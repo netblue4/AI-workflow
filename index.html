@@ -193,13 +193,122 @@ function renderDetail(step, phaseColor, phaseTitle) {
     </div>`;
 }
 
+// ---- Render step-3 dual-axis classification detail ---------
+function renderStep3Detail(step, detail, color, phaseTitle) {
+  const cm = detail.classification_model;
+  const axisA = detail.axis_a_classification;
+  const axisB = detail.axis_b_classification;
+  const matrix = detail.combined_outcome_matrix;
+
+  // Tier cards
+  const tierCards = axisA.tiers.map(t => `
+    <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--border-radius-md);padding:12px 14px;margin-bottom:8px">
+      <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px">${t.label}</p>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">${t.definition}</p>
+      <p style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Examples</p>
+      ${t.examples.map(e => `<span style="display:inline-block;font-size:11px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:4px;padding:2px 7px;margin:2px 2px 2px 0;color:var(--color-text-secondary)">${e}</span>`).join('')}
+      <p style="margin-top:8px;font-size:11px;color:${t.change_board_required ? 'var(--warning-text)' : 'var(--success-text)'};background:${t.change_board_required ? 'var(--warning-fill)' : 'var(--success-fill)'};padding:3px 8px;border-radius:4px;display:inline-block">
+        ${t.change_board_required ? 'AI Change Board approval required' : 'ISG fast-track eligible'}
+      </p>
+    </div>`).join('');
+
+  // Gate summary rows
+  const gateRows = axisB.gates.map(g => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--color-bg);border-radius:var(--border-radius-md);margin-bottom:6px">
+      <span style="min-width:32px;font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:var(--purple-fill);color:var(--purple-text);margin-top:1px">${g.gate_id}</span>
+      <div>
+        <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px">${g.gate_name}</p>
+        <p style="font-size:12px;color:var(--color-text-secondary)">${g.gate_purpose}</p>
+        ${g.short_circuit ? `<p style="font-size:11px;margin-top:4px;color:var(--danger-text);background:var(--danger-fill);padding:3px 8px;border-radius:4px">${g.short_circuit}</p>` : ''}
+      </div>
+    </div>`).join('');
+
+  // Outcome matrix rows
+  const matrixRows = matrix.rules.map(r => `
+    <tr style="border-bottom:1px solid var(--color-border)">
+      <td style="padding:8px 10px;font-size:12px;color:var(--color-text-secondary)">${r.axis_a === 'any' ? 'Any' : r.axis_a === 'tier_1' ? 'Tier 1' : 'Tier 2'}</td>
+      <td style="padding:8px 10px;font-size:12px">
+        <span style="font-size:11px;font-weight:500;padding:2px 7px;border-radius:4px;
+          background:${r.axis_b === 'PROHIBITED' ? 'var(--danger-fill)' : r.axis_b === 'HIGH_RISK' ? 'var(--warning-fill)' : r.axis_b === 'OUT_OF_SCOPE' ? 'var(--color-bg)' : 'var(--success-fill)'};
+          color:${r.axis_b === 'PROHIBITED' ? 'var(--danger-text)' : r.axis_b === 'HIGH_RISK' ? 'var(--warning-text)' : r.axis_b === 'OUT_OF_SCOPE' ? 'var(--color-text-secondary)' : 'var(--success-text)'}">
+          ${r.axis_b}
+        </span>
+      </td>
+      <td style="padding:8px 10px;font-size:12px;color:var(--color-text-primary);font-weight:500">${r.label}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--color-text-secondary)">${r.article_14_human_oversight ? '✓ Art.14' : r.axis_b === 'PROHIBITED' ? '—' : 'Portfolio only'}</td>
+    </tr>`).join('');
+
+  let deliverablesHtml = detail.deliverables.map(d => `
+    <li class="deliverable-item">
+      <span class="deliverable-icon">${ICONS.check}</span>
+      <span>${d}</span>
+    </li>`).join('');
+
+  let reqHtml = (detail.requirement_labels || []).map(r => `<span class="req-pill">${r}</span>`).join('');
+
+  let srBadges = (step.requirements || []).map(r => `<span class="badge sr">${r}</span>`).join('');
+  const applicClass = APPLIC_CLASS[step.applicabilityKey] || 'all';
+
+  return `
+    <div class="step-detail-card">
+
+      <div class="step-detail-eyebrow">
+        <span class="step-detail-number color-${color}">${step.number}</span>
+        <span class="step-detail-phase-label">${phaseTitle}</span>
+      </div>
+      <h1 class="step-detail-title">${step.title}</h1>
+      <div class="step-detail-meta">
+        <span class="owner-tag">${ICONS[step.ownerIcon] || ''}&nbsp;${step.owners.join(', ')}</span>
+        ${srBadges}
+        <span class="badge ${applicClass}">${step.applicability}</span>
+      </div>
+      <p class="step-detail-summary">${cm.description}</p>
+
+      <p class="section-label">Axis A — Internal governance tier</p>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">${cm.axis_a.purpose}</p>
+      ${tierCards}
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;margin-bottom:24px;padding:8px 12px;background:var(--warning-fill);border-left:3px solid var(--warning-border);border-radius:var(--border-radius-md);color:var(--warning-text)">
+        Escalation rule: ${axisA.escalation_rule}
+      </p>
+
+      <p class="section-label">Axis B — EU AI Act legal risk tier</p>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">${cm.axis_b.purpose}</p>
+      ${gateRows}
+      <p style="font-size:12px;color:var(--color-text-tertiary);margin-top:4px;margin-bottom:24px">Full gate questions and article mappings are defined in <code style="font-family:var(--font-mono);font-size:11px">${axisB.reference_file}</code></p>
+
+      <p class="section-label">Combined outcome matrix</p>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">${matrix.description}</p>
+      <div style="overflow-x:auto;margin-bottom:24px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--color-border);border-radius:var(--border-radius-md);overflow:hidden">
+          <thead>
+            <tr style="background:var(--color-bg)">
+              <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--color-text-secondary);font-size:11px;border-bottom:1px solid var(--color-border)">Axis A</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--color-text-secondary);font-size:11px;border-bottom:1px solid var(--color-border)">Axis B</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--color-text-secondary);font-size:11px;border-bottom:1px solid var(--color-border)">Combined outcome</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--color-text-secondary);font-size:11px;border-bottom:1px solid var(--color-border)">Human oversight</th>
+            </tr>
+          </thead>
+          <tbody>${matrixRows}</tbody>
+        </table>
+      </div>
+
+      <p class="section-label">Deliverables</p>
+      <ul class="deliverables-list" style="margin-bottom:24px">${deliverablesHtml}</ul>
+
+      <div class="gate-note info" style="margin-bottom:8px"><strong>AI SR9 clarification:</strong> ${detail.standard_note}</div>
+
+      <div class="req-list">${reqHtml}</div>
+
+    </div>`;
+}
+
 // ---- Select and display a step -----------------------------
 let _workflow = null;
 let _stepIndex = null;
 let _phaseIndex = null;
 let _activeStepId = null;
 
-function selectStep(stepId) {
+async function selectStep(stepId) {
   if (!_workflow || !_stepIndex) return;
   _activeStepId = stepId;
 
@@ -208,14 +317,30 @@ function selectStep(stepId) {
   const color = PHASE_COLOR[phase.colorKey] || 'teal';
   const phaseTitle = `Phase ${phase.number} — ${phase.title}`;
 
-  // Update detail panel
-  document.getElementById('detail-panel').innerHTML = renderDetail(step, color, phaseTitle);
-
   // Update nav active state
   renderNav(_workflow, _stepIndex, _phaseIndex, stepId);
 
   // Scroll detail to top
-  document.getElementById('detail-panel').scrollTop = 0;
+  const panel = document.getElementById('detail-panel');
+  panel.scrollTop = 0;
+
+  // Try to load step detail file if referenced
+  let detailData = null;
+  if (step.detailFile) {
+    try {
+      const res = await fetch(step.detailFile);
+      if (res.ok) detailData = await res.json();
+    } catch (e) {
+      // Detail file not yet created — fall through to base render
+    }
+  }
+
+  // Render: use rich renderer if detail file loaded and step has one, else base renderer
+  if (detailData && stepId === 'step-3') {
+    panel.innerHTML = renderStep3Detail(step, detailData, color, phaseTitle);
+  } else {
+    panel.innerHTML = renderDetail(step, color, phaseTitle);
+  }
 }
 
 // ---- Bootstrap ---------------------------------------------
