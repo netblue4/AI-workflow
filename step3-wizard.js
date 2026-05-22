@@ -322,6 +322,13 @@
     return section;
   }
 
+  // G1 and G3 are collapsed to a single Yes/No — the individual items are shown as
+  // a compact reference list. The answer is stored under 'G1_any' / 'G3_any'.
+  const COLLAPSED_GATES = {
+    G1: { key: 'G1_any', question: 'Does this system involve any practice prohibited under Article 5 of the EU AI Act?' },
+    G3: { key: 'G3_any', question: 'Does this system fall within any Annex III high-risk domain?' },
+  };
+
   function _buildGateSection(gate) {
     const section = _el('div', 'wiz-gate-section');
     section.id = `wiz-gate-${gate.gate_id}`;
@@ -339,9 +346,64 @@
     section.appendChild(header);
 
     const body = _el('div', 'wiz-gate-body');
-    gate.questions.forEach(q => body.appendChild(_buildQuestionRow(q)));
+    const collapsed = COLLAPSED_GATES[gate.gate_id];
+    if (collapsed) {
+      body.appendChild(_buildCollapsedQuestion(collapsed.key, collapsed.question, gate.questions));
+    } else {
+      gate.questions.forEach(q => body.appendChild(_buildQuestionRow(q)));
+    }
     section.appendChild(body);
     return section;
+  }
+
+  function _buildCollapsedQuestion(answerKey, questionText, subItems) {
+    const row = _el('div', 'wiz-q-row');
+    row.id = `wiz-q-${answerKey}`;
+    const saved = _state.gate_answers[answerKey];
+    if (saved === 'yes') row.classList.add('answered-yes');
+    if (saved === 'no')  row.classList.add('answered-no');
+
+    row.appendChild(_el('p', '', { style: 'font-size:13px;color:var(--color-text-primary);margin-bottom:10px;line-height:1.5', textContent: questionText }));
+
+    const pillGroup = _el('div', '', { style: 'display:flex;gap:8px;margin-bottom:14px' });
+    ['yes', 'no'].forEach(value => {
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = `wiz-q-${answerKey}`; input.value = value;
+      input.id = `wiz-q-${answerKey}-${value}`; input.style.display = 'none';
+      if (saved === value) input.checked = true;
+
+      const label = document.createElement('label');
+      label.htmlFor = input.id;
+      label.className = 'wiz-pill' + (saved === value ? ` active-${value}` : '');
+      label.textContent = value === 'yes' ? 'Yes' : 'No';
+
+      input.addEventListener('change', () => {
+        _state.gate_answers[answerKey] = value;
+        row.classList.remove('answered-yes', 'answered-no');
+        row.classList.add(value === 'yes' ? 'answered-yes' : 'answered-no');
+        pillGroup.querySelectorAll('.wiz-pill').forEach(l => l.classList.remove('active-yes', 'active-no'));
+        label.classList.add(`active-${value}`);
+        _updateGateVisibility();
+      });
+
+      row.appendChild(input);
+      pillGroup.appendChild(label);
+    });
+    row.appendChild(pillGroup);
+
+    // Compact reference list of sub-items
+    const refLabel = _el('p', '', { style: 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin-bottom:6px', textContent: 'Covered items' });
+    const grid = _el('div', '', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:4px' });
+    subItems.forEach(q => {
+      const item = _el('div', '', { style: 'display:flex;gap:6px;align-items:baseline' });
+      item.appendChild(_el('span', 'wiz-ref-tag', { textContent: q.ai_act_reference }));
+      const text = _el('span', '', { style: 'font-size:11px;color:var(--color-text-secondary);line-height:1.4', textContent: q.question });
+      item.appendChild(text);
+      grid.appendChild(item);
+    });
+    row.append(refLabel, grid);
+
+    return row;
   }
 
   function _buildQuestionRow(q) {
@@ -389,8 +451,9 @@
     const gates = _detail.axis_b_classification.gates;
     const g1 = gates.find(g => g.gate_id === 'G1');
     const g2 = gates.find(g => g.gate_id === 'G2');
-    const g1AnyYes = g1 && g1.questions.some(q => _state.gate_answers[q.id] === 'yes');
+    const g1AnyYes = _state.gate_answers['G1_any'] === 'yes';
     const g2AnyNo  = g2 && g2.questions.some(q => _state.gate_answers[q.id] === 'no');
+    // G3_any drives the collapsed G3 question — not used for visibility but kept for symmetry
 
     gates.forEach(gate => {
       const el = document.getElementById(`wiz-gate-${gate.gate_id}`);
@@ -415,7 +478,12 @@
     detail.axis_b_classification.gates.forEach(gate => {
       const el = document.getElementById(`wiz-gate-${gate.gate_id}`);
       if (el && el.dataset.disabled === 'true') return;
-      gate.questions.forEach(q => { if (!_state.gate_answers[q.id]) unanswered.push(q.id); });
+      const collapsed = COLLAPSED_GATES[gate.gate_id];
+      if (collapsed) {
+        if (!_state.gate_answers[collapsed.key]) unanswered.push(collapsed.key);
+      } else {
+        gate.questions.forEach(q => { if (!_state.gate_answers[q.id]) unanswered.push(q.id); });
+      }
     });
     if (unanswered.length > 0) {
       _showInlineError(pane, `${unanswered.length} gate question${unanswered.length > 1 ? 's' : ''} still need${unanswered.length === 1 ? 's' : ''} an answer.`);
@@ -448,7 +516,7 @@
 
       if (gate.gate_id === 'G1') {
         result.gates_completed.push('G1');
-        if (qA.some(({ answer }) => answer === 'yes')) { result.classification = 'PROHIBITED'; result.short_circuit_gate = 'G1'; return result; }
+        if (answers['G1_any'] === 'yes') { result.classification = 'PROHIBITED'; result.short_circuit_gate = 'G1'; return result; }
 
       } else if (gate.gate_id === 'G2') {
         result.gates_completed.push('G2');
@@ -456,7 +524,7 @@
 
       } else if (gate.gate_id === 'G3') {
         result.gates_completed.push('G3');
-        if (qA.some(({ answer }) => answer === 'yes')) { result.classification = 'HIGH_RISK'; _mergeArticles(result, gate.outcomes.any_yes.applicable_articles); }
+        if (answers['G3_any'] === 'yes') { result.classification = 'HIGH_RISK'; _mergeArticles(result, gate.outcomes.any_yes.applicable_articles); }
         else { result.classification = result.classification || 'NOT_HIGH_RISK'; }
 
       } else if (gate.gate_id === 'G4') {
@@ -737,6 +805,7 @@
       .wiz-flag-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
       .wiz-article-card { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px; }
       .wiz-cn-badge { font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--purple-fill);border:1px solid var(--purple-border);color:var(--purple-text);font-family:var(--font-mono); }
+      .wiz-ref-tag { flex-shrink:0;font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;background:var(--color-bg);border:1px solid var(--color-border-mid);color:var(--color-text-tertiary);font-family:var(--font-mono); }
 
       /* Reference pane helpers */
       .ov-tier-card { background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px; }
