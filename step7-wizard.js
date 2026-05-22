@@ -315,14 +315,20 @@
     deselAll.addEventListener('click', e => { e.stopPropagation(); _setArticleSelection(article, false); });
     right.appendChild(deselAll);
 
+    // Per-article selected/total count — computed after checkboxes exist
+    const selCount = _el('span', 'wiz7-article-sel-count');
+    right.appendChild(selCount);
+
     const chevron = _el('span', 'wiz7-chevron');
     chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    // Start collapsed
+    chevron.style.transform = 'rotate(-90deg)';
     right.appendChild(chevron);
     header.appendChild(right);
     sec.appendChild(header);
 
-    // Body
-    const body = _el('div', 'wiz7-article-body');
+    // Body — starts collapsed
+    const body = _el('div', 'wiz7-article-body wiz7-collapsed');
 
     if (article.objectives?.length) {
       const obj = _el('p', 'wiz7-objective');
@@ -332,6 +338,9 @@
 
     article.fields.forEach(f => body.appendChild(_buildFieldGroup(f)));
     sec.appendChild(body);
+
+    // Set initial count badge after controls are in the DOM
+    _updateArticleBadge(sec);
 
     header.addEventListener('click', () => {
       const collapsed = body.classList.toggle('wiz7-collapsed');
@@ -354,6 +363,7 @@
       if (rcn !== undefined) cb.checked = !!_state.selected_controls[rcn];
     });
     _updateCountBadge();
+    _container.querySelectorAll('.wiz7-article').forEach(a => _updateArticleBadge(a));
   }
 
   function _updateCountBadge() {
@@ -361,6 +371,21 @@
     const tot = Object.keys(_state.selected_controls).length;
     const badge = _container.querySelector('#wiz7-count');
     if (badge) badge.textContent = `${sel} / ${tot} selected`;
+  }
+
+  function _updateArticleBadge(articleEl) {
+    const all = articleEl.querySelectorAll('.wiz7-ctrl-cb');
+    const checked = articleEl.querySelectorAll('.wiz7-ctrl-cb:checked');
+    const badge = articleEl.querySelector('.wiz7-article-sel-count');
+    if (!badge) return;
+    const sel = checked.length;
+    const tot = all.length;
+    badge.textContent = `${sel} / ${tot}`;
+    badge.className = sel === 0
+      ? 'wiz7-article-sel-count wiz7-article-sel-count--none'
+      : sel === tot
+        ? 'wiz7-article-sel-count wiz7-article-sel-count--all'
+        : 'wiz7-article-sel-count wiz7-article-sel-count--partial';
   }
 
   // ---- Field group -----------------------------------------
@@ -390,6 +415,8 @@
     cb.addEventListener('change', e => {
       _state.selected_controls[ctrl.requirement_control_number] = e.target.checked;
       _updateCountBadge();
+      const articleEl = e.target.closest('.wiz7-article');
+      if (articleEl) _updateArticleBadge(articleEl);
     });
     row.appendChild(cb);
 
@@ -718,6 +745,10 @@
 .wiz7-article-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .wiz7-sel-btn { font-size: 11px; font-weight: 500; color: var(--teal-600,#0d9488); background: none; border: 1px solid var(--teal-200,#99f6e4); border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
 .wiz7-sel-btn:hover { background: var(--teal-50,#f0fdfa); }
+.wiz7-article-sel-count { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; white-space: nowrap; min-width: 52px; text-align: center; }
+.wiz7-article-sel-count--all { background: var(--success-100,#dcfce7); color: var(--success-700,#15803d); }
+.wiz7-article-sel-count--partial { background: var(--warning-100,#fef3c7); color: var(--warning-700,#b45309); }
+.wiz7-article-sel-count--none { background: var(--danger-100,#fee2e2); color: var(--danger-700,#b91c1c); }
 .wiz7-chevron { display: flex; color: var(--color-text-tertiary); flex-shrink: 0; transition: transform .2s; }
 .wiz7-article-body { padding: 0 14px 14px; }
 .wiz7-collapsed { display: none; }
