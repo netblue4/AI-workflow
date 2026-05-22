@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "ai-workflow",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["/Users/michaelbergman/Documents/GitHub/AI-workflow/serve.py"],
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": ["-run", "-e", "httpd", "/Users/michaelbergman/Documents/GitHub/AI-workflow", "-p", "3737"],
       "port": 3737
     }
   ]

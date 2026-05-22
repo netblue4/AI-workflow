@@ -335,9 +335,11 @@ async function selectStep(stepId) {
     }
   }
 
-  // Render: wizard for step-3, rich renderer for other steps with detail files, base otherwise
-  if (detailData && stepId === 'step-3') {
+  // Render: step-specific wizards, rich renderer for other steps with detail files, base otherwise
+  if (stepId === 'step-3' && detailData) {
     mountStep3Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-7') {
+    mountStep7Wizard(panel, step, detailData, color, phaseTitle);
   } else {
     panel.innerHTML = renderDetail(step, color, phaseTitle);
   }
@@ -358,5 +360,6 @@ async function selectStep(stepId) {
 </script>
 
 <script src="step3-wizard.js"></script>
+<script src="step7-wizard.js"></script>
 </body>
 </html>
