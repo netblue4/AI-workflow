@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ai-workflow",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["/Users/michaelbergman/Documents/GitHub/AI-workflow/serve.py"],
+      "port": 3737
+    }
+  ]
+}

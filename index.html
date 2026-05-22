@@ -335,9 +335,9 @@ async function selectStep(stepId) {
     }
   }
 
-  // Render: use rich renderer if detail file loaded and step has one, else base renderer
+  // Render: wizard for step-3, rich renderer for other steps with detail files, base otherwise
   if (detailData && stepId === 'step-3') {
-    panel.innerHTML = renderStep3Detail(step, detailData, color, phaseTitle);
+    mountStep3Wizard(panel, step, detailData, color, phaseTitle);
   } else {
     panel.innerHTML = renderDetail(step, color, phaseTitle);
   }
@@ -357,5 +357,6 @@ async function selectStep(stepId) {
 })();
 </script>
 
+<script src="step3-wizard.js"></script>
 </body>
 </html>
