@@ -1,0 +1,430 @@
+{
+  "meta": {
+    "title": "AI Acceptable Use — Authorisation and Governance Workflow",
+    "version": "2.0",
+    "standard": "ISO/IEC 42001-aligned",
+    "lastUpdated": "2025"
+  },
+  "phases": [
+    {
+      "id": "phase-1",
+      "number": 1,
+      "title": "Pre-screening",
+      "owners": ["Requestor", "Department Head"],
+      "colorKey": "teal",
+      "steps": ["step-1", "step-2", "step-3", "step-4", "step-5"]
+    },
+    {
+      "id": "phase-2",
+      "number": 2,
+      "title": "Due diligence",
+      "owners": ["ISG Team", "DPO", "AI Taskforce"],
+      "colorKey": "purple",
+      "steps": ["step-6", "step-7", "step-8", "step-9", "step-10"]
+    },
+    {
+      "id": "phase-3",
+      "number": 3,
+      "title": "Approval gate",
+      "owners": ["AI Change Board"],
+      "colorKey": "amber",
+      "steps": ["step-11"]
+    },
+    {
+      "id": "phase-4",
+      "number": 4,
+      "title": "Operational controls",
+      "owners": ["CISO", "ISG Team"],
+      "colorKey": "blue",
+      "steps": ["step-12", "step-13"]
+    },
+    {
+      "id": "phase-5",
+      "number": 5,
+      "title": "Ongoing governance",
+      "owners": ["ISG Team", "CISO", "SteerCo"],
+      "colorKey": "coral",
+      "steps": ["step-14", "step-15"]
+    }
+  ],
+  "steps": [
+    {
+      "id": "step-1",
+      "number": 1,
+      "phaseId": "phase-1",
+      "title": "Training prerequisite check",
+      "isNew": false,
+      "owners": ["Requestor"],
+      "ownerIcon": "user",
+      "applicability": "All tiers",
+      "applicabilityKey": "all",
+      "requirements": ["AI SR7"],
+      "summary": "Before any request is submitted, the requestor must confirm they have completed annual AI risk awareness training. Untrained personnel may not operate AI tools under any tier.",
+      "deliverables": [
+        "Confirmation of current annual AI risk awareness training completion"
+      ],
+      "gates": [
+        {
+          "type": "info",
+          "text": "Gate: If training is not current, complete it before proceeding. The ISG team maintains training records."
+        }
+      ],
+      "requirementLabels": ["AI SR7 — Awareness and Training"],
+      "detailFile": "step-1.json"
+    },
+    {
+      "id": "step-2",
+      "number": 2,
+      "phaseId": "phase-1",
+      "title": "Business case documentation",
+      "isNew": false,
+      "owners": ["Requestor", "Department Head"],
+      "ownerIcon": "user",
+      "applicability": "All tiers",
+      "applicabilityKey": "all",
+      "requirements": ["AI SR2"],
+      "summary": "Document the clear business necessity using the AI Tool Use Case request form. Specify access duration and whether use is single-instance or ongoing. Must be countersigned by a Department Head before submission to ISG.",
+      "deliverables": [
+        "Completed AI Tool Use Case request form, countersigned by Department Head"
+      ],
+      "gates": [],
+      "requirementLabels": ["AI SR2 — Authorisation", "AI SR6 — Record Keeping"],
+      "detailFile": "step-2.json"
+    },
+    {
+      "id": "step-3",
+      "number": 3,
+      "phaseId": "phase-1",
+      "title": "System classification",
+      "isNew": false,
+      "owners": ["Requestor"],
+      "ownerIcon": "user",
+      "applicability": "All tiers",
+      "applicabilityKey": "all",
+      "requirements": ["AI SR2"],
+      "summary": "Classify as Tier 1 (general productivity) or Tier 2 (business-impacting content — marketing, legal, financial, code, translations). The tier drives the depth of due diligence in subsequent steps.",
+      "deliverables": [
+        "Tier assignment documented in the request form"
+      ],
+      "gates": [
+        {
+          "type": "warning",
+          "text": "Tier 2 gate: Any use case producing marketing, legal, compliance, financial, code, or translation content must follow the full due diligence phase and requires AI Change Board approval."
+        }
+      ],
+      "requirementLabels": ["AI SR2 — Tiered authorisation"],
+      "detailFile": "step-3.json"
+    },
+    {
+      "id": "step-4",
+      "number": 4,
+      "phaseId": "phase-1",
+      "title": "Data identification",
+      "isNew": false,
+      "owners": ["Requestor", "Data Governance Team"],
+      "ownerIcon": "user",
+      "applicability": "All tiers",
+      "applicabilityKey": "all",
+      "requirements": ["AI SR3"],
+      "summary": "Identify all data types to be processed. Determine whether personal data, confidential business information, or Group-identifying data (trade secrets, proprietary code) is involved. This drives tier classification and whether a DPIA is required.",
+      "deliverables": [
+        "Data inventory: types, sensitivity classification, personal/confidential data flag"
+      ],
+      "gates": [
+        {
+          "type": "danger",
+          "text": "Hard stop: Personal, confidential, or Group-identifying data must not enter external AI tools without approved safeguards and contracts. Escalate to ISG before proceeding."
+        }
+      ],
+      "requirementLabels": ["AI SR3 — Data Protection", "AI SR9 — EU AI Act"],
+      "detailFile": "step-4.json"
+    },
+    {
+      "id": "step-5",
+      "number": 5,
+      "phaseId": "phase-1",
+      "title": "ISG triage decision",
+      "isNew": false,
+      "owners": ["ISG Team"],
+      "ownerIcon": "shield",
+      "applicability": "All tiers",
+      "applicabilityKey": "all",
+      "requirements": ["AI SR2"],
+      "summary": "ISG reviews the submission and routes it. Not all requests proceed to the AI Change Board — ISG may approve Tier 1 low-risk cases directly. Tier 2 or elevated-risk cases proceed to Phase 2.",
+      "deliverables": [
+        "Routing decision: ISG-level approval OR escalation to Phase 2 due diligence"
+      ],
+      "gates": [
+        {
+          "type": "info",
+          "text": "Outcome A: Tier 1, low-risk, no personal/confidential data — ISG approves directly. Proceed to Phase 4 (Record Keeping) and Phase 5 (Ongoing governance)."
+        },
+        {
+          "type": "warning",
+          "text": "Outcome B: Tier 2, elevated risk, or personal/confidential data — proceed to Phase 2."
+        }
+      ],
+      "requirementLabels": ["AI SR2 — ISG workflow", "AI SR1 — Governance"],
+      "detailFile": "step-5.json"
+    },
+    {
+      "id": "step-6",
+      "number": 6,
+      "phaseId": "phase-2",
+      "title": "Tool fitness evaluation",
+      "isNew": true,
+      "owners": ["ISG Team", "AI Taskforce"],
+      "ownerIcon": "shield",
+      "applicability": "Tier 2 / elevated risk",
+      "applicabilityKey": "tier2",
+      "requirements": ["AI SR2", "AI SR4"],
+      "summary": "Before assessing the use case, evaluate whether the AI tool itself is fit for the intended domain. This is a prerequisite to the risk assessment. Covers factual reliability, known bias characteristics, training data provenance and IP exposure, and vendor contractual protections.",
+      "deliverables": [
+        "Tool evaluation report: domain reliability, known bias profile, training data provenance",
+        "Vendor assessment: IP indemnity, data processing terms, contractual safeguards",
+        "Hallucination risk rating for the intended domain (e.g. legal, medical, financial)"
+      ],
+      "gates": [
+        {
+          "type": "danger",
+          "text": "Hard stop: If the tool cannot be evaluated or vendor terms are insufficient, the use case must be redesigned around a tool that can be assessed. The risk assessment in Step 7 is only valid if this evaluation is complete."
+        }
+      ],
+      "requirementLabels": ["AI SR2 — Risk Assessment", "AI SR4 — Content Verification (system layer)", "AI SR9 — Supply chain / EU AI Act"],
+      "detailFile": "step-6.json"
+    },
+    {
+      "id": "step-7",
+      "number": 7,
+      "phaseId": "phase-2",
+      "title": "Risk assessment",
+      "isNew": false,
+      "owners": ["ISG Team"],
+      "ownerIcon": "shield",
+      "applicability": "Tier 2 / elevated risk",
+      "applicabilityKey": "tier2",
+      "requirements": ["AI SR2", "AI SR9"],
+      "summary": "Conduct a formal risk assessment informed by the tool fitness evaluation in Step 6. Covers technical risks (data breaches, cyberattacks, vulnerable code), legal risks (GDPR, IP, copyright), and regulatory risks (EU AI Act classification, prohibited use cases). Identify and document risk mitigation strategies.",
+      "deliverables": [
+        "Risk assessment: technical, legal, and regulatory dimensions",
+        "EU AI Act risk classification (prohibited / high-risk / limited-risk / minimal-risk)",
+        "Technology Risk Assessment (TRA) where applicable"
+      ],
+      "gates": [],
+      "requirementLabels": ["AI SR2 — Risk Assessment", "AI SR9 — EU AI Act", "AI SR6 — TRA retention"],
+      "detailFile": "step-7.json"
+    },
+    {
+      "id": "step-8",
+      "number": 8,
+      "phaseId": "phase-2",
+      "title": "DPIA",
+      "isNew": false,
+      "owners": ["DPO", "ISG Team"],
+      "ownerIcon": "shield",
+      "applicability": "Personal data use cases",
+      "applicabilityKey": "personal-data",
+      "requirements": ["AI SR3", "AI SR9"],
+      "summary": "Where the use case involves personal data, a Data Protection Impact Assessment must be completed confirming lawful basis, data subject notification, and safeguards. DPIA records are retained outside the ISG team inventory.",
+      "deliverables": [
+        "Completed DPIA: lawful basis, data subject notification, safeguards confirmed"
+      ],
+      "gates": [
+        {
+          "type": "danger",
+          "text": "Hard stop: If a lawful basis cannot be established, the use case must be rejected or redesigned to eliminate personal data."
+        }
+      ],
+      "requirementLabels": ["AI SR3 — Data Protection", "AI SR9 — DPIAs", "AI SR6 — DPIA retention"],
+      "detailFile": "step-8.json"
+    },
+    {
+      "id": "step-9",
+      "number": 9,
+      "phaseId": "phase-2",
+      "title": "Control identification and disclosure design",
+      "isNew": false,
+      "owners": ["ISG Team"],
+      "ownerIcon": "shield",
+      "applicability": "Tier 2 / elevated risk",
+      "applicabilityKey": "tier2",
+      "requirements": ["AI SR9", "AI SR8"],
+      "summary": "Define technical and operational controls to mitigate identified risks. Separately, design transparency and disclosure mechanisms — disclaimer templates, labelling standards, and version control — for Business-Impacting Content. Controls must be specific and verifiable, not delegated to user judgement.",
+      "deliverables": [
+        "Control schedule: encryption, access control, logging, human review checkpoints",
+        "Disclosure framework: disclaimer text, internal tagging, version control approach"
+      ],
+      "gates": [],
+      "requirementLabels": ["AI SR9 — Human oversight", "AI SR8 — Disclosure", "AI SR3 — Encryption and access"],
+      "detailFile": "step-9.json"
+    },
+    {
+      "id": "step-10",
+      "number": 10,
+      "phaseId": "phase-2",
+      "title": "Content verification testing",
+      "isNew": false,
+      "owners": ["AI Taskforce", "Authorised Users"],
+      "ownerIcon": "users",
+      "applicability": "Tier 2 / elevated risk",
+      "applicabilityKey": "tier2",
+      "requirements": ["AI SR4"],
+      "summary": "Structured pre-approval testing of AI-generated output against defined criteria. Evaluates factual accuracy, bias, and IP compliance using the tool fitness evaluation from Step 6 as the baseline. The AI Taskforce conducts checks against documented criteria — not subjective review.",
+      "deliverables": [
+        "Content verification report: accuracy, bias, and IP checks against defined criteria",
+        "AI Taskforce sign-off with documented pass/fail criteria"
+      ],
+      "gates": [],
+      "requirementLabels": ["AI SR4 — Content Verification"],
+      "detailFile": "step-10.json"
+    },
+    {
+      "id": "step-11",
+      "number": 11,
+      "phaseId": "phase-3",
+      "title": "AI Change Board approval",
+      "isNew": false,
+      "owners": ["AI Change Board"],
+      "ownerIcon": "building",
+      "applicability": "Tier 2 / elevated risk",
+      "applicabilityKey": "tier2",
+      "requirements": ["AI SR2", "AI SR6"],
+      "summary": "Submit the complete authorisation package. The Board reviews the business case, tool fitness evaluation, risk assessment, DPIA (if applicable), control schedule, and content verification evidence. High-risk or prohibited AI systems under the EU AI Act require prior assessment here before any implementation.",
+      "deliverables": [
+        "Submission pack: business case, tool evaluation, RA, DPIA, control schedule, verification report",
+        "AI Change Board decision record (approval / conditional / rejection)"
+      ],
+      "gates": [
+        {
+          "type": "success",
+          "text": "On approval: Proceed to Phase 4. ISG registers the use case in the central inventory."
+        },
+        {
+          "type": "warning",
+          "text": "On rejection: Requestor notified with documented reasons. Resubmission requires material redesign."
+        }
+      ],
+      "requirementLabels": ["AI SR2 — AI Change Board", "AI SR9 — High-risk AI", "AI SR6 — Authorisation records"],
+      "detailFile": "step-11.json"
+    },
+    {
+      "id": "step-12",
+      "number": 12,
+      "phaseId": "phase-4",
+      "title": "Operational controls activation",
+      "isNew": true,
+      "owners": ["CISO", "ISG Team"],
+      "ownerIcon": "shield",
+      "applicability": "Live operation",
+      "applicabilityKey": "ops",
+      "requirements": ["AI SR1", "AI SR4", "AI SR8"],
+      "summary": "Before any user accesses the approved tool, the controls defined in Step 9 must be active and verified. This ensures system protections do not evaporate once the workflow ends. Controls are the organisation's responsibility, not the user's.",
+      "deliverables": [
+        "Output logging active and reviewed against logging standards",
+        "Human review checkpoints configured for high-stakes content (Tier 2)",
+        "Disclosure and labelling templates deployed and tested",
+        "Anomaly flagging or output monitoring mechanism in place",
+        "Access controls enforced: no Group entity email addresses, MFA required"
+      ],
+      "gates": [
+        {
+          "type": "danger",
+          "text": "Gate: Tool access must not be granted until all controls from the approved control schedule are confirmed active. Verified by ISG, not self-certified by the requestor."
+        }
+      ],
+      "requirementLabels": ["AI SR1 — Governance controls", "AI SR4 — System-level verification", "AI SR8 — Disclosure active"],
+      "detailFile": "step-12.json"
+    },
+    {
+      "id": "step-13",
+      "number": 13,
+      "phaseId": "phase-4",
+      "title": "User obligations briefing",
+      "isNew": true,
+      "owners": ["ISG Team", "Authorised Users"],
+      "ownerIcon": "users",
+      "applicability": "Live operation",
+      "applicabilityKey": "ops",
+      "requirements": ["AI SR4", "AI SR7"],
+      "summary": "Before access is granted, authorised users receive a use-case-specific briefing that tells them exactly what they are responsible for — and what the system is responsible for. User obligations are narrow, behavioural, and achievable. Users are not asked to verify things the system should prevent.",
+      "deliverables": [
+        "Use-case-specific user obligations briefing delivered and acknowledged",
+        "System responsibilities schedule communicated to users"
+      ],
+      "accountability": {
+        "system": [
+          "Accuracy and hallucination risk evaluation (Step 6)",
+          "Bias detection and domain suitability (Steps 6 and 10)",
+          "IP and copyright exposure (vendor terms, Step 6)",
+          "Output logging and anomaly flagging (Step 12)",
+          "Disclosure labelling on published content (Step 12)"
+        ],
+        "user": [
+          "Not inputting data known to be personal, confidential, or classified",
+          "Flagging outputs clearly wrong or inconsistent with professional knowledge",
+          "Not publishing or acting on output without the required human review step",
+          "Deleting chat history after each session as instructed",
+          "Reporting anomalous, harmful, or unexpected outputs to ISG"
+        ]
+      },
+      "gates": [
+        {
+          "type": "info",
+          "text": "Key principle: Users are held to obligations they can actually discharge. Accuracy, bias, and IP verification are organisational controls — not individual responsibilities."
+        }
+      ],
+      "requirementLabels": ["AI SR4 — Revised user obligations", "AI SR7 — Awareness"],
+      "detailFile": "step-13.json"
+    },
+    {
+      "id": "step-14",
+      "number": 14,
+      "phaseId": "phase-5",
+      "title": "Central inventory registration and record keeping",
+      "isNew": false,
+      "owners": ["CISO", "ISG Team"],
+      "ownerIcon": "shield",
+      "applicability": "All approved use cases",
+      "applicabilityKey": "all",
+      "requirements": ["AI SR6", "AI SR1"],
+      "summary": "Register the authorised use case in the central inventory. Retain all authorisation records, risk assessments, tool evaluations, and periodic review documentation. TRAs and DPIAs retained outside ISG. AI risks factored into the RCSA process by ExCo.",
+      "deliverables": [
+        "Entry in CISO/ISG central AI tool use case inventory",
+        "Retained: business case, tool evaluation, RA, DPIA, Board decision, verification evidence, operational controls schedule"
+      ],
+      "gates": [],
+      "requirementLabels": ["AI SR6 — Record Keeping", "AI SR1 — Governance / RCSA"],
+      "detailFile": "step-14.json"
+    },
+    {
+      "id": "step-15",
+      "number": 15,
+      "phaseId": "phase-5",
+      "title": "Periodic and triggered review",
+      "isNew": false,
+      "owners": ["ISG Team", "SteerCo"],
+      "ownerIcon": "shield",
+      "applicability": "All approved use cases",
+      "applicabilityKey": "all",
+      "requirements": ["AI SR5", "AI SR7"],
+      "summary": "Periodic reviews confirm the business case remains valid, risk assessments are current, operational controls are still active, and the tool fitness evaluation reflects any vendor model updates. Triggered reviews are initiated immediately following security incidents or significant changes.",
+      "deliverables": [
+        "Review schedule at risk-proportionate frequency",
+        "Triggered review mechanism active: security incidents, vendor model changes, regulatory updates",
+        "Review outcomes: updated tool evaluation, controls verification, SteerCo report"
+      ],
+      "gates": [
+        {
+          "type": "info",
+          "text": "Model change trigger: If the vendor updates the underlying model, the tool fitness evaluation (Step 6) must be re-run before continued use is permitted."
+        },
+        {
+          "type": "info",
+          "text": "Training feedback loop: Trends from reviews must be escalated to ISG for targeted training programmes under AI SR7."
+        }
+      ],
+      "requirementLabels": ["AI SR5 — Periodic Review", "AI SR7 — Training feedback", "AI SR1 — SteerCo oversight"],
+      "detailFile": "step-15.json"
+    }
+  ]
+}

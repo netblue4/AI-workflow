@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Acceptable Use — Governance Workflow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- LEFT: Navigation panel -->
+  <nav class="nav-panel" aria-label="Workflow navigation">
+    <div class="nav-header">
+      <p class="nav-header-title">ISO/IEC 42001-aligned</p>
+      <p class="nav-header-subtitle">AI Acceptable Use<br>Governance Workflow</p>
+    </div>
+    <div class="nav-scroll" id="nav-scroll">
+      <!-- Rendered by JS from workflow.json -->
+    </div>
+  </nav>
+
+  <!-- RIGHT: Detail panel -->
+  <main class="detail-panel" id="detail-panel" aria-live="polite">
+    <div class="detail-empty">
+      <svg class="detail-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <p class="detail-empty-text">Select a step to view details</p>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ---- Icons (inline SVG strings keyed by name) ---------------
+const ICONS = {
+  user: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,
+  shield: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 9.7-8 11-4.5-1.3-8-6-8-11V7l8-4z"/></svg>`,
+  users: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.85"/></svg>`,
+  building: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01"/></svg>`,
+  check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>`,
+  doc: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+};
+
+// ---- Phase color key lookup --------------------------------
+const PHASE_COLOR = {
+  teal: 'teal', purple: 'purple', amber: 'amber', blue: 'blue', coral: 'coral'
+};
+
+// ---- Applicability badge key lookup ------------------------
+const APPLIC_CLASS = {
+  'all': 'all',
+  'tier2': 'tier2',
+  'ops': 'ops',
+  'personal-data': 'pdata'
+};
+
+// ---- Load workflow.json ------------------------------------
+async function loadWorkflow() {
+  const res = await fetch('workflow.json');
+  if (!res.ok) throw new Error('Could not load workflow.json');
+  return res.json();
+}
+
+// ---- Build step index for quick lookup ---------------------
+function indexSteps(workflow) {
+  const idx = {};
+  workflow.steps.forEach(s => { idx[s.id] = s; });
+  return idx;
+}
+
+function indexPhases(workflow) {
+  const idx = {};
+  workflow.phases.forEach(p => { idx[p.id] = p; });
+  return idx;
+}
+
+// ---- Render nav panel from data ----------------------------
+function renderNav(workflow, stepIndex, phaseIndex, activeStepId) {
+  const container = document.getElementById('nav-scroll');
+  let html = '';
+
+  workflow.phases.forEach(phase => {
+    const colorKey = PHASE_COLOR[phase.colorKey] || 'teal';
+    html += `
+      <div class="nav-phase">
+        <div class="nav-phase-header">
+          <span class="nav-phase-pip pip-${colorKey}"></span>
+          <span class="nav-phase-label">Phase ${phase.number} — ${phase.title}</span>
+        </div>`;
+
+    phase.steps.forEach(stepId => {
+      const step = stepIndex[stepId];
+      if (!step) return;
+      const isActive = stepId === activeStepId;
+      const activeClass = isActive ? `active active-${colorKey}` : '';
+      html += `
+        <button class="nav-step ${activeClass}" data-step-id="${step.id}" onclick="selectStep('${step.id}')">
+          <span class="nav-step-num color-${colorKey}">${step.number}</span>
+          <span class="nav-step-title">${step.title}</span>
+          ${step.isNew ? '<span class="nav-step-new">new</span>' : ''}
+        </button>`;
+    });
+
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ---- Render step detail panel from step data ---------------
+function renderDetail(step, phaseColor, phaseTitle) {
+  const color = phaseColor || 'teal';
+  const applicClass = APPLIC_CLASS[step.applicabilityKey] || 'all';
+
+  let deliverablesHtml = step.deliverables.map(d => `
+    <li class="deliverable-item">
+      <span class="deliverable-icon">${ICONS.check}</span>
+      <span>${d}</span>
+    </li>`).join('');
+
+  let gatesHtml = (step.gates || []).map(g => `
+    <div class="gate-note ${g.type}">${g.text}</div>`).join('');
+
+  let reqHtml = (step.requirementLabels || []).map(r => `
+    <span class="req-pill">${r}</span>`).join('');
+
+  let srBadges = (step.requirements || []).map(r => `
+    <span class="badge sr">${r}</span>`).join('');
+
+  // Accountability grid (step 13 only)
+  let accountabilityHtml = '';
+  if (step.accountability) {
+    const sysItems = step.accountability.system.map(i => `<li>${i}</li>`).join('');
+    const userItems = step.accountability.user.map(i => `<li>${i}</li>`).join('');
+    accountabilityHtml = `
+      <p class="section-label">Accountability split</p>
+      <div class="accountability-grid">
+        <div class="acc-col system">
+          <p class="acc-col-title">System responsibilities</p>
+          <ul>${sysItems}</ul>
+        </div>
+        <div class="acc-col user">
+          <p class="acc-col-title">User responsibilities</p>
+          <ul>${userItems}</ul>
+        </div>
+      </div>`;
+  }
+
+  // Hint for future step-specific detail file
+  const detailHint = step.detailFile
+    ? `<p style="font-size:12px;color:var(--color-text-tertiary);margin-top:12px">
+        Step detail file: <code style="font-family:var(--font-mono)">${step.detailFile}</code>
+       </p>`
+    : '';
+
+  return `
+    <div class="step-detail-card">
+
+      <div class="step-detail-eyebrow">
+        <span class="step-detail-number color-${color}">${step.number}</span>
+        <span class="step-detail-phase-label">${phaseTitle}</span>
+      </div>
+
+      <h1 class="step-detail-title">
+        ${step.title}
+        ${step.isNew ? '<span class="badge new" style="font-size:11px;vertical-align:middle;margin-left:8px">new</span>' : ''}
+      </h1>
+
+      <div class="step-detail-meta">
+        <span class="owner-tag">${ICONS[step.ownerIcon] || ''}&nbsp;${step.owners.join(', ')}</span>
+        ${srBadges}
+        <span class="badge ${applicClass}">${step.applicability}</span>
+      </div>
+
+      <p class="step-detail-summary">${step.summary}</p>
+
+      <p class="section-label">Deliverables</p>
+      <ul class="deliverables-list">${deliverablesHtml}</ul>
+
+      ${accountabilityHtml}
+
+      ${gatesHtml ? `<p class="section-label" style="margin-top:${step.accountability ? '16px' : '0'}">Gates and notes</p>${gatesHtml}` : ''}
+
+      <div class="req-list">${reqHtml}</div>
+
+      ${detailHint}
+
+    </div>`;
+}
+
+// ---- Select and display a step -----------------------------
+let _workflow = null;
+let _stepIndex = null;
+let _phaseIndex = null;
+let _activeStepId = null;
+
+function selectStep(stepId) {
+  if (!_workflow || !_stepIndex) return;
+  _activeStepId = stepId;
+
+  const step = _stepIndex[stepId];
+  const phase = _phaseIndex[step.phaseId];
+  const color = PHASE_COLOR[phase.colorKey] || 'teal';
+  const phaseTitle = `Phase ${phase.number} — ${phase.title}`;
+
+  // Update detail panel
+  document.getElementById('detail-panel').innerHTML = renderDetail(step, color, phaseTitle);
+
+  // Update nav active state
+  renderNav(_workflow, _stepIndex, _phaseIndex, stepId);
+
+  // Scroll detail to top
+  document.getElementById('detail-panel').scrollTop = 0;
+}
+
+// ---- Bootstrap ---------------------------------------------
+(async () => {
+  try {
+    _workflow = await loadWorkflow();
+    _stepIndex = indexSteps(_workflow);
+    _phaseIndex = indexPhases(_workflow);
+    renderNav(_workflow, _stepIndex, _phaseIndex, null);
+  } catch (e) {
+    document.getElementById('nav-scroll').innerHTML =
+      `<p style="padding:12px;font-size:12px;color:var(--color-text-tertiary)">Could not load workflow.json: ${e.message}</p>`;
+  }
+})();
+</script>
+
+</body>
+</html>
