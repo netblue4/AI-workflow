@@ -1,8 +1,11 @@
 // step3-wizard.js
 // Interactive classification wizard for Step 3 — System Classification.
-// Renders a single scrolling card: reference overview → deliverables →
-// wizard inputs below. Produces a downloadable system-record.json and
-// can restore all answers from an uploaded record file.
+//
+// Layout pattern (reused across all step wizards):
+//   Tab 1 — "Step Wizard"    : interactive inputs that produce the step deliverables
+//   Tab 2 — "Reference"      : read-only overview of the step's JSON data
+//
+// Produces a downloadable system-record.json. Uploading the file restores all answers.
 
 (function () {
   'use strict';
@@ -15,12 +18,12 @@
   let _state = {
     use_case_id: '',
     classified_by: '',
-    axis_a_tier: null,      // 'tier_1' | 'tier_2'
-    gate_answers: {},       // { G1_Q1: 'yes'|'no', … }
+    axis_a_tier: null,    // 'tier_1' | 'tier_2'
+    gate_answers: {},     // { G1_Q1: 'yes'|'no', … }
     result: null
   };
 
-  let _record = {};         // full system record, grows across steps
+  let _record = {};       // full system record, grows as steps are completed
 
   // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -37,7 +40,7 @@
     container.innerHTML = '';
     const card = _el('div', 'step-detail-card');
 
-    // ── Step header ─────────────────────────────────────────────────────────
+    // ── Step header (shared across both tabs) ────────────────────────────────
     const eyebrow = _el('div', 'step-detail-eyebrow');
     eyebrow.append(
       _el('span', `step-detail-number color-${colorKey}`, { textContent: step.number }),
@@ -56,33 +59,118 @@
     const summary = _el('p', 'step-detail-summary', { textContent: detail.classification_model.description });
     card.append(eyebrow, titleEl, meta, summary);
 
-    // ── Reference: Axis A ───────────────────────────────────────────────────
-    card.appendChild(_sectionLabel('Axis A — Internal governance tier'));
-    card.appendChild(_el('p', '', {
-      style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:10px',
-      textContent: detail.classification_model.axis_a.purpose
-    }));
-    detail.axis_a_classification.tiers.forEach(t => {
+    // ── Tab strip ────────────────────────────────────────────────────────────
+    const tabStrip = _buildTabStrip();
+    card.appendChild(tabStrip);
+
+    // ── Wizard tab (default) ─────────────────────────────────────────────────
+    const wizardPane = _buildWizardPane(detail);
+    wizardPane.id = 'wiz-pane-wizard';
+
+    // ── Reference tab ────────────────────────────────────────────────────────
+    const referencePane = _buildReferencePane(detail);
+    referencePane.id = 'wiz-pane-reference';
+    referencePane.style.display = 'none';
+
+    card.append(wizardPane, referencePane);
+
+    // Tab switching
+    tabStrip.querySelectorAll('.wiz-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabStrip.querySelectorAll('.wiz-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const showWizard = btn.dataset.tab === 'wizard';
+        wizardPane.style.display   = showWizard ? 'block' : 'none';
+        referencePane.style.display = showWizard ? 'none' : 'block';
+      });
+    });
+
+    container.appendChild(card);
+
+    _updateGateVisibility();
+
+    if (_state.result) {
+      const rc = wizardPane.querySelector('#wiz-results');
+      if (rc) _renderResults(rc, _state.result);
+    }
+  };
+
+  // ── Tab strip ─────────────────────────────────────────────────────────────────
+
+  function _buildTabStrip() {
+    const strip = _el('div', 'wiz-tab-strip');
+    [['wizard', 'Step Wizard'], ['reference', 'Reference']].forEach(([key, label], i) => {
+      const btn = _el('button', 'wiz-tab' + (i === 0 ? ' active' : ''), { textContent: label });
+      btn.dataset.tab = key;
+      strip.appendChild(btn);
+    });
+    return strip;
+  }
+
+  // ── Wizard pane ───────────────────────────────────────────────────────────────
+
+  function _buildWizardPane(detail) {
+    const pane = _el('div', '');
+
+    pane.appendChild(_buildIdentitySection());
+    pane.appendChild(_buildAxisASection(detail.axis_a_classification));
+    pane.appendChild(_buildAxisBSection(detail.axis_b_classification));
+
+    // Action row
+    const actionRow = _el('div', 'wiz-action-row');
+
+    const classifyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Classify System' });
+    classifyBtn.addEventListener('click', () => _handleClassify(pane, detail));
+
+    const loadWrap = _el('div', '', { style: 'position:relative;display:inline-block' });
+    const loadBtn  = _el('button', 'wiz-btn-secondary', { textContent: 'Load System Record' });
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file'; fileInput.accept = '.json';
+    fileInput.style.cssText = 'position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;';
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) _loadRecord(file);
+      fileInput.value = '';
+    });
+    loadWrap.append(loadBtn, fileInput);
+
+    actionRow.append(classifyBtn, loadWrap);
+    pane.appendChild(actionRow);
+
+    const resultsContainer = _el('div', '');
+    resultsContainer.id = 'wiz-results';
+    pane.appendChild(resultsContainer);
+
+    return pane;
+  }
+
+  // ── Reference pane ────────────────────────────────────────────────────────────
+
+  function _buildReferencePane(detail) {
+    const pane = _el('div', '');
+    const cm    = detail.classification_model;
+    const axisA = detail.axis_a_classification;
+    const axisB = detail.axis_b_classification;
+    const matrix = detail.combined_outcome_matrix;
+
+    // Axis A
+    pane.appendChild(_sectionLabel('Axis A — Internal governance tier'));
+    pane.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:10px', textContent: cm.axis_a.purpose }));
+    axisA.tiers.forEach(t => {
       const c = _el('div', 'ov-tier-card');
       c.innerHTML = `
         <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px">${t.label}</p>
         <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">${t.definition}</p>
         <div style="margin-bottom:8px">${t.examples.map(e => `<span class="ov-chip">${e}</span>`).join('')}</div>
         <span class="badge ${t.change_board_required ? 'tier2' : 'all'}">${t.change_board_required ? 'Change Board required' : 'ISG fast-track'}</span>`;
-      card.appendChild(c);
+      pane.appendChild(c);
     });
-    card.appendChild(_el('div', 'gate-note warning', {
-      style: 'margin-top:4px;margin-bottom:24px',
-      textContent: `Escalation rule: ${detail.axis_a_classification.escalation_rule}`
-    }));
+    pane.appendChild(_el('div', 'gate-note warning', { style: 'margin-top:4px;margin-bottom:24px', textContent: `Escalation rule: ${axisA.escalation_rule}` }));
 
-    // ── Reference: Axis B gate summary ──────────────────────────────────────
-    card.appendChild(_sectionLabel('Axis B — EU AI Act legal risk tier'));
-    card.appendChild(_el('p', '', {
-      style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:10px',
-      textContent: detail.classification_model.axis_b.purpose
-    }));
-    detail.axis_b_classification.gates.forEach(g => {
+    // Axis B gate summary
+    pane.appendChild(_sectionLabel('Axis B — EU AI Act legal risk tier'));
+    pane.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:10px', textContent: cm.axis_b.purpose }));
+    axisB.gates.forEach(g => {
       const row = _el('div', 'ov-gate-row');
       row.innerHTML = `
         <span class="badge pdata" style="min-width:28px;text-align:center;flex-shrink:0">${g.gate_id}</span>
@@ -91,114 +179,58 @@
           <p style="font-size:12px;color:var(--color-text-secondary)">${g.gate_purpose}</p>
           ${g.short_circuit ? `<p class="gate-note danger" style="margin-top:6px;font-size:11px">${g.short_circuit}</p>` : ''}
         </div>`;
-      card.appendChild(row);
+      pane.appendChild(row);
     });
+    pane.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-tertiary);margin-top:4px;margin-bottom:24px', textContent: 'Full gate questions and article mappings are defined in step-3.json.' }));
 
-    // ── Reference: Outcome matrix ───────────────────────────────────────────
-    card.appendChild(_sectionLabel('Combined outcome matrix'));
-    card.appendChild(_el('p', '', {
-      style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:10px',
-      textContent: detail.combined_outcome_matrix.description
-    }));
+    // Outcome matrix
+    pane.appendChild(_sectionLabel('Combined outcome matrix'));
+    pane.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:10px', textContent: matrix.description }));
     const axisColors = {
-      PROHIBITED:    ['var(--danger-fill)',  'var(--danger-text)'],
-      HIGH_RISK:     ['var(--warning-fill)', 'var(--warning-text)'],
-      LIMITED_RISK:  ['var(--info-fill)',    'var(--info-text)'],
-      MINIMAL_RISK:  ['var(--success-fill)', 'var(--success-text)'],
-      OUT_OF_SCOPE:  ['var(--color-bg)',     'var(--color-text-secondary)'],
+      PROHIBITED:   ['var(--danger-fill)',  'var(--danger-text)'],
+      HIGH_RISK:    ['var(--warning-fill)', 'var(--warning-text)'],
+      LIMITED_RISK: ['var(--info-fill)',    'var(--info-text)'],
+      MINIMAL_RISK: ['var(--success-fill)', 'var(--success-text)'],
+      OUT_OF_SCOPE: ['var(--color-bg)',     'var(--color-text-secondary)'],
     };
     const tbl = document.createElement('table');
     tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px';
     tbl.innerHTML = `
       <thead><tr style="background:var(--color-bg)">
-        ${['Axis A', 'Axis B', 'Combined outcome', 'Oversight'].map(h =>
+        ${['Axis A','Axis B','Combined outcome','Oversight'].map(h =>
           `<th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:500;color:var(--color-text-secondary);border-bottom:1px solid var(--color-border)">${h}</th>`
         ).join('')}
       </tr></thead>
-      <tbody>${detail.combined_outcome_matrix.rules.map(r => {
+      <tbody>${matrix.rules.map(r => {
         const [bg, col] = axisColors[r.axis_b] || axisColors.MINIMAL_RISK;
-        const axisALabel = r.axis_a === 'any' ? 'Any' : r.axis_a === 'tier_1' ? 'Tier 1' : 'Tier 2';
+        const aLabel = r.axis_a === 'any' ? 'Any' : r.axis_a === 'tier_1' ? 'Tier 1' : 'Tier 2';
         return `<tr style="border-bottom:1px solid var(--color-border)">
-          <td style="padding:8px 10px;color:var(--color-text-secondary)">${axisALabel}</td>
+          <td style="padding:8px 10px;color:var(--color-text-secondary)">${aLabel}</td>
           <td style="padding:8px 10px"><span style="font-size:11px;font-weight:500;padding:2px 7px;border-radius:4px;background:${bg};color:${col}">${r.axis_b}</span></td>
           <td style="padding:8px 10px;font-weight:500;color:var(--color-text-primary)">${r.label}</td>
           <td style="padding:8px 10px;color:var(--color-text-secondary)">${r.article_14_human_oversight ? '✓ Art.14' : r.axis_b === 'PROHIBITED' ? '—' : 'Portfolio'}</td>
         </tr>`;
       }).join('')}</tbody>`;
-    card.appendChild(tbl);
+    pane.appendChild(tbl);
 
-    // ── Deliverables ────────────────────────────────────────────────────────
-    card.appendChild(_sectionLabel('Deliverables'));
+    // Deliverables
+    pane.appendChild(_sectionLabel('Deliverables'));
     const dl = _el('ul', 'deliverables-list', { style: 'margin-bottom:24px' });
     detail.deliverables.forEach(d => {
       const li = _el('li', 'deliverable-item');
       li.innerHTML = `<span class="deliverable-icon">${typeof ICONS !== 'undefined' ? ICONS.check : ''}</span><span>${d}</span>`;
       dl.appendChild(li);
     });
-    card.appendChild(dl);
+    pane.appendChild(dl);
 
-    // SR9 note + requirement labels (end of reference section)
-    card.appendChild(_el('div', 'gate-note info', {
-      style: 'margin-bottom:8px',
-      innerHTML: `<strong>AI SR9 clarification:</strong> ${detail.standard_note}`
-    }));
+    // SR9 note + requirement labels
+    pane.appendChild(_el('div', 'gate-note info', { style: 'margin-bottom:8px', innerHTML: `<strong>AI SR9 clarification:</strong> ${detail.standard_note}` }));
     const reqList = _el('div', 'req-list');
-    (detail.requirement_labels || []).forEach(r =>
-      reqList.appendChild(_el('span', 'req-pill', { textContent: r }))
-    );
-    card.appendChild(reqList);
+    (detail.requirement_labels || []).forEach(r => reqList.appendChild(_el('span', 'req-pill', { textContent: r })));
+    pane.appendChild(reqList);
 
-    // ── Wizard divider ──────────────────────────────────────────────────────
-    const divider = _el('div', '', { style: 'margin-top:32px;padding-top:28px;border-top:2px solid var(--color-border)' });
-    const wizHeading = _el('h2', '', { style: 'font-size:16px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px', textContent: 'Classification Wizard' });
-    const wizSubtitle = _el('p', '', {
-      style: 'font-size:13px;color:var(--color-text-secondary);margin-bottom:24px',
-      textContent: 'Complete both axes below to produce the classification record and generate the system authorisation evidence file.'
-    });
-    divider.append(wizHeading, wizSubtitle);
-    card.appendChild(divider);
-
-    // ── Wizard: Identity ────────────────────────────────────────────────────
-    card.appendChild(_buildIdentitySection());
-
-    // ── Wizard: Axis A interactive ──────────────────────────────────────────
-    card.appendChild(_buildAxisASection(detail.axis_a_classification));
-
-    // ── Wizard: Axis B gates ────────────────────────────────────────────────
-    card.appendChild(_buildAxisBSection(detail.axis_b_classification));
-
-    // ── Action row ──────────────────────────────────────────────────────────
-    const actionRow = _el('div', 'wiz-action-row');
-
-    const classifyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Classify System' });
-    classifyBtn.addEventListener('click', () => _handleClassify(card, detail));
-
-    const loadWrap = _el('div', '', { style: 'position:relative;display:inline-block' });
-    const loadBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Load System Record' });
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.json';
-    fileInput.style.cssText = 'position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;';
-    fileInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (file) _loadRecord(file);
-      fileInput.value = '';
-    });
-    loadWrap.append(loadBtn, fileInput);
-    actionRow.append(classifyBtn, loadWrap);
-    card.appendChild(actionRow);
-
-    // ── Results container ───────────────────────────────────────────────────
-    const resultsContainer = _el('div', '');
-    resultsContainer.id = 'wiz-results';
-    card.appendChild(resultsContainer);
-
-    container.appendChild(card);
-
-    _updateGateVisibility();
-
-    if (_state.result) _renderResults(resultsContainer, _state.result);
-  };
+    return pane;
+  }
 
   // ── Identity section ──────────────────────────────────────────────────────────
 
@@ -207,6 +239,7 @@
     const lbl = _sectionLabel('Use case identity');
     lbl.style.marginBottom = '12px';
     section.appendChild(lbl);
+
     const grid = _el('div', '', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:12px' });
     [
       { id: 'wiz-use-case-id',   label: 'Use case ID',   placeholder: 'e.g. UC-001',  key: 'use_case_id'   },
@@ -224,11 +257,12 @@
       wrap.append(lbl2, inp);
       grid.appendChild(wrap);
     });
+
     section.appendChild(grid);
     return section;
   }
 
-  // ── Axis A interactive section ────────────────────────────────────────────────
+  // ── Axis A interactive ────────────────────────────────────────────────────────
 
   function _buildAxisASection(axisA) {
     const section = _el('div', '', { style: 'margin-bottom:20px' });
@@ -237,6 +271,7 @@
       style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:12px',
       textContent: 'Select the tier that applies to this use case.'
     }));
+
     axisA.tiers.forEach(tier => {
       const radio = document.createElement('input');
       radio.type = 'radio'; radio.name = 'wiz-axis-a'; radio.value = tier.tier_id;
@@ -249,14 +284,16 @@
       card.className = 'wiz-tier-card' + (_state.axis_a_tier === tier.tier_id ? ` selected-${tier.tier_id}` : '');
 
       const headerRow = _el('div', '', { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px' });
-      headerRow.appendChild(_el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: tier.label }));
-      headerRow.appendChild(_el('span', `badge ${tier.change_board_required ? 'tier2' : 'all'}`, {
-        textContent: tier.change_board_required ? 'Change Board required' : 'ISG fast-track'
-      }));
+      headerRow.append(
+        _el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: tier.label }),
+        _el('span', `badge ${tier.change_board_required ? 'tier2' : 'all'}`, { textContent: tier.change_board_required ? 'Change Board required' : 'ISG fast-track' })
+      );
+      const chips = _el('div', '');
+      tier.examples.forEach(e => chips.appendChild(_el('span', 'ov-chip', { textContent: e })));
       card.append(
         headerRow,
         _el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:8px', textContent: tier.definition }),
-        (() => { const d = _el('div', ''); tier.examples.forEach(e => d.appendChild(_el('span', 'ov-chip', { textContent: e }))); return d; })()
+        chips
       );
 
       radio.addEventListener('change', () => {
@@ -264,15 +301,18 @@
         section.querySelectorAll('.wiz-tier-card').forEach(c => { c.className = 'wiz-tier-card'; });
         card.className = `wiz-tier-card selected-${tier.tier_id}`;
       });
+
       section.appendChild(card);
     });
+
+    section.appendChild(_el('div', 'gate-note warning', { style: 'margin-top:4px', textContent: `Escalation rule: ${axisA.escalation_rule}` }));
     return section;
   }
 
   // ── Axis B gates ──────────────────────────────────────────────────────────────
 
   function _buildAxisBSection(axisB) {
-    const section = _el('div', '', { style: 'margin-top:4px;margin-bottom:4px' });
+    const section = _el('div', '', { style: 'margin-top:24px;margin-bottom:4px' });
     section.appendChild(_sectionLabel('Axis B — Complete EU AI Act gates G1–G5'));
     section.appendChild(_el('p', '', {
       style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:14px',
@@ -288,8 +328,10 @@
 
     const header = _el('div', 'wiz-gate-header');
     const titleRow = _el('div', '', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:4px' });
-    titleRow.appendChild(_el('span', 'badge pdata', { textContent: gate.gate_id }));
-    titleRow.appendChild(_el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: gate.gate_name }));
+    titleRow.append(
+      _el('span', 'badge pdata', { textContent: gate.gate_id }),
+      _el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: gate.gate_name })
+    );
     header.appendChild(titleRow);
     header.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-top:2px', textContent: gate.gate_purpose }));
     if (gate.short_circuit) header.appendChild(_el('p', 'gate-note danger', { style: 'margin-top:8px;font-size:11px', textContent: gate.short_circuit }));
@@ -346,8 +388,8 @@
     if (!_detail) return;
     const gates = _detail.axis_b_classification.gates;
     const g1 = gates.find(g => g.gate_id === 'G1');
-    const g1AnyYes = g1 && g1.questions.some(q => _state.gate_answers[q.id] === 'yes');
     const g2 = gates.find(g => g.gate_id === 'G2');
+    const g1AnyYes = g1 && g1.questions.some(q => _state.gate_answers[q.id] === 'yes');
     const g2AnyNo  = g2 && g2.questions.some(q => _state.gate_answers[q.id] === 'no');
 
     gates.forEach(gate => {
@@ -364,9 +406,9 @@
 
   // ── Classify ──────────────────────────────────────────────────────────────────
 
-  function _handleClassify(card, detail) {
+  function _handleClassify(pane, detail) {
     if (!_state.axis_a_tier) {
-      _showInlineError(card, 'Please select an Axis A tier before classifying.');
+      _showInlineError(pane, 'Please select an Axis A tier before classifying.');
       return;
     }
     const unanswered = [];
@@ -376,25 +418,24 @@
       gate.questions.forEach(q => { if (!_state.gate_answers[q.id]) unanswered.push(q.id); });
     });
     if (unanswered.length > 0) {
-      _showInlineError(card, `${unanswered.length} gate question${unanswered.length > 1 ? 's' : ''} still need${unanswered.length === 1 ? 's' : ''} an answer.`);
+      _showInlineError(pane, `${unanswered.length} gate question${unanswered.length > 1 ? 's' : ''} still need${unanswered.length === 1 ? 's' : ''} an answer.`);
       return;
     }
-    _clearInlineError(card);
+    _clearInlineError(pane);
 
-    const axisBResult    = _evaluateGates(_state.gate_answers, detail.axis_b_classification.gates);
+    const axisBResult     = _evaluateGates(_state.gate_answers, detail.axis_b_classification.gates);
     const combinedOutcome = _lookupCombinedOutcome(_state.axis_a_tier, axisBResult.classification, detail.combined_outcome_matrix);
-    const outputRecord   = _buildOutputRecord(axisBResult, combinedOutcome, detail);
+    const outputRecord    = _buildOutputRecord(axisBResult, combinedOutcome, detail);
 
     _state.result = outputRecord;
     _record['step-3'] = outputRecord;
     if (!_record._meta) _record._meta = { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString() };
     _record._meta.last_modified = new Date().toISOString();
     _record._meta.use_case_id   = outputRecord.use_case_id || _record._meta.use_case_id || '';
-
     try { sessionStorage.setItem('_aiWorkflowRecord', JSON.stringify(_record)); } catch (_) {}
 
-    const resultsContainer = card.querySelector('#wiz-results');
-    if (resultsContainer) _renderResults(resultsContainer, outputRecord);
+    const rc = pane.querySelector('#wiz-results');
+    if (rc) _renderResults(rc, outputRecord);
   }
 
   // ── Gate evaluation ───────────────────────────────────────────────────────────
@@ -455,7 +496,7 @@
         || null;
   }
 
-  // ── Build output record ───────────────────────────────────────────────────────
+  // ── Build output record (matches output_record_template in step-3.json) ────────
 
   function _buildOutputRecord(axisBResult, combinedOutcome, detail) {
     const tierDef = detail.axis_a_classification.tiers.find(t => t.tier_id === _state.axis_a_tier);
@@ -506,9 +547,11 @@
     const s = STYLES[classification] || STYLES.MINIMAL_RISK;
 
     const headerRow = _el('div', '', { style: 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px' });
-    headerRow.appendChild(_el('h3', '', { style: 'font-size:16px;font-weight:500;color:var(--color-text-primary);margin:0', textContent: 'Classification Result' }));
-    headerRow.appendChild(_el('span', `badge ${record.axis_a.tier === 'tier_1' ? 'all' : 'tier2'}`, { textContent: record.axis_a.tier_label || record.axis_a.tier }));
-    headerRow.appendChild(_el('span', `wiz-result-badge ${s.cls}`, { textContent: s.label }));
+    headerRow.append(
+      _el('h3', '', { style: 'font-size:16px;font-weight:500;color:var(--color-text-primary);margin:0', textContent: 'Classification Result' }),
+      _el('span', `badge ${record.axis_a.tier === 'tier_1' ? 'all' : 'tier2'}`, { textContent: record.axis_a.tier_label || record.axis_a.tier }),
+      _el('span', `wiz-result-badge ${s.cls}`, { textContent: s.label })
+    );
     container.appendChild(headerRow);
 
     if (classification === 'PROHIBITED') {
@@ -527,14 +570,14 @@
       coCard.appendChild(_el('p', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:12px', textContent: co.outcome_label }));
       const flagGrid = _el('div', 'wiz-flag-grid');
       [
-        { label: 'Change Board approval',  value: co.change_board_required },
-        { label: 'Conformity assessment',  value: co.requires_conformity_assessment },
-        { label: 'DPIA required',          value: co.requires_dpia === true ? true : co.requires_dpia === false ? false : null },
-        { label: 'Article 14 oversight',   value: co.article_14_human_oversight },
-        { label: 'Article 50 disclosure',  value: co.article_50_transparency === true ? true : co.article_50_transparency === false ? false : null },
+        { label: 'Change Board approval', value: co.change_board_required },
+        { label: 'Conformity assessment', value: co.requires_conformity_assessment },
+        { label: 'DPIA required',         value: co.requires_dpia === true ? true : co.requires_dpia === false ? false : null },
+        { label: 'Article 14 oversight',  value: co.article_14_human_oversight },
+        { label: 'Article 50 disclosure', value: co.article_50_transparency === true ? true : co.article_50_transparency === false ? false : null },
       ].forEach(({ label, value }) => {
         const flag = _el('div', 'wiz-flag');
-        const dot = _el('span', 'wiz-flag-dot');
+        const dot  = _el('span', 'wiz-flag-dot');
         dot.style.background = value === true ? 'var(--danger-border)' : value === false ? 'var(--success-border)' : 'var(--color-border-mid)';
         flag.append(
           dot,
@@ -571,9 +614,7 @@
       cnLbl.style.marginTop = '16px';
       container.appendChild(cnLbl);
       const cnWrap = _el('div', '', { style: 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px' });
-      record.all_requirement_control_numbers.forEach(cn =>
-        cnWrap.appendChild(_el('span', 'wiz-cn-badge', { textContent: cn }))
-      );
+      record.all_requirement_control_numbers.forEach(cn => cnWrap.appendChild(_el('span', 'wiz-cn-badge', { textContent: cn })));
       container.appendChild(cnWrap);
     }
 
@@ -635,12 +676,12 @@
 
   // ── Inline error ──────────────────────────────────────────────────────────────
 
-  function _showInlineError(card, message) {
-    let err = card.querySelector('.wiz-inline-error');
-    if (!err) { err = _el('div', 'wiz-inline-error gate-note danger'); card.querySelector('.wiz-action-row').insertAdjacentElement('afterend', err); }
+  function _showInlineError(pane, message) {
+    let err = pane.querySelector('.wiz-inline-error');
+    if (!err) { err = _el('div', 'wiz-inline-error gate-note danger'); pane.querySelector('.wiz-action-row').insertAdjacentElement('afterend', err); }
     err.textContent = message;
   }
-  function _clearInlineError(card) { const e = card.querySelector('.wiz-inline-error'); if (e) e.remove(); }
+  function _clearInlineError(pane) { const e = pane.querySelector('.wiz-inline-error'); if (e) e.remove(); }
 
   // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -649,25 +690,42 @@
     _stylesInjected = true;
     const style = document.createElement('style');
     style.textContent = `
+      /* Tab strip */
+      .wiz-tab-strip { display:flex;margin-bottom:24px;border-bottom:1px solid var(--color-border); }
+      .wiz-tab { padding:8px 18px;font-size:13px;font-weight:500;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;transition:color var(--transition),border-color var(--transition); }
+      .wiz-tab:hover { color:var(--color-text-primary); }
+      .wiz-tab.active { color:var(--teal-text);border-bottom-color:var(--teal-border); }
+
+      /* Identity */
       .wiz-section { background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px 18px;margin-bottom:20px; }
+
+      /* Axis A tier cards */
       .wiz-tier-card { display:block;border:2px solid var(--color-border);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color var(--transition),background var(--transition);user-select:none; }
       .wiz-tier-card:hover { border-color:var(--color-border-mid);background:var(--color-bg); }
       .wiz-tier-card.selected-tier_1 { border-color:var(--teal-border);background:var(--teal-fill); }
       .wiz-tier-card.selected-tier_2 { border-color:var(--amber-border);background:var(--amber-fill); }
+
+      /* Gates */
       .wiz-gate-section { border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;transition:opacity var(--transition); }
       .wiz-gate-header { padding:12px 16px;background:var(--color-bg);border-bottom:1px solid var(--color-border); }
       .wiz-gate-body { padding:14px 16px;display:flex;flex-direction:column;gap:10px; }
+
+      /* Questions */
       .wiz-q-row { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;transition:border-color var(--transition); }
       .wiz-q-row.answered-yes { border-color:var(--danger-border); }
       .wiz-q-row.answered-no  { border-color:var(--success-border); }
       .wiz-pill { padding:5px 18px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--color-border-mid);background:var(--color-surface);color:var(--color-text-secondary);transition:all var(--transition);user-select:none;font-family:inherit; }
       .wiz-pill.active-yes { border-color:var(--danger-border);background:var(--danger-fill);color:var(--danger-text); }
       .wiz-pill.active-no  { border-color:var(--success-border);background:var(--success-fill);color:var(--success-text); }
+
+      /* Actions */
       .wiz-action-row { display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border); }
       .wiz-btn-primary { padding:10px 22px;border-radius:var(--radius-md);font-size:14px;font-weight:500;cursor:pointer;background:var(--teal-border);color:#fff;border:none;font-family:inherit;transition:opacity var(--transition); }
       .wiz-btn-primary:hover { opacity:0.88; }
       .wiz-btn-secondary { padding:10px 22px;border-radius:var(--radius-md);font-size:14px;font-weight:500;cursor:pointer;background:var(--color-surface);color:var(--color-text-secondary);border:1px solid var(--color-border-mid);font-family:inherit;transition:background var(--transition); }
       .wiz-btn-secondary:hover { background:var(--color-bg); }
+
+      /* Results */
       .wiz-result-badge { font-size:11px;font-weight:600;padding:3px 12px;border-radius:999px;letter-spacing:0.5px; }
       .wiz-result-badge.danger  { background:var(--danger-fill); border:1px solid var(--danger-border); color:var(--danger-text); }
       .wiz-result-badge.warning { background:var(--warning-fill);border:1px solid var(--warning-border);color:var(--warning-text); }
@@ -679,6 +737,8 @@
       .wiz-flag-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
       .wiz-article-card { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px; }
       .wiz-cn-badge { font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--purple-fill);border:1px solid var(--purple-border);color:var(--purple-text);font-family:var(--font-mono); }
+
+      /* Reference pane helpers */
       .ov-tier-card { background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px; }
       .ov-chip { display:inline-block;font-size:11px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:4px;padding:2px 7px;margin:2px 2px 2px 0;color:var(--color-text-secondary); }
       .ov-gate-row { display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--color-bg);border-radius:var(--radius-md);margin-bottom:6px; }
