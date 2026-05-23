@@ -18,6 +18,13 @@
     relevance_filter: 'all' // 'all' | 'high'
   };
 
+  // Guided wizard state
+  const _wizState = {
+    step_index: 0,      // current question index (0-based)
+    answers:    {},     // riskName → 'yes'|'partially'|'no'
+    complete:   false
+  };
+
   let _searchQuery = '';
 
   // Category color palette — maps JSON color keys to CSS values
@@ -49,6 +56,9 @@
     _state.selected_risks  = {};
     _state.relevance_filter = 'all';
     _searchQuery = '';
+    _wizState.step_index = 0;
+    _wizState.answers    = {};
+    _wizState.complete   = false;
 
     _injectStyles();
 
@@ -87,10 +97,17 @@
     _step3Data = _record?.['step-3'] ?? null;
     _step7Data = _record?.['step-7'] ?? null;
 
-    // Restore prior selections
+    // Restore prior selections + wizard answers
     const saved8 = _record?.['step-8'];
     if (saved8?.risks) {
       saved8.risks.forEach(r => { _state.selected_risks[r.risk_name] = r.selected; });
+    }
+    if (saved8?.wizard_answers) {
+      Object.assign(_wizState.answers, saved8.wizard_answers);
+      const wqs = _guidance?.wizard_questions;
+      if (wqs && Object.keys(_wizState.answers).length >= wqs.length) {
+        _wizState.complete = true;
+      }
     }
 
     _filteredFGItems = _buildFGItems();
@@ -227,7 +244,7 @@
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     const strip = _el('div', 'wiz-tab-strip');
-    [['wizard', 'Step Wizard'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
+    [['guided', 'Guided'], ['browse', 'Browse All'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
       const btn = document.createElement('button');
       btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
       btn.dataset.tab = id; btn.textContent = lbl;
@@ -247,11 +264,305 @@
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const wz  = _el('div', 'wiz-pane');  wz.dataset.pane  = 'wizard';
-    const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
-    wz.appendChild(_buildWizardPane());
+    const guided = _el('div', 'wiz-pane');             guided.dataset.pane = 'guided';
+    const browse = _el('div', 'wiz-pane wiz-pane--hidden'); browse.dataset.pane = 'browse';
+    const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
+    guided.appendChild(_buildGuidedPane());
+    browse.appendChild(_buildWizardPane());
     ref.appendChild(_buildReferencePane());
-    pw.appendChild(wz); pw.appendChild(ref);
+    pw.appendChild(guided); pw.appendChild(browse); pw.appendChild(ref);
+  }
+
+  // ---- Re-render guided pane in place -------------------------
+  function _renderGuidedPane() {
+    const pane = _container.querySelector('[data-pane="guided"]');
+    if (!pane) return;
+    pane.innerHTML = '';
+    pane.appendChild(_buildGuidedPane());
+  }
+
+  // ---- Guided pane dispatcher ---------------------------------
+  function _buildGuidedPane() {
+    const wqs = _guidance?.wizard_questions;
+    if (!wqs?.length) {
+      const card = _el('div', 'step-detail-card');
+      const p = _el('p', 'wiz8-notice');
+      p.innerHTML = 'No wizard questions defined. Add a <code>wizard_questions</code> array to <strong>step8-guidance.json</strong> to enable guided mode.';
+      card.appendChild(p);
+      return card;
+    }
+    if (_wizState.complete) return _buildWizardSummary();
+    return _buildQuestionScreen(_wizState.step_index);
+  }
+
+  // ---- Single question screen ---------------------------------
+  function _buildQuestionScreen(idx) {
+    const wqs   = _guidance.wizard_questions;
+    const total = wqs.length;
+    const wq    = wqs[idx];
+    const riskG = _guidance.risks?.[wq.risk_name];
+    const relevance = _computeRelevance(wq.risk_name);
+    const category  = riskG?.category || null;
+    const catColor  = category ? (_guidance.categories?.[category]?.color || 'slate') : 'slate';
+    const catColors = _CAT_COLORS[catColor] || _CAT_COLORS.slate;
+    const answer    = _wizState.answers[wq.risk_name] || null;
+
+    const wrap = _el('div', 'wiz8-guided-wrap');
+
+    // Progress bar
+    const progWrap = _el('div', 'wiz8-guided-prog-wrap');
+    const progMeta = _el('div', 'wiz8-guided-prog-meta');
+    const progTitle = _el('span', 'wiz8-guided-prog-title');
+    progTitle.textContent = 'Guided Risk Assessment';
+    const progLabel = _el('span', 'wiz8-guided-prog-label');
+    progLabel.textContent = `${idx + 1} of ${total}`;
+    progMeta.appendChild(progTitle); progMeta.appendChild(progLabel);
+    const progBar  = _el('div', 'wiz8-guided-prog-bar');
+    const progFill = _el('div', 'wiz8-guided-prog-fill');
+    progFill.style.width = Math.round((idx / total) * 100) + '%';
+    progBar.appendChild(progFill);
+    progWrap.appendChild(progMeta); progWrap.appendChild(progBar);
+    wrap.appendChild(progWrap);
+
+    // Question card
+    const qCard = _el('div', 'wiz8-q-card');
+    if (relevance === 'high') qCard.classList.add('wiz8-q-card--high');
+
+    // Meta row: category + relevance
+    const qMeta = _el('div', 'wiz8-q-meta');
+    if (category) {
+      const catTag = _el('span', 'wiz8-cat-tag');
+      catTag.textContent = category;
+      catTag.style.background = catColors.bg; catTag.style.color = catColors.text;
+      qMeta.appendChild(catTag);
+    }
+    if (relevance !== 'unassessed') {
+      const relBadge = _el('span', `wiz8-rel-badge wiz8-rel-badge--${relevance}`);
+      relBadge.textContent = relevance === 'high' ? '▲ HIGH' : '◆ MEDIUM';
+      qMeta.appendChild(relBadge);
+    }
+    qCard.appendChild(qMeta);
+
+    // Risk name
+    const rName = _el('h3', 'wiz8-q-risk-name');
+    rName.textContent = wq.risk_name; qCard.appendChild(rName);
+
+    // Interrogative question text
+    const qText = _el('p', 'wiz8-q-text');
+    qText.textContent = wq.question; qCard.appendChild(qText);
+
+    // Applies-if conditions
+    if (riskG?.applies_if?.length) {
+      const aiWrap  = _el('div', 'wiz8-applies-wrap');
+      const aiLabel = _el('p', 'wiz8-applies-label');
+      aiLabel.textContent = 'This risk applies if any of:';
+      aiWrap.appendChild(aiLabel);
+      const aiList = _el('ul', 'wiz8-applies-list');
+      riskG.applies_if.forEach(cond => {
+        const li = _el('li', 'wiz8-applies-item'); li.textContent = cond; aiList.appendChild(li);
+      });
+      aiWrap.appendChild(aiList);
+      qCard.appendChild(aiWrap);
+    }
+
+    // Traditional analogue
+    if (riskG?.traditional_analog) {
+      const analogRow  = _el('div', 'wiz8-analog-row');
+      const analogIcon = _el('span', 'wiz8-analog-icon');
+      analogIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      analogRow.appendChild(analogIcon);
+      const analogText = _el('span', 'wiz8-analog-text');
+      analogText.textContent = riskG.traditional_analog;
+      analogRow.appendChild(analogText);
+      qCard.appendChild(analogRow);
+    }
+
+    wrap.appendChild(qCard);
+
+    // Answer label
+    const ansLabel = _el('p', 'wiz8-q-answer-label');
+    ansLabel.textContent = 'Does this risk apply to your system?';
+    wrap.appendChild(ansLabel);
+
+    // Answer buttons
+    const btnRow = _el('div', 'wiz8-q-btn-row');
+
+    const advance = () => {
+      if (idx < total - 1) {
+        _wizState.step_index = idx + 1;
+      } else {
+        _wizState.complete = true;
+      }
+      _renderGuidedPane();
+    };
+
+    [
+      ['yes',       '✓  Yes, this risk applies',  'wiz8-q-btn--yes'],
+      ['partially', '~  Partially applies',        'wiz8-q-btn--part'],
+      ['no',        '✗  No / not applicable',      'wiz8-q-btn--no']
+    ].forEach(([val, label, mod]) => {
+      const btn = _el('button', `wiz8-q-btn ${mod}${answer === val ? ' wiz8-q-btn--selected' : ''}`);
+      btn.textContent = label;
+      btn.addEventListener('click', () => { _wizState.answers[wq.risk_name] = val; advance(); });
+      btnRow.appendChild(btn);
+    });
+    wrap.appendChild(btnRow);
+
+    // Navigation row
+    const navRow = _el('div', 'wiz8-q-nav-row');
+    if (idx > 0) {
+      const backBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
+      backBtn.textContent = '← Back';
+      backBtn.addEventListener('click', () => { _wizState.step_index = idx - 1; _renderGuidedPane(); });
+      navRow.appendChild(backBtn);
+    } else {
+      navRow.appendChild(_el('span', '')); // left spacer
+    }
+
+    const navRight = _el('div', 'wiz8-q-nav-right');
+    const posLabel = _el('span', 'wiz8-q-nav-pos');
+    posLabel.textContent = `${idx + 1} / ${total}`;
+    navRight.appendChild(posLabel);
+
+    if (idx < total - 1) {
+      const nextBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--next');
+      nextBtn.textContent = 'Next →';
+      nextBtn.addEventListener('click', () => { _wizState.step_index = idx + 1; _renderGuidedPane(); });
+      navRight.appendChild(nextBtn);
+    } else {
+      const finBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--finish');
+      finBtn.textContent = 'Finish ✓';
+      finBtn.addEventListener('click', () => { _wizState.complete = true; _renderGuidedPane(); });
+      navRight.appendChild(finBtn);
+    }
+    navRow.appendChild(navRight);
+    wrap.appendChild(navRow);
+
+    return wrap;
+  }
+
+  // ---- Summary screen (after wizard completes) ----------------
+  function _buildWizardSummary() {
+    const wqs = _guidance.wizard_questions;
+
+    const applicable = wqs.filter(wq => ['yes', 'partially'].includes(_wizState.answers[wq.risk_name]));
+    const excluded   = wqs.filter(wq => _wizState.answers[wq.risk_name] === 'no');
+    const skipped    = wqs.filter(wq => !_wizState.answers[wq.risk_name]);
+    const highApp    = applicable.filter(wq => _computeRelevance(wq.risk_name) === 'high');
+
+    // Group applicable by category
+    const byCategory = {};
+    applicable.forEach(wq => {
+      const cat = _guidance.risks?.[wq.risk_name]?.category || 'Other';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(wq);
+    });
+
+    const wrap = _el('div', 'wiz8-guided-wrap');
+    const card = _el('div', 'step-detail-card');
+
+    // Heading
+    const tickRow = _el('div', 'wiz8-summary-tick-row');
+    const tickIcon = _el('span', 'wiz8-summary-tick-icon');
+    tickIcon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+    const tickTitle = _el('h2', 'wiz8-summary-title');
+    tickTitle.textContent = 'Guided Assessment Complete';
+    tickRow.appendChild(tickIcon); tickRow.appendChild(tickTitle);
+    card.appendChild(tickRow);
+
+    // Stats
+    const stats = _el('div', 'wiz8-summary-stats');
+    [
+      [applicable.length, 'Risks identified',       '#15803d'],
+      [highApp.length,    'HIGH relevance',          '#b91c1c'],
+      [excluded.length,   'Excluded',                '#64748b'],
+      [skipped.length,    'Skipped',                 '#94a3b8']
+    ].forEach(([num, lbl, col]) => {
+      const s = _el('div', 'wiz8-stat');
+      const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num); n.style.color = col;
+      const l = _el('span', 'wiz8-stat-lbl'); l.textContent = lbl;
+      s.appendChild(n); s.appendChild(l); stats.appendChild(s);
+    });
+    card.appendChild(stats);
+
+    // Category breakdown
+    if (Object.keys(byCategory).length) {
+      card.appendChild(_sectionLabel('Identified Risks by Category'));
+      const catList = _el('div', 'wiz8-summary-cat-list');
+      Object.entries(byCategory).forEach(([cat, risks]) => {
+        const row = _el('div', 'wiz8-summary-cat-row');
+        const catTag = _el('span', 'wiz8-cat-tag');
+        catTag.textContent = cat;
+        const c = _CAT_COLORS[_guidance.categories?.[cat]?.color || 'slate'] || _CAT_COLORS.slate;
+        catTag.style.background = c.bg; catTag.style.color = c.text;
+        row.appendChild(catTag);
+        const names = _el('span', 'wiz8-summary-risk-names');
+        names.textContent = risks.map(wq =>
+          wq.risk_name + (_wizState.answers[wq.risk_name] === 'partially' ? ' (partial)' : '')
+        ).join(' · ');
+        row.appendChild(names);
+        catList.appendChild(row);
+      });
+      card.appendChild(catList);
+    }
+
+    if (skipped.length) {
+      const skipNote = _el('p', 'wiz8-summary-skip-note');
+      skipNote.textContent = `${skipped.length} risk${skipped.length !== 1 ? 's' : ''} skipped — they will keep their existing selection in Browse All.`;
+      card.appendChild(skipNote);
+    }
+
+    // Actions
+    const actRow = _el('div', 'wiz-action-row');
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'wiz-btn-primary';
+    applyBtn.textContent = 'Apply to Risk Assessment →';
+    applyBtn.addEventListener('click', _applyWizardAnswers);
+    actRow.appendChild(applyBtn);
+
+    const restartBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
+    restartBtn.textContent = '↺  Start over';
+    restartBtn.style.marginLeft = 'auto';
+    restartBtn.addEventListener('click', () => {
+      _wizState.step_index = 0;
+      _wizState.answers    = {};
+      _wizState.complete   = false;
+      _renderGuidedPane();
+    });
+    actRow.appendChild(restartBtn);
+    card.appendChild(actRow);
+
+    wrap.appendChild(card);
+    return wrap;
+  }
+
+  // ---- Apply wizard answers to Browse All ---------------------
+  function _applyWizardAnswers() {
+    const wqs = _guidance?.wizard_questions || [];
+    wqs.forEach(wq => {
+      const ans = _wizState.answers[wq.risk_name];
+      if (ans === 'yes' || ans === 'partially') {
+        _state.selected_risks[wq.risk_name] = true;
+      } else if (ans === 'no') {
+        _state.selected_risks[wq.risk_name] = false;
+      }
+      // 'skip' / undefined → leave existing selection unchanged
+    });
+    _syncAllCheckboxes();
+    _switchTab('browse');
+
+    // Banner confirmation at top of Browse All
+    const browsePane = _container.querySelector('[data-pane="browse"]');
+    if (browsePane) {
+      const existing = browsePane.querySelector('.wiz8-applied-banner');
+      if (existing) existing.remove();
+      const applied = wqs.filter(wq => ['yes', 'partially'].includes(_wizState.answers[wq.risk_name])).length;
+      const banner = _el('div', 'wiz8-applied-banner');
+      banner.innerHTML = `✓ Guided assessment applied — <strong>${applied} risk${applied !== 1 ? 's' : ''}</strong> confirmed as applicable. Review the selections below, then click <strong>Save Risk Assessment</strong>.`;
+      const firstCard = browsePane.querySelector('.step-detail-card');
+      if (firstCard) firstCard.insertBefore(banner, firstCard.firstChild);
+      setTimeout(() => banner?.remove(), 10000);
+    }
   }
 
   // ---- Wizard pane --------------------------------------------
@@ -808,6 +1119,7 @@
       selected_risks: selectedCount,
       high_relevance_selected: highSelected,
       excluded_risks: risks.length - selectedCount,
+      wizard_answers: Object.keys(_wizState.answers).length ? { ..._wizState.answers } : null,
       risks
     };
   }
@@ -1054,6 +1366,47 @@
 .wiz8-stat-num{font-size:24px;font-weight:700;color:#15803d;line-height:1}
 .wiz8-stat-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
 .wiz8-result-note{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0}
+
+/* Guided wizard */
+.wiz8-guided-wrap{max-width:680px;margin:0 auto;padding:24px}
+.wiz8-guided-prog-wrap{margin-bottom:24px}
+.wiz8-guided-prog-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.wiz8-guided-prog-title{font-size:14px;font-weight:700;color:var(--color-text-primary)}
+.wiz8-guided-prog-label{font-size:12px;color:var(--color-text-tertiary);font-weight:500}
+.wiz8-guided-prog-bar{height:6px;background:var(--color-border);border-radius:3px;overflow:hidden}
+.wiz8-guided-prog-fill{height:100%;background:var(--teal-500,#14b8a6);border-radius:3px;transition:width .3s ease}
+.wiz8-q-card{background:#fff;border:1px solid var(--color-border);border-radius:10px;padding:20px 22px;margin-bottom:18px}
+.wiz8-q-card--high{border-left:3px solid #fca5a5}
+.wiz8-q-meta{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.wiz8-q-risk-name{font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0 0 10px;line-height:1.35}
+.wiz8-q-text{font-size:14px;font-weight:600;color:var(--teal-700,#0f766e);line-height:1.55;margin:0 0 16px;padding:12px 14px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px}
+.wiz8-q-answer-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);margin:0 0 10px}
+.wiz8-q-btn-row{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.wiz8-q-btn{width:100%;padding:13px 18px;font-size:13px;font-weight:600;border:2px solid var(--color-border);border-radius:8px;cursor:pointer;text-align:left;background:#fff;color:var(--color-text-primary);font-family:inherit;transition:background .12s,border-color .12s}
+.wiz8-q-btn:hover{background:var(--color-bg-subtle,#f8fafc);border-color:var(--teal-300,#5eead4)}
+.wiz8-q-btn--yes.wiz8-q-btn--selected{background:#f0fdf4;border-color:#4ade80;color:#15803d}
+.wiz8-q-btn--part.wiz8-q-btn--selected{background:#fffbeb;border-color:#fcd34d;color:#92400e}
+.wiz8-q-btn--no.wiz8-q-btn--selected{background:#f8fafc;border-color:#94a3b8;color:#475569}
+.wiz8-q-nav-row{display:flex;align-items:center;justify-content:space-between;padding-top:4px}
+.wiz8-q-nav-right{display:flex;align-items:center;gap:10px}
+.wiz8-q-nav-pos{font-size:11px;color:var(--color-text-tertiary)}
+.wiz8-q-nav-btn{padding:8px 16px;font-size:12px;font-weight:600;border:1px solid var(--color-border);border-radius:6px;cursor:pointer;background:#fff;color:var(--color-text-secondary);font-family:inherit;transition:background .12s}
+.wiz8-q-nav-btn:hover{background:var(--color-bg-subtle,#f8fafc)}
+.wiz8-q-nav-btn--next,.wiz8-q-nav-btn--finish{background:var(--teal-600,#0d9488);color:#fff;border-color:var(--teal-600,#0d9488)}
+.wiz8-q-nav-btn--next:hover,.wiz8-q-nav-btn--finish:hover{background:var(--teal-700,#0f766e)}
+
+/* Summary screen */
+.wiz8-summary-tick-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.wiz8-summary-tick-icon{color:#15803d;display:flex;flex-shrink:0}
+.wiz8-summary-title{font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0}
+.wiz8-summary-stats{display:flex;gap:28px;margin-bottom:20px;flex-wrap:wrap}
+.wiz8-summary-cat-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.wiz8-summary-cat-row{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:var(--color-bg-subtle,#f8fafc);border-radius:6px}
+.wiz8-summary-risk-names{font-size:12px;color:var(--color-text-secondary);line-height:1.5;padding-top:1px}
+.wiz8-summary-skip-note{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:0 0 16px}
+
+/* Applied banner */
+.wiz8-applied-banner{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 14px;font-size:13px;color:#166534;margin-bottom:16px;line-height:1.5}
 
 /* Reference pane */
 .wiz8-cat-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}

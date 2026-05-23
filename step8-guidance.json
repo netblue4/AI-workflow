@@ -433,5 +433,129 @@
       }
     }
 
-  }
+  },
+
+  "wizard_questions": [
+    {
+      "id": "wq01",
+      "risk_name": "Human Oversight Bypass Failure",
+      "question": "Does the AI system make or significantly influence decisions without a mandatory human review or override step?"
+    },
+    {
+      "id": "wq02",
+      "risk_name": "Subgroup Coverage Failure",
+      "question": "Does the AI system process data about, or make decisions that affect, people from distinct demographic or protected groups (age, gender, ethnicity, disability, etc.)?"
+    },
+    {
+      "id": "wq03",
+      "risk_name": "Proxy Discrimination Propagation Failure",
+      "question": "Does the AI use input variables — such as location, purchasing history, or social network data — that could act as proxies for protected characteristics?"
+    },
+    {
+      "id": "wq04",
+      "risk_name": "Dataset Lifecycle Integrity Failure",
+      "question": "Are formal controls in place governing the collection, labelling, versioning, and retirement of all training datasets?"
+    },
+    {
+      "id": "wq05",
+      "risk_name": "Data Governance Documentation Failure",
+      "question": "Is the data lineage, schema, and quality thresholds for all training data formally documented and maintained?"
+    },
+    {
+      "id": "wq06",
+      "risk_name": "Data Quality Measurement Failure",
+      "question": "Is the quality, completeness, and representativeness of training data regularly measured and reported against defined thresholds?"
+    },
+    {
+      "id": "wq07",
+      "risk_name": "Audit Log Integrity Failure",
+      "question": "Does the AI system generate comprehensive, tamper-evident audit logs of its decisions, inputs, and actions?"
+    },
+    {
+      "id": "wq08",
+      "risk_name": "Log Retention Violation",
+      "question": "Are AI system logs retained for the full period required by applicable regulations, internal policies, or contractual obligations?"
+    },
+    {
+      "id": "wq09",
+      "risk_name": "Adversarial Input Evasion Failure",
+      "question": "Does the AI system accept external or user-supplied inputs that directly influence its predictions or decisions?"
+    },
+    {
+      "id": "wq10",
+      "risk_name": "Model Extraction Attack Failure",
+      "question": "Is the trained model or its outputs exposed through APIs or interfaces accessible to users or systems outside your organisation?"
+    },
+    {
+      "id": "wq11",
+      "risk_name": "Development Environment Integrity Failure",
+      "question": "Are the development and training pipelines protected against supply-chain attacks or unauthorised injection of code or data?"
+    },
+    {
+      "id": "wq12",
+      "risk_name": "Cyber Attack Detection Failure",
+      "question": "Does the AI system have monitoring controls to detect anomalous query patterns, unusual output behaviour, or attempted intrusions?"
+    },
+    {
+      "id": "wq13",
+      "risk_name": "Unauthorised Access and Privilege Escalation Failure",
+      "question": "Are role-based access controls in place limiting who can query, modify, retrain, or administer the AI system?"
+    },
+    {
+      "id": "wq14",
+      "risk_name": "Accuracy Measurement and Drift Failure",
+      "question": "Is the AI system's accuracy formally measured at deployment and monitored on an ongoing basis for model drift or degradation?"
+    },
+    {
+      "id": "wq15",
+      "risk_name": "Feedback Loop Contamination Failure",
+      "question": "Does the AI system use its own historical outputs — directly or indirectly — as future training or reinforcement data?"
+    },
+    {
+      "id": "wq16",
+      "risk_name": "Output Reproducibility Failure",
+      "question": "Is reproducibility required for this system — must the same input reliably produce the same output across runs and environments?"
+    },
+    {
+      "id": "wq17",
+      "risk_name": "Input Corruption Propagation Failure",
+      "question": "Could corrupted, spoofed, or low-quality data reach the model without detection by an upstream validation or anomaly-detection layer?"
+    },
+    {
+      "id": "wq18",
+      "risk_name": "Fail-Safe Activation Failure",
+      "question": "Is a fail-safe or fallback mode defined and tested for when the AI system becomes unavailable or produces outputs below an acceptable confidence threshold?"
+    },
+    {
+      "id": "wq19",
+      "risk_name": "AI Disclosure Mechanism Failure",
+      "question": "Are users or individuals affected by the system's outputs notified that they are interacting with, or being assessed by, an AI system?"
+    },
+    {
+      "id": "wq20",
+      "risk_name": "Image Integrity & Supply Chain Failure",
+      "question": "Are container images and model artefacts cryptographically signed or verified for integrity before deployment?"
+    },
+    {
+      "id": "wq21",
+      "risk_name": "Registry & Identity Access Failure",
+      "question": "Are container or model registries protected with access controls, authentication, and audit logging?"
+    },
+    {
+      "id": "wq22",
+      "risk_name": "Network Exposure & API Abuse Failure",
+      "question": "Are AI system APIs and service endpoints protected against unauthorised external access, rate abuse, and data exfiltration?"
+    },
+    {
+      "id": "wq23",
+      "risk_name": "Host & Workload Isolation Failure",
+      "question": "Are AI workloads isolated from other systems at the host, VM, or container level to prevent lateral movement in the event of a compromise?"
+    },
+    {
+      "id": "wq24",
+      "risk_name": "Container Runtime Security Failure",
+      "question": "Are container runtime security controls applied — such as read-only filesystems, dropped capabilities, non-root execution, and syscall filtering?"
+    }
+  ]
+
 }
