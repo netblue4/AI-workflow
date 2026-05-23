@@ -12,10 +12,10 @@
   let _filteredStepItems = []; // [{stepName, objectives, risks:[{jkName,RiskDescription,controls:[...]}]}]
 
   const _state = {
-    assessed_by: '',
-    use_case_id: '',
     selected_controls: {} // control_number → boolean
   };
+
+  let _searchQuery = '';
 
   // ---- Public API -------------------------------------------
   window.mountStep7Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -221,7 +221,6 @@
     // Risk assessment
     card.appendChild(_sectionLabel('Risk Assessment'));
     card.appendChild(_buildStep3SummaryCard());
-    card.appendChild(_buildIdentitySection());
 
     const totalRisks = _filteredStepItems.reduce((s, si) => s + si.risks.length, 0);
     const totalControls = _filteredStepItems.reduce(
@@ -237,7 +236,13 @@
       instr.innerHTML = `<strong>${totalRisks} risk${totalRisks !== 1 ? 's' : ''}</strong> and <strong>${totalControls} risk control${totalControls !== 1 ? 's' : ''}</strong> ${_step3Data ? 'are applicable based on the Step 3 classification' : '(all risks shown — complete Step 3 first for filtered view)'}. Review each risk and deselect controls that do not apply to your deployment.`;
       card.appendChild(instr);
 
-      _filteredStepItems.forEach(si => card.appendChild(_buildStepNameSection(si)));
+      // Search box
+      card.appendChild(_buildSearchBox());
+
+      // Risk list wrapper (search targets this)
+      const riskList = _el('div', 'wiz7-risk-list');
+      _filteredStepItems.forEach(si => riskList.appendChild(_buildStepNameSection(si)));
+      card.appendChild(riskList);
     }
 
     card.appendChild(_buildActionRow());
@@ -501,6 +506,101 @@
         : 'wiz7-article-sel-count wiz7-article-sel-count--partial';
   }
 
+  // ---- Search box ------------------------------------------
+  function _buildSearchBox() {
+    const wrap = _el('div', 'wiz7-search-wrap');
+
+    const icon = _el('span', 'wiz7-search-icon');
+    icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+    wrap.appendChild(icon);
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'wiz7-search-input';
+    inp.placeholder = 'Search risks and controls… e.g. MFA, access control, logging';
+    inp.value = _searchQuery;
+    inp.addEventListener('input', e => {
+      _searchQuery = e.target.value;
+      _applySearch(_searchQuery);
+      clearBtn.style.display = _searchQuery ? 'flex' : 'none';
+      matchCount.textContent = _searchQuery ? _countVisibleControls() : '';
+    });
+    wrap.appendChild(inp);
+
+    const clearBtn = _el('button', 'wiz7-search-clear');
+    clearBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    clearBtn.style.display = _searchQuery ? 'flex' : 'none';
+    clearBtn.title = 'Clear search';
+    clearBtn.addEventListener('click', () => {
+      inp.value = '';
+      _searchQuery = '';
+      _applySearch('');
+      clearBtn.style.display = 'none';
+      matchCount.textContent = '';
+      inp.focus();
+    });
+    wrap.appendChild(clearBtn);
+
+    const matchCount = _el('span', 'wiz7-search-count');
+    wrap.appendChild(matchCount);
+
+    return wrap;
+  }
+
+  function _applySearch(query) {
+    const riskList = _container.querySelector('.wiz7-risk-list');
+    if (!riskList) return;
+
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      // Restore all elements
+      riskList.querySelectorAll('.wiz7-stepname, .wiz7-risk-card, .wiz7-ctrl-row').forEach(el => el.classList.remove('wiz7-hidden'));
+      return;
+    }
+
+    const tokens = q.split(/\s+/).filter(Boolean);
+
+    const matchesTokens = text => tokens.every(t => text.toLowerCase().includes(t));
+
+    riskList.querySelectorAll('.wiz7-stepname').forEach(stepEl => {
+      let stepVisible = false;
+
+      stepEl.querySelectorAll('.wiz7-risk-card').forEach(riskEl => {
+        const riskName = riskEl.querySelector('.wiz7-risk-name')?.textContent || '';
+        const riskDesc = riskEl.querySelector('.wiz7-risk-desc')?.textContent || '';
+        const riskMatches = matchesTokens(riskName + ' ' + riskDesc);
+
+        let riskVisible = false;
+
+        riskEl.querySelectorAll('.wiz7-ctrl-row').forEach(ctrlRow => {
+          const ctrlText = ctrlRow.querySelector('.wiz7-ctrl-content')?.textContent || '';
+          const ctrlVisible = riskMatches || matchesTokens(ctrlText);
+          ctrlRow.classList.toggle('wiz7-hidden', !ctrlVisible);
+          if (ctrlVisible) riskVisible = true;
+        });
+
+        riskEl.classList.toggle('wiz7-hidden', !riskVisible);
+        if (riskVisible) stepVisible = true;
+      });
+
+      stepEl.classList.toggle('wiz7-hidden', !stepVisible);
+      if (stepVisible) {
+        // Auto-expand the body so results are visible
+        const body = stepEl.querySelector('.wiz7-stepname-body');
+        const chevron = stepEl.querySelector('.wiz7-chevron');
+        if (body) body.classList.remove('wiz7-collapsed');
+        if (chevron) chevron.style.transform = '';
+      }
+    });
+  }
+
+  function _countVisibleControls() {
+    const riskList = _container.querySelector('.wiz7-risk-list');
+    if (!riskList) return '';
+    const visible = riskList.querySelectorAll('.wiz7-ctrl-row:not(.wiz7-hidden)').length;
+    return visible === 0 ? 'No matches' : `${visible} control${visible !== 1 ? 's' : ''} match`;
+  }
+
   // ---- Action row ------------------------------------------
   function _buildActionRow() {
     const row = _el('div', 'wiz-action-row');
@@ -516,12 +616,6 @@
     row.appendChild(left);
 
     const right = _el('div', 'wiz7-action-right');
-
-    const uploadBtn = document.createElement('button');
-    uploadBtn.className = 'wiz-btn-secondary';
-    uploadBtn.textContent = 'Upload Record';
-    uploadBtn.addEventListener('click', _handleUpload);
-    right.appendChild(uploadBtn);
 
     const saveBtn = document.createElement('button');
     saveBtn.className = 'wiz-btn-primary';
@@ -551,12 +645,12 @@
     }
 
     _record._meta.last_modified = new Date().toISOString();
-    if (_state.use_case_id) _record._meta.use_case_id = _state.use_case_id;
     _record['step-7'] = rec7;
 
     try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_e) {}
 
-    _downloadRecord();
+    // Notify the central Save Record status
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 7 saved ✓');
     _renderResults(rec7);
   }
 
@@ -588,12 +682,13 @@
     const totalControls = selectedRisks.reduce((s, r) => s + r.total_controls, 0);
     const totalSelected = selectedRisks.reduce((s, r) => s + r.selected_controls, 0);
 
+    const centralMeta = _record?._meta || {};
     return {
       step_id: 'step-7',
       step_title: 'Risk assessment',
       assessment_date: today,
-      assessed_by: _state.assessed_by,
-      use_case_id: _state.use_case_id || _step3Data?.use_case_id || '',
+      assessed_by: centralMeta.assessed_by || '',
+      use_case_id: centralMeta.use_case_id || _step3Data?.use_case_id || '',
       source_classification: _step3Data ? {
         ai_act_outcome: _step3Data.axis_b?.ai_act_outcome,
         governance_tier: _step3Data.axis_a?.tier,
@@ -695,7 +790,7 @@
     card.appendChild(stats);
 
     const note = _el('p', 'wiz7-result-note');
-    note.textContent = 'System record updated and downloaded. Selected controls will feed into Step 9 (Risk Treatment). Step 8 (DPIA) will additionally extract Article 10 data governance risks.';
+    note.textContent = 'Risk assessment saved to record. Use the Save Record button in the sidebar to download the full system record. Selected controls will feed into Step 9 (Risk Treatment). Step 8 (DPIA) will extract Article 10 data governance risks.';
     card.appendChild(note);
 
     area.appendChild(card);
@@ -843,6 +938,17 @@
 .wiz7-rcn { font-size: 10px; font-weight: 600; font-family: var(--font-mono,monospace); background: var(--purple-100,#ede9fe); color: var(--purple-700,#6d28d9); padding: 1px 5px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
 .wiz7-ctrl-name { font-size: 13px; font-weight: 600; color: var(--color-text-primary); }
 .wiz7-ctrl-desc { font-size: 12px; color: var(--color-text-secondary); line-height: 1.55; margin: 0; }
+
+/* ---- Search box ---- */
+.wiz7-search-wrap { position: relative; display: flex; align-items: center; gap: 6px; margin-bottom: 14px; background: #fff; border: 1px solid var(--color-border); border-radius: 6px; padding: 0 10px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.wiz7-search-icon { display: flex; color: var(--color-text-tertiary); flex-shrink: 0; }
+.wiz7-search-input { flex: 1; border: none; outline: none; padding: 10px 0; font-size: 13px; font-family: inherit; color: var(--color-text-primary); background: transparent; }
+.wiz7-search-input::placeholder { color: var(--color-text-tertiary); }
+.wiz7-search-clear { display: flex; align-items: center; justify-content: center; background: var(--color-bg-subtle,#f8fafc); border: 1px solid var(--color-border); border-radius: 4px; width: 20px; height: 20px; cursor: pointer; color: var(--color-text-tertiary); flex-shrink: 0; padding: 0; }
+.wiz7-search-clear:hover { background: var(--color-bg-hover,#f1f5f9); color: var(--color-text-primary); }
+.wiz7-search-count { font-size: 11px; color: var(--color-text-tertiary); white-space: nowrap; flex-shrink: 0; }
+.wiz7-hidden { display: none !important; }
+.wiz7-risk-list { display: flex; flex-direction: column; }
 
 /* ---- Count badge (shared) ---- */
 .wiz7-count-badge { font-size: 11px; font-weight: 600; background: var(--teal-100,#ccfbf1); color: var(--teal-700,#0f766e); padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }

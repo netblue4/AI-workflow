@@ -18,6 +18,23 @@
       <p class="nav-header-title">ISO/IEC 42001-aligned</p>
       <p class="nav-header-subtitle">AI Acceptable Use<br>Governance Workflow</p>
     </div>
+
+    <!-- Central use-case identity — shared across all steps -->
+    <div class="uc-panel" id="uc-panel">
+      <p class="uc-panel-title">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+        Use Case Record
+      </p>
+      <input id="uc-name" class="uc-input" type="text" placeholder="Use case name" autocomplete="off">
+      <input id="uc-id"   class="uc-input" type="text" placeholder="Use case ID  (e.g. UC-2025-001)" autocomplete="off">
+      <input id="uc-by"   class="uc-input" type="text" placeholder="Assessed by  (name / role)" autocomplete="off">
+      <div class="uc-btn-row">
+        <button class="uc-btn uc-btn-load" onclick="handleUCLoad()">Load Record</button>
+        <button class="uc-btn uc-btn-save" onclick="handleUCSave()">Save Record</button>
+      </div>
+      <div id="uc-status" class="uc-status"></div>
+    </div>
+
     <div class="nav-scroll" id="nav-scroll">
       <!-- Rendered by JS from workflow.json -->
     </div>
@@ -34,6 +51,22 @@
   </main>
 
 </div>
+
+<style>
+/* ---- Central Use Case Identity panel ---- */
+.uc-panel { padding: 10px 14px 10px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-subtle, #f8fafc); }
+.uc-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-tertiary); margin: 0 0 7px; display: flex; align-items: center; gap: 5px; }
+.uc-input { display: block; width: 100%; padding: 5px 8px; border: 1px solid var(--color-border); border-radius: 4px; font-size: 11px; font-family: inherit; color: var(--color-text-primary); background: #fff; margin-bottom: 5px; box-sizing: border-box; outline: none; }
+.uc-input:focus { border-color: var(--teal-400, #2dd4bf); box-shadow: 0 0 0 2px var(--teal-100, #ccfbf1); }
+.uc-input::placeholder { color: var(--color-text-tertiary); }
+.uc-btn-row { display: flex; gap: 5px; margin-top: 2px; }
+.uc-btn { flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; font-family: inherit; transition: background .15s; }
+.uc-btn-load { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); }
+.uc-btn-load:hover { background: var(--color-bg-hover, #f1f5f9); }
+.uc-btn-save { background: var(--teal-600, #0d9488); border: none; color: #fff; }
+.uc-btn-save:hover { background: var(--teal-700, #0f766e); }
+.uc-status { font-size: 10px; color: var(--success-600, #16a34a); margin-top: 5px; min-height: 14px; transition: opacity .6s; opacity: 0; }
+</style>
 
 <script>
 // ---- Icons (inline SVG strings keyed by name) ---------------
@@ -345,6 +378,99 @@ async function selectStep(stepId) {
   }
 }
 
+// ---- Central record key (shared by all step wizards) -------
+const UC_RECORD_KEY = 'ai_workflow_system_record';
+
+function _ucGetRecord() {
+  try {
+    const s = sessionStorage.getItem(UC_RECORD_KEY);
+    if (s) return JSON.parse(s);
+  } catch (_) {}
+  return {
+    _meta: {
+      schema_version: '1.0',
+      title: 'AI Acceptable Use — System Authorisation Record',
+      standard: 'ISO/IEC 42001-aligned',
+      created: new Date().toISOString(),
+      last_modified: new Date().toISOString(),
+      use_case_name: '',
+      use_case_id: '',
+      assessed_by: ''
+    }
+  };
+}
+
+function _ucSetRecord(rec) {
+  try { sessionStorage.setItem(UC_RECORD_KEY, JSON.stringify(rec)); } catch (_) {}
+}
+
+function _ucGetIdentity() {
+  return {
+    use_case_name: document.getElementById('uc-name')?.value?.trim() || '',
+    use_case_id:   document.getElementById('uc-id')?.value?.trim()   || '',
+    assessed_by:   document.getElementById('uc-by')?.value?.trim()   || ''
+  };
+}
+
+function _ucSetIdentity(meta) {
+  if (!meta) return;
+  const n = document.getElementById('uc-name');
+  const i = document.getElementById('uc-id');
+  const b = document.getElementById('uc-by');
+  if (n) n.value = meta.use_case_name || '';
+  if (i) i.value = meta.use_case_id   || '';
+  if (b) b.value = meta.assessed_by   || '';
+}
+
+function _ucSyncToRecord() {
+  const rec = _ucGetRecord();
+  if (!rec._meta) rec._meta = {};
+  Object.assign(rec._meta, _ucGetIdentity(), { last_modified: new Date().toISOString() });
+  _ucSetRecord(rec);
+}
+
+function handleUCSave() {
+  _ucSyncToRecord();
+  const rec  = _ucGetRecord();
+  const blob = new Blob([JSON.stringify(rec, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `system-record-${rec._meta?.use_case_id || 'draft'}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  _ucShowStatus('Saved ✓');
+}
+
+function handleUCLoad() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        _ucSetRecord(parsed);
+        _ucSetIdentity(parsed._meta);
+        if (_activeStepId) selectStep(_activeStepId);
+        _ucShowStatus(`Loaded: ${parsed._meta?.use_case_id || file.name} ✓`);
+      } catch (err) { alert('Invalid record file: ' + err.message); }
+    };
+    reader.readAsText(file);
+  });
+  inp.click();
+}
+
+function _ucShowStatus(msg) {
+  const el = document.getElementById('uc-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  setTimeout(() => { if (el) el.style.opacity = '0'; }, 3000);
+}
+
 // ---- Bootstrap ---------------------------------------------
 (async () => {
   try {
@@ -352,6 +478,16 @@ async function selectStep(stepId) {
     _stepIndex = indexSteps(_workflow);
     _phaseIndex = indexPhases(_workflow);
     renderNav(_workflow, _stepIndex, _phaseIndex, null);
+    // Restore UC identity from any previously saved record in this session
+    try {
+      const saved = sessionStorage.getItem(UC_RECORD_KEY);
+      if (saved) _ucSetIdentity(JSON.parse(saved)._meta);
+    } catch (_) {}
+    // Wire identity inputs to auto-sync whenever user types
+    ['uc-name', 'uc-id', 'uc-by'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', _ucSyncToRecord);
+    });
   } catch (e) {
     document.getElementById('nav-scroll').innerHTML =
       `<p style="padding:12px;font-size:12px;color:var(--color-text-tertiary)">Could not load workflow.json: ${e.message}</p>`;

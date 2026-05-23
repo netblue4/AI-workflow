@@ -16,8 +16,6 @@
   let _stylesInjected = false;
 
   let _state = {
-    use_case_id: '',
-    classified_by: '',
     axis_a_tier: null,    // 'tier_1' | 'tier_2'
     gate_answers: {},     // { G1_Q1: 'yes'|'no', … }
     result: null
@@ -32,7 +30,7 @@
     _injectStyles();
 
     try {
-      const saved = sessionStorage.getItem('_aiWorkflowRecord');
+      const saved = sessionStorage.getItem('ai_workflow_system_record');
       if (saved) _record = JSON.parse(saved);
     } catch (_) {}
     if (_record['step-3']) _restoreState(_record['step-3']);
@@ -112,7 +110,6 @@
   function _buildWizardPane(detail) {
     const pane = _el('div', '');
 
-    pane.appendChild(_buildIdentitySection());
     pane.appendChild(_buildAxisASection(detail.axis_a_classification));
     pane.appendChild(_buildAxisBSection(detail.axis_b_classification));
 
@@ -122,19 +119,7 @@
     const classifyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Classify System' });
     classifyBtn.addEventListener('click', () => _handleClassify(pane, detail));
 
-    const loadWrap = _el('div', '', { style: 'position:relative;display:inline-block' });
-    const loadBtn  = _el('button', 'wiz-btn-secondary', { textContent: 'Load System Record' });
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file'; fileInput.accept = '.json';
-    fileInput.style.cssText = 'position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;';
-    fileInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (file) _loadRecord(file);
-      fileInput.value = '';
-    });
-    loadWrap.append(loadBtn, fileInput);
-
-    actionRow.append(classifyBtn, loadWrap);
+    actionRow.append(classifyBtn);
     pane.appendChild(actionRow);
 
     const resultsContainer = _el('div', '');
@@ -497,10 +482,14 @@
 
     _state.result = outputRecord;
     _record['step-3'] = outputRecord;
-    if (!_record._meta) _record._meta = { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString() };
+    if (!_record._meta) _record._meta = { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), use_case_name: '', use_case_id: '', assessed_by: '' };
     _record._meta.last_modified = new Date().toISOString();
-    _record._meta.use_case_id   = outputRecord.use_case_id || _record._meta.use_case_id || '';
-    try { sessionStorage.setItem('_aiWorkflowRecord', JSON.stringify(_record)); } catch (_) {}
+    if (outputRecord.use_case_id) _record._meta.use_case_id = outputRecord.use_case_id;
+    try {
+      sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record));
+      // Reflect any use_case_id back to the central panel if it was set here
+      if (typeof _ucSetIdentity === 'function') _ucSetIdentity(_record._meta);
+    } catch (_) {}
 
     const rc = pane.querySelector('#wiz-results');
     if (rc) _renderResults(rc, outputRecord);
@@ -571,8 +560,8 @@
     return {
       step_id: 'step-3', step_title: 'System classification',
       classification_date: new Date().toISOString().split('T')[0],
-      classified_by: _state.classified_by || '',
-      use_case_id:   _state.use_case_id   || '',
+      classified_by: (_record._meta && _record._meta.assessed_by) || '',
+      use_case_id:   (_record._meta && _record._meta.use_case_id) || '',
       axis_a: { tier: _state.axis_a_tier, tier_label: tierDef ? tierDef.label : '', content_types_identified: [], escalation_applied: false },
       axis_b: {
         ai_act_outcome: axisBResult.classification,
@@ -690,11 +679,12 @@
   }
 
   function _appendSaveRow(container, record) {
-    const row = _el('div', '', { style: 'display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--color-border)' });
-    const dlBtn = _el('button', 'wiz-btn-primary', { textContent: 'Download System Record' });
-    dlBtn.addEventListener('click', () => _downloadRecord(record));
-    row.appendChild(dlBtn);
-    container.appendChild(row);
+    // Step result is already in sessionStorage — instruct user to use the central Save Record button
+    const note = _el('div', '', {
+      style: 'margin-top:16px;padding:10px 14px;background:var(--success-50,#f0fdf4);border:1px solid var(--success-200,#bbf7d0);border-radius:6px;font-size:12px;color:var(--success-700,#15803d);'
+    });
+    note.innerHTML = '<strong>Classification saved to record.</strong> Use the <strong>Save Record</strong> button in the sidebar to download the full system record JSON.';
+    container.appendChild(note);
   }
 
   // ── Download ──────────────────────────────────────────────────────────────────
@@ -727,7 +717,7 @@
         const step3Data = parsed['step-3'];
         if (!step3Data) { alert('This file does not contain Step 3 data. Other step records have been loaded.'); return; }
         _restoreState(step3Data);
-        try { sessionStorage.setItem('_aiWorkflowRecord', JSON.stringify(_record)); } catch (_) {}
+        try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
         if (typeof selectStep === 'function') selectStep('step-3');
       } catch (err) { alert(`Could not parse record file: ${err.message}`); }
     };
@@ -735,11 +725,9 @@
   }
 
   function _restoreState(step3Data) {
-    _state.use_case_id   = step3Data.use_case_id || '';
-    _state.classified_by = step3Data.classified_by || '';
-    _state.axis_a_tier   = step3Data.axis_a?.tier || null;
-    _state.gate_answers  = step3Data.axis_b?.gate_answers || {};
-    _state.result        = step3Data;
+    _state.axis_a_tier  = step3Data.axis_a?.tier || null;
+    _state.gate_answers = step3Data.axis_b?.gate_answers || {};
+    _state.result       = step3Data;
   }
 
   // ── Inline error ──────────────────────────────────────────────────────────────
