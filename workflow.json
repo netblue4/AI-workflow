@@ -20,31 +20,39 @@
       "title": "Due diligence",
       "owners": ["ISG Team", "DPO", "AI Taskforce"],
       "colorKey": "purple",
-      "steps": ["step-6", "step-7", "step-8", "step-9", "step-10"]
+      "steps": ["step-6", "step-7", "step-8"]
     },
     {
       "id": "phase-3",
       "number": 3,
-      "title": "Approval gate",
-      "owners": ["AI Change Board"],
-      "colorKey": "amber",
-      "steps": ["step-11"]
+      "title": "Build",
+      "owners": ["Development Team", "ISG Team"],
+      "colorKey": "green",
+      "steps": ["step-9"]
     },
     {
       "id": "phase-4",
       "number": 4,
-      "title": "Operational controls",
-      "owners": ["CISO", "ISG Team"],
+      "title": "Verification",
+      "owners": ["AI Taskforce", "ISG Team", "Authorised Users"],
       "colorKey": "blue",
-      "steps": ["step-12", "step-13"]
+      "steps": ["step-10", "step-13", "step-12"]
     },
     {
       "id": "phase-5",
       "number": 5,
+      "title": "Approval gate",
+      "owners": ["CISO", "ISG Team", "AI Change Board"],
+      "colorKey": "amber",
+      "steps": ["step-14", "step-11"]
+    },
+    {
+      "id": "phase-6",
+      "number": 6,
       "title": "Ongoing governance",
       "owners": ["ISG Team", "CISO", "SteerCo"],
       "colorKey": "coral",
-      "steps": ["step-14", "step-15"]
+      "steps": ["step-15"]
     }
   ],
   "steps": [
@@ -249,7 +257,7 @@
     {
       "id": "step-9",
       "number": 9,
-      "phaseId": "phase-2",
+      "phaseId": "phase-3",
       "title": "Control identification and disclosure design",
       "isNew": false,
       "owners": ["ISG Team"],
@@ -269,7 +277,7 @@
     {
       "id": "step-10",
       "number": 10,
-      "phaseId": "phase-2",
+      "phaseId": "phase-4",
       "title": "Content verification testing",
       "isNew": false,
       "owners": ["AI Taskforce", "Authorised Users"],
@@ -289,7 +297,7 @@
     {
       "id": "step-11",
       "number": 11,
-      "phaseId": "phase-3",
+      "phaseId": "phase-5",
       "title": "AI Change Board approval",
       "isNew": false,
       "owners": ["AI Change Board"],
@@ -407,7 +415,7 @@
     {
       "id": "step-15",
       "number": 15,
-      "phaseId": "phase-5",
+      "phaseId": "phase-6",
       "title": "Periodic and triggered review",
       "isNew": false,
       "owners": ["ISG Team", "SteerCo"],
