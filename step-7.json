@@ -1,0 +1,539 @@
+{
+  "step_id": "step-7",
+  "title": "Data Protection Impact Assessment (DPIA)",
+  "standard_reference": "GDPR Article 35",
+  "version": "1.0",
+  "description": "A DPIA must be completed where an AI system is likely to result in a high risk to the rights and freedoms of natural persons (GDPR Art.35). This wizard captures the mandatory DPIA elements. The data types inventory produced here feeds directly into the Risk Assessment in Step 8.",
+
+  "sections": [
+    {
+      "id": "s1",
+      "title": "System description",
+      "gdpr_ref": "Art.35(7)(a)",
+      "description": "Describe the nature, scope, context, and purposes of the AI system's data processing.",
+      "fields": [
+        {
+          "id": "s1_f1",
+          "label": "Processing description",
+          "type": "textarea",
+          "placeholder": "Describe what the AI system does with personal data — what it receives, processes, and outputs.",
+          "required": true,
+          "hint": "Include: input data, model processing, output data, and any downstream use of AI output."
+        },
+        {
+          "id": "s1_f2",
+          "label": "Processing purposes",
+          "type": "textarea",
+          "placeholder": "State the specific purposes for which personal data is processed by or through the AI system.",
+          "required": true,
+          "hint": "Be specific. Vague purposes (e.g. 'improve services') do not satisfy Art.35(7)(a)."
+        },
+        {
+          "id": "s1_f3",
+          "label": "Controller / processor relationship",
+          "type": "select",
+          "options": ["Organisation is data controller", "Organisation is data processor", "Joint controllership", "Not yet determined"],
+          "required": true
+        },
+        {
+          "id": "s1_f4",
+          "label": "Vendor / AI provider data processing agreement in place?",
+          "type": "select",
+          "options": ["Yes — DPA signed", "In progress", "No — required before go-live", "Not applicable (no third-party processing)"],
+          "required": true
+        }
+      ]
+    },
+
+    {
+      "id": "s2",
+      "title": "Data inventory",
+      "gdpr_ref": "Art.35(7)(a) — necessity & proportionality assessment basis",
+      "description": "Identify all personal data categories processed by the AI system. This inventory is used by the Risk Assessment in Step 8 to scope applicable risks.",
+      "fields": [
+        {
+          "id": "s2_f1",
+          "label": "Data subjects",
+          "type": "checkbox_group",
+          "options": [
+            "Employees / staff",
+            "Customers / clients",
+            "Prospective customers",
+            "Job applicants",
+            "Children (under 18)",
+            "Vulnerable adults",
+            "Members of the public",
+            "Suppliers / contractors",
+            "Other"
+          ],
+          "required": true,
+          "hint": "Select all categories of data subjects whose personal data the AI system processes."
+        },
+        {
+          "id": "s2_f2",
+          "label": "Personal data types processed",
+          "type": "checkbox_group",
+          "options": [
+            "Name and contact details",
+            "Identity documents (passport, national ID)",
+            "Financial data (salary, account numbers, transaction history)",
+            "Location data",
+            "Online identifiers (IP address, cookies, device IDs)",
+            "Behavioural / usage data",
+            "Professional / employment data",
+            "Communications content (emails, messages)",
+            "Photographs / images",
+            "Voice recordings / transcripts",
+            "Inferred / derived data (AI-generated scores, predictions)",
+            "Other non-special-category personal data"
+          ],
+          "required": true,
+          "output_key": "standard_personal_data"
+        },
+        {
+          "id": "s2_f3",
+          "label": "Estimated volume of data subjects",
+          "type": "select",
+          "options": ["Fewer than 100", "100–1,000", "1,000–10,000", "10,000–100,000", "Over 100,000", "Not yet known"],
+          "required": false
+        },
+        {
+          "id": "s2_f4",
+          "label": "Data retention period",
+          "type": "text",
+          "placeholder": "e.g. 90 days / 7 years / duration of employment",
+          "required": true
+        }
+      ]
+    },
+
+    {
+      "id": "s3",
+      "title": "Special category data (Art.9)",
+      "gdpr_ref": "GDPR Art.9",
+      "description": "Special category data carries heightened obligations. Confirm whether any such data is involved and establish the Art.9(2) condition relied upon.",
+      "fields": [
+        {
+          "id": "s3_f1",
+          "label": "Special category data processed",
+          "type": "checkbox_group",
+          "options": [
+            "Racial or ethnic origin",
+            "Political opinions",
+            "Religious or philosophical beliefs",
+            "Trade union membership",
+            "Genetic data",
+            "Biometric data (for unique identification)",
+            "Health / medical data",
+            "Sex life or sexual orientation",
+            "None — no special category data"
+          ],
+          "required": true,
+          "output_key": "special_category_data"
+        },
+        {
+          "id": "s3_f2",
+          "label": "Art.9(2) condition relied upon",
+          "type": "select",
+          "options": [
+            "Not applicable — no special category data",
+            "Art.9(2)(a) — Explicit consent",
+            "Art.9(2)(b) — Employment / social security obligations",
+            "Art.9(2)(c) — Vital interests",
+            "Art.9(2)(d) — Legitimate activities of a not-for-profit body",
+            "Art.9(2)(e) — Manifestly made public by the data subject",
+            "Art.9(2)(f) — Legal claims / judicial acts",
+            "Art.9(2)(g) — Substantial public interest (with safeguards)",
+            "Art.9(2)(h) — Medical / health purposes",
+            "Art.9(2)(i) — Public health (Art.9(3))",
+            "Art.9(2)(j) — Scientific / historical research or statistics"
+          ],
+          "required": true,
+          "conditional_show_if": "s3_f1_not_none"
+        },
+        {
+          "id": "s3_f3",
+          "label": "Safeguards in place for special category data",
+          "type": "textarea",
+          "placeholder": "Describe specific safeguards applied to special category data (e.g. encryption, access controls, anonymisation before AI processing).",
+          "required": false,
+          "conditional_show_if": "s3_f1_not_none"
+        }
+      ]
+    },
+
+    {
+      "id": "s4",
+      "title": "Lawful basis for processing",
+      "gdpr_ref": "GDPR Art.6",
+      "description": "Identify the Art.6 lawful basis for each processing purpose. A lawful basis must be established before processing begins.",
+      "fields": [
+        {
+          "id": "s4_f1",
+          "label": "Primary lawful basis (Art.6)",
+          "type": "select",
+          "options": [
+            "Art.6(1)(a) — Consent",
+            "Art.6(1)(b) — Performance of a contract",
+            "Art.6(1)(c) — Compliance with a legal obligation",
+            "Art.6(1)(d) — Vital interests",
+            "Art.6(1)(e) — Public task",
+            "Art.6(1)(f) — Legitimate interests"
+          ],
+          "required": true
+        },
+        {
+          "id": "s4_f2",
+          "label": "Legitimate interests assessment (LIA) completed?",
+          "type": "select",
+          "options": [
+            "Not required — lawful basis is not Art.6(1)(f)",
+            "Yes — LIA completed and documented",
+            "In progress",
+            "No — required before go-live"
+          ],
+          "required": true,
+          "conditional_show_if": "s4_f1_is_LIA"
+        },
+        {
+          "id": "s4_f3",
+          "label": "Data subject notification mechanism",
+          "type": "select",
+          "options": [
+            "Privacy notice updated to include this processing",
+            "Specific notice provided at point of collection",
+            "Existing notice already covers this processing",
+            "Notice not yet updated — required before go-live",
+            "Not applicable (no direct collection from data subjects)"
+          ],
+          "required": true
+        }
+      ]
+    },
+
+    {
+      "id": "s5",
+      "title": "Automated decision-making (Art.22)",
+      "gdpr_ref": "GDPR Art.22",
+      "description": "Art.22 applies where the AI system makes decisions based solely on automated processing that produce legal or similarly significant effects on individuals.",
+      "fields": [
+        {
+          "id": "s5_f1",
+          "label": "Does the AI system make automated decisions with legal or similarly significant effects?",
+          "type": "select",
+          "options": [
+            "No — output is advisory only; human makes all decisions",
+            "Partially — AI output influences decisions but human reviews every case",
+            "Yes — AI output directly determines outcomes for individuals",
+            "Not yet assessed"
+          ],
+          "required": true,
+          "output_key": "automated_decision_making"
+        },
+        {
+          "id": "s5_f2",
+          "label": "Art.22(2) ground relied upon",
+          "type": "select",
+          "options": [
+            "Not applicable — no Art.22 automated decisions",
+            "Art.22(2)(a) — Necessary for contract performance",
+            "Art.22(2)(b) — Authorised by Union or Member State law",
+            "Art.22(2)(c) — Explicit consent"
+          ],
+          "required": true,
+          "conditional_show_if": "s5_f1_is_automated"
+        },
+        {
+          "id": "s5_f3",
+          "label": "Human oversight mechanism for automated decisions",
+          "type": "textarea",
+          "placeholder": "Describe the human review checkpoint or override mechanism for decisions made by or significantly influenced by the AI system.",
+          "required": false,
+          "hint": "Art.22(3) requires the right to obtain human intervention, express one's point of view, and contest the decision where Art.22 applies."
+        },
+        {
+          "id": "s5_f4",
+          "label": "AI system explainability / transparency level",
+          "type": "select",
+          "options": [
+            "Full explainability — decision factors and weights are disclosed",
+            "Partial — high-level rationale provided to data subjects",
+            "Black-box — output only, no rationale available",
+            "Not yet assessed"
+          ],
+          "required": true
+        }
+      ]
+    },
+
+    {
+      "id": "s6",
+      "title": "Data flows and third parties",
+      "gdpr_ref": "Art.35(7)(a) — processing description",
+      "description": "Map where personal data flows to and from, including any third-party AI providers or international transfers.",
+      "fields": [
+        {
+          "id": "s6_f1",
+          "label": "Personal data transferred outside the EEA?",
+          "type": "select",
+          "options": [
+            "No — all processing within EEA",
+            "Yes — adequacy decision applies",
+            "Yes — Standard Contractual Clauses (SCCs) in place",
+            "Yes — Binding Corporate Rules (BCRs)",
+            "Yes — transfer mechanism not yet confirmed",
+            "Unknown"
+          ],
+          "required": true
+        },
+        {
+          "id": "s6_f2",
+          "label": "Third-party recipients / sub-processors",
+          "type": "textarea",
+          "placeholder": "List all third parties (including AI vendor) that receive or process personal data as part of this AI system.",
+          "required": true
+        },
+        {
+          "id": "s6_f3",
+          "label": "Personal data used to train or fine-tune the AI model?",
+          "type": "select",
+          "options": [
+            "No — inference only; no training data retained by vendor",
+            "Yes — explicit consent or another basis obtained",
+            "Unknown — vendor contract does not address this",
+            "Not applicable"
+          ],
+          "required": true,
+          "output_key": "training_data_use"
+        }
+      ]
+    },
+
+    {
+      "id": "s7",
+      "title": "Security measures",
+      "gdpr_ref": "Art.32 — security of processing",
+      "description": "Confirm the technical and organisational measures protecting personal data processed by the AI system.",
+      "fields": [
+        {
+          "id": "s7_f1",
+          "label": "Technical security measures in place",
+          "type": "checkbox_group",
+          "options": [
+            "Encryption at rest",
+            "Encryption in transit (TLS 1.2+)",
+            "Access controls / role-based access",
+            "Multi-factor authentication (MFA)",
+            "Audit logging of access and processing",
+            "Data masking / pseudonymisation before AI input",
+            "Automated anomaly detection",
+            "Penetration testing of AI interface",
+            "Data loss prevention (DLP) controls",
+            "None currently in place"
+          ],
+          "required": true,
+          "output_key": "security_measures"
+        },
+        {
+          "id": "s7_f2",
+          "label": "Data minimisation approach",
+          "type": "textarea",
+          "placeholder": "Describe how personal data is minimised before being input to the AI system (e.g. anonymisation, pseudonymisation, field exclusion).",
+          "required": false
+        }
+      ]
+    },
+
+    {
+      "id": "s8",
+      "title": "Data subject rights",
+      "gdpr_ref": "Arts.15–22",
+      "description": "Confirm that mechanisms exist to fulfil data subject rights, particularly given the complexity of AI-driven processing.",
+      "fields": [
+        {
+          "id": "s8_f1",
+          "label": "Data subject rights fulfilment",
+          "type": "checkbox_group",
+          "options": [
+            "Right of access (Art.15) — process documented",
+            "Right to rectification (Art.16) — process documented",
+            "Right to erasure (Art.17) — process documented",
+            "Right to restriction (Art.18) — process documented",
+            "Right to data portability (Art.20) — process documented",
+            "Right to object (Art.21) — process documented",
+            "Rights re automated decisions (Art.22) — process documented"
+          ],
+          "required": false
+        },
+        {
+          "id": "s8_f2",
+          "label": "Can personal data be erased from AI model outputs / logs?",
+          "type": "select",
+          "options": [
+            "Yes — erasure process confirmed with vendor",
+            "Partial — logs erased but model weights cannot be adjusted",
+            "No — technical limitation prevents erasure",
+            "Not assessed"
+          ],
+          "required": true,
+          "hint": "AI systems may 'remember' training data in model weights. Confirm vendor's position on erasure requests."
+        }
+      ]
+    },
+
+    {
+      "id": "s9",
+      "title": "Necessity and proportionality",
+      "gdpr_ref": "Art.35(7)(b)",
+      "description": "Assess whether the processing is necessary for the stated purposes and proportionate to the risk it poses.",
+      "fields": [
+        {
+          "id": "s9_f1",
+          "label": "Could the business purpose be achieved with less personal data or without AI?",
+          "type": "select",
+          "options": [
+            "No — AI and this level of data are necessary for the stated purpose",
+            "Partially — some data could be reduced; mitigation documented",
+            "Yes — redesign required before proceeding",
+            "Not yet assessed"
+          ],
+          "required": true
+        },
+        {
+          "id": "s9_f2",
+          "label": "Proportionality and necessity statement",
+          "type": "textarea",
+          "placeholder": "Justify why the scope of personal data processing by the AI system is proportionate to the business purpose.",
+          "required": true
+        }
+      ]
+    },
+
+    {
+      "id": "s10",
+      "title": "Risk identification and rating",
+      "gdpr_ref": "Art.35(7)(c) — risks to rights and freedoms",
+      "description": "Identify and rate the privacy risks posed by the AI system's processing. This rating feeds into the overall risk register in Step 8.",
+      "fields": [
+        {
+          "id": "s10_f1",
+          "label": "Privacy risks identified",
+          "type": "checkbox_group",
+          "options": [
+            "Unauthorised access to personal data via AI interface",
+            "Re-identification of pseudonymised data through AI inference",
+            "AI-generated output revealing personal data inadvertently",
+            "Bias / discriminatory outcomes affecting protected characteristics",
+            "Unlawful profiling or scoring of individuals",
+            "Personal data retained in AI model weights / caches",
+            "Third-country transfer without adequate safeguards",
+            "Data subject unaware of AI-driven processing",
+            "Inaccurate AI output used to make decisions about individuals",
+            "Vendor data breach or model exfiltration"
+          ],
+          "required": true,
+          "output_key": "privacy_risks"
+        },
+        {
+          "id": "s10_f2",
+          "label": "Inherent privacy risk rating (before controls)",
+          "type": "select",
+          "options": ["Low", "Medium", "High", "Very High"],
+          "required": true,
+          "output_key": "inherent_risk_rating"
+        },
+        {
+          "id": "s10_f3",
+          "label": "Residual privacy risk rating (after controls)",
+          "type": "select",
+          "options": ["Low", "Medium", "High", "Very High"],
+          "required": true,
+          "output_key": "residual_risk_rating"
+        },
+        {
+          "id": "s10_f4",
+          "label": "Residual risk justification",
+          "type": "textarea",
+          "placeholder": "Justify the residual risk rating. Identify any risks that remain above acceptable threshold and the additional mitigations required.",
+          "required": true
+        }
+      ]
+    },
+
+    {
+      "id": "s11",
+      "title": "DPO consultation",
+      "gdpr_ref": "Art.35(2) and Art.36",
+      "description": "Where required, the DPO must be consulted on the DPIA. If residual risk is high and cannot be mitigated, the supervisory authority must be consulted under Art.36.",
+      "fields": [
+        {
+          "id": "s11_f1",
+          "label": "DPO consulted?",
+          "type": "select",
+          "options": [
+            "Yes — DPO reviewed and approved",
+            "Yes — DPO noted concerns (documented below)",
+            "Consultation in progress",
+            "No — DPO not required (no DPO designated)",
+            "No — not yet consulted"
+          ],
+          "required": true
+        },
+        {
+          "id": "s11_f2",
+          "label": "DPO advice / concerns",
+          "type": "textarea",
+          "placeholder": "Record any DPO advice, conditions, or concerns raised during consultation.",
+          "required": false
+        },
+        {
+          "id": "s11_f3",
+          "label": "Supervisory authority consultation required (Art.36)?",
+          "type": "select",
+          "options": [
+            "No — residual risk is acceptable",
+            "Yes — Art.36 prior consultation initiated",
+            "Under assessment"
+          ],
+          "required": true,
+          "hint": "Art.36 consultation is required where residual risk remains High or Very High after mitigation."
+        }
+      ]
+    }
+  ],
+
+  "output_schema": {
+    "description": "Fields written to system-record['step-7'] on save",
+    "keys": {
+      "completion_status": "complete | partial | not_started",
+      "completed_at": "ISO 8601 timestamp",
+      "data_types_identified": {
+        "description": "Structured inventory used by Step 8 Risk Assessment",
+        "standard_personal_data": "array of selected personal data types",
+        "special_category_data": "array of selected special category types",
+        "data_subjects": "array of selected data subject categories",
+        "training_data_use": "string from s6_f3",
+        "automated_decision_making": "string from s5_f1",
+        "security_measures": "array from s7_f1",
+        "privacy_risks": "array from s10_f1"
+      },
+      "lawful_basis": "string from s4_f1",
+      "inherent_risk_rating": "string from s10_f2",
+      "residual_risk_rating": "string from s10_f3",
+      "dpo_consulted": "string from s11_f1",
+      "art36_consultation_required": "string from s11_f3",
+      "answers": "flat map of all field IDs to their values"
+    }
+  },
+
+  "requirement_labels": [
+    "GDPR Art.35 — DPIA mandatory for high-risk processing",
+    "GDPR Art.6 — Lawful basis",
+    "GDPR Art.9 — Special category data",
+    "GDPR Art.22 — Automated decision-making",
+    "GDPR Art.32 — Security of processing",
+    "GDPR Art.36 — Prior consultation with supervisory authority",
+    "ISO/IEC 42001 — AI system governance",
+    "EU AI Act — High-risk AI system data governance"
+  ]
+}

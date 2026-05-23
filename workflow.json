@@ -197,27 +197,6 @@
       "id": "step-7",
       "number": 7,
       "phaseId": "phase-2",
-      "title": "Risk assessment",
-      "isNew": false,
-      "owners": ["ISG Team"],
-      "ownerIcon": "shield",
-      "applicability": "Tier 2 / elevated risk",
-      "applicabilityKey": "tier2",
-      "requirements": ["AI SR2", "AI SR9"],
-      "summary": "Conduct a formal risk assessment informed by the tool fitness evaluation in Step 6. Covers technical risks (data breaches, cyberattacks, vulnerable code), legal risks (GDPR, IP, copyright), and regulatory risks (EU AI Act classification, prohibited use cases). Identify and document risk mitigation strategies.",
-      "deliverables": [
-        "Risk assessment: technical, legal, and regulatory dimensions",
-        "EU AI Act risk classification (prohibited / high-risk / limited-risk / minimal-risk)",
-        "Technology Risk Assessment (TRA) where applicable"
-      ],
-      "gates": [],
-      "requirementLabels": ["AI SR2 — Risk Assessment", "AI SR9 — EU AI Act", "AI SR6 — TRA retention"],
-      "detailFile": "step-7.json"
-    },
-    {
-      "id": "step-8",
-      "number": 8,
-      "phaseId": "phase-2",
       "title": "DPIA",
       "isNew": false,
       "owners": ["DPO", "ISG Team"],
@@ -225,17 +204,46 @@
       "applicability": "Personal data use cases",
       "applicabilityKey": "personal-data",
       "requirements": ["AI SR3", "AI SR9"],
-      "summary": "Where the use case involves personal data, a Data Protection Impact Assessment must be completed confirming lawful basis, data subject notification, and safeguards. DPIA records are retained outside the ISG team inventory.",
+      "summary": "Where the use case involves personal data, complete a Data Protection Impact Assessment under GDPR Article 35. Establishes lawful basis, identifies data subjects and special-category data, assesses automated decision-making obligations under Art.22, and documents necessity & proportionality. The DPIA output — particularly the data types inventory — feeds directly into the Risk Assessment in Step 8.",
       "deliverables": [
-        "Completed DPIA: lawful basis, data subject notification, safeguards confirmed"
+        "Completed DPIA: lawful basis, data subjects, and data types inventory",
+        "Special-category data assessment (Art.9) and Art.22 automated decision-making analysis",
+        "Necessity & proportionality statement and DPO consultation record",
+        "Risk rating and residual risk sign-off"
       ],
       "gates": [
         {
           "type": "danger",
           "text": "Hard stop: If a lawful basis cannot be established, the use case must be rejected or redesigned to eliminate personal data."
+        },
+        {
+          "type": "warning",
+          "text": "Art.22 gate: Where the AI system makes automated decisions with legal or significant effects on data subjects, explicit consent or another Art.22(2) ground must be confirmed before proceeding."
         }
       ],
       "requirementLabels": ["AI SR3 — Data Protection", "AI SR9 — DPIAs", "AI SR6 — DPIA retention"],
+      "detailFile": "step-7.json"
+    },
+    {
+      "id": "step-8",
+      "number": 8,
+      "phaseId": "phase-2",
+      "title": "Risk assessment",
+      "isNew": false,
+      "owners": ["ISG Team"],
+      "ownerIcon": "shield",
+      "applicability": "Tier 2 / elevated risk",
+      "applicabilityKey": "tier2",
+      "requirements": ["AI SR2", "AI SR9"],
+      "summary": "Conduct a formal risk assessment informed by the tool fitness evaluation (Step 6) and the data types identified in the DPIA (Step 7). Risks are grouped by the compliance control framework — covering technical risks (data breaches, cyberattacks, model vulnerabilities), legal risks (GDPR, IP, copyright), and regulatory risks (EU AI Act classification). Each risk is assessed against its attack vectors to determine relevance and priority.",
+      "deliverables": [
+        "Risk register: risks grouped by compliance control area with relevance assessment",
+        "Attack vector analysis per risk, informed by DPIA data types",
+        "EU AI Act risk classification (prohibited / high-risk / limited-risk / minimal-risk)",
+        "Technology Risk Assessment (TRA) where applicable"
+      ],
+      "gates": [],
+      "requirementLabels": ["AI SR2 — Risk Assessment", "AI SR9 — EU AI Act", "AI SR6 — TRA retention"],
       "detailFile": "step-8.json"
     },
     {
