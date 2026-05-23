@@ -1,22 +1,38 @@
-/* Step 8 — Risk Assessment Wizard
-   Hierarchy: fieldGroup.jkName (from "1. Compliance Requirements") → risks → Attack Vectors
-   Selection at risk level. Reads ai_Risk_Control_Framework.json.
-   Identity from central _meta. Informed by Step 3 (filter) and Step 7 (DPIA data types).
+/* Step 8 — Risk Assessment Wizard (Guided)
+   Hierarchy: fieldGroup.jkName → risks → Attack Vectors
+   Guidance (analogues, applies-if, relevance, categories) loaded from step8-guidance.json.
+   Selection at risk level. Identity from central _meta.
+   Informed by Step 3 (RCN filter + relevance) and Step 7 (DPIA data types + relevance).
 */
 (function () {
   'use strict';
 
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
-  let _container = null, _framework = null, _record = null;
+  let _container = null, _framework = null, _guidance = null, _record = null;
   let _step3Data = null, _step7Data = null;
-  let _filteredFGItems = []; // [{fieldGroupName, risks:[{jkName,RiskDescription,role,attackVectors,fieldGroups}]}]
+  let _filteredFGItems = []; // [{fieldGroupName, risks:[...]}]
 
   const _state = {
-    selected_risks: {} // riskName → boolean
+    selected_risks:  {},  // riskName → boolean
+    relevance_filter: 'all' // 'all' | 'high'
   };
 
   let _searchQuery = '';
+
+  // Category color palette — maps JSON color keys to CSS values
+  const _CAT_COLORS = {
+    amber:   { bg: '#fef3c7', text: '#92400e' },
+    rose:    { bg: '#ffe4e6', text: '#9f1239' },
+    teal:    { bg: '#ccfbf1', text: '#115e59' },
+    slate:   { bg: '#f1f5f9', text: '#334155' },
+    red:     { bg: '#fee2e2', text: '#b91c1c' },
+    purple:  { bg: '#ede9fe', text: '#6d28d9' },
+    indigo:  { bg: '#e0e7ff', text: '#4338ca' },
+    orange:  { bg: '#ffedd5', text: '#9a3412' },
+    green:   { bg: '#dcfce7', text: '#166534' },
+    blue:    { bg: '#dbeafe', text: '#1e40af' }
+  };
 
   // ---- Public API ---------------------------------------------
   window.mountStep8Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -25,11 +41,13 @@
     _colorKey   = colorKey;
     _phaseTitle = phaseTitle;
     _framework  = null;
+    _guidance   = null;
     _record     = null;
     _step3Data  = null;
     _step7Data  = null;
     _filteredFGItems = [];
-    _state.selected_risks = {};
+    _state.selected_risks  = {};
+    _state.relevance_filter = 'all';
     _searchQuery = '';
 
     _injectStyles();
@@ -45,13 +63,20 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    try {
-      const res = await fetch('ai_Risk_Control_Framework.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      _framework = await res.json();
-    } catch (e) {
-      pw.innerHTML = `<p style="padding:24px;color:var(--danger-600,#dc2626)">Could not load ai_Risk_Control_Framework.json: ${e.message}</p>`;
+    // Load framework and guidance in parallel
+    const [fwRes, gdRes] = await Promise.allSettled([
+      fetch('ai_Risk_Control_Framework.json'),
+      fetch('step8-guidance.json')
+    ]);
+
+    if (fwRes.status === 'rejected' || !fwRes.value.ok) {
+      pw.innerHTML = `<p style="padding:24px;color:var(--danger-600,#dc2626)">Could not load ai_Risk_Control_Framework.json</p>`;
       return;
+    }
+    _framework = await fwRes.value.json();
+
+    if (gdRes.status === 'fulfilled' && gdRes.value.ok) {
+      try { _guidance = await gdRes.value.json(); } catch (_) {}
     }
 
     try {
@@ -70,7 +95,7 @@
 
     _filteredFGItems = _buildFGItems();
 
-    // Default: select all risks if no prior state
+    // Default: select all if no prior state
     if (Object.keys(_state.selected_risks).length === 0) {
       _filteredFGItems.forEach(fg =>
         fg.risks.forEach(r => { _state.selected_risks[r.jkName] = true; })
@@ -80,16 +105,14 @@
     _renderPanes(pw);
   }
 
-  // ---- Build RCN → fieldGroup name map from "1. Compliance Requirements" ---
+  // ---- RCN → fieldGroup name map ------------------------------
   function _buildRcnToFGMap() {
     const map = {};
     (_framework?.['1. Compliance Requirements'] || []).forEach(article => {
       (article.Fields || []).forEach(field => {
         if (field.jkType === 'fieldGroup') {
           (field.controls || []).forEach(ctrl => {
-            if (ctrl.requirement_control_number) {
-              map[ctrl.requirement_control_number] = field.jkName;
-            }
+            if (ctrl.requirement_control_number) map[ctrl.requirement_control_number] = field.jkName;
           });
         }
       });
@@ -97,56 +120,35 @@
     return map;
   }
 
-  // ---- Build filtered fieldGroup → risks structure -----------
+  // ---- Build fieldGroup → risks structure ---------------------
   function _buildFGItems() {
     if (!_framework) return [];
-
-    const rcnToFG = _buildRcnToFGMap();
-
+    const rcnToFG  = _buildRcnToFGMap();
     const applicable = _step3Data?.all_requirement_control_numbers
-      ? new Set(_step3Data.all_requirement_control_numbers)
-      : null;
-
-    // Flatten all section items (risks exist in multiple sections)
+      ? new Set(_step3Data.all_requirement_control_numbers) : null;
     const allItems = Object.values(_framework).reduce(
       (acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []
     );
-
-    // Map: fieldGroupName → risks[] — preserve insertion order
     const fgMap = new Map();
 
     for (const item of allItems) {
       for (const field of (item.Fields || [])) {
         if (field.jkType !== 'risk') continue;
-
-        // Determine which fieldGroups this risk maps to (via applicable RCNs)
         const matchedFGs = new Set();
         const matchedControls = [];
 
         for (const ctrl of (field.controls || [])) {
           const rcns = (ctrl.requirement_control_number || '')
             .split(',').map(s => s.trim()).filter(Boolean);
-
-          // A control is applicable if ANY of its RCNs is in the applicable set
-          const ctrlApplicable = applicable ? rcns.some(r => applicable.has(r)) : true;
-          if (!ctrlApplicable) continue;
-
+          const applicable_ = applicable ? rcns.some(r => applicable.has(r)) : true;
+          if (!applicable_) continue;
           matchedControls.push(ctrl);
-
-          // Map RCNs to fieldGroups
-          rcns.forEach(rcn => {
-            const fg = rcnToFG[rcn];
-            if (fg) matchedFGs.add(fg);
-          });
+          rcns.forEach(rcn => { const fg = rcnToFG[rcn]; if (fg) matchedFGs.add(fg); });
         }
 
         if (matchedControls.length === 0) continue;
 
-        // Collect attack vectors from matched controls only
-        const attackVectors = matchedControls
-          .map(c => c.jkAttackVector)
-          .filter(Boolean);
-
+        const attackVectors = matchedControls.map(c => c.jkAttackVector).filter(Boolean);
         const riskObj = {
           jkName:          field.jkName,
           RiskDescription: field.RiskDescription || '',
@@ -155,23 +157,71 @@
           fieldGroups:     Array.from(matchedFGs)
         };
 
-        if (matchedFGs.size === 0) {
-          // No fieldGroup match — skip unclassified
-          continue;
-        }
-
-        // Add risk under each matched fieldGroup (risk may appear in multiple)
+        if (matchedFGs.size === 0) continue;
         matchedFGs.forEach(fg => {
           if (!fgMap.has(fg)) fgMap.set(fg, []);
           const arr = fgMap.get(fg);
-          if (!arr.find(r => r.jkName === riskObj.jkName)) {
-            arr.push(riskObj);
-          }
+          if (!arr.find(r => r.jkName === riskObj.jkName)) arr.push(riskObj);
         });
       }
     }
 
-    return Array.from(fgMap.entries()).map(([fieldGroupName, risks]) => ({ fieldGroupName, risks }));
+    // Sort risks within each fieldGroup: HIGH relevance first
+    return Array.from(fgMap.entries()).map(([fieldGroupName, risks]) => ({
+      fieldGroupName,
+      risks: risks.slice().sort((a, b) => {
+        const ra = _computeRelevance(a.jkName);
+        const rb = _computeRelevance(b.jkName);
+        if (ra === rb) return 0;
+        return ra === 'high' ? -1 : 1;
+      })
+    }));
+  }
+
+  // ---- Relevance computation (uses step8-guidance.json) ------
+  function _computeRelevance(riskName) {
+    if (!_guidance) return 'unassessed';
+    const g = _guidance.risks?.[riskName];
+    if (!g) return 'unassessed';
+    if (!_step3Data && !_step7Data) return 'unassessed';
+
+    const rf = g.relevance_factors || {};
+    let isHigh = false;
+
+    // Step 3: AI Act outcome
+    if (rf.high_if_step3_ai_act_outcome?.length && _step3Data) {
+      const outcome = _step3Data.axis_b?.ai_act_outcome || '';
+      if (rf.high_if_step3_ai_act_outcome.includes(outcome)) isHigh = true;
+    }
+
+    if (_step7Data) {
+      const di = _step7Data.data_types_identified || {};
+
+      // Automated decision-making
+      if (rf.high_if_step7_automated_decisions_contains?.length) {
+        const adm = di.automated_decision_making || '';
+        if (rf.high_if_step7_automated_decisions_contains.some(v => adm.includes(v))) isHigh = true;
+      }
+
+      // Special-category data (filter out "None" option)
+      if (rf.high_if_step7_has_special_categories) {
+        const sc = (di.special_category_data || []).filter(x => !x.startsWith('None'));
+        if (sc.length > 0) isHigh = true;
+      }
+
+      // Standard personal data
+      if (rf.high_if_step7_has_personal_data) {
+        if ((di.standard_personal_data || []).length > 0) isHigh = true;
+      }
+
+      // Training data used (personal data)
+      if (rf.high_if_step7_training_data_used) {
+        const tdu = di.training_data_use || '';
+        if (tdu && !tdu.startsWith('No') && !tdu.startsWith('Not applicable')) isHigh = true;
+      }
+    }
+
+    return isHigh ? 'high' : 'medium';
   }
 
   // ---- Tabs ---------------------------------------------------
@@ -208,7 +258,6 @@
   function _buildWizardPane() {
     const card = _el('div', 'step-detail-card');
 
-    // Header
     const ey = _el('p', `step-detail-eyebrow color-${_colorKey}`);
     ey.textContent = _phaseTitle; card.appendChild(ey);
 
@@ -224,7 +273,6 @@
     const summ = _el('p', 'step-detail-summary');
     summ.textContent = _step.summary || ''; card.appendChild(summ);
 
-    // Deliverables
     if (_step.deliverables?.length) {
       card.appendChild(_sectionLabel('Deliverables'));
       const dl = _el('ul', 'deliverables-list');
@@ -234,15 +282,14 @@
       card.appendChild(dl);
     }
 
-    // Input source summaries
     card.appendChild(_sectionLabel('Input Sources'));
     card.appendChild(_buildStep3Card());
     card.appendChild(_buildDpiaCard());
 
-    // Risk list
     card.appendChild(_sectionLabel('Risk Assessment'));
 
     const uniqueRisks = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
+    const highCount   = Array.from(uniqueRisks).filter(n => _computeRelevance(n) === 'high').length;
     const totalFGs    = _filteredFGItems.length;
     const totalRisks  = uniqueRisks.size;
 
@@ -251,12 +298,19 @@
       notice.textContent = 'No applicable risks found for this classification.';
       card.appendChild(notice);
     } else {
+      // Summary line
       const instr = _el('p', 'wiz8-instruction');
-      instr.innerHTML = `<strong>${totalRisks} risk${totalRisks !== 1 ? 's' : ''}</strong> across <strong>${totalFGs} compliance control area${totalFGs !== 1 ? 's' : ''}</strong> ${_step3Data ? 'are applicable based on the Step 3 classification' : '(all risks shown — complete Step 3 first for filtered view)'}. Expand each risk to review its attack vectors and assess relevance. Check each risk that applies to your deployment.`;
+      const guidanceSuffix = _guidance ? '' : ' (install step8-guidance.json for relevance scoring and guidance)';
+      instr.innerHTML = `<strong>${totalRisks} risk${totalRisks !== 1 ? 's' : ''}</strong> across <strong>${totalFGs} compliance control area${totalFGs !== 1 ? 's' : ''}</strong>${_step3Data ? '' : ' (all risks — complete Step 3 for filtered view)'}. ${highCount > 0 ? `<strong class="wiz8-high-count">${highCount} HIGH-relevance</strong> risks identified for your system. ` : ''}Review each risk below.${guidanceSuffix}`;
       card.appendChild(instr);
 
+      // Filter bar
+      if (_guidance) card.appendChild(_buildFilterBar());
+
+      // Search box
       card.appendChild(_buildSearchBox());
 
+      // Risk list
       const riskList = _el('div', 'wiz8-risk-list');
       _filteredFGItems.forEach(fg => riskList.appendChild(_buildFGSection(fg)));
       card.appendChild(riskList);
@@ -267,7 +321,7 @@
     return card;
   }
 
-  // ---- Step 3 summary card ------------------------------------
+  // ---- Source cards -------------------------------------------
   function _buildStep3Card() {
     const card = _el('div', 'wiz8-source-card');
     if (!_step3Data) {
@@ -290,12 +344,11 @@
     card.appendChild(grid); return card;
   }
 
-  // ---- DPIA summary card --------------------------------------
   function _buildDpiaCard() {
     const card = _el('div', 'wiz8-source-card wiz8-source-card--dpia');
     if (!_step7Data) {
       const w = _el('div', 'wiz8-info');
-      w.innerHTML = '<strong>Step 7 (DPIA) not yet completed.</strong> Complete the DPIA to include data inventory context. Risk assessment proceeds using Step 3 classifications only.';
+      w.innerHTML = '<strong>Step 7 (DPIA) not yet completed.</strong> Complete the DPIA to sharpen relevance scoring with data inventory context.';
       card.appendChild(w); return card;
     }
     const lbl = _el('p', 'wiz8-source-label'); lbl.textContent = 'Step 7 — DPIA Data Inventory'; card.appendChild(lbl);
@@ -307,40 +360,93 @@
       const v = _el('span', mod ? `wiz8-cell-value wiz8-cell-value--${mod}` : 'wiz8-cell-value');
       v.textContent = value || '—'; c.appendChild(v); grid.appendChild(c);
     };
-    cell('Standard personal data', (di.standard_personal_data || []).length + ' types');
-    cell('Special categories',     (di.special_category_data  || []).length + ' types');
+    cell('Personal data types', (di.standard_personal_data || []).length + ' types');
+    cell('Special categories',  (di.special_category_data  || []).filter(x => !x.startsWith('None')).length + ' types');
     const rr = _step7Data.residual_risk_rating;
     cell('Residual risk', rr || '—', (rr === 'High' || rr === 'Very High') ? 'danger' : null);
     const adm = di.automated_decision_making || '';
-    cell('Automated decisions', adm ? (adm.length > 40 ? adm.slice(0, 40) + '…' : adm) : '—');
+    cell('Automated decisions', adm ? (adm.length > 38 ? adm.slice(0, 38) + '…' : adm) : '—');
     card.appendChild(grid); return card;
+  }
+
+  // ---- Filter bar ---------------------------------------------
+  function _buildFilterBar() {
+    const bar = _el('div', 'wiz8-filter-bar');
+    const lbl = _el('span', 'wiz8-filter-label'); lbl.textContent = 'Show:'; bar.appendChild(lbl);
+
+    const allBtn = document.createElement('button');
+    allBtn.className = `wiz8-filter-btn${_state.relevance_filter === 'all' ? ' wiz8-filter-btn--active' : ''}`;
+    allBtn.textContent = 'All risks';
+    allBtn.addEventListener('click', () => {
+      _state.relevance_filter = 'all';
+      _syncFilterButtons();
+      _applyRelevanceFilter();
+    });
+    bar.appendChild(allBtn);
+
+    const highBtn = document.createElement('button');
+    highBtn.className = `wiz8-filter-btn wiz8-filter-btn--high${_state.relevance_filter === 'high' ? ' wiz8-filter-btn--active' : ''}`;
+    highBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>HIGH relevance only`;
+    highBtn.addEventListener('click', () => {
+      _state.relevance_filter = 'high';
+      _syncFilterButtons();
+      _applyRelevanceFilter();
+    });
+    bar.appendChild(highBtn);
+
+    return bar;
+  }
+
+  function _syncFilterButtons() {
+    const bar = _container.querySelector('.wiz8-filter-bar');
+    if (!bar) return;
+    const [allBtn, highBtn] = bar.querySelectorAll('.wiz8-filter-btn');
+    if (allBtn)  allBtn.classList.toggle('wiz8-filter-btn--active',  _state.relevance_filter === 'all');
+    if (highBtn) highBtn.classList.toggle('wiz8-filter-btn--active', _state.relevance_filter === 'high');
+  }
+
+  function _applyRelevanceFilter() {
+    const riskList = _container.querySelector('.wiz8-risk-list');
+    if (!riskList) return;
+    const filterHigh = _state.relevance_filter === 'high';
+
+    riskList.querySelectorAll('.wiz8-fg').forEach(fgEl => {
+      let fgHasVisible = false;
+      fgEl.querySelectorAll('.wiz8-risk-card').forEach(riskEl => {
+        const relevance = riskEl.dataset.relevance;
+        const hide = filterHigh && relevance !== 'high';
+        riskEl.classList.toggle('wiz8-filter-hidden', hide);
+        if (!hide) fgHasVisible = true;
+      });
+      fgEl.classList.toggle('wiz8-filter-hidden', filterHigh && !fgHasVisible);
+    });
   }
 
   // ---- FieldGroup accordion (top level) -----------------------
   function _buildFGSection(fg) {
+    const highInFG = fg.risks.filter(r => _computeRelevance(r.jkName) === 'high').length;
     const sec = _el('div', 'wiz8-fg');
 
     const header = _el('div', 'wiz8-fg-header');
-
-    const left = _el('div', 'wiz8-fg-header-left');
+    const left   = _el('div', 'wiz8-fg-header-left');
     const nm = _el('span', 'wiz8-fg-name'); nm.textContent = fg.fieldGroupName; left.appendChild(nm);
     const rb = _el('span', 'wiz8-badge-risks');
     rb.textContent = `${fg.risks.length} risk${fg.risks.length !== 1 ? 's' : ''}`; left.appendChild(rb);
+    if (highInFG > 0) {
+      const hb = _el('span', 'wiz8-badge-high');
+      hb.textContent = `${highInFG} HIGH`; left.appendChild(hb);
+    }
     header.appendChild(left);
 
     const right = _el('div', 'wiz8-fg-header-right');
-
     const selAll = document.createElement('button'); selAll.className = 'wiz8-sel-btn'; selAll.textContent = 'Select all';
     selAll.addEventListener('click', e => { e.stopPropagation(); _setFGSel(fg, true); }); right.appendChild(selAll);
-
     const deselAll = document.createElement('button'); deselAll.className = 'wiz8-sel-btn'; deselAll.textContent = 'Deselect all';
     deselAll.addEventListener('click', e => { e.stopPropagation(); _setFGSel(fg, false); }); right.appendChild(deselAll);
-
     const selCount = _el('span', 'wiz8-fg-sel-count'); right.appendChild(selCount);
-
     const chevron = _el('span', 'wiz8-chevron');
     chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chevron.style.transform = 'rotate(-90deg)'; // starts collapsed
+    chevron.style.transform = 'rotate(-90deg)';
     right.appendChild(chevron);
     header.appendChild(right);
     sec.appendChild(header);
@@ -348,14 +454,12 @@
     const body = _el('div', 'wiz8-fg-body wiz8-collapsed');
     fg.risks.forEach(risk => body.appendChild(_buildRiskCard(risk)));
     sec.appendChild(body);
-
     _updateFGBadge(sec);
 
     header.addEventListener('click', () => {
       const collapsed = body.classList.toggle('wiz8-collapsed');
       chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
     });
-
     return sec;
   }
 
@@ -364,25 +468,32 @@
     _syncAllCheckboxes();
   }
 
-  // ---- Risk card ----------------------------------------------
+  // ---- Risk card (with guidance) ------------------------------
   function _buildRiskCard(risk) {
-    const card = _el('div', 'wiz8-risk-card');
-    card.dataset.riskName = risk.jkName;
+    const relevance = _computeRelevance(risk.jkName);
+    const guidance  = _guidance?.risks?.[risk.jkName];
+    const category  = guidance?.category || null;
+    const catColor  = category
+      ? (_guidance?.categories?.[category]?.color || 'slate')
+      : 'slate';
+    const catColors = _CAT_COLORS[catColor] || _CAT_COLORS.slate;
 
+    const card = _el('div', 'wiz8-risk-card');
+    card.dataset.riskName  = risk.jkName;
+    card.dataset.relevance = relevance;
+
+    // ---- Header row: checkbox + icon + name + category + relevance ----
     const riskHeader = _el('div', 'wiz8-risk-header');
 
-    // Risk-level checkbox
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.className = 'wiz8-risk-cb';
     cb.dataset.riskName = risk.jkName;
     cb.checked = !!_state.selected_risks[risk.jkName];
     cb.addEventListener('change', e => {
       _state.selected_risks[risk.jkName] = e.target.checked;
-      // Sync all checkboxes with the same risk name (risk may appear in multiple FGs)
       _container.querySelectorAll(`.wiz8-risk-cb[data-risk-name="${CSS.escape(risk.jkName)}"]`)
         .forEach(c => { c.checked = e.target.checked; });
-      _updateAllFGBadges();
-      _updateCountBadge();
+      _updateAllFGBadges(); _updateCountBadge();
     });
     riskHeader.appendChild(cb);
 
@@ -392,17 +503,59 @@
 
     const riskName = _el('span', 'wiz8-risk-name'); riskName.textContent = risk.jkName; riskHeader.appendChild(riskName);
 
+    // Category tag (from guidance JSON)
+    if (category) {
+      const catTag = _el('span', 'wiz8-cat-tag');
+      catTag.textContent = category;
+      catTag.style.background = catColors.bg;
+      catTag.style.color = catColors.text;
+      riskHeader.appendChild(catTag);
+    }
+
+    // Relevance badge
+    if (relevance !== 'unassessed') {
+      const relBadge = _el('span', `wiz8-rel-badge wiz8-rel-badge--${relevance}`);
+      relBadge.textContent = relevance === 'high' ? '▲ HIGH' : '◆ MEDIUM';
+      riskHeader.appendChild(relBadge);
+    }
+
     if (risk.role) {
       const rb = _el('span', 'wiz8-role-badge'); rb.textContent = risk.role; riskHeader.appendChild(rb);
     }
     card.appendChild(riskHeader);
 
-    // Risk description
-    if (risk.RiskDescription) {
-      const desc = _el('p', 'wiz8-risk-desc'); desc.textContent = risk.RiskDescription; card.appendChild(desc);
+    // ---- Traditional IT analogue --------------------------------
+    if (guidance?.traditional_analog) {
+      const analogRow = _el('div', 'wiz8-analog-row');
+      const analogIcon = _el('span', 'wiz8-analog-icon');
+      analogIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      analogRow.appendChild(analogIcon);
+      const analogText = _el('span', 'wiz8-analog-text');
+      analogText.textContent = guidance.traditional_analog;
+      analogRow.appendChild(analogText);
+      card.appendChild(analogRow);
     }
 
-    // Attack vectors (collapsible)
+    // ---- Applies-if checklist -----------------------------------
+    if (guidance?.applies_if?.length) {
+      const aiWrap = _el('div', 'wiz8-applies-wrap');
+      const aiLabel = _el('p', 'wiz8-applies-label');
+      aiLabel.textContent = 'Applies if any of:';
+      aiWrap.appendChild(aiLabel);
+      const aiList = _el('ul', 'wiz8-applies-list');
+      guidance.applies_if.forEach(condition => {
+        const li = _el('li', 'wiz8-applies-item'); li.textContent = condition; aiList.appendChild(li);
+      });
+      aiWrap.appendChild(aiList);
+      card.appendChild(aiWrap);
+    }
+
+    // ---- Detailed risk description (collapsible) ----------------
+    if (risk.RiskDescription) {
+      card.appendChild(_buildCollapsibleDesc(risk.RiskDescription));
+    }
+
+    // ---- Attack Vectors (collapsible) ---------------------------
     if (risk.attackVectors.length > 0) {
       card.appendChild(_buildAttackVectorsDiv(risk.attackVectors));
     }
@@ -410,33 +563,50 @@
     return card;
   }
 
-  // ---- Attack Vectors div -------------------------------------
+  function _buildCollapsibleDesc(text) {
+    const wrap    = _el('div', 'wiz8-desc-wrap');
+    const hdr     = _el('div', 'wiz8-desc-header');
+    const icon    = _el('span', 'wiz8-desc-icon');
+    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+    hdr.appendChild(icon);
+    const lbl = _el('span', 'wiz8-desc-label'); lbl.textContent = 'Detailed risk description'; hdr.appendChild(lbl);
+    const chv = _el('span', 'wiz8-desc-chevron');
+    chv.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    chv.style.transform = 'rotate(-90deg)'; hdr.appendChild(chv);
+    wrap.appendChild(hdr);
+    const body = _el('div', 'wiz8-desc-body wiz8-collapsed');
+    const p = _el('p', 'wiz8-risk-desc-text'); p.textContent = text; body.appendChild(p);
+    wrap.appendChild(body);
+    hdr.addEventListener('click', () => {
+      const col = body.classList.toggle('wiz8-collapsed');
+      chv.style.transform = col ? 'rotate(-90deg)' : '';
+    });
+    return wrap;
+  }
+
   function _buildAttackVectorsDiv(attackVectors) {
     const wrap = _el('div', 'wiz8-av-wrap');
-
-    const hdr = _el('div', 'wiz8-av-header');
+    const hdr  = _el('div', 'wiz8-av-header');
     const icon = _el('span', 'wiz8-av-icon');
     icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
     hdr.appendChild(icon);
     const lbl = _el('span', 'wiz8-av-label');
     lbl.textContent = `Attack Vectors (${attackVectors.length})`; hdr.appendChild(lbl);
-    const chevron = _el('span', 'wiz8-av-chevron');
-    chevron.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chevron.style.transform = 'rotate(-90deg)'; hdr.appendChild(chevron);
+    const chv = _el('span', 'wiz8-av-chevron');
+    chv.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    chv.style.transform = 'rotate(-90deg)'; hdr.appendChild(chv);
     wrap.appendChild(hdr);
-
     const body = _el('div', 'wiz8-av-body wiz8-collapsed');
     attackVectors.forEach((av, i) => {
       const item = _el('div', 'wiz8-av-item');
-      const num = _el('span', 'wiz8-av-num'); num.textContent = String(i + 1); item.appendChild(num);
-      const txt = _el('p', 'wiz8-av-text'); txt.textContent = av; item.appendChild(txt);
+      const num  = _el('span', 'wiz8-av-num'); num.textContent = String(i + 1); item.appendChild(num);
+      const txt  = _el('p', 'wiz8-av-text'); txt.textContent = av; item.appendChild(txt);
       body.appendChild(item);
     });
     wrap.appendChild(body);
-
     hdr.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('wiz8-collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
+      const col = body.classList.toggle('wiz8-collapsed');
+      chv.style.transform = col ? 'rotate(-90deg)' : '';
     });
     return wrap;
   }
@@ -446,8 +616,7 @@
     _container.querySelectorAll('.wiz8-risk-cb').forEach(cb => {
       cb.checked = !!_state.selected_risks[cb.dataset.riskName];
     });
-    _updateAllFGBadges();
-    _updateCountBadge();
+    _updateAllFGBadges(); _updateCountBadge();
   }
 
   function _updateAllFGBadges() {
@@ -455,8 +624,8 @@
   }
 
   function _updateFGBadge(secEl) {
-    const all  = secEl.querySelectorAll('.wiz8-risk-cb');
-    const chkd = secEl.querySelectorAll('.wiz8-risk-cb:checked');
+    const all   = secEl.querySelectorAll('.wiz8-risk-cb');
+    const chkd  = secEl.querySelectorAll('.wiz8-risk-cb:checked');
     const badge = secEl.querySelector('.wiz8-fg-sel-count');
     if (!badge) return;
     const sel = chkd.length, tot = all.length;
@@ -469,46 +638,37 @@
   }
 
   function _updateCountBadge() {
-    const uniqueRisks = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
-    const sel = Array.from(uniqueRisks).filter(n => _state.selected_risks[n]).length;
-    const tot = uniqueRisks.size;
+    const unique = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
+    const sel = Array.from(unique).filter(n => _state.selected_risks[n]).length;
     const badge = _container.querySelector('#wiz8-count');
-    if (badge) badge.textContent = `${sel} / ${tot} risks selected`;
+    if (badge) badge.textContent = `${sel} / ${unique.size} risks confirmed`;
   }
 
   // ---- Search box ---------------------------------------------
   function _buildSearchBox() {
     const wrap = _el('div', 'wiz8-search-wrap');
-
     const icon = _el('span', 'wiz8-search-icon');
     icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
     wrap.appendChild(icon);
-
     const inp = document.createElement('input');
     inp.type = 'text'; inp.className = 'wiz8-search-input';
-    inp.placeholder = 'Search risks and attack vectors… e.g. MFA, access control, logging, bias';
+    inp.placeholder = 'Search risks, analogues, applies-if, attack vectors… e.g. MFA, bias, logging';
     inp.value = _searchQuery;
-
     const matchCount = _el('span', 'wiz8-search-count');
-    const clearBtn = _el('button', 'wiz8-search-clear');
+    const clearBtn   = _el('button', 'wiz8-search-clear');
     clearBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
     clearBtn.style.display = _searchQuery ? 'flex' : 'none';
     clearBtn.title = 'Clear search';
-
     inp.addEventListener('input', e => {
       _searchQuery = e.target.value;
       _applySearch(_searchQuery);
       clearBtn.style.display = _searchQuery ? 'flex' : 'none';
       matchCount.textContent = _searchQuery ? _countVisibleRisks() : '';
     });
-
     clearBtn.addEventListener('click', () => {
-      inp.value = ''; _searchQuery = '';
-      _applySearch('');
-      clearBtn.style.display = 'none'; matchCount.textContent = '';
-      inp.focus();
+      inp.value = ''; _searchQuery = ''; _applySearch('');
+      clearBtn.style.display = 'none'; matchCount.textContent = ''; inp.focus();
     });
-
     wrap.appendChild(inp); wrap.appendChild(clearBtn); wrap.appendChild(matchCount);
     return wrap;
   }
@@ -518,7 +678,8 @@
     if (!riskList) return;
     const q = query.trim().toLowerCase();
     if (!q) {
-      riskList.querySelectorAll('.wiz8-fg, .wiz8-risk-card').forEach(el => el.classList.remove('wiz8-hidden'));
+      riskList.querySelectorAll('.wiz8-fg, .wiz8-risk-card').forEach(el => el.classList.remove('wiz8-search-hidden'));
+      _updateVisibilityAfterSearch();
       return;
     }
     const tokens = q.split(/\s+/).filter(Boolean);
@@ -526,62 +687,69 @@
 
     riskList.querySelectorAll('.wiz8-fg').forEach(fgEl => {
       let fgVisible = false;
-      const fgName = fgEl.querySelector('.wiz8-fg-name')?.textContent || '';
-      const fgMatch = matches(fgName);
+      const fgName  = fgEl.querySelector('.wiz8-fg-name')?.textContent || '';
 
       fgEl.querySelectorAll('.wiz8-risk-card').forEach(riskEl => {
-        const rn   = riskEl.querySelector('.wiz8-risk-name')?.textContent || '';
-        const rd   = riskEl.querySelector('.wiz8-risk-desc')?.textContent || '';
-        const avTx = Array.from(riskEl.querySelectorAll('.wiz8-av-text')).map(e => e.textContent).join(' ');
+        const rn     = riskEl.querySelector('.wiz8-risk-name')?.textContent || '';
+        const analog = riskEl.querySelector('.wiz8-analog-text')?.textContent || '';
+        const applyT = Array.from(riskEl.querySelectorAll('.wiz8-applies-item')).map(e => e.textContent).join(' ');
+        const avTx   = Array.from(riskEl.querySelectorAll('.wiz8-av-text')).map(e => e.textContent).join(' ');
+        const descTx = riskEl.querySelector('.wiz8-risk-desc-text')?.textContent || '';
+        const catT   = riskEl.querySelector('.wiz8-cat-tag')?.textContent || '';
 
-        const riskVisible = fgMatch || matches(rn + ' ' + rd + ' ' + avTx);
-        riskEl.classList.toggle('wiz8-hidden', !riskVisible);
-
-        if (riskVisible) {
+        const fullText = rn + ' ' + analog + ' ' + applyT + ' ' + avTx + ' ' + descTx + ' ' + fgName + ' ' + catT;
+        const visible  = matches(fullText);
+        riskEl.classList.toggle('wiz8-search-hidden', !visible);
+        if (visible) {
           fgVisible = true;
-          // Auto-expand attack vectors if they contain the match
-          if (!fgMatch && !matches(rn + ' ' + rd) && matches(avTx)) {
-            const avBody    = riskEl.querySelector('.wiz8-av-body');
-            const avChevron = riskEl.querySelector('.wiz8-av-chevron');
-            if (avBody)    avBody.classList.remove('wiz8-collapsed');
-            if (avChevron) avChevron.style.transform = '';
+          // Auto-expand attack vectors if they match
+          if (!matches(rn + ' ' + analog + ' ' + applyT) && matches(avTx)) {
+            const avBody = riskEl.querySelector('.wiz8-av-body');
+            const avChv  = riskEl.querySelector('.wiz8-av-chevron');
+            if (avBody) avBody.classList.remove('wiz8-collapsed');
+            if (avChv)  avChv.style.transform = '';
           }
         }
       });
 
-      fgEl.classList.toggle('wiz8-hidden', !fgVisible);
+      fgEl.classList.toggle('wiz8-search-hidden', !fgVisible);
       if (fgVisible) {
-        const body    = fgEl.querySelector('.wiz8-fg-body');
-        const chevron = fgEl.querySelector('.wiz8-chevron');
-        if (body)    body.classList.remove('wiz8-collapsed');
-        if (chevron) chevron.style.transform = '';
+        const body = fgEl.querySelector('.wiz8-fg-body');
+        const chv  = fgEl.querySelector('.wiz8-chevron');
+        if (body) body.classList.remove('wiz8-collapsed');
+        if (chv)  chv.style.transform = '';
       }
     });
+
+    _updateVisibilityAfterSearch();
+  }
+
+  function _updateVisibilityAfterSearch() {
+    // Re-apply relevance filter on top of search results
+    _applyRelevanceFilter();
   }
 
   function _countVisibleRisks() {
     const riskList = _container.querySelector('.wiz8-risk-list');
     if (!riskList) return '';
-    const n = riskList.querySelectorAll('.wiz8-risk-card:not(.wiz8-hidden)').length;
+    const n = riskList.querySelectorAll('.wiz8-risk-card:not(.wiz8-search-hidden):not(.wiz8-filter-hidden)').length;
     return n === 0 ? 'No matches' : `${n} risk${n !== 1 ? 's' : ''} match`;
   }
 
   // ---- Action row ---------------------------------------------
   function _buildActionRow() {
-    const row   = _el('div', 'wiz-action-row');
-    const left  = _el('div');
+    const row  = _el('div', 'wiz-action-row');
+    const left = _el('div');
     const badge = document.createElement('span');
     badge.id = 'wiz8-count'; badge.className = 'wiz8-count-lg';
-    const uniqueRisks = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
-    const sel = Array.from(uniqueRisks).filter(n => _state.selected_risks[n]).length;
-    badge.textContent = `${sel} / ${uniqueRisks.size} risks selected`;
+    const unique = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
+    const sel = Array.from(unique).filter(n => _state.selected_risks[n]).length;
+    badge.textContent = `${sel} / ${unique.size} risks confirmed`;
     left.appendChild(badge); row.appendChild(left);
-
     const right = _el('div', 'wiz8-action-right');
     const btn = document.createElement('button');
     btn.className = 'wiz-btn-primary'; btn.textContent = 'Save Risk Assessment';
-    btn.addEventListener('click', _handleSave);
-    right.appendChild(btn); row.appendChild(right);
+    btn.addEventListener('click', _handleSave); right.appendChild(btn); row.appendChild(right);
     return row;
   }
 
@@ -601,63 +769,61 @@
   function _buildOutputRecord() {
     const today = new Date().toISOString().slice(0, 10);
     const meta  = _record?._meta || {};
-
-    // Deduplicate risks by name (same risk may appear under multiple FGs)
     const uniqueMap = new Map();
     _filteredFGItems.forEach(fg => {
       fg.risks.forEach(r => {
         if (!uniqueMap.has(r.jkName)) {
+          const guidance = _guidance?.risks?.[r.jkName];
           uniqueMap.set(r.jkName, {
             risk_name:           r.jkName,
             risk_description:    r.RiskDescription,
+            category:            guidance?.category || null,
             field_groups:        r.fieldGroups,
+            relevance:           _computeRelevance(r.jkName),
             attack_vector_count: r.attackVectors.length,
             selected:            !!_state.selected_risks[r.jkName]
           });
         }
       });
     });
-
     const risks         = Array.from(uniqueMap.values());
     const selectedCount = risks.filter(r => r.selected).length;
-
+    const highSelected  = risks.filter(r => r.selected && r.relevance === 'high').length;
     return {
-      step_id:         'step-8',
-      step_title:      'Risk assessment',
+      step_id: 'step-8', step_title: 'Risk assessment',
       assessment_date: today,
-      assessed_by:     meta.assessed_by || '',
-      use_case_id:     meta.use_case_id || '',
+      assessed_by:  meta.assessed_by || '',
+      use_case_id:  meta.use_case_id || '',
       source_classification: _step3Data ? {
         ai_act_outcome:  _step3Data.axis_b?.ai_act_outcome,
         governance_tier: _step3Data.axis_a?.tier,
         combined_outcome: _step3Data.combined_outcome?.outcome_label
       } : null,
       dpia_summary: _step7Data ? {
-        residual_risk_rating:     _step7Data.residual_risk_rating,
-        special_category_data:    _step7Data.data_types_identified?.special_category_data || [],
+        residual_risk_rating:      _step7Data.residual_risk_rating,
+        special_category_data:     _step7Data.data_types_identified?.special_category_data || [],
         automated_decision_making: _step7Data.data_types_identified?.automated_decision_making
       } : null,
-      total_risks:    risks.length,
+      total_risks: risks.length,
       selected_risks: selectedCount,
+      high_relevance_selected: highSelected,
       excluded_risks: risks.length - selectedCount,
       risks
     };
   }
 
-  // ---- Results area -------------------------------------------
   function _renderResults(rec8) {
     const area = _container.querySelector('.wiz8-results');
     if (!area) return;
     area.innerHTML = '';
     const card = _el('div', 'wiz8-result-card');
-
     const h = _el('h3', 'wiz8-result-title'); h.textContent = 'Risk Assessment Saved'; card.appendChild(h);
-
     const stats = _el('div', 'wiz8-result-stats');
     [
-      [rec8.total_risks,    'Risks assessed'],
-      [rec8.selected_risks, 'Risks confirmed'],
-      [rec8.excluded_risks, 'Risks excluded']
+      [rec8.total_risks,             'Total risks'],
+      [rec8.selected_risks,          'Confirmed applicable'],
+      [rec8.high_relevance_selected, 'HIGH-relevance confirmed'],
+      [rec8.excluded_risks,          'Excluded as not applicable']
     ].forEach(([num, lbl]) => {
       const s = _el('div', 'wiz8-stat');
       const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num);
@@ -665,11 +831,9 @@
       s.appendChild(n); s.appendChild(l); stats.appendChild(s);
     });
     card.appendChild(stats);
-
     const note = _el('p', 'wiz8-result-note');
-    note.innerHTML = `Risk assessment saved to record. <strong>${rec8.selected_risks} confirmed risk${rec8.selected_risks !== 1 ? 's' : ''}</strong> will feed into Step 9 (Control identification and risk treatment). Use the <strong>Save Record</strong> button in the sidebar to download the full system record.`;
+    note.innerHTML = `Risk assessment saved. <strong>${rec8.selected_risks} confirmed risk${rec8.selected_risks !== 1 ? 's' : ''}</strong> (including <strong>${rec8.high_relevance_selected} HIGH-relevance</strong>) will feed into Step 9 (Control identification). Use <strong>Save Record</strong> in the sidebar to download the full system record.`;
     card.appendChild(note);
-
     area.appendChild(card);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -679,13 +843,31 @@
     const card = _el('div', 'step-detail-card');
     const title = _el('h2', 'step-detail-title'); title.textContent = 'Risk Catalogue Reference'; card.appendChild(title);
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Complete catalogue of all risks from the AI Risk Control Framework, grouped by compliance control area. The wizard view is filtered to risks applicable to the Step 3 classification.';
+    sub.textContent = 'Complete risk catalogue grouped by compliance control area, with guidance from step8-guidance.json. Edit that file to adapt analogues, conditions, and relevance rules for your organisation.';
     card.appendChild(sub);
 
-    const rcnToFG = _buildRcnToFGMap();
-    const allItems = Object.values(_framework || {}).reduce((acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []);
+    // Category legend
+    if (_guidance?.categories) {
+      card.appendChild(_sectionLabel('Risk Categories'));
+      const legend = _el('div', 'wiz8-cat-legend');
+      Object.entries(_guidance.categories).forEach(([name, info]) => {
+        const item = _el('div', 'wiz8-cat-legend-item');
+        const tag  = _el('span', 'wiz8-cat-tag');
+        tag.textContent = name;
+        const c = _CAT_COLORS[info.color] || _CAT_COLORS.slate;
+        tag.style.background = c.bg; tag.style.color = c.text;
+        item.appendChild(tag);
+        const desc = _el('span', 'wiz8-cat-legend-desc'); desc.textContent = info.description; item.appendChild(desc);
+        legend.appendChild(item);
+      });
+      card.appendChild(legend);
+    }
 
-    const fgMap = new Map();
+    card.appendChild(_sectionLabel('All Risks by Compliance Control Area'));
+
+    const rcnToFG  = _buildRcnToFGMap();
+    const allItems = Object.values(_framework || {}).reduce((acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []);
+    const fgMap    = new Map();
     allItems.forEach(item => {
       (item.Fields || []).filter(f => f.jkType === 'risk').forEach(risk => {
         const fgs = new Set();
@@ -709,11 +891,19 @@
       sec.appendChild(h3);
       risks.forEach(risk => {
         const rd  = _el('div', 'wiz8-ref-risk');
-        const rn  = _el('p', 'wiz8-ref-risk-name'); rn.textContent = risk.jkName; rd.appendChild(rn);
-        if (risk.RiskDescription) {
-          const rdesc = _el('p', 'wiz8-ref-risk-desc');
-          rdesc.textContent = risk.RiskDescription.length > 200 ? risk.RiskDescription.slice(0, 200) + '…' : risk.RiskDescription;
-          rd.appendChild(rdesc);
+        const g   = _guidance?.risks?.[risk.jkName];
+        const rnh = _el('div', 'wiz8-ref-risk-header');
+        const rn  = _el('p', 'wiz8-ref-risk-name'); rn.textContent = risk.jkName; rnh.appendChild(rn);
+        if (g?.category) {
+          const catTag = _el('span', 'wiz8-cat-tag');
+          catTag.textContent = g.category;
+          const c = _CAT_COLORS[_guidance.categories?.[g.category]?.color || 'slate'] || _CAT_COLORS.slate;
+          catTag.style.background = c.bg; catTag.style.color = c.text;
+          rnh.appendChild(catTag);
+        }
+        rd.appendChild(rnh);
+        if (g?.traditional_analog) {
+          const an = _el('p', 'wiz8-ref-analog'); an.textContent = '💡 ' + g.traditional_analog; rd.appendChild(an);
         }
         sec.appendChild(rd);
       });
@@ -729,7 +919,7 @@
     const s = document.createElement('style');
     s.id = 'wiz8-styles';
     s.textContent = `
-/* ---- Shared wizard layout (if wiz7-styles not yet loaded) ---- */
+/* Shared base layout */
 .wiz-shell{display:flex;flex-direction:column;height:100%}
 .wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
 .wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
@@ -741,106 +931,149 @@
 .wiz-btn-primary{padding:9px 20px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
 .wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
 
-/* ---- Source cards ---- */
-.wiz8-source-card{background:var(--info-50,#f0f9ff);border:1px solid var(--info-200,#bae6fd);border-radius:8px;padding:14px 16px;margin-bottom:12px}
-.wiz8-source-card--dpia{background:var(--purple-50,#faf5ff);border-color:var(--purple-200,#ddd6fe)}
-.wiz8-source-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--info-600,#0284c7);margin:0 0 10px}
-.wiz8-source-card--dpia .wiz8-source-label{color:var(--purple-600,#7c3aed)}
+/* Source cards */
+.wiz8-source-card{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.wiz8-source-card--dpia{background:#faf5ff;border-color:#ddd6fe}
+.wiz8-source-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#0284c7;margin:0 0 10px}
+.wiz8-source-card--dpia .wiz8-source-label{color:#7c3aed}
 .wiz8-source-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .wiz8-source-cell{display:flex;flex-direction:column;gap:3px}
 .wiz8-cell-label{font-size:11px;color:var(--color-text-tertiary);font-weight:500}
 .wiz8-cell-value{font-size:13px;font-weight:600;color:var(--color-text-primary)}
-.wiz8-cell-value--badge{font-size:11px;font-weight:700;text-transform:uppercase;background:var(--teal-100,#ccfbf1);color:var(--teal-700,#0f766e);padding:2px 8px;border-radius:10px;display:inline-block}
+.wiz8-cell-value--badge{font-size:11px;font-weight:700;text-transform:uppercase;background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:10px;display:inline-block}
 .wiz8-cell-value--num{font-size:18px;font-weight:700;color:var(--teal-600,#0d9488)}
-.wiz8-cell-value--danger{font-size:13px;font-weight:700;color:var(--danger-700,#b91c1c)}
-.wiz8-warn{background:var(--warning-50,#fffbeb);border:1px solid var(--warning-200,#fde68a);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--warning-800,#92400e);line-height:1.55}
-.wiz8-info{background:var(--info-50,#f0f9ff);border:1px solid var(--info-200,#bae6fd);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--info-800,#075985);line-height:1.55}
-.wiz8-instruction{font-size:13px;color:var(--color-text-secondary);margin:0 0 16px;line-height:1.6}
+.wiz8-cell-value--danger{font-size:13px;font-weight:700;color:#b91c1c}
+.wiz8-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;font-size:13px;color:#92400e;line-height:1.55}
+.wiz8-info{background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px 14px;font-size:13px;color:#075985;line-height:1.55}
+.wiz8-instruction{font-size:13px;color:var(--color-text-secondary);margin:0 0 12px;line-height:1.6}
+.wiz8-high-count{color:#b91c1c}
 .wiz8-notice{font-size:13px;color:var(--color-text-tertiary);padding:20px 0}
 
-/* ---- FieldGroup accordion (top level) ---- */
+/* Filter bar */
+.wiz8-filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.wiz8-filter-label{font-size:12px;font-weight:600;color:var(--color-text-secondary)}
+.wiz8-filter-btn{padding:5px 12px;font-size:12px;font-weight:500;border:1px solid var(--color-border);border-radius:20px;cursor:pointer;background:#fff;color:var(--color-text-secondary);font-family:inherit;transition:background .15s,border-color .15s;display:inline-flex;align-items:center}
+.wiz8-filter-btn:hover{background:var(--color-bg-subtle,#f8fafc)}
+.wiz8-filter-btn--active{background:#f8fafc;border-color:var(--teal-400,#2dd4bf);color:var(--teal-700,#0f766e);font-weight:600}
+.wiz8-filter-btn--high.wiz8-filter-btn--active{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+
+/* FieldGroup accordion */
 .wiz8-fg{border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:10px}
 .wiz8-fg-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none;gap:10px}
 .wiz8-fg-header:hover{background:var(--color-bg-hover,#f1f5f9)}
 .wiz8-fg-header-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 .wiz8-fg-name{font-size:13px;font-weight:700;color:var(--color-text-primary)}
-.wiz8-badge-risks{font-size:11px;font-weight:600;background:var(--danger-100,#fee2e2);color:var(--danger-700,#b91c1c);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.wiz8-badge-risks{font-size:11px;font-weight:600;background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.wiz8-badge-high{font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
 .wiz8-fg-header-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.wiz8-sel-btn{font-size:11px;font-weight:500;color:var(--teal-600,#0d9488);background:none;border:1px solid var(--teal-200,#99f6e4);border-radius:4px;padding:3px 8px;cursor:pointer;white-space:nowrap}
-.wiz8-sel-btn:hover{background:var(--teal-50,#f0fdfa)}
+.wiz8-sel-btn{font-size:11px;font-weight:500;color:var(--teal-600,#0d9488);background:none;border:1px solid #99f6e4;border-radius:4px;padding:3px 8px;cursor:pointer;white-space:nowrap}
+.wiz8-sel-btn:hover{background:#f0fdfa}
 .wiz8-fg-sel-count{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;min-width:40px;text-align:center}
-.wiz8-fg-sel-count--all{background:var(--success-100,#dcfce7);color:var(--success-700,#15803d)}
-.wiz8-fg-sel-count--partial{background:var(--warning-100,#fef3c7);color:var(--warning-700,#b45309)}
-.wiz8-fg-sel-count--none{background:var(--danger-100,#fee2e2);color:var(--danger-700,#b91c1c)}
+.wiz8-fg-sel-count--all{background:#dcfce7;color:#15803d}
+.wiz8-fg-sel-count--partial{background:#fef3c7;color:#b45309}
+.wiz8-fg-sel-count--none{background:#fee2e2;color:#b91c1c}
 .wiz8-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
-.wiz8-fg-body{padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+.wiz8-fg-body{padding:12px 14px;display:flex;flex-direction:column;gap:14px}
 .wiz8-collapsed{display:none}
+.wiz8-hidden,.wiz8-filter-hidden,.wiz8-search-hidden{display:none!important}
 
-/* ---- Risk card ---- */
+/* Risk card */
 .wiz8-risk-card{background:#fff;border:1px solid var(--color-border);border-radius:8px;padding:14px 16px}
-.wiz8-risk-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.wiz8-risk-cb{flex-shrink:0;accent-color:var(--teal-600,#0d9488);width:15px;height:15px;cursor:pointer;margin-top:1px}
-.wiz8-risk-icon{display:flex;color:var(--danger-500,#ef4444);flex-shrink:0}
-.wiz8-risk-name{font-size:13px;font-weight:700;color:var(--color-text-primary);flex:1}
-.wiz8-role-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;background:var(--purple-100,#ede9fe);color:var(--purple-700,#6d28d9);padding:2px 7px;border-radius:4px;white-space:nowrap}
-.wiz8-risk-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.65;margin:0 0 10px;padding:10px 12px;background:var(--danger-50,#fef2f2);border-left:3px solid var(--danger-200,#fecaca);border-radius:0 4px 4px 0}
+.wiz8-risk-card[data-relevance="high"]{border-left:3px solid #fca5a5}
 
-/* ---- Attack vectors ---- */
+/* Risk header */
+.wiz8-risk-header{display:flex;align-items:center;gap:7px;margin-bottom:10px;flex-wrap:wrap}
+.wiz8-risk-cb{flex-shrink:0;accent-color:var(--teal-600,#0d9488);width:15px;height:15px;cursor:pointer;margin-top:1px}
+.wiz8-risk-icon{display:flex;color:#ef4444;flex-shrink:0}
+.wiz8-risk-name{font-size:13px;font-weight:700;color:var(--color-text-primary);flex:1;min-width:140px}
+.wiz8-role-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;background:#ede9fe;color:#6d28d9;padding:2px 7px;border-radius:4px;white-space:nowrap}
+
+/* Category tag */
+.wiz8-cat-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+
+/* Relevance badge */
+.wiz8-rel-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;letter-spacing:.03em}
+.wiz8-rel-badge--high{background:#fee2e2;color:#b91c1c}
+.wiz8-rel-badge--medium{background:#f1f5f9;color:#475569}
+
+/* Traditional IT analogue */
+.wiz8-analog-row{display:flex;gap:7px;align-items:flex-start;margin-bottom:10px;padding:9px 12px;background:#f8fafc;border-radius:6px;border:1px solid var(--color-border)}
+.wiz8-analog-icon{display:flex;color:#0284c7;flex-shrink:0;margin-top:1px}
+.wiz8-analog-text{font-size:12px;color:#334155;line-height:1.6;font-style:italic}
+
+/* Applies-if checklist */
+.wiz8-applies-wrap{margin-bottom:10px}
+.wiz8-applies-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 6px}
+.wiz8-applies-list{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.wiz8-applies-item{font-size:12px;color:var(--color-text-secondary);line-height:1.55;padding:5px 10px 5px 28px;background:#fff;border:1px solid var(--color-border);border-radius:5px;position:relative}
+.wiz8-applies-item::before{content:"✓";position:absolute;left:8px;color:#0d9488;font-weight:700;font-size:11px;top:6px}
+
+/* Collapsible description */
+.wiz8-desc-wrap{border:1px solid var(--color-border);border-radius:6px;overflow:hidden;margin-bottom:6px}
+.wiz8-desc-header{display:flex;align-items:center;gap:6px;padding:7px 11px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none}
+.wiz8-desc-header:hover{background:var(--color-bg-hover,#f1f5f9)}
+.wiz8-desc-icon{display:flex;color:var(--color-text-tertiary);flex-shrink:0}
+.wiz8-desc-label{font-size:12px;font-weight:600;color:var(--color-text-secondary);flex:1}
+.wiz8-desc-chevron{display:flex;color:var(--color-text-tertiary);transition:transform .2s}
+.wiz8-desc-body{padding:12px 14px}
+.wiz8-risk-desc-text{font-size:12px;color:var(--color-text-secondary);line-height:1.65;margin:0}
+
+/* Attack vectors */
 .wiz8-av-wrap{border:1px solid var(--color-border);border-radius:6px;overflow:hidden;margin-top:4px}
-.wiz8-av-header{display:flex;align-items:center;gap:7px;padding:8px 12px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none}
+.wiz8-av-header{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none}
 .wiz8-av-header:hover{background:var(--color-bg-hover,#f1f5f9)}
-.wiz8-av-icon{display:flex;color:var(--amber-600,#d97706);flex-shrink:0}
-.wiz8-av-label{font-size:12px;font-weight:600;color:var(--amber-800,#92400e);flex:1}
+.wiz8-av-icon{display:flex;color:#d97706;flex-shrink:0}
+.wiz8-av-label{font-size:12px;font-weight:600;color:#92400e;flex:1}
 .wiz8-av-chevron{display:flex;color:var(--color-text-tertiary);transition:transform .2s}
-.wiz8-av-body{padding:12px 14px;display:flex;flex-direction:column;gap:12px;background:var(--amber-50,#fffbeb)}
+.wiz8-av-body{padding:12px 14px;display:flex;flex-direction:column;gap:12px;background:#fffbeb}
 .wiz8-av-item{display:flex;gap:10px;align-items:flex-start}
-.wiz8-av-num{font-size:11px;font-weight:700;color:var(--amber-700,#b45309);background:var(--amber-100,#fef3c7);padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-top:2px}
+.wiz8-av-num{font-size:11px;font-weight:700;color:#b45309;background:#fef3c7;padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-top:2px}
 .wiz8-av-text{font-size:12px;color:var(--color-text-secondary);line-height:1.65;margin:0}
 
-/* ---- Search box ---- */
-.wiz8-search-wrap{display:flex;align-items:center;gap:6px;margin-bottom:14px;background:#fff;border:1px solid var(--color-border);border-radius:6px;padding:0 10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+/* Search */
+.wiz8-search-wrap{display:flex;align-items:center;gap:6px;margin-bottom:10px;background:#fff;border:1px solid var(--color-border);border-radius:6px;padding:0 10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .wiz8-search-icon{display:flex;color:var(--color-text-tertiary);flex-shrink:0}
 .wiz8-search-input{flex:1;border:none;outline:none;padding:10px 0;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:transparent}
 .wiz8-search-input::placeholder{color:var(--color-text-tertiary)}
 .wiz8-search-clear{display:flex;align-items:center;justify-content:center;background:var(--color-bg-subtle,#f8fafc);border:1px solid var(--color-border);border-radius:4px;width:20px;height:20px;cursor:pointer;color:var(--color-text-tertiary);flex-shrink:0;padding:0}
 .wiz8-search-clear:hover{color:var(--color-text-primary)}
 .wiz8-search-count{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap}
-.wiz8-hidden{display:none!important}
 .wiz8-risk-list{display:flex;flex-direction:column}
 
-/* ---- Count and action ---- */
-.wiz8-count-badge{font-size:11px;font-weight:600;background:var(--teal-100,#ccfbf1);color:var(--teal-700,#0f766e);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+/* Count/action */
+.wiz8-count-badge{font-size:11px;font-weight:600;background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
 .wiz8-action-right{display:flex;gap:8px}
 .wiz8-count-lg{font-size:13px;font-weight:600;color:var(--teal-700,#0f766e)}
 
-/* ---- Results card ---- */
+/* Results */
 .wiz8-results{margin-top:16px}
-.wiz8-result-card{background:var(--success-50,#f0fdf4);border:1px solid var(--success-200,#bbf7d0);border-radius:8px;padding:20px}
-.wiz8-result-title{font-size:14px;font-weight:700;color:var(--success-700,#15803d);margin:0 0 14px}
-.wiz8-result-stats{display:flex;gap:28px;margin-bottom:14px;flex-wrap:wrap}
+.wiz8-result-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px}
+.wiz8-result-title{font-size:14px;font-weight:700;color:#15803d;margin:0 0 14px}
+.wiz8-result-stats{display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap}
 .wiz8-stat{display:flex;flex-direction:column;gap:2px}
-.wiz8-stat-num{font-size:26px;font-weight:700;color:var(--success-700,#15803d);line-height:1}
-.wiz8-stat-lbl{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
+.wiz8-stat-num{font-size:24px;font-weight:700;color:#15803d;line-height:1}
+.wiz8-stat-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
 .wiz8-result-note{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0}
 
-/* ---- Reference pane ---- */
+/* Reference pane */
+.wiz8-cat-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.wiz8-cat-legend-item{display:flex;align-items:flex-start;gap:10px}
+.wiz8-cat-legend-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.5}
 .wiz8-ref-fg{margin-bottom:28px}
 .wiz8-ref-fg-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--color-border)}
 .wiz8-ref-fg-name{font-size:13px;font-weight:700;color:var(--color-text-primary)}
-.wiz8-ref-risk{margin-bottom:10px;padding-left:12px;border-left:3px solid var(--danger-200,#fecaca)}
-.wiz8-ref-risk-name{font-size:12px;font-weight:700;color:var(--danger-700,#b91c1c);margin:0 0 4px}
-.wiz8-ref-risk-desc{font-size:11px;color:var(--color-text-secondary);margin:0;line-height:1.55}
+.wiz8-ref-risk{margin-bottom:12px;padding-left:12px;border-left:3px solid #fecaca}
+.wiz8-ref-risk-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.wiz8-ref-risk-name{font-size:12px;font-weight:700;color:#b91c1c;margin:0}
+.wiz8-ref-analog{font-size:11px;color:var(--color-text-secondary);margin:0;line-height:1.55;font-style:italic}
 `;
     document.head.appendChild(s);
   }
 
   // ---- Utilities ----------------------------------------------
   function _el(tag, cls) {
-    const el = document.createElement(tag);
-    if (cls) el.className = cls;
-    return el;
+    const el = document.createElement(tag); if (cls) el.className = cls; return el;
   }
-
   function _sectionLabel(text) {
     const p = _el('p', 'section-label'); p.textContent = text; return p;
   }
