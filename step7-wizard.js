@@ -3,37 +3,35 @@
 
   // ---- Module state -----------------------------------------
   let _step = null;
-  let _detail = null;
   let _colorKey = null;
   let _phaseTitle = null;
   let _container = null;
   let _framework = null;
   let _record = null;
   let _step3Data = null;
-  let _filteredArticles = [];
+  let _filteredStepItems = []; // [{stepName, objectives, risks:[{jkName,RiskDescription,controls:[...]}]}]
 
   const _state = {
     assessed_by: '',
     use_case_id: '',
-    selected_controls: {} // requirement_control_number → boolean
+    selected_controls: {} // control_number → boolean
   };
 
   // ---- Public API -------------------------------------------
   window.mountStep7Wizard = function (container, step, detail, colorKey, phaseTitle) {
     _container = container;
     _step = step;
-    _detail = detail;
     _colorKey = colorKey;
     _phaseTitle = phaseTitle;
 
-    // Reset state for fresh mount
+    // Reset on fresh mount
     _state.assessed_by = '';
     _state.use_case_id = '';
     _state.selected_controls = {};
     _framework = null;
     _record = null;
     _step3Data = null;
-    _filteredArticles = [];
+    _filteredStepItems = [];
 
     _injectStyles();
 
@@ -59,7 +57,6 @@
       return;
     }
 
-    // Load system record from sessionStorage
     try {
       const saved = sessionStorage.getItem('ai_workflow_system_record');
       if (saved) _record = JSON.parse(saved);
@@ -67,23 +64,25 @@
 
     _step3Data = _record?.['step-3'] ?? null;
 
-    // Restore prior step-7 selections if they exist
+    // Restore prior step-7 selections
     const saved7 = _record?.['step-7'];
-    if (saved7?.selected_controls) {
+    if (saved7?.selected_risks) {
       _state.assessed_by = saved7.assessed_by || '';
       _state.use_case_id = saved7.use_case_id || '';
-      saved7.selected_controls.forEach(c => {
-        _state.selected_controls[c.requirement_control_number] = c.selected;
-      });
+      saved7.selected_risks.forEach(risk =>
+        risk.controls.forEach(c => {
+          _state.selected_controls[c.control_number] = c.selected;
+        })
+      );
     }
 
-    _filteredArticles = _buildFilteredArticles();
+    _filteredStepItems = _buildFilteredStepItems();
 
-    // Default all to selected if no prior state
+    // Default: select all controls if no prior state
     if (Object.keys(_state.selected_controls).length === 0) {
-      _filteredArticles.forEach(a =>
-        a.fields.forEach(f =>
-          f.controls.forEach(c => { _state.selected_controls[c.requirement_control_number] = true; })
+      _filteredStepItems.forEach(si =>
+        si.risks.forEach(r =>
+          r.controls.forEach(c => { _state.selected_controls[c.control_number] = true; })
         )
       );
     }
@@ -91,27 +90,56 @@
     _renderPanes(paneWrap);
   }
 
-  function _buildFilteredArticles() {
+  // ---- Filter all sections for jkType==="risk" by applicable control numbers ---
+  function _buildFilteredStepItems() {
     if (!_framework) return [];
-    const allArticles = _framework['1. Compliance Requirements'] || [];
+    // Collect every step item from every top-level section — risks exist in multiple sections
+    const buildSection = Object.values(_framework).reduce(
+      (acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []
+    );
+
     const applicable = _step3Data?.all_requirement_control_numbers
       ? new Set(_step3Data.all_requirement_control_numbers)
       : null;
 
-    return allArticles.map(article => {
-      const filteredFields = (article.Fields || []).map(field => {
-        const filteredControls = (field.controls || []).filter(c =>
-          !applicable || applicable.has(c.requirement_control_number)
-        );
-        return filteredControls.length ? { ...field, controls: filteredControls } : null;
-      }).filter(Boolean);
+    const result = [];
 
-      return filteredFields.length ? {
-        stepName: article.StepName,
-        objectives: article.Objectives || [],
-        fields: filteredFields
-      } : null;
-    }).filter(Boolean);
+    for (const stepItem of buildSection) {
+      const matchedRisks = [];
+
+      for (const field of (stepItem.Fields || [])) {
+        if (field.jkType !== 'risk') continue;
+
+        // Filter controls: a control matches if ANY of its (comma-separated) rcns is applicable
+        const matchedControls = (field.controls || []).filter(ctrl => {
+          if (!applicable) return true; // no filter — show all
+          const rcns = (ctrl.requirement_control_number || '')
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+          return rcns.some(rcn => applicable.has(rcn));
+        });
+
+        if (matchedControls.length > 0) {
+          matchedRisks.push({
+            jkName: field.jkName,
+            RiskDescription: field.RiskDescription || '',
+            role: field.Role || '',
+            controls: matchedControls
+          });
+        }
+      }
+
+      if (matchedRisks.length > 0) {
+        result.push({
+          stepName: stepItem.StepName,
+          objectives: stepItem.Objectives || [],
+          risks: matchedRisks
+        });
+      }
+    }
+
+    return result;
   }
 
   // ---- Tab strip --------------------------------------------
@@ -157,17 +185,15 @@
   function _buildWizardPane() {
     const card = _el('div', 'step-detail-card');
 
-    // Eyebrow
+    // Header
     const ey = _el('p', `step-detail-eyebrow color-${_colorKey}`);
     ey.textContent = _phaseTitle;
     card.appendChild(ey);
 
-    // Title
     const title = _el('h2', 'step-detail-title');
     title.textContent = `Step ${_step.number} — ${_step.title}`;
     card.appendChild(title);
 
-    // Meta
     const meta = _el('div', 'step-detail-meta');
     (_step.owners || []).forEach(o => {
       const tag = _el('span', 'owner-tag');
@@ -176,7 +202,6 @@
     });
     card.appendChild(meta);
 
-    // Summary
     const summ = _el('p', 'step-detail-summary');
     summ.textContent = _step.summary || '';
     card.appendChild(summ);
@@ -193,31 +218,30 @@
       card.appendChild(dl);
     }
 
-    // Risk assessment section
-    card.appendChild(_sectionLabel('Risk & Control Assessment'));
+    // Risk assessment
+    card.appendChild(_sectionLabel('Risk Assessment'));
     card.appendChild(_buildStep3SummaryCard());
     card.appendChild(_buildIdentitySection());
 
-    const totalControls = _filteredArticles.reduce(
-      (s, a) => s + a.fields.reduce((s2, f) => s2 + f.controls.length, 0), 0
+    const totalRisks = _filteredStepItems.reduce((s, si) => s + si.risks.length, 0);
+    const totalControls = _filteredStepItems.reduce(
+      (s, si) => s + si.risks.reduce((s2, r) => s2 + r.controls.length, 0), 0
     );
 
-    if (totalControls === 0 && _step3Data) {
+    if (totalRisks === 0 && _step3Data) {
       const notice = _el('p', 'wiz7-notice');
-      notice.textContent = 'No applicable controls found for this classification.';
+      notice.textContent = 'No applicable risks found for this classification.';
       card.appendChild(notice);
     } else {
       const instr = _el('p', 'wiz7-instruction');
-      instr.innerHTML = `<strong>${totalControls} control${totalControls !== 1 ? 's' : ''}</strong> ${_step3Data ? 'are applicable based on the Step 3 classification' : '(all controls shown — complete Step 3 first for filtered view)'}. Review each and deselect controls that do not apply to your specific deployment.`;
+      instr.innerHTML = `<strong>${totalRisks} risk${totalRisks !== 1 ? 's' : ''}</strong> and <strong>${totalControls} risk control${totalControls !== 1 ? 's' : ''}</strong> ${_step3Data ? 'are applicable based on the Step 3 classification' : '(all risks shown — complete Step 3 first for filtered view)'}. Review each risk and deselect controls that do not apply to your deployment.`;
       card.appendChild(instr);
 
-      _filteredArticles.forEach(a => card.appendChild(_buildArticleSection(a)));
+      _filteredStepItems.forEach(si => card.appendChild(_buildStepNameSection(si)));
     }
 
     card.appendChild(_buildActionRow());
-
-    const resultsArea = _el('div', 'wiz7-results');
-    card.appendChild(resultsArea);
+    card.appendChild(_el('div', 'wiz7-results'));
 
     return card;
   }
@@ -228,7 +252,7 @@
 
     if (!_step3Data) {
       const w = _el('div', 'wiz7-warn');
-      w.innerHTML = '<strong>Step 3 not yet completed.</strong> Complete Step 3 (System classification) to filter controls to only those applicable to your system. All 95 controls are shown.';
+      w.innerHTML = '<strong>Step 3 not yet completed.</strong> Complete Step 3 (System classification) to filter risks to only those applicable to your system. All risks are shown.';
       card.appendChild(w);
       return card;
     }
@@ -284,62 +308,59 @@
     return row;
   }
 
-  // ---- Article section --------------------------------------
-  function _buildArticleSection(article) {
-    const sec = _el('div', 'wiz7-article');
-    const totalControls = article.fields.reduce((s, f) => s + f.controls.length, 0);
+  // ---- StepName accordion (top level) ----------------------
+  function _buildStepNameSection(stepItem) {
+    const totalControls = stepItem.risks.reduce((s, r) => s + r.controls.length, 0);
+    const sec = _el('div', 'wiz7-stepname');
 
     // Header
-    const header = _el('div', 'wiz7-article-header');
+    const header = _el('div', 'wiz7-stepname-header');
 
-    const left = _el('div', 'wiz7-article-header-left');
-    const nameEl = _el('span', 'wiz7-article-name');
-    nameEl.textContent = article.stepName;
-    left.appendChild(nameEl);
-    const badge = _el('span', 'wiz7-count-badge');
-    badge.textContent = `${totalControls} control${totalControls !== 1 ? 's' : ''}`;
-    left.appendChild(badge);
+    const left = _el('div', 'wiz7-stepname-header-left');
+    const nm = _el('span', 'wiz7-stepname-name');
+    nm.textContent = stepItem.stepName;
+    left.appendChild(nm);
+
+    const riskBadge = _el('span', 'wiz7-badge-risks');
+    riskBadge.textContent = `${stepItem.risks.length} risk${stepItem.risks.length !== 1 ? 's' : ''}`;
+    left.appendChild(riskBadge);
+
     header.appendChild(left);
 
-    const right = _el('div', 'wiz7-article-header-right');
+    const right = _el('div', 'wiz7-stepname-header-right');
 
     const selAll = document.createElement('button');
     selAll.className = 'wiz7-sel-btn';
     selAll.textContent = 'Select all';
-    selAll.addEventListener('click', e => { e.stopPropagation(); _setArticleSelection(article, true); });
+    selAll.addEventListener('click', e => { e.stopPropagation(); _setStepItemSelection(stepItem, true); });
     right.appendChild(selAll);
 
     const deselAll = document.createElement('button');
     deselAll.className = 'wiz7-sel-btn';
     deselAll.textContent = 'Deselect all';
-    deselAll.addEventListener('click', e => { e.stopPropagation(); _setArticleSelection(article, false); });
+    deselAll.addEventListener('click', e => { e.stopPropagation(); _setStepItemSelection(stepItem, false); });
     right.appendChild(deselAll);
 
-    // Per-article selected/total count — computed after checkboxes exist
+    // Selection count badge (updated live)
     const selCount = _el('span', 'wiz7-article-sel-count');
     right.appendChild(selCount);
 
     const chevron = _el('span', 'wiz7-chevron');
     chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    // Start collapsed
-    chevron.style.transform = 'rotate(-90deg)';
+    chevron.style.transform = 'rotate(-90deg)'; // starts collapsed
     right.appendChild(chevron);
+
     header.appendChild(right);
     sec.appendChild(header);
 
     // Body — starts collapsed
-    const body = _el('div', 'wiz7-article-body wiz7-collapsed');
+    const body = _el('div', 'wiz7-stepname-body wiz7-collapsed');
 
-    if (article.objectives?.length) {
-      const obj = _el('p', 'wiz7-objective');
-      obj.textContent = article.objectives[0].Objective;
-      body.appendChild(obj);
-    }
+    stepItem.risks.forEach(risk => body.appendChild(_buildRiskCard(risk)));
 
-    article.fields.forEach(f => body.appendChild(_buildFieldGroup(f)));
     sec.appendChild(body);
 
-    // Set initial count badge after controls are in the DOM
+    // Set initial count badge
     _updateArticleBadge(sec);
 
     header.addEventListener('click', () => {
@@ -350,20 +371,112 @@
     return sec;
   }
 
-  function _setArticleSelection(article, selected) {
-    article.fields.forEach(f =>
-      f.controls.forEach(c => { _state.selected_controls[c.requirement_control_number] = selected; })
+  function _setStepItemSelection(stepItem, selected) {
+    stepItem.risks.forEach(r =>
+      r.controls.forEach(c => { _state.selected_controls[c.control_number] = selected; })
     );
     _syncCheckboxes();
   }
 
+  // ---- Risk card -------------------------------------------
+  function _buildRiskCard(risk) {
+    const card = _el('div', 'wiz7-risk-card');
+
+    // Risk header
+    const riskHeader = _el('div', 'wiz7-risk-header');
+
+    const riskIcon = _el('span', 'wiz7-risk-icon');
+    riskIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    riskHeader.appendChild(riskIcon);
+
+    const riskName = _el('span', 'wiz7-risk-name');
+    riskName.textContent = risk.jkName;
+    riskHeader.appendChild(riskName);
+
+    if (risk.role) {
+      const roleBadge = _el('span', 'wiz7-role-badge');
+      roleBadge.textContent = risk.role;
+      riskHeader.appendChild(roleBadge);
+    }
+
+    card.appendChild(riskHeader);
+
+    // Risk description
+    if (risk.RiskDescription) {
+      const desc = _el('p', 'wiz7-risk-desc');
+      desc.textContent = risk.RiskDescription;
+      card.appendChild(desc);
+    }
+
+    // Controls label
+    const ctrlLabel = _el('p', 'wiz7-ctrl-section-label');
+    ctrlLabel.textContent = `Risk Controls (${risk.controls.length})`;
+    card.appendChild(ctrlLabel);
+
+    // Controls list
+    const ctrlList = _el('div', 'wiz7-ctrl-list');
+    risk.controls.forEach(c => ctrlList.appendChild(_buildRiskControlRow(c)));
+    card.appendChild(ctrlList);
+
+    return card;
+  }
+
+  // ---- Risk control row ------------------------------------
+  function _buildRiskControlRow(ctrl) {
+    const row = _el('div', 'wiz7-ctrl-row');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'wiz7-ctrl-cb';
+    cb.dataset.rcn = ctrl.control_number;
+    cb.checked = !!_state.selected_controls[ctrl.control_number];
+    cb.addEventListener('change', e => {
+      _state.selected_controls[ctrl.control_number] = e.target.checked;
+      _updateCountBadge();
+      const stepnameEl = e.target.closest('.wiz7-stepname');
+      if (stepnameEl) _updateArticleBadge(stepnameEl);
+    });
+    row.appendChild(cb);
+
+    const content = _el('div', 'wiz7-ctrl-content');
+
+    // Top: control number badge + mapped rcn badges + name
+    const top = _el('div', 'wiz7-ctrl-top');
+
+    const ctrlNumBadge = _el('span', 'wiz7-ctrl-num');
+    ctrlNumBadge.textContent = ctrl.control_number;
+    top.appendChild(ctrlNumBadge);
+
+    // Mapped requirement_control_numbers as individual pills
+    const rcns = (ctrl.requirement_control_number || '').split(',').map(s => s.trim()).filter(Boolean);
+    rcns.forEach(rcn => {
+      const b = _el('span', 'wiz7-rcn');
+      b.textContent = rcn;
+      top.appendChild(b);
+    });
+
+    const nm = _el('span', 'wiz7-ctrl-name');
+    nm.textContent = ctrl.jkName;
+    top.appendChild(nm);
+
+    content.appendChild(top);
+
+    const desc = _el('p', 'wiz7-ctrl-desc');
+    desc.textContent = ctrl.jkText || '';
+    content.appendChild(desc);
+
+    row.appendChild(content);
+    return row;
+  }
+
+  // ---- Sync helpers ----------------------------------------
   function _syncCheckboxes() {
     _container.querySelectorAll('.wiz7-ctrl-cb').forEach(cb => {
-      const rcn = cb.dataset.rcn;
-      if (rcn !== undefined) cb.checked = !!_state.selected_controls[rcn];
+      const key = cb.dataset.rcn;
+      if (key !== undefined) cb.checked = !!_state.selected_controls[key];
     });
     _updateCountBadge();
-    _container.querySelectorAll('.wiz7-article').forEach(a => _updateArticleBadge(a));
+    _container.querySelectorAll('.wiz7-stepname').forEach(el => _updateArticleBadge(el));
   }
 
   function _updateCountBadge() {
@@ -373,10 +486,10 @@
     if (badge) badge.textContent = `${sel} / ${tot} selected`;
   }
 
-  function _updateArticleBadge(articleEl) {
-    const all = articleEl.querySelectorAll('.wiz7-ctrl-cb');
-    const checked = articleEl.querySelectorAll('.wiz7-ctrl-cb:checked');
-    const badge = articleEl.querySelector('.wiz7-article-sel-count');
+  function _updateArticleBadge(sectionEl) {
+    const all = sectionEl.querySelectorAll('.wiz7-ctrl-cb');
+    const checked = sectionEl.querySelectorAll('.wiz7-ctrl-cb:checked');
+    const badge = sectionEl.querySelector('.wiz7-article-sel-count');
     if (!badge) return;
     const sel = checked.length;
     const tot = all.length;
@@ -386,57 +499,6 @@
       : sel === tot
         ? 'wiz7-article-sel-count wiz7-article-sel-count--all'
         : 'wiz7-article-sel-count wiz7-article-sel-count--partial';
-  }
-
-  // ---- Field group -----------------------------------------
-  function _buildFieldGroup(field) {
-    const fg = _el('div', 'wiz7-fg');
-
-    const fn = _el('p', 'wiz7-fg-name');
-    fn.textContent = field.jkName;
-    fg.appendChild(fn);
-
-    const list = _el('div', 'wiz7-ctrl-list');
-    field.controls.forEach(c => list.appendChild(_buildControlRow(c)));
-    fg.appendChild(list);
-
-    return fg;
-  }
-
-  // ---- Control row -----------------------------------------
-  function _buildControlRow(ctrl) {
-    const row = _el('div', 'wiz7-ctrl-row');
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'wiz7-ctrl-cb';
-    cb.dataset.rcn = ctrl.requirement_control_number;
-    cb.checked = !!_state.selected_controls[ctrl.requirement_control_number];
-    cb.addEventListener('change', e => {
-      _state.selected_controls[ctrl.requirement_control_number] = e.target.checked;
-      _updateCountBadge();
-      const articleEl = e.target.closest('.wiz7-article');
-      if (articleEl) _updateArticleBadge(articleEl);
-    });
-    row.appendChild(cb);
-
-    const content = _el('div', 'wiz7-ctrl-content');
-
-    const top = _el('div', 'wiz7-ctrl-top');
-    const rcnBadge = _el('span', 'wiz7-rcn');
-    rcnBadge.textContent = ctrl.requirement_control_number;
-    top.appendChild(rcnBadge);
-    const nm = _el('span', 'wiz7-ctrl-name');
-    nm.textContent = ctrl.jkName;
-    top.appendChild(nm);
-    content.appendChild(top);
-
-    const desc = _el('p', 'wiz7-ctrl-desc');
-    desc.textContent = ctrl.jkText || '';
-    content.appendChild(desc);
-
-    row.appendChild(content);
-    return row;
   }
 
   // ---- Action row ------------------------------------------
@@ -471,7 +533,7 @@
     return row;
   }
 
-  // ---- Save handler ----------------------------------------
+  // ---- Save ------------------------------------------------
   function _handleSave() {
     const rec7 = _buildOutputRecord();
 
@@ -492,9 +554,7 @@
     if (_state.use_case_id) _record._meta.use_case_id = _state.use_case_id;
     _record['step-7'] = rec7;
 
-    try {
-      sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record));
-    } catch (_e) {}
+    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_e) {}
 
     _downloadRecord();
     _renderResults(rec7);
@@ -502,22 +562,31 @@
 
   function _buildOutputRecord() {
     const today = new Date().toISOString().slice(0, 10);
-    const controls = [];
 
-    _filteredArticles.forEach(a =>
-      a.fields.forEach(f =>
-        f.controls.forEach(c => {
-          controls.push({
-            requirement_control_number: c.requirement_control_number,
-            article: a.stepName,
-            field_group: f.jkName,
-            control_name: c.jkName,
-            control_description: c.jkText || '',
-            selected: !!_state.selected_controls[c.requirement_control_number]
-          });
-        })
-      )
-    );
+    const selectedRisks = [];
+    _filteredStepItems.forEach(si => {
+      si.risks.forEach(risk => {
+        const controls = risk.controls.map(c => ({
+          control_number: c.control_number,
+          requirement_control_number: c.requirement_control_number,
+          control_name: c.jkName,
+          control_description: c.jkText || '',
+          selected: !!_state.selected_controls[c.control_number]
+        }));
+
+        selectedRisks.push({
+          step_name: si.stepName,
+          risk_name: risk.jkName,
+          risk_description: risk.RiskDescription,
+          total_controls: controls.length,
+          selected_controls: controls.filter(c => c.selected).length,
+          controls
+        });
+      });
+    });
+
+    const totalControls = selectedRisks.reduce((s, r) => s + r.total_controls, 0);
+    const totalSelected = selectedRisks.reduce((s, r) => s + r.selected_controls, 0);
 
     return {
       step_id: 'step-7',
@@ -531,9 +600,10 @@
         combined_outcome: _step3Data.combined_outcome?.outcome_label,
         classification_date: _step3Data.classification_date
       } : null,
-      total_controls_applicable: controls.length,
-      total_controls_selected: controls.filter(c => c.selected).length,
-      selected_controls: controls
+      total_risks: selectedRisks.length,
+      total_controls_applicable: totalControls,
+      total_controls_selected: totalSelected,
+      selected_risks: selectedRisks
     };
   }
 
@@ -563,25 +633,23 @@
           sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record));
 
           _step3Data = _record?.['step-3'] ?? null;
-
-          // Restore step-7 state from uploaded record
-          const s7 = _record?.['step-7'];
           _state.selected_controls = {};
-          if (s7?.selected_controls) {
+
+          const s7 = _record?.['step-7'];
+          if (s7?.selected_risks) {
             _state.assessed_by = s7.assessed_by || '';
             _state.use_case_id = s7.use_case_id || '';
-            s7.selected_controls.forEach(c => {
-              _state.selected_controls[c.requirement_control_number] = c.selected;
-            });
+            s7.selected_risks.forEach(risk =>
+              risk.controls.forEach(c => { _state.selected_controls[c.control_number] = c.selected; })
+            );
           }
 
-          _filteredArticles = _buildFilteredArticles();
+          _filteredStepItems = _buildFilteredStepItems();
 
-          // If still no selections, default all to selected
           if (Object.keys(_state.selected_controls).length === 0) {
-            _filteredArticles.forEach(a =>
-              a.fields.forEach(f =>
-                f.controls.forEach(c => { _state.selected_controls[c.requirement_control_number] = true; })
+            _filteredStepItems.forEach(si =>
+              si.risks.forEach(r =>
+                r.controls.forEach(c => { _state.selected_controls[c.control_number] = true; })
               )
             );
           }
@@ -610,9 +678,10 @@
     card.appendChild(h);
 
     const stats = _el('div', 'wiz7-result-stats');
-    [[rec7.total_controls_selected, 'Controls selected'],
-     [rec7.total_controls_applicable - rec7.total_controls_selected, 'Controls excluded'],
-     [rec7.total_controls_applicable, 'Total applicable']
+    [
+      [rec7.total_risks, 'Risks assessed'],
+      [rec7.total_controls_selected, 'Controls selected'],
+      [rec7.total_controls_applicable - rec7.total_controls_selected, 'Controls excluded']
     ].forEach(([num, label]) => {
       const s = _el('div', 'wiz7-stat');
       const n = _el('span', 'wiz7-stat-num');
@@ -626,63 +695,64 @@
     card.appendChild(stats);
 
     const note = _el('p', 'wiz7-result-note');
-    note.textContent = 'System record updated and downloaded. Selected controls will feed into Step 9 (Risk Treatment). Step 8 (DPIA) will additionally extract Article 10 data governance controls.';
+    note.textContent = 'System record updated and downloaded. Selected controls will feed into Step 9 (Risk Treatment). Step 8 (DPIA) will additionally extract Article 10 data governance risks.';
     card.appendChild(note);
 
     area.appendChild(card);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // ---- Reference pane --------------------------------------
+  // ---- Reference pane -------------------------------------
   function _buildReferencePane() {
     const card = _el('div', 'step-detail-card');
 
     const title = _el('h2', 'step-detail-title');
-    title.textContent = 'Risk & Control Framework Reference';
+    title.textContent = 'Risk Catalogue Reference';
     card.appendChild(title);
 
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Complete listing of all EU AI Act compliance articles and their associated control families in the AI Risk Control Framework. Controls applicable to a specific system are determined by the Step 3 classification output.';
+    sub.textContent = 'Complete catalogue of all risks and their associated controls from the AI Risk Control Framework (Section 3: Build & Test). The risks displayed in the wizard are filtered to those applicable to the Step 3 classification.';
     card.appendChild(sub);
 
-    const articles = _framework?.['1. Compliance Requirements'] || [];
+    const allItems = Object.values(_framework || {}).reduce(
+      (acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []
+    );
 
-    articles.forEach(article => {
-      const totalControls = (article.Fields || []).reduce(
-        (s, f) => s + (f.controls || []).length, 0
-      );
+    allItems.forEach(stepItem => {
+      const risks = (stepItem.Fields || []).filter(f => f.jkType === 'risk');
+      if (!risks.length) return;
 
       const sec = _el('div', 'wiz7-ref-article');
 
       const h3 = _el('div', 'wiz7-ref-article-header');
       const nm = _el('span', 'wiz7-ref-article-name');
-      nm.textContent = article.StepName;
+      nm.textContent = stepItem.StepName;
       h3.appendChild(nm);
       const cnt = _el('span', 'wiz7-count-badge');
-      cnt.textContent = `${totalControls} controls`;
+      cnt.textContent = `${risks.length} risk${risks.length !== 1 ? 's' : ''}`;
       h3.appendChild(cnt);
       sec.appendChild(h3);
 
-      (article.Fields || []).forEach(field => {
-        const fg = _el('div', 'wiz7-ref-fg');
-        const fn = _el('p', 'wiz7-ref-fg-name');
-        fn.textContent = field.jkName;
-        fg.appendChild(fn);
+      risks.forEach(risk => {
+        const riskDiv = _el('div', 'wiz7-ref-risk');
+
+        const riskNm = _el('p', 'wiz7-ref-risk-name');
+        riskNm.textContent = risk.jkName;
+        riskDiv.appendChild(riskNm);
 
         const grid = _el('div', 'wiz7-ref-ctrl-grid');
-        (field.controls || []).forEach(ctrl => {
+        (risk.controls || []).forEach(ctrl => {
           const c = _el('div', 'wiz7-ref-ctrl');
-          const rcn = _el('span', 'wiz7-rcn');
-          rcn.textContent = ctrl.requirement_control_number;
-          c.appendChild(rcn);
+          const cnum = _el('span', 'wiz7-ctrl-num');
+          cnum.textContent = ctrl.control_number;
+          c.appendChild(cnum);
           const nm2 = _el('span', 'wiz7-ref-ctrl-name');
           nm2.textContent = ctrl.jkName;
           c.appendChild(nm2);
           grid.appendChild(c);
         });
-
-        fg.appendChild(grid);
-        sec.appendChild(fg);
+        riskDiv.appendChild(grid);
+        sec.appendChild(riskDiv);
       });
 
       card.appendChild(sec);
@@ -697,7 +767,7 @@
     const s = document.createElement('style');
     s.id = 'wiz7-styles';
     s.textContent = `
-/* ---- Step 7 Wizard — base layout (safe to redeclare alongside wiz3) ---- */
+/* ---- Step 7 base layout ---- */
 .wiz-shell { display: flex; flex-direction: column; height: 100%; }
 .wiz-tab-strip { display: flex; gap: 4px; padding: 16px 24px 0; border-bottom: 1px solid var(--color-border); background: var(--color-bg); flex-shrink: 0; }
 .wiz-tab { padding: 8px 16px; font-size: 13px; font-weight: 500; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; color: var(--color-text-secondary); margin-bottom: -1px; transition: color .15s, border-color .15s; }
@@ -735,14 +805,14 @@
 .wiz7-instruction { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; line-height: 1.6; }
 .wiz7-notice { font-size: 13px; color: var(--color-text-tertiary); padding: 20px 0; }
 
-/* ---- Article accordion ---- */
-.wiz7-article { border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
-.wiz7-article-header { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: var(--color-bg-subtle,#f8fafc); cursor: pointer; user-select: none; gap: 10px; }
-.wiz7-article-header:hover { background: var(--color-bg-hover,#f1f5f9); }
-.wiz7-article-header-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-.wiz7-article-name { font-size: 13px; font-weight: 600; color: var(--color-text-primary); }
-.wiz7-count-badge { font-size: 11px; font-weight: 600; background: var(--teal-100,#ccfbf1); color: var(--teal-700,#0f766e); padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
-.wiz7-article-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+/* ---- StepName accordion (top level) ---- */
+.wiz7-stepname { border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+.wiz7-stepname-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--color-bg-subtle,#f8fafc); cursor: pointer; user-select: none; gap: 10px; }
+.wiz7-stepname-header:hover { background: var(--color-bg-hover,#f1f5f9); }
+.wiz7-stepname-header-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.wiz7-stepname-name { font-size: 13px; font-weight: 700; color: var(--color-text-primary); }
+.wiz7-badge-risks { font-size: 11px; font-weight: 600; background: var(--danger-100,#fee2e2); color: var(--danger-700,#b91c1c); padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
+.wiz7-stepname-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .wiz7-sel-btn { font-size: 11px; font-weight: 500; color: var(--teal-600,#0d9488); background: none; border: 1px solid var(--teal-200,#99f6e4); border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
 .wiz7-sel-btn:hover { background: var(--teal-50,#f0fdfa); }
 .wiz7-article-sel-count { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; white-space: nowrap; min-width: 52px; text-align: center; }
@@ -750,26 +820,32 @@
 .wiz7-article-sel-count--partial { background: var(--warning-100,#fef3c7); color: var(--warning-700,#b45309); }
 .wiz7-article-sel-count--none { background: var(--danger-100,#fee2e2); color: var(--danger-700,#b91c1c); }
 .wiz7-chevron { display: flex; color: var(--color-text-tertiary); flex-shrink: 0; transition: transform .2s; }
-.wiz7-article-body { padding: 0 14px 14px; }
+.wiz7-stepname-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
 .wiz7-collapsed { display: none; }
 
-/* ---- Objective ---- */
-.wiz7-objective { font-size: 12px; color: var(--color-text-tertiary); line-height: 1.6; margin: 12px 0 8px; padding: 8px 10px; background: var(--color-bg-subtle,#f8fafc); border-radius: 4px; border-left: 3px solid var(--info-300,#7dd3fc); }
+/* ---- Risk card ---- */
+.wiz7-risk-card { background: #fff; border: 1px solid var(--color-border); border-radius: 8px; padding: 14px 16px; }
+.wiz7-risk-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.wiz7-risk-icon { display: flex; color: var(--danger-500,#ef4444); flex-shrink: 0; }
+.wiz7-risk-name { font-size: 13px; font-weight: 700; color: var(--color-text-primary); flex: 1; }
+.wiz7-role-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; background: var(--purple-100,#ede9fe); color: var(--purple-700,#6d28d9); padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.wiz7-risk-desc { font-size: 12px; color: var(--color-text-secondary); line-height: 1.65; margin: 0 0 12px; padding: 10px 12px; background: var(--danger-50,#fef2f2); border-left: 3px solid var(--danger-200,#fecaca); border-radius: 0 4px 4px 0; }
+.wiz7-ctrl-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--color-text-tertiary); margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--color-border); }
 
-/* ---- Field group ---- */
-.wiz7-fg { margin-top: 14px; }
-.wiz7-fg-name { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--color-text-tertiary); margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--color-border); }
-
-/* ---- Control rows ---- */
+/* ---- Risk control rows ---- */
 .wiz7-ctrl-list { display: flex; flex-direction: column; gap: 5px; }
 .wiz7-ctrl-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; transition: background .1s; }
 .wiz7-ctrl-row:hover { background: var(--color-bg-subtle,#f8fafc); }
 .wiz7-ctrl-cb { margin-top: 3px; flex-shrink: 0; accent-color: var(--teal-600,#0d9488); width: 14px; height: 14px; cursor: pointer; }
 .wiz7-ctrl-content { flex: 1; min-width: 0; }
-.wiz7-ctrl-top { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; flex-wrap: wrap; }
-.wiz7-rcn { font-size: 10px; font-weight: 700; font-family: var(--font-mono,monospace); background: var(--purple-100,#ede9fe); color: var(--purple-700,#6d28d9); padding: 1px 5px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+.wiz7-ctrl-top { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+.wiz7-ctrl-num { font-size: 10px; font-weight: 700; font-family: var(--font-mono,monospace); background: var(--amber-100,#fef3c7); color: var(--amber-700,#b45309); padding: 1px 5px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+.wiz7-rcn { font-size: 10px; font-weight: 600; font-family: var(--font-mono,monospace); background: var(--purple-100,#ede9fe); color: var(--purple-700,#6d28d9); padding: 1px 5px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
 .wiz7-ctrl-name { font-size: 13px; font-weight: 600; color: var(--color-text-primary); }
 .wiz7-ctrl-desc { font-size: 12px; color: var(--color-text-secondary); line-height: 1.55; margin: 0; }
+
+/* ---- Count badge (shared) ---- */
+.wiz7-count-badge { font-size: 11px; font-weight: 600; background: var(--teal-100,#ccfbf1); color: var(--teal-700,#0f766e); padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
 
 /* ---- Action area ---- */
 .wiz7-action-left { display: flex; align-items: center; }
@@ -788,11 +864,11 @@
 
 /* ---- Reference pane ---- */
 .wiz7-ref-article { margin-bottom: 28px; }
-.wiz7-ref-article-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--color-border); }
+.wiz7-ref-article-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--color-border); }
 .wiz7-ref-article-name { font-size: 13px; font-weight: 700; color: var(--color-text-primary); }
-.wiz7-ref-fg { margin-bottom: 12px; padding-left: 12px; border-left: 3px solid var(--color-border); }
-.wiz7-ref-fg-name { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--color-text-tertiary); margin: 0 0 8px; }
-.wiz7-ref-ctrl-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 5px; }
+.wiz7-ref-risk { margin-bottom: 14px; padding-left: 12px; border-left: 3px solid var(--danger-200,#fecaca); }
+.wiz7-ref-risk-name { font-size: 12px; font-weight: 700; color: var(--danger-700,#b91c1c); margin: 0 0 8px; }
+.wiz7-ref-ctrl-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: 5px; }
 .wiz7-ref-ctrl { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--color-bg-subtle,#f8fafc); border: 1px solid var(--color-border); border-radius: 5px; }
 .wiz7-ref-ctrl-name { font-size: 12px; color: var(--color-text-secondary); }
 `;
