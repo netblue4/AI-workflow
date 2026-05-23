@@ -147,6 +147,11 @@
       t.classList.toggle('wiz-tab--active', t.dataset.tab === id));
     _container.querySelectorAll('.wiz-pane').forEach(p =>
       p.classList.toggle('wiz-pane--hidden', p.dataset.pane !== id));
+    // Rebuild reference pane on every switch so it reflects current selections
+    if (id === 'reference') {
+      const refPane = _container.querySelector('[data-pane="reference"]');
+      if (refPane) { refPane.innerHTML = ''; refPane.appendChild(_buildReferencePane()); }
+    }
   }
 
   // ---- Panes --------------------------------------------------
@@ -635,59 +640,101 @@
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // ---- Reference pane -----------------------------------------
+  // ---- Reference pane (rebuilds on tab switch — always reflects current selections) ---
   function _buildReferencePane() {
     const card = _el('div', 'step-detail-card');
     const title = _el('h2', 'step-detail-title'); title.textContent = 'Control Catalogue Reference'; card.appendChild(title);
-    const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'All technical controls for your selected risks. Each control includes implementation tasks and Python code samples. Use this panel while reviewing controls in the Step Wizard tab.';
-    card.appendChild(sub);
 
     if (_riskData.length === 0) {
       const p = _el('p', 'wiz9-intro'); p.textContent = 'No risks selected in Step 8.'; card.appendChild(p);
       return card;
     }
 
+    // Live selection summary
+    const totalCtrls = _riskData.reduce((n, r) => n + r.controls.length, 0);
+    const selCtrls   = _riskData.reduce((n, r) => n + r.controls.filter(c => !!_state.selected[_selKey(r.risk_name, c.jkName)]).length, 0);
+    const uncovered  = _riskData.filter(r => _selectedCountForRisk(r) === 0).length;
+
+    const summary = _el('div', 'wiz9-ref-summary');
+    const sumBadge = _el('span', selCtrls === totalCtrls ? 'wiz9-ref-sum-badge wiz9-ref-sum-badge--ok' : 'wiz9-ref-sum-badge wiz9-ref-sum-badge--warn');
+    sumBadge.textContent = `${selCtrls} / ${totalCtrls} controls selected`;
+    summary.appendChild(sumBadge);
+    if (uncovered > 0) {
+      const unc = _el('span', 'wiz9-ref-uncovered');
+      unc.textContent = `${uncovered} risk${uncovered !== 1 ? 's' : ''} without a control`;
+      summary.appendChild(unc);
+    }
+    const hint = _el('p', 'wiz9-ref-hint');
+    hint.textContent = 'This view reflects your current selections in the Step Wizard tab. Selected controls are shown in full; deselected controls are greyed out.';
+    card.appendChild(summary);
+    card.appendChild(hint);
+
     _riskData.forEach(risk => {
+      const selCount = _selectedCountForRisk(risk);
       const sec = _el('div', 'wiz9-ref-risk-sec');
 
+      // Risk header with live count
       const hdr = _el('div', 'wiz9-ref-risk-hdr');
       const rn  = _el('span', 'wiz9-ref-risk-name'); rn.textContent = risk.risk_name; hdr.appendChild(rn);
       if (risk.category) {
         const ct = _el('span', 'wiz9-cat-tag'); ct.textContent = risk.category;
         ct.style.cssText = 'background:#ccfbf1;color:#115e59'; hdr.appendChild(ct);
       }
+      const rb = _el('span', selCount === 0
+        ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--none'
+        : selCount === risk.controls.length
+          ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--all'
+          : 'wiz9-risk-sel-badge wiz9-risk-sel-badge--partial');
+      rb.textContent = `${selCount} / ${risk.controls.length}`;
+      hdr.appendChild(rb);
       sec.appendChild(hdr);
 
       risk.controls.forEach(ctrl => {
-        const cc = _el('div', 'wiz9-ref-ctrl');
+        const key      = _selKey(risk.risk_name, ctrl.jkName);
+        const isSelected = !!_state.selected[key];
+
+        const cc = _el('div', isSelected ? 'wiz9-ref-ctrl' : 'wiz9-ref-ctrl wiz9-ref-ctrl--deselected');
         const ch = _el('div', 'wiz9-ref-ctrl-hdr');
+
+        // Selection indicator
+        const selInd = _el('span', isSelected ? 'wiz9-ref-sel-ind wiz9-ref-sel-ind--on' : 'wiz9-ref-sel-ind wiz9-ref-sel-ind--off');
+        selInd.textContent = isSelected ? '✓' : '✗';
+        ch.appendChild(selInd);
+
         const ci = _el('span', 'wiz9-ctrl-icon');
         ci.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
         ch.appendChild(ci);
+
         const cn = _el('span', 'wiz9-ref-ctrl-name'); cn.textContent = ctrl.jkName; ch.appendChild(cn);
         if (ctrl.requirement_control_number) {
           const rcn = _el('span', 'wiz9-rcn-badge'); rcn.textContent = ctrl.requirement_control_number; ch.appendChild(rcn);
         }
         cc.appendChild(ch);
 
-        if (ctrl.jkObjective || ctrl.jkText) {
-          const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective || ctrl.jkText; cc.appendChild(obj);
+        // Only expand tasks/code for selected controls
+        if (isSelected) {
+          if (ctrl.jkObjective || ctrl.jkText) {
+            const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective || ctrl.jkText; cc.appendChild(obj);
+          }
+          const tasks = ctrl.jkTask || [], samples = ctrl.jkCodeSample || [];
+          tasks.forEach((t, i) => {
+            const pair = _el('div', 'wiz9-ref-pair');
+            const tn = _el('span', 'wiz9-task-num'); tn.textContent = `Task ${i + 1}`; pair.appendChild(tn);
+            const tt = _el('p', 'wiz9-task-text'); tt.textContent = _stripLeadingNum(t); pair.appendChild(tt);
+            if (samples[i]) {
+              const cb2 = _el('span', 'wiz9-code-badge'); cb2.textContent = `Code ${i + 1}`; pair.appendChild(cb2);
+              const pre = document.createElement('pre'); pre.className = 'wiz9-code-block';
+              const code = document.createElement('code'); code.textContent = _extractCode(samples[i]);
+              pre.appendChild(code); pair.appendChild(pre);
+            }
+            cc.appendChild(pair);
+          });
+        } else {
+          const skip = _el('p', 'wiz9-ref-ctrl-skip');
+          skip.textContent = 'Not selected — deselected in Step Wizard.';
+          cc.appendChild(skip);
         }
 
-        const tasks = ctrl.jkTask || [], samples = ctrl.jkCodeSample || [];
-        tasks.forEach((t, i) => {
-          const pair = _el('div', 'wiz9-ref-pair');
-          const tn = _el('span', 'wiz9-task-num'); tn.textContent = `Task ${i + 1}`; pair.appendChild(tn);
-          const tt = _el('p', 'wiz9-task-text'); tt.textContent = _stripLeadingNum(t); pair.appendChild(tt);
-          if (samples[i]) {
-            const cn2 = _el('span', 'wiz9-code-badge'); cn2.textContent = `Code ${i + 1}`; pair.appendChild(cn2);
-            const pre = document.createElement('pre'); pre.className = 'wiz9-code-block';
-            const code = document.createElement('code'); code.textContent = _extractCode(samples[i]);
-            pre.appendChild(code); pair.appendChild(pre);
-          }
-          cc.appendChild(pair);
-        });
         sec.appendChild(cc);
       });
       card.appendChild(sec);
@@ -698,6 +745,28 @@
 
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
+    // Inject shared wiz-* base classes if not already present (e.g. when step-8 hasn't run)
+    if (!document.getElementById('wiz-shared-styles')) {
+      const shared = document.createElement('style');
+      shared.id = 'wiz-shared-styles';
+      shared.textContent = `
+.wiz-shell{display:flex;flex-direction:column;height:100%}
+.wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
+.wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
+.wiz-tab--active{color:var(--teal-600,#0d9488);border-bottom-color:var(--teal-600,#0d9488)}
+.wiz-pane-wrap{flex:1;overflow-y:auto}
+.wiz-pane{min-height:100%}
+.wiz-pane--hidden{display:none}
+.wiz-action-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-top:1px solid var(--color-border);margin-top:24px;gap:12px;flex-wrap:wrap}
+.wiz-btn-primary{padding:9px 20px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
+.wiz8-stat{display:flex;flex-direction:column;gap:2px}
+.wiz8-stat-num{font-size:24px;font-weight:700;color:#15803d;line-height:1}
+.wiz8-stat-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
+`;
+      document.head.appendChild(shared);
+    }
+
     if (document.getElementById('wiz9-styles')) return;
     const s = document.createElement('style');
     s.id = 'wiz9-styles';
@@ -796,12 +865,23 @@
 .wiz9-result-note{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0}
 
 /* Reference pane */
+.wiz9-ref-summary{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.wiz9-ref-sum-badge{font-size:12px;font-weight:700;padding:4px 12px;border-radius:10px}
+.wiz9-ref-sum-badge--ok{background:#dcfce7;color:#15803d}
+.wiz9-ref-sum-badge--warn{background:#fee2e2;color:#b91c1c}
+.wiz9-ref-uncovered{font-size:12px;font-weight:600;color:#b91c1c;background:#fff1f2;padding:3px 10px;border-radius:6px}
+.wiz9-ref-hint{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:0 0 20px;line-height:1.5}
 .wiz9-ref-risk-sec{margin-bottom:28px}
 .wiz9-ref-risk-hdr{display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-border);margin-bottom:12px;flex-wrap:wrap}
 .wiz9-ref-risk-name{font-size:13px;font-weight:700;color:var(--color-text-primary)}
-.wiz9-ref-ctrl{margin-bottom:14px;padding-left:12px;border-left:3px solid #a5b4fc}
+.wiz9-ref-ctrl{margin-bottom:10px;padding-left:12px;border-left:3px solid #a5b4fc}
+.wiz9-ref-ctrl--deselected{border-left-color:#e2e8f0;opacity:.55}
 .wiz9-ref-ctrl-hdr{display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap}
 .wiz9-ref-ctrl-name{font-size:12px;font-weight:700;color:#4338ca}
+.wiz9-ref-sel-ind{font-size:11px;font-weight:800;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.wiz9-ref-sel-ind--on{background:#dcfce7;color:#15803d}
+.wiz9-ref-sel-ind--off{background:#f1f5f9;color:#94a3b8}
+.wiz9-ref-ctrl-skip{font-size:11px;color:#94a3b8;font-style:italic;margin:0 0 4px}
 .wiz9-ref-pair{margin-bottom:12px;padding:8px 10px;background:#fafbff;border:1px solid #e0e7ff;border-radius:5px;display:flex;flex-direction:column;gap:6px}
 `;
     document.head.appendChild(s);
