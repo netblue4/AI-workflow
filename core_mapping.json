@@ -1,0 +1,479 @@
+[
+  {
+    "map_id": "MAP-001",
+    "ai_act_article": "Article 14: Human Oversight",
+    "harmonised_standard": "[18229-1.6]",
+    "risk_id": "RISK-001",
+    "test_id": "TEST-001",
+    "control_id": "CTRL-001",
+    "owasp_id": "OWASP-LLM05-M1"
+  },
+  {
+    "map_id": "MAP-002",
+    "ai_act_article": "Article 14: Human Oversight",
+    "harmonised_standard": "[18229-1.7]",
+    "risk_id": "RISK-001",
+    "test_id": "TEST-001",
+    "control_id": "CTRL-002",
+    "owasp_id": "OWASP-LLM06-M2"
+  },
+  {
+    "map_id": "MAP-003",
+    "ai_act_article": "Article 14: Human Oversight",
+    "harmonised_standard": "[18229-1.8]",
+    "risk_id": "RISK-001",
+    "test_id": "TEST-001",
+    "control_id": "CTRL-003",
+    "owasp_id": "OWASP-LLM09-M3"
+  },
+  {
+    "map_id": "MAP-004",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18283.1]",
+    "risk_id": "RISK-002",
+    "test_id": "TEST-003",
+    "control_id": "CTRL-004",
+    "owasp_id": "OWASP-LLM08-M2"
+  },
+  {
+    "map_id": "MAP-005",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18283.2]",
+    "risk_id": "RISK-002",
+    "test_id": "TEST-003",
+    "control_id": "CTRL-005",
+    "owasp_id": "OWASP-LLM08-M2"
+  },
+  {
+    "map_id": "MAP-006",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18283.3]",
+    "risk_id": "RISK-003",
+    "test_id": "TEST-003",
+    "control_id": "CTRL-006",
+    "owasp_id": "OWASP-LLM08-M2"
+  },
+  {
+    "map_id": "MAP-007",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.7]",
+    "risk_id": "RISK-004",
+    "test_id": "TEST-006",
+    "control_id": "CTRL-007",
+    "owasp_id": "OWASP-LLM04-M1"
+  },
+  {
+    "map_id": "MAP-008",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.8]",
+    "risk_id": "RISK-004",
+    "test_id": "TEST-006",
+    "control_id": "CTRL-008",
+    "owasp_id": "OWASP-LLM02-M1"
+  },
+  {
+    "map_id": "MAP-009",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.9]",
+    "risk_id": "RISK-004",
+    "test_id": "TEST-006",
+    "control_id": "CTRL-009",
+    "owasp_id": "OWASP-LLM09-M2"
+  },
+  {
+    "map_id": "MAP-010",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.1]",
+    "risk_id": "RISK-005",
+    "test_id": "TEST-004",
+    "control_id": "CTRL-010",
+    "owasp_id": "OWASP-LLM04-M1"
+  },
+  {
+    "map_id": "MAP-011",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.2]",
+    "risk_id": "RISK-005",
+    "test_id": "TEST-004",
+    "control_id": "CTRL-011",
+    "owasp_id": "OWASP-LLM04-M1"
+  },
+  {
+    "map_id": "MAP-012",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.3]",
+    "risk_id": "RISK-005",
+    "test_id": "TEST-004",
+    "control_id": "CTRL-012",
+    "owasp_id": "OWASP-LLM04-M1"
+  },
+  {
+    "map_id": "MAP-013",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.4]",
+    "risk_id": "RISK-006",
+    "test_id": "TEST-005",
+    "control_id": "CTRL-013",
+    "owasp_id": "OWASP-LLM08-M2"
+  },
+  {
+    "map_id": "MAP-014",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.5]",
+    "risk_id": "RISK-006",
+    "test_id": "TEST-005",
+    "control_id": "CTRL-014",
+    "owasp_id": "OWASP-LLM04-M1"
+  },
+  {
+    "map_id": "MAP-015",
+    "ai_act_article": "Article 10: Data and Data Governance",
+    "harmonised_standard": "[18284.6]",
+    "risk_id": "RISK-006",
+    "test_id": "TEST-005",
+    "control_id": "CTRL-015",
+    "owasp_id": "OWASP-LLM04-M1"
+  },
+  {
+    "map_id": "MAP-016",
+    "ai_act_article": "Article 12: Record-Keeping",
+    "harmonised_standard": "[18229-1.4]",
+    "risk_id": "RISK-007",
+    "test_id": "TEST-007",
+    "control_id": "CTRL-016",
+    "owasp_id": "OWASP-LLM06-M3"
+  },
+  {
+    "map_id": "MAP-017",
+    "ai_act_article": "Article 12: Record-Keeping",
+    "harmonised_standard": "[18229-1.5]",
+    "risk_id": "RISK-007",
+    "test_id": "TEST-002",
+    "control_id": "CTRL-017",
+    "owasp_id": null
+  },
+  {
+    "map_id": "MAP-018",
+    "ai_act_article": "Article 12: Record-Keeping",
+    "harmonised_standard": "[24970.2]",
+    "risk_id": "RISK-007",
+    "test_id": "TEST-007",
+    "control_id": "CTRL-018",
+    "owasp_id": "OWASP-LLM06-M3"
+  },
+  {
+    "map_id": "MAP-019",
+    "ai_act_article": "Article 12: Record-Keeping",
+    "harmonised_standard": "[24970.6]",
+    "risk_id": "RISK-007",
+    "test_id": "TEST-002",
+    "control_id": "CTRL-019",
+    "owasp_id": null
+  },
+  {
+    "map_id": "MAP-020",
+    "ai_act_article": "Article 12: Record-Keeping",
+    "harmonised_standard": "[24970.8]",
+    "risk_id": "RISK-007",
+    "test_id": "TEST-002",
+    "control_id": "CTRL-020",
+    "owasp_id": "OWASP-LLM02-M1"
+  },
+  {
+    "map_id": "MAP-021",
+    "ai_act_article": "Article 12: Record-Keeping",
+    "harmonised_standard": "[24970.7]",
+    "risk_id": "RISK-008",
+    "test_id": "TEST-008",
+    "control_id": "CTRL-021",
+    "owasp_id": null
+  },
+  {
+    "map_id": "MAP-022",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.1]",
+    "risk_id": "RISK-009",
+    "test_id": "TEST-009",
+    "control_id": "CTRL-022",
+    "owasp_id": "OWASP-LLM01-M2"
+  },
+  {
+    "map_id": "MAP-023",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.2]",
+    "risk_id": "RISK-009",
+    "test_id": "TEST-009",
+    "control_id": "CTRL-023",
+    "owasp_id": "OWASP-LLM04-M2"
+  },
+  {
+    "map_id": "MAP-024",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.3]",
+    "risk_id": "RISK-010",
+    "test_id": "TEST-010",
+    "control_id": "CTRL-024",
+    "owasp_id": "OWASP-LLM10-M2"
+  },
+  {
+    "map_id": "MAP-025",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-011",
+    "test_id": "TEST-011",
+    "control_id": "CTRL-025",
+    "owasp_id": "OWASP-LLM03-M1"
+  },
+  {
+    "map_id": "MAP-026",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.5]",
+    "risk_id": "RISK-011",
+    "test_id": "TEST-011",
+    "control_id": "CTRL-026",
+    "owasp_id": "OWASP-LLM03-M2"
+  },
+  {
+    "map_id": "MAP-027",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.6]",
+    "risk_id": "RISK-012",
+    "test_id": "TEST-012",
+    "control_id": "CTRL-027",
+    "owasp_id": "OWASP-LLM06-M1"
+  },
+  {
+    "map_id": "MAP-028",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.7]",
+    "risk_id": "RISK-012",
+    "test_id": "TEST-012",
+    "control_id": "CTRL-028",
+    "owasp_id": "OWASP-LLM01-M2"
+  },
+  {
+    "map_id": "MAP-029",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.6]",
+    "risk_id": "RISK-012",
+    "test_id": "TEST-012",
+    "control_id": "CTRL-029",
+    "owasp_id": "OWASP-LLM01-M1"
+  },
+  {
+    "map_id": "MAP-030",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.8]",
+    "risk_id": "RISK-013",
+    "test_id": "TEST-013",
+    "control_id": "CTRL-030",
+    "owasp_id": "OWASP-LLM01-M2"
+  },
+  {
+    "map_id": "MAP-031",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.8]",
+    "risk_id": "RISK-013",
+    "test_id": "TEST-013",
+    "control_id": "CTRL-031",
+    "owasp_id": "OWASP-LLM10-M2"
+  },
+  {
+    "map_id": "MAP-032",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.9]",
+    "risk_id": "RISK-014",
+    "test_id": "TEST-014",
+    "control_id": "CTRL-032",
+    "owasp_id": "OWASP-LLM09-M2"
+  },
+  {
+    "map_id": "MAP-033",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.10]",
+    "risk_id": "RISK-014",
+    "test_id": "TEST-014",
+    "control_id": "CTRL-033",
+    "owasp_id": "OWASP-LLM04-M1"
+  },
+  {
+    "map_id": "MAP-034",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.12]",
+    "risk_id": "RISK-014",
+    "test_id": "TEST-014",
+    "control_id": "CTRL-034",
+    "owasp_id": "OWASP-LLM09-M2"
+  },
+  {
+    "map_id": "MAP-035",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.13]",
+    "risk_id": "RISK-014",
+    "test_id": "TEST-014",
+    "control_id": "CTRL-035",
+    "owasp_id": "OWASP-LLM09-M2"
+  },
+  {
+    "map_id": "MAP-036",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.17]",
+    "risk_id": "RISK-015",
+    "test_id": "TEST-015",
+    "control_id": "CTRL-036",
+    "owasp_id": "OWASP-LLM04-M2"
+  },
+  {
+    "map_id": "MAP-037",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.20]",
+    "risk_id": "RISK-016",
+    "test_id": "TEST-016",
+    "control_id": "CTRL-037",
+    "owasp_id": null
+  },
+  {
+    "map_id": "MAP-038",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.15]",
+    "risk_id": "RISK-017",
+    "test_id": "TEST-015",
+    "control_id": "CTRL-038",
+    "owasp_id": "OWASP-LLM05-M1"
+  },
+  {
+    "map_id": "MAP-039",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.16]",
+    "risk_id": "RISK-017",
+    "test_id": "TEST-015",
+    "control_id": "CTRL-039",
+    "owasp_id": "OWASP-LLM05-M1"
+  },
+  {
+    "map_id": "MAP-040",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.18]",
+    "risk_id": "RISK-018",
+    "test_id": "TEST-016",
+    "control_id": "CTRL-040",
+    "owasp_id": "OWASP-LLM06-M2"
+  },
+  {
+    "map_id": "MAP-041",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18229-2.19]",
+    "risk_id": "RISK-018",
+    "test_id": "TEST-016",
+    "control_id": "CTRL-041",
+    "owasp_id": null
+  },
+  {
+    "map_id": "MAP-042",
+    "ai_act_article": "Article 13: Transparency and Provision of Information to Deployers",
+    "harmonised_standard": "[24368.1]",
+    "risk_id": "RISK-019",
+    "test_id": "TEST-017",
+    "control_id": "CTRL-042",
+    "owasp_id": "OWASP-LLM07-M2"
+  },
+  {
+    "map_id": "MAP-043",
+    "ai_act_article": "Article 13: Transparency and Provision of Information to Deployers",
+    "harmonised_standard": "[24368.3]",
+    "risk_id": "RISK-019",
+    "test_id": "TEST-017",
+    "control_id": "CTRL-043",
+    "owasp_id": "OWASP-LLM09-M3"
+  },
+  {
+    "map_id": "MAP-044",
+    "ai_act_article": "Article 13: Transparency and Provision of Information to Deployers",
+    "harmonised_standard": "[24368.4]",
+    "risk_id": "RISK-019",
+    "test_id": null,
+    "control_id": "CTRL-044",
+    "owasp_id": "OWASP-LLM07-M1"
+  },
+  {
+    "map_id": "MAP-045",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-020",
+    "test_id": null,
+    "control_id": "CTRL-045",
+    "owasp_id": "OWASP-LLM03-M1"
+  },
+  {
+    "map_id": "MAP-046",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-020",
+    "test_id": null,
+    "control_id": "CTRL-046",
+    "owasp_id": "OWASP-LLM07-M1"
+  },
+  {
+    "map_id": "MAP-047",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-021",
+    "test_id": null,
+    "control_id": "CTRL-047",
+    "owasp_id": "OWASP-LLM06-M1"
+  },
+  {
+    "map_id": "MAP-048",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-021",
+    "test_id": null,
+    "control_id": "CTRL-048",
+    "owasp_id": "OWASP-LLM06-M1"
+  },
+  {
+    "map_id": "MAP-049",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-022",
+    "test_id": null,
+    "control_id": "CTRL-049",
+    "owasp_id": "OWASP-LLM01-M1"
+  },
+  {
+    "map_id": "MAP-050",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-022",
+    "test_id": null,
+    "control_id": "CTRL-050",
+    "owasp_id": "OWASP-LLM10-M1"
+  },
+  {
+    "map_id": "MAP-051",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-023",
+    "test_id": null,
+    "control_id": "CTRL-051",
+    "owasp_id": "OWASP-LLM03-M1"
+  },
+  {
+    "map_id": "MAP-052",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-024",
+    "test_id": null,
+    "control_id": "CTRL-052",
+    "owasp_id": "OWASP-LLM03-M1"
+  },
+  {
+    "map_id": "MAP-053",
+    "ai_act_article": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "harmonised_standard": "[18282.4]",
+    "risk_id": "RISK-024",
+    "test_id": null,
+    "control_id": "CTRL-053",
+    "owasp_id": "OWASP-LLM03-M1"
+  }
+]

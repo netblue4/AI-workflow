@@ -1,0 +1,1200 @@
+[
+  {
+    "control_id": "CTRL-001",
+    "control_name": "Confidence Warning Injection",
+    "control_text": "The Output Guardrail must compute a confidence score for every LLM (Generator) response as the average of the Retriever's top-1 cosine similarity score and the LLM's token probability score, inject a fixed warning banner into the response payload when the score falls below 0.80, and write a structured log entry for every evaluation.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-1.6],[42001.6],[24368.5]",
+    "control_number": "[2.6.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-delivery scoring gate in the Output Guardrail that runs on every response before it reaches the user. It computes a composite confidence score from the Retriever's relevance signal and the LLM's own probability estimate, and injects a visible warning banner when the score falls below 0.80. This prevents a low-confidence response from reaching a user who has no way of knowing the output is unreliable.",
+    "jkImplementationEvidence": "An 'Output Confidence Log' showing every response evaluated, the confidence score assigned, whether a warning banner was injected, and a zero count of responses with confidence score < 0.80 that reached the Response Interface without a warning.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-001"
+    ]
+  },
+  {
+    "control_id": "CTRL-002",
+    "control_name": "Kill Switch Implementation",
+    "control_text": "The Orchestrator must expose a stop endpoint that sets the system state to HALTED within 500 milliseconds, blocks the Query Interface from accepting new requests with an HTTP 503 response, writes a structured stop event to the immutable audit log, and requires an explicit operator restart signal before query processing resumes.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-1.7],[42001.6]",
+    "control_number": "[2.6.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "An emergency halt mechanism that gives a human operator a single-action stop control reachable under operational pressure. When activated it immediately blocks all new query acceptance, terminates in-flight processing, and writes a timestamped stop event to the audit log \u2014 creating a verifiable record that the system was halted promptly when an incident was detected. The system cannot resume without an explicit human restart signal.",
+    "jkImplementationEvidence": "A 'Kill Switch Activation Log' showing the timestamp of each stop event, the operator ID that triggered it, confirmation that the Query Interface was blocked within 500 milliseconds, and the timestamp of the subsequent restart signal.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-002"
+    ]
+  },
+  {
+    "control_id": "CTRL-003",
+    "control_name": "Retrieval Source Attribution",
+    "control_text": "The Context Assembler must attach source metadata to every chunk passed to the LLM (Generator), and the Response Interface must render a numbered citation list showing source document name, chunk ID, and relevance score beneath every response \u2014 suppressing and flagging any response where the Retriever returned zero attributable chunks.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-1.8],[42001.6]",
+    "control_number": "[2.6.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A two-part attribution mechanism that makes every AI response traceable to its source documents. The Context Assembler tags every chunk with its document name, chunk ID, and relevance score before it enters the LLM input. The Response Interface renders those tags as a numbered citation list beneath every response. A zero-chunk guard prevents the LLM call from executing at all when the Retriever returns nothing \u2014 routing the query to engineer triage instead of generating an unsupported response.",
+    "jkImplementationEvidence": "A 'Response Attribution Report' generated per deployment showing the average citation count per response, the count of responses with zero attributable chunks, and confirmation that all zero-attribution responses were suppressed and flagged before reaching the Response Interface.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-003"
+    ]
+  },
+  {
+    "control_id": "CTRL-004",
+    "control_name": "Subgroup Representation Gate",
+    "control_text": "The data ingestion pipeline must compute sample counts per protected subgroup before any dataset enters the Embedding Model training pipeline or Vector Store, and must reject any dataset where any declared subgroup falls below the 500-record minimum threshold.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18283.1]",
+    "control_number": "[6.1.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-ingestion gate that counts records per protected subgroup against the 500-record minimum before any data is written to the Vector Store or passed to the Embedding Model. If any declared subgroup falls below the threshold, the dataset is rejected, the failing subgroup name, count, and threshold are written to the coverage gap register, and ingestion is blocked until a documented engineering override is logged with a written justification referencing the specific fundamental right at risk.",
+    "jkImplementationEvidence": "A 'Subgroup Coverage Report' generated on every ingestion run showing the sample count per protected subgroup, the threshold result per subgroup, the ingestion gate decision, and a zero count of datasets ingested with any protected subgroup below the 500-record threshold without a logged engineering override decision.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-004"
+    ]
+  },
+  {
+    "control_id": "CTRL-005",
+    "control_name": "Disparate Impact Detection Gate",
+    "control_text": "The bias evaluation pipeline must compute the Disparate Impact Ratio and Equalized Odds difference for every declared protected subgroup pair before deployment, blocking any deployment where the Disparate Impact Ratio falls below 0.80 or the Equalized Odds difference exceeds 0.05.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18283.2]",
+    "control_number": "[6.1.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-deployment bias gate that quantifies outcome disparity between every declared protected subgroup pair using two complementary metrics. A Disparate Impact Ratio below 0.80 means the least-favoured group receives a positive outcome less than 80% as often as the most-favoured group \u2014 a legally significant threshold under the EU four-fifths rule. If either metric breaches its threshold, deployment is blocked and the failing subgroup pair, metric name, and score are written to the bias evaluation report.",
+    "jkImplementationEvidence": "A 'Bias Metric Evaluation Report' generated on every deployment run showing the metric name, score per protected subgroup pair, threshold applied, deployment gate result, and a zero count of deployments that proceeded with a Disparate Impact Ratio below 0.80 or an Equalized Odds difference above 0.05 without a logged engineering override.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-005"
+    ]
+  },
+  {
+    "control_id": "CTRL-006",
+    "control_name": "Proxy Correlation Screening",
+    "control_text": "The data preparation pipeline must compute the Pearson correlation coefficient between every non-protected variable and every declared protected characteristic before any dataset enters the Embedding Model training pipeline or is written to the Vector Store, and must block ingestion of any variable with an absolute coefficient of \u2265 0.70 until a documented action decision and engineer ID are recorded.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18283.3]",
+    "control_number": "[6.1.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-ingestion screening step that calculates how closely every non-protected variable in the dataset moves with each declared protected characteristic. Any variable with an absolute Pearson coefficient of \u2265 0.70 is flagged as a proxy candidate and triggers a hard ingestion block until the engineer records one of three actions \u2014 remove, transform, or retain with written justification \u2014 alongside their engineer ID. This prevents the Embedding Model from learning discriminatory associations from variables that encode protected characteristics indirectly.",
+    "jkImplementationEvidence": "A 'Proxy Correlation Screening Report' generated on every ingestion run showing every variable screened, the Pearson correlation coefficient against each protected characteristic, the flag status for each variable above the 0.70 threshold, the action taken (removed, transformed, or retained with justification), and a zero count of datasets ingested containing a proxy variable that was flagged but not actioned.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-006"
+    ]
+  },
+  {
+    "control_id": "CTRL-007",
+    "control_name": "Split Contamination Prevention",
+    "control_text": "Evaluation and training datasets must be logically separated with cryptographic hash verification and strict access controls to prevent data leakage and accuracy inflation.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.7]",
+    "control_number": "[5.3.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-evaluation gate that runs automatically before every model assessment. Its job is to verify the test dataset has not been accessed or altered by the training pipeline. If contamination is detected, the evaluation is blocked and an alert is raised.",
+    "jkImplementationEvidence": "A 'Split Integrity Report' generated before every evaluation run showing the SHA-256 hash at partition creation, the re-verified hash immediately before evaluation (both must match), the test repository access control list (must contain zero training pipeline service accounts), and a zero count of evaluations run on a contaminated test partition.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-007"
+    ]
+  },
+  {
+    "control_id": "CTRL-008",
+    "control_name": "Retention Schedule Enforcement",
+    "control_text": "All datasets must be tagged with a retention schedule and legal basis at ingestion to enforce automated deletion and auditable decommissioning.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.8]",
+    "control_number": "[5.3.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "An automated lifecycle manager that tracks the expiry date of every dataset in the Vector Store. It ensures personal data is deleted when its legal basis expires and that all deletion events are logged with an authorising engineer ID for audit purposes.",
+    "jkImplementationEvidence": "A 'Retention Compliance Report' generated monthly showing every active dataset, its retention tag, scheduled deletion date, deletion method, and \u2014 for executed deletions \u2014 the deletion timestamp, decommission method used, and approving engineer ID, with a zero count of datasets retained beyond their scheduled deletion date.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-008"
+    ]
+  },
+  {
+    "control_id": "CTRL-009",
+    "control_name": "Assumption Validity Monitor",
+    "control_text": "Core data assumptions must be declared in a registry and automatically validated on a weekly schedule using measurable proxy metrics and defined staleness thresholds.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.9]",
+    "control_number": "[5.4.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A weekly automated monitor that checks whether the real-world conditions the system was built on still hold true. If the source data has changed but the Vector Store has not been updated, this control fires an alert before the AI begins serving stale or incorrect responses to users.",
+    "jkImplementationEvidence": "A weekly 'Assumption Validity Report' showing every declared assumption, its proxy metric value, its threshold, the check result (pass or breach), and a zero count of assumption breaches that did not trigger an alert within one monitoring cycle.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-009"
+    ]
+  },
+  {
+    "control_id": "CTRL-010",
+    "control_name": "Data Selection Rationale Gate",
+    "control_text": "Datasets must be blocked from ingestion unless a verified selection rationale, suitability assessment, and completion date exist in the governance register.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.1],[18286.11]",
+    "control_number": "[5.1.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-ingestion gate that queries the central governance register before any dataset enters the Vector Store. It verifies that three mandatory documentation fields are present and complete. If any field is missing, the ingestion job is aborted and a structured error is logged \u2014 no data enters the pipeline without a documented reason for being there.",
+    "jkImplementationEvidence": "A 'Data Governance Gate Report' generated on every ingestion run showing the dataset name, governance register check result, missing fields (must be zero for all passing datasets), and a zero count of datasets ingested without a completed selection rationale record.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-010"
+    ]
+  },
+  {
+    "control_id": "CTRL-011",
+    "control_name": "Provenance Chain Validation",
+    "control_text": "Every dataset's provenance record must be validated for five required fields, cryptographically hashed at ingestion, and re-verified on every read to detect post-ingestion tampering.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.2],[18286.11]",
+    "control_number": "[5.1.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A two-stage integrity control that first validates the completeness of a dataset's provenance record at ingestion, then seals it with a SHA-256 hash. On every subsequent read, the hash is recalculated and compared \u2014 if the legal basis or any other provenance field has been altered after ingestion, an immediate security alert is raised.",
+    "jkImplementationEvidence": "A 'Provenance Validation Report' generated on every ingestion run showing the dataset name, all five required provenance fields, the SHA-256 hash of the provenance record, and a zero count of datasets ingested with a missing legal basis or unverified provenance hash.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-011"
+    ]
+  },
+  {
+    "control_id": "CTRL-012",
+    "control_name": "Pipeline Operation Audit Log",
+    "control_text": "Every data transformation step must emit a structured log entry capturing tool versions, record counts, and input/output SHA-256 hashes to a tamper-evident audit store.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.3],[18286.11]",
+    "control_number": "[5.1.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A step-level audit trail that automatically captures a before-and-after hash at every transformation stage in the data preparation pipeline. If the RAG system begins producing degraded retrieval results, engineers can trace the root cause to the exact pipeline operation that altered the data \u2014 rather than re-running the entire pipeline blind.",
+    "jkImplementationEvidence": "A 'Data Preparation Audit Log' generated on every pipeline run showing one entry per operation, all required fields populated (operation name, timestamp, tool version, input hash, output hash, input record count, output record count), and a zero count of pipeline steps that advanced without a confirmed log entry.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-012"
+    ]
+  },
+  {
+    "control_id": "CTRL-013",
+    "control_name": "Representativeness Distribution Check",
+    "control_text": "Every dataset must pass a representativeness distribution check before entering the Embedding Model training pipeline or Vector Store. All defined population segments \u2014 category, language, and geographic region \u2014 must meet a minimum of 500 records. Any dataset where more than 10% of defined segments fall below this threshold must be blocked at ingestion with all coverage gaps written to the data gap register.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.4]",
+    "control_number": "[5.2.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-ingestion gate that analyses every dataset for population coverage before data reaches the Embedding Model or Vector Store. It counts records per segment field, identifies underrepresented groups, and blocks ingestion when the proportion of coverage gaps exceeds 10%. Without it, the system is deployed with silent blind spots that return poor or zero retrieval results for entire user populations \u2014 with no quality gate having detected the gap before those users are served.",
+    "jkImplementationEvidence": "A 'Distribution Analysis Report' generated on every dataset ingestion showing frequency distribution per category, geographic coverage count, language coverage count, the count of segments below the 500-record threshold, and a zero count of datasets ingested where more than 10% of population segments fell below threshold.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-013"
+    ]
+  },
+  {
+    "control_id": "CTRL-014",
+    "control_name": "Completeness Threshold Enforcement",
+    "control_text": "Every record must be scored for completeness against a declared required-fields list before ingestion. Records where more than 5% of required fields are null or missing must be rejected and written to the data gap register. Any dataset where more than 2% of records fail the record-level check must be rejected in full, requiring a logged human engineering override with engineer ID to proceed.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.5]",
+    "control_number": "[5.2.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A dual-threshold completeness gate that evaluates every record and every dataset before any data is written to the Vector Store or passed to the Embedding Model. It first rejects individual records missing too many required fields, then escalates to a full dataset block when incomplete records exceed 2% of the total. This prevents structurally incomplete records from corrupting Embedding Model training and populating the Vector Store with chunks that silently omit context that the Retriever and Generator will never know is missing.",
+    "jkImplementationEvidence": "A 'Completeness Threshold Report' generated on every ingestion run showing the record-level completeness score per dataset, the count of records rejected for missing fields, the dataset-level pass or fail result, and a zero count of datasets ingested with a dataset-level completeness score below 98%.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-014"
+    ]
+  },
+  {
+    "control_id": "CTRL-015",
+    "control_name": "Label Quality Gate",
+    "control_text": "Every annotation batch must be scored for inter-annotator agreement before any labelled data is released to the Embedding Model training pipeline. Two-annotator batches must use Cohen's Kappa; batches with three or more annotators must use Krippendorff's Alpha. Any batch scoring below 0.80 must be hard-rejected with no override and routed to a re-annotation queue.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18284.6]",
+    "control_number": "[5.2.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-training gate in the annotation pipeline that measures label consistency before any labelled data reaches the Embedding Model. It computes an overall agreement score and per-category scores to pinpoint which label categories drove the disagreement, then hard-blocks any low-agreement batch from entering the training pipeline. This prevents Label Noise from corrupting the Embedding Model's semantic representations \u2014 a defect that cannot be corrected without a full retraining cycle from a clean labelled dataset.",
+    "jkImplementationEvidence": "A 'Label Quality Report' generated on every annotation batch showing the Cohen's Kappa or Krippendorff's Alpha score, the label categories evaluated, the batch pass or fail result, and a zero count of annotation batches scoring below 0.80 that were released to the Embedding Model training pipeline.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-015"
+    ]
+  },
+  {
+    "control_id": "CTRL-016",
+    "control_name": "Mandatory Event Write Enforcement",
+    "control_text": "Every mandatory pipeline event must be written to the log store as a blocking operation with a 200-millisecond timeout \u2014 the pipeline must not advance to the next stage until the write is confirmed, and any timeout or error must halt the pipeline, return HTTP 500 to the Query Interface, and write a fallback entry to a local buffer store.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-1.4],[24970.5],[24970.1],[42001.7]",
+    "control_number": "[3.1.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A blocking log writer that wraps every mandatory pipeline event in a write-confirm-advance pattern. The Orchestrator cannot move past any stage until the log store acknowledges the write for that stage. If the log store times out or errors within 200 milliseconds, the pipeline halts immediately \u2014 preventing a silent log gap from forming while the pipeline continues delivering responses.",
+    "jkImplementationEvidence": "A 'Pipeline Log Completeness Report' generated daily showing the count of pipeline executions, the count of confirmed log writes per mandatory event type, and a zero count of pipeline stages that advanced without a confirmed log entry.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-016"
+    ]
+  },
+  {
+    "control_id": "CTRL-017",
+    "control_name": "Reconstruction Payload Standard",
+    "control_text": "Every Orchestrator log entry must include eleven mandatory reconstruction fields \u2014 session ID, query ID, user pseudonym, UTC timestamp to millisecond precision, RAG component, model version ID, configuration hash, retrieved chunk IDs with similarity scores, assembled context hash, LLM response hash, and confidence score \u2014 validated at write time with schema rejection of any partial entry.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-1.5],[24970.3],[24970.4],[42001.7]",
+    "control_number": "[3.1.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A schema validation gate that runs on every log entry before it is passed to the log store write function. It checks all eleven mandatory reconstruction fields are present and non-null. Any entry missing one or more fields is rejected in full, the missing fields are recorded in a schema failure register, and nothing is written to the log store \u2014 preventing a partial entry from creating a false appearance of completeness.",
+    "jkImplementationEvidence": "A 'Log Schema Validation Report' generated per deployment showing the count of log entries validated, the count of entries that passed the full schema check, and a zero count of partial entries written to the log store.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-017"
+    ]
+  },
+  {
+    "control_id": "CTRL-018",
+    "control_name": "Human Intervention Event Capture",
+    "control_text": "The Orchestrator must write a dedicated human intervention log entry for every output override, kill switch activation, query cancellation, and human escalation routing event, capturing event type, operator ID, query ID, response hash, and UTC timestamp to millisecond precision, linked to the originating session ID.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[24970.2]",
+    "control_number": "[3.1.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A dedicated event writer called by every human oversight action surface in the system. When an operator overrides an output, activates the kill switch, cancels a query, or routes an escalation, this writer fires as part of the same blocking write transaction as the pipeline event it accompanies. It validates all five mandatory fields, cross-references the session ID against the session log, and writes a linked entry \u2014 ensuring the full decision sequence of AI output followed by human action is reconstructable as a single event chain.",
+    "jkImplementationEvidence": "A 'Human Intervention Log' showing every intervention event, the operator ID, the query ID affected, the intervention type, and the UTC timestamp \u2014 cross-referenced against the session log to confirm every intervention entry has a matching session ID.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-018"
+    ]
+  },
+  {
+    "control_id": "CTRL-019",
+    "control_name": "Immutable Log Storage Enforcement",
+    "control_text": "The log store must enforce an append-only write policy with SHA-256 hash verification on every entry at write time and re-verification on read, triggering an immediate tamper alert and writing a detection event to a separate integrity log on any hash mismatch.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[24970.6],[42001.7]",
+    "control_number": "[3.3.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "An append-only log store wrapper that computes and stores a SHA-256 hash of every entry at write time and a verifier that re-computes and compares that hash on every read. Any mismatch \u2014 indicating a post-write modification or deletion \u2014 fires an immediate tamper alert to the engineering team and writes a detection event to a separate, isolated integrity log. This makes any attempt to alter the audit record detectable before the tampered entry can be used as evidence.",
+    "jkImplementationEvidence": "A 'Log Integrity Verification Report' generated weekly showing the count of log entries hash-verified, the count of hash mismatches detected, and confirmation that all mismatches triggered a tamper alert \u2014 with a zero count of undetected tamper events.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-019"
+    ]
+  },
+  {
+    "control_id": "CTRL-020",
+    "control_name": "Privacy-Safe Log Pseudonymisation",
+    "control_text": "The Orchestrator must replace every raw user identifier \u2014 name, email address, IP address \u2014 with a deterministic HMAC pseudonymised token before writing any log entry, store the token-to-identifier mapping in a separate access-controlled key store, and apply SHA-256 hashing to prompt content in any entry where the Input Guardrail flagged personal data.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[24970.8]",
+    "control_number": "[3.3.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-write pseudonymisation processor that runs on every log entry before it reaches the log store. It replaces personally identifiable fields with deterministic HMAC tokens, stores the real-identifier-to-token mappings in an isolated key store that the log store cannot access, and hashes any prompt field flagged as containing personal data. This preserves full session traceability for authorised incident reconstruction while ensuring the log store contains no raw personal data.",
+    "jkImplementationEvidence": "A 'Log Privacy Compliance Report' generated monthly showing the count of log entries processed, confirmation that zero raw user identifiers appear in the log store, and the count of prompt entries hashed \u2014 cross-referenced against the privacy control declaration in [3.3.3].",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-020"
+    ]
+  },
+  {
+    "control_id": "CTRL-021",
+    "control_name": "Log Retention Schedule Enforcement",
+    "control_text": "Every log entry must be tagged with a minimum retention floor of 180 days and a declared maximum retention ceiling at write time. A daily scheduled job must enforce both bounds \u2014 blocking deletion of any entry before the floor expires, and executing cryptographic erasure of any entry that has exceeded the maximum ceiling \u2014 with every deletion event written to a separate decommission log including the authorising engineer ID and UTC timestamp.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[24970.7],[42001.7]",
+    "control_number": "[3.4.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A dual-bound retention enforcer that tags every log entry with both a minimum deletion date (floor: 180 days from write time, derived from EU AI Act Art. 26(6)) and a maximum deletion date (ceiling: declared in fieldGroup [3.4.1] per sector-specific law) at write time. A daily scheduler checks both bounds \u2014 it blocks any deletion attempt before the floor date, and executes cryptographic erasure of any entry that has passed the ceiling date. This ensures the audit trail is preserved long enough to support incident investigation and regulatory audit, while preventing indefinite accumulation of pseudonymised log data beyond its lawful basis. Cross-reference [5.3.R2] \u2014 the deletion scheduler and cryptographic erasure function patterns are reused here with the addition of the minimum floor guard that [5.3.R2] does not implement.",
+    "jkImplementationEvidence": "A 'Log Retention Compliance Report' generated daily showing every active log entry, its floor date, its ceiling date, the daily scheduler decision per entry (retained / floor-protected / ceiling-erased), and a zero count of log entries deleted before the 180-day floor or retained beyond their declared ceiling date \u2014 cross-referenced against the decommission log for every executed erasure.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-021"
+    ]
+  },
+  {
+    "control_id": "CTRL-022",
+    "control_name": "Adversarial Pattern Detection Gate",
+    "control_text": "The Input Guardrail must run three independent adversarial checks on every inbound prompt \u2014 keyword injection scanning, Unicode zero-width character stripping, and semantic divergence scoring \u2014 before any prompt is passed to the Embedding Model or Retriever, blocking and alerting the security team on any failure.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.1]",
+    "control_number": "[8.1.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A three-layer pre-retrieval gate that intercepts adversarially crafted prompts before they reach the Embedding Model. Layer 1 scans for known injection phrases. Layer 2 strips invisible Unicode characters that attackers use to break keyword filters. Layer 3 embeds the sanitised prompt and scores its cosine similarity against the system's declared purpose \u2014 blocking any prompt that diverges semantically from legitimate use. All three layers run on every prompt; a failure at any layer blocks the prompt and triggers a security alert.",
+    "jkImplementationEvidence": "An 'Adversarial Pattern Detection Log' generated per session showing every prompt evaluated, the Layer 1 keyword match result, the Layer 2 zero-width character scan result with stripped characters logged, the Layer 3 cosine similarity score, the gate decision, and a zero count of prompts failing any layer that reached the Embedding Model or Retriever.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-022"
+    ]
+  },
+  {
+    "control_id": "CTRL-023",
+    "control_name": "Poisoned Ingestion Blocking Gate",
+    "control_text": "The data ingestion pipeline must run four sequential integrity checks on every document before it is written to the Vector Store \u2014 source allowlist verification, content hash verification, instruction pattern scanning, and semantic outlier detection \u2014 with Steps 1 and 2 as hard rejection gates and Steps 3 and 4 routing flagged documents to a human security review queue.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.2]",
+    "control_number": "[8.1.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A four-step pre-ingestion gate that blocks maliciously crafted documents from entering the Vector Store. Steps 1 and 2 are hard gates \u2014 an unlisted source or a hash mismatch aborts ingestion immediately with no review routing. Steps 3 and 4 are soft gates \u2014 a document containing embedded instruction patterns or an anomalous embedding is held in a human security review queue rather than deleted, as it may be legitimate content requiring assessment. All four step results are written to a structured log entry for every document evaluated, regardless of outcome.",
+    "jkImplementationEvidence": "An 'Ingestion Integrity Report' generated on every ingestion run showing the four-step check result per document, the count of documents rejected at each step, the count routed to human security review, and a zero count of documents containing flagged instruction patterns or hash mismatches that were written to the Vector Store.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-023"
+    ]
+  },
+  {
+    "control_id": "CTRL-024",
+    "control_name": "API Query Rate and Pattern Monitor",
+    "control_text": "The Query Interface must enforce a per-API-key rate limit of 500 queries per rolling 60-minute window with automatic suspension on breach, and the Orchestrator must run a rolling 15-minute semantic variance check that flags and alerts on any session where variance falls below 0.15 with more than 50 queries in the window.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.3]",
+    "control_number": "[8.1.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "Two independent monitors that detect model extraction probing at different signal layers. Monitor 1 sits in the Query Interface and counts raw query volume per API key \u2014 suspending any key that exceeds 500 queries in a rolling 60-minute window. Monitor 2 sits in the Orchestrator and measures how semantically similar a session's queries are to each other \u2014 a legitimate user asks varied questions, while an extraction attacker asks tightly clustered variants of the same question. When variance drops below 0.15 with more than 50 queries in a 15-minute window, the session is flagged and a security alert is fired.",
+    "jkImplementationEvidence": "A 'Query Pattern Anomaly Report' generated daily showing every API key session flagged for rate limit breach or low semantic variance, the query count and semantic variance score at flag, the API key suspension status, security team alert confirmation, and a zero count of sessions that exceeded the 500-query threshold or fell below 0.15 semantic variance without triggering a suspension or alert.",
+    "jkMaturity": "Medium",
+    "map_ids": [
+      "MAP-024"
+    ]
+  },
+  {
+    "control_id": "CTRL-025",
+    "control_name": "Build Environment Isolation Gate",
+    "control_text": "Every build producing a deployable artefact for the Orchestrator, Input Guardrail, or Output Guardrail must pass five controls \u2014 environment separation, code signing, peer review, content-addressed artefact hashing, and secrets vault enforcement \u2014 before the artefact is accepted by the deployment pipeline.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4]",
+    "control_number": "[8.2.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-deployment artefact validation gate that reads signing status, peer review approval, content-address hash, and secrets scan results from build metadata and returns a structured pass/fail decision per control. An artefact targeting the Orchestrator, Input Guardrail, or Output Guardrail cannot enter the deployment pipeline unless all five controls pass \u2014 an unsigned artefact, a self-merged pull request, or a hardcoded credential each independently block deployment and trigger a security alert.",
+    "jkImplementationEvidence": "A 'Build Integrity Report' generated on every pipeline run showing the environment separation check result, artefact signing status, peer review approval record, artefact content address hash, secrets vault usage confirmation, and a zero count of unsigned, self-merged, or hardcoded-credential build artefacts that reached the deployment pipeline.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-025"
+    ]
+  },
+  {
+    "control_id": "CTRL-026",
+    "control_name": "Supply Chain Integrity Gate",
+    "control_text": "Every build and ingestion run must pass three verification paths \u2014 library hash and CVE verification, pre-trained model weight hash verification, and external data source freshness verification \u2014 before any dependency, model file, or data source is used, with a zero critical CVE finding requirement and a 30-day maximum source verification age.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.5]",
+    "control_number": "[8.2.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A three-path integrity checker that runs on every build and ingestion run before any external asset is consumed. Path 1 verifies that every third-party library's local SHA-256 hash matches the package registry's published hash and carries zero critical CVE findings. Path 2 verifies that every pre-trained model weight file's hash matches the value published by the model provider on a separate trusted channel \u2014 not the same download URL. Path 3 rejects any external data source whose last-verified date in fieldGroup [8.2.2] exceeds 30 days. A mismatch or breach on any path blocks the build and triggers a security alert before any build step executes.",
+    "jkImplementationEvidence": "A 'Supply Chain Integrity Report' generated on every build and ingestion run showing every dependency name, pinned version, SHA-256 hash verification result, CVE scan result (must show zero critical findings), model weight hash verification result, and a zero count of dependencies or model files used in a build without a passing hash verification and CVE scan.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-026"
+    ]
+  },
+  {
+    "control_id": "CTRL-027",
+    "control_name": "RBAC and MFA Enforcement Gate",
+    "control_text": "The identity management system must restrict write access to model weights, Vector Store content, and Orchestrator configuration to three named roles with MFA enforced on every write operation, and must run a 90-day access review job that automatically revokes any role assignment not re-approved within the cycle.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.6]",
+    "control_number": "[8.3.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A scheduled access review job that queries every role assignment across the three highest-privilege access paths and automatically revokes any assignment whose last approval date exceeds 90 days. On every run it produces a structured Access Control Compliance Report recording the review result, MFA enforcement status, and Privileged Access Workstation registration status per account \u2014 ensuring stale grants cannot persist as silent write-access backdoors into the Vector Store, model weights, or Orchestrator configuration.",
+    "jkImplementationEvidence": "An 'Access Control Compliance Report' generated after every 90-day access review cycle showing every role assignment for the three high-privilege access paths, MFA enforcement status per account, Privileged Access Workstation registration status for the Model Engineer role, the review cycle completion date, and a zero count of active role assignments that have not been re-approved within the 90-day cycle.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-027"
+    ]
+  },
+  {
+    "control_id": "CTRL-028",
+    "control_name": "Unexpected Input Pattern Gate",
+    "control_text": "The Input Guardrail must apply three independent adversarial noise checks on every prompt \u2014 Zero-Width character stripping, homoglyph normalisation, and Semantic Bomb token frequency detection \u2014 before any prompt is passed to the Embedding Model, logging all sanitisation and blocking decisions in a single structured entry per prompt.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.7]",
+    "control_number": "[8.3.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A three-check sanitisation and blocking gate that runs on every prompt before it reaches the Embedding Model. Check 1 strips invisible Unicode Cf and Mn characters that attackers use to bypass keyword filters, logging each stripped character's code point and position. Check 2 normalises the prompt to NFC form and replaces visually identical characters from non-Latin scripts with their ASCII equivalents, logging each substitution. Check 3 tokenises the sanitised prompt and blocks any prompt where any single token appears more than five times \u2014 the signature of a Semantic Bomb payload designed to flood the Retriever's attention signal. All three checks run on every prompt regardless of whether an earlier check sanitised it, and all results are written to a single log entry.",
+    "jkImplementationEvidence": "An 'Adversarial Noise Detection Log' generated per session showing every prompt evaluated, Zero-Width characters detected and stripped with Unicode code points, homoglyph substitutions applied with before/after character values, Semantic Bomb tokens flagged with frequency counts, and a zero count of prompts containing detected adversarial noise patterns that reached the Embedding Model without sanitisation.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-028"
+    ]
+  },
+  {
+    "control_id": "CTRL-029",
+    "control_name": "MFA Failure Lockout and Alert",
+    "control_text": "The identity management system must automatically suspend any account and terminate all active sessions after 3 consecutive failed MFA attempts within a rolling 10-minute window on any high-privilege access path, dispatch a Priority-1 security alert, and block reinstatement until a Security team member records a completed out-of-band identity verification.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.6]",
+    "control_number": "[8.3.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "An automated lockout monitor that tracks consecutive MFA failures per account per high-privilege access path within a rolling 10-minute window. On the third failure it immediately suspends the account, terminates all active sessions, and dispatches a Priority-1 alert containing the account ID, source IP, attempt timestamps, and targeted access path. All subsequent authentication attempts are rejected until a Security team member records an out-of-band identity verification outcome against the lockout event \u2014 eliminating the window in which an attacker with stolen credentials can gain privileged access through repeated authentication attempts.",
+    "jkImplementationEvidence": "An 'MFA Failure Lockout Log' generated per incident showing the account ID targeted, access path attempted, source IP address, timestamps of each failed MFA attempt, automatic suspension confirmation timestamp, active sessions terminated, Security team alert delivery confirmation, out-of-band identity verification outcome, and reinstatement timestamp or escalation reference if credential compromise was confirmed. A zero count of accounts reinstated without a completed out-of-band verification step.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-029"
+    ]
+  },
+  {
+    "control_id": "CTRL-030",
+    "control_name": "Prompt Injection Detection Gate",
+    "control_text": "A real-time binary injection classifier must run independently of the keyword blocklist in risk control [8.1.R1] on every prompt, blocking and alerting on any prompt scoring \u2265 0.85 injection probability, and must be retrained on a maximum 30-day cycle using patterns harvested from the blocked prompt log.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.8]",
+    "control_number": "[8.4.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A second-layer injection detector that runs alongside the keyword blocklist in [8.1.R1], not instead of it. Where the blocklist catches known phrases, this classifier scores the statistical likelihood that any prompt \u2014 including novel, obfuscated, or encoded patterns \u2014 is an injection attempt. Any prompt scoring \u2265 0.85 is blocked, logged, and triggers an immediate security alert before any data reaches the Retriever or LLM (Generator).",
+    "jkImplementationEvidence": "A 'Prompt Injection Detection Log' generated per session showing every prompt evaluated, the injection probability score, the classification decision, the alert sent confirmation for every blocked prompt, and a zero count of prompts scoring \u2265 0.85 injection probability that reached the Retriever or LLM (Generator) without being blocked.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-030"
+    ]
+  },
+  {
+    "control_id": "CTRL-031",
+    "control_name": "Behavioural Anomaly Monitor",
+    "control_text": "The Orchestrator must maintain a rolling 7-day baseline for four behavioural metrics and fire a security alert with a documented runbook response action when any metric deviates more than 2 standard deviations above its baseline, producing a structured daily Behavioural Anomaly Report regardless of whether any alerts fired.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.8]",
+    "control_number": "[8.4.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A rolling baseline monitor that detects attack patterns invisible to per-event controls by tracking cumulative behavioural deviation across four system-wide metrics. Where upstream controls check individual events, this monitor checks whether the session-level or hourly-level pattern has drifted statistically from normal \u2014 catching coordinated extraction campaigns, distributed data harvesting, and sustained injection probing that each stay below per-key thresholds but collectively exceed the 2-standard-deviation boundary.",
+    "jkImplementationEvidence": "A daily 'Behavioural Anomaly Report' showing the rolling 7-day baseline for all four metrics, every alert fired with the triggering metric value and standard deviation at trigger, the response action executed per alert, and a zero count of metric deviations exceeding 2 standard deviations that did not trigger an alert and a documented response action within one monitoring cycle.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-031"
+    ]
+  },
+  {
+    "control_id": "CTRL-032",
+    "control_name": "RAG-Specific Metric Pipeline",
+    "control_text": "An automated evaluation pipeline using a human-validated Golden Dataset must enforce a minimum RAGAS Faithfulness threshold of 0.80 before every deployment.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.9],[18286.12]",
+    "control_number": "[4.1.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-deployment gate that scores how well the AI's answers are grounded in their source documents. It runs automatically on every deployment using a fixed Golden Dataset and blocks the build if the Faithfulness score falls below 0.80, preventing factually incorrect models from reaching users.",
+    "jkImplementationEvidence": "An 'Accuracy Evaluation Report' generated on every deployment showing the primary metric score, RAGAS Faithfulness score, Golden Dataset size, and a deployment gate result \u2014 must show RAGAS Faithfulness \u2265 0.80 for all passing deployments.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-032"
+    ]
+  },
+  {
+    "control_id": "CTRL-033",
+    "control_name": "Test Set Isolation Enforcement",
+    "control_text": "The evaluation test set must be isolated in a dedicated repository with SHA-256 integrity verification and IAM policies that explicitly block all training pipeline access.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.10],[18286.13]",
+    "control_number": "[4.2.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A pre-evaluation integrity check that cryptographically proves the test dataset has not been altered or accessed by the training pipeline. If the hash does not match or a blocked service account is present in the ACL, the evaluation is immediately aborted, ensuring reported accuracy scores reflect genuine unseen-data performance.",
+    "jkImplementationEvidence": "A 'Test Set Isolation Report' generated before each evaluation run showing the repository access control list (must contain zero training pipeline service accounts), the SHA-256 hash of the test set at creation, and the re-verified hash immediately before evaluation \u2014 both hashes must match.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-033"
+    ]
+  },
+  {
+    "control_id": "CTRL-034",
+    "control_name": "Production Drift Monitor",
+    "control_text": "A weekly production monitor must evaluate RAGAS Faithfulness against the Golden Dataset and automatically suspend the Query Interface after two consecutive threshold breaches.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.12],[18286.13],[18286.22]",
+    "control_number": "[4.3.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A scheduled early-warning system that re-scores the live AI environment weekly against its original Golden Dataset. If the Faithfulness score drops more than 5% below the production baseline for two consecutive cycles, the Query Interface is automatically suspended and an urgent alert is dispatched, preventing users from receiving silently degraded responses.",
+    "jkImplementationEvidence": "A weekly 'Accuracy Drift Monitor Report' showing the primary metric score, RAGAS Faithfulness score, delta against baseline, alert threshold status, and Query Interface suspension events \u2014 with a zero count of consecutive threshold breaches that did not trigger a Query Interface suspension.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-034"
+    ]
+  },
+  {
+    "control_id": "CTRL-035",
+    "control_name": "Human Benchmark Comparison Gate",
+    "control_text": "A deployment gate must block release if the system's score falls more than 5% below the registered human expert benchmark, unless an engineer provides a documented justification override.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.13],[18286.13]",
+    "control_number": "[4.3.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A deployment-time check that compares the model's evaluated score against a registered human expert baseline for the specific domain. If the model performs more than 5% below that baseline, the deployment is hard-blocked until an engineer provides a written justification \u2014 creating a mandatory audit record for every sub-par release decision.",
+    "jkImplementationEvidence": "A 'Benchmark Comparison Report' generated on every deployment showing the benchmark name, benchmark score, system score, classification result, and \u2014 for any 'Below Benchmark' result \u2014 the engineer override decision, engineer ID, and justification text.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-035"
+    ]
+  },
+  {
+    "control_id": "CTRL-036",
+    "control_name": "Feedback Isolation Barrier",
+    "control_text": "The data ingestion pipeline must run two independent checks on every inbound document \u2014 a provenance source path check and a cryptographic AI-generated marker check \u2014 before any document is written to the Vector Store or passed to the Embedding Model, and must route any rejected document to a human review queue with a structured rejection log entry.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.17]",
+    "control_number": "[7.1.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A two-stage pre-ingestion barrier that prevents LLM (Generator) outputs from re-entering the Vector Store or Embedding Model training pipeline without human approval. The first stage rejects any document whose source path matches a declared LLM output store. The second stage rejects any document carrying a cryptographic 'AI-GENERATED:' SHA-256 marker embedded at generation time. Both checks run independently on every document \u2014 a document that passes the first check is still evaluated by the second.",
+    "jkImplementationEvidence": "A 'Feedback Isolation Log' generated on every ingestion run showing every document evaluated, the provenance check result, the AI-generated marker check result, the count of documents routed to the human review queue, and a zero count of AI-generated documents ingested into the Vector Store or Embedding Model training pipeline without a logged human approval.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-036"
+    ]
+  },
+  {
+    "control_id": "CTRL-037",
+    "control_name": "Determinism Enforcement Gate",
+    "control_text": "The Orchestrator initialisation sequence must configure the LLM with temperature = 0.0, top_p = 1.0, and a fixed integer seed, then execute a fixed probe query and compare its response hash against a stored reference hash \u2014 blocking the Query Interface from accepting user input and alerting the engineering team if the hashes do not match.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.20]",
+    "control_number": "[7.3.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A startup-time determinism probe that runs before the Query Interface accepts any user input and re-runs after every LLM configuration change or model version update. It configures the LLM with temperature = 0.0, top_p = 1.0, and a fixed seed, submits a fixed probe query that is never shown to users, and compares the SHA-256 hash of the response against a stored reference hash. A hash mismatch means the LLM's sampling behaviour has changed \u2014 the Query Interface is blocked, the configuration values active at the time of the failure are written to the audit log, and an engineering alert is dispatched. The system cannot return to accepting user input until a passing probe result is logged.",
+    "jkImplementationEvidence": "A 'Determinism Validation Log' generated on every system startup and after every LLM (Generator) configuration change, showing the probe query hash, the response hash, the reference hash, the configuration values (temperature, top_p, seed), the hash comparison result, and a zero count of startups where the Query Interface accepted user input with a failing determinism check.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-037"
+    ]
+  },
+  {
+    "control_id": "CTRL-038",
+    "control_name": "Corrupted Input Sanitisation Gate",
+    "control_text": "The Input Guardrail must apply a two-stage validation on every prompt \u2014 a structural check for null, encoding, and length validity followed by a semantic integrity check against the Embedding Model's vocabulary \u2014 rejecting any prompt with an unrecognised token ratio above 30%, attempting domain spell-correction for prompts between 10% and 30%, and logging all check results before any call to the Embedding Model.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.15],[18286.23]",
+    "control_number": "[7.1.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A two-stage pre-embedding gate that prevents structurally invalid and semantically degraded prompts from reaching the Embedding Model. Stage 1 catches hard corruption \u2014 null payloads, broken encodings, and out-of-bounds lengths \u2014 with an immediate HTTP 400 rejection. Stage 2 catches soft corruption by measuring how many tokens the Embedding Model's vocabulary does not recognise: above 30% the prompt is rejected outright; between 10% and 30% the gate attempts domain-specific spell-correction and re-evaluates before deciding whether to pass or reject.",
+    "jkImplementationEvidence": "An 'Input Sanitisation Log' generated per session showing every prompt evaluated, the Stage 1 and Stage 2 check results, the unrecognised token ratio for each prompt, corrections applied, and a zero count of prompts with an unrecognised token ratio above 30% that reached the Embedding Model.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-038"
+    ]
+  },
+  {
+    "control_id": "CTRL-039",
+    "control_name": "Environment Degradation Response Gate",
+    "control_text": "The Orchestrator must monitor the response latency of every external dependency on every pipeline execution, automatically switch to the declared degraded mode for any dependency that exceeds its configured threshold for 3 consecutive calls, send an immediate engineering alert, and automatically restore normal operation after 5 consecutive below-threshold calls.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.16],[18286.23]",
+    "control_number": "[7.1.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A per-dependency latency monitor that records response time on every Orchestrator call to the Vector Store, Embedding Model, and upstream data sources. When any dependency exceeds its declared threshold for three consecutive calls, the Orchestrator switches automatically to the pre-defined degraded mode for that dependency without waiting for manual intervention. Normal mode is restored automatically after five consecutive below-threshold calls. Every state transition is logged and an engineering alert is dispatched at activation.",
+    "jkImplementationEvidence": "An 'Environment Degradation Log' showing every dependency latency measurement, the threshold applied, degraded mode activations with timestamps, the degraded mode behaviour executed, engineering team alert sent confirmation, and recovery events \u2014 with a zero count of threshold breaches that did not trigger a degraded mode activation within 3 consecutive calls.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-039"
+    ]
+  },
+  {
+    "control_id": "CTRL-040",
+    "control_name": "Safe State Trigger Gate",
+    "control_text": "The Orchestrator must register a health check handler for every RAG component, execute the component's declared safe state behaviour within 500 milliseconds of any failure status, default to maintenance mode and Query Interface blocking when no safe state is declared, and log every activation event with an engineering alert \u2014 never default to silent bypass.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.18]",
+    "control_number": "[7.2.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A component health wrapper that intercepts every failure signal from every RAG component before it can either crash the pipeline or be silently swallowed. When a failure is detected, it immediately looks up the declared safe state for that component \u2014 serving a cached response with a staleness warning, displaying a maintenance message and blocking new queries, or routing to a human reviewer queue \u2014 and activates it within 500 milliseconds. When no safe state is declared, it defaults to maintenance mode. Silent bypass is structurally impossible: the wrapper never returns control to the pipeline without either a confirmed component response or a confirmed safe state activation.",
+    "jkImplementationEvidence": "A 'Safe State Activation Log' generated per incident showing the failed component name, failure status code, safe state behaviour activated, time elapsed between failure detection and safe state activation (must be \u2264 500 milliseconds), engineering alert sent confirmation, and a zero count of component failures that resulted in silent bypass or unhandled crash.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-040"
+    ]
+  },
+  {
+    "control_id": "CTRL-041",
+    "control_name": "Redundancy Failover Gate",
+    "control_text": "The Orchestrator must automatically route the current and all subsequent requests to a declared redundant instance within 200 milliseconds when the primary Vector Store, Embedding Model, or LLM exceeds its latency threshold or returns an error, and must suppress any LLM response that fails a pre-Output-Guardrail plausibility sanity check \u2014 routing it to the human reviewer queue and writing a violation log entry.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18229-2.19]",
+    "control_number": "[7.2.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A two-part protection against single-component availability failures and contextually implausible outputs. The failover gate monitors the active instance for every redundant component pair and switches to the backup instance within 200 milliseconds of a latency breach or error, re-issuing the in-flight request to the backup without dropping it. The Output Sanity Check runs after generation but before the Output Guardrail \u2014 it evaluates the response against domain-specific plausibility rules and suppresses any response that violates them, routing the query to human review before the Output Guardrail ever sees it. A plausibility-failed response never reaches the Response Interface under any circumstance.",
+    "jkImplementationEvidence": "A 'Redundancy Failover Log' showing every primary component failure, the failover timestamp, the redundant instance activated, the time elapsed between failure and failover (must be \u2264 200 milliseconds), and a 'Sanity Check Violation Log' showing every response suppressed, the plausibility rule triggered, and a zero count of sanity-check-failed responses delivered to the Response Interface.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-041"
+    ]
+  },
+  {
+    "control_id": "CTRL-042",
+    "control_name": "AI Identity Disclosure Gate",
+    "control_text": "The system must inject a clear AI identity disclosure at the start of every user session or interaction, confirming the user is interacting with an AI system. The disclosure must appear before any consequential output is delivered, be expressed in plain language, and be logged as a disclosure event in the audit log.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[24368.1],[24368.2],[24368.5]",
+    "control_number": "[9.5.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "A session-level disclosure gate that ensures every user is informed they are interacting with an AI before any output is produced, satisfying Article 50(1) and the deployer implementation requirement.",
+    "jkImplementationEvidence": "A Disclosure Event Log showing every session ID where the AI identity disclosure was injected, the timestamp, and confirmation that the disclosure preceded the first AI output in every session.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-042"
+    ]
+  },
+  {
+    "control_id": "CTRL-043",
+    "control_name": "AI-Generated Content Labelling",
+    "control_text": "Any content generated by the system that could be mistaken for authentic human-created content must be labelled as AI-generated. The label must be present in a machine-readable format and, where technically feasible, visible to the end user in the response payload.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[24368.3]",
+    "control_number": "[9.5.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To ensure all AI-generated outputs are marked as such, preventing users from mistaking AI content for human-authored content and satisfying Article 50(2).",
+    "jkImplementationEvidence": "A Content Labelling Audit Report showing that all response payloads carry a machine-readable AI-generated content flag and that the label is visible in the response UI for a representative sample of outputs.",
+    "jkMaturity": "Medium",
+    "map_ids": [
+      "MAP-043"
+    ]
+  },
+  {
+    "control_id": "CTRL-044",
+    "control_name": "Synthetic Content Provenance",
+    "control_text": "Where the system generates synthetic audio, image, or video content depicting real persons or events, technical measures must be in place to embed provenance metadata or watermarking to support downstream detection of AI-generated content.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[24368.4]",
+    "control_number": "[9.5.R3]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To satisfy Article 50(4) by ensuring synthetic media generated by the system carries embedded provenance markers that enable downstream detection and verification.",
+    "jkImplementationEvidence": "A Provenance Metadata Verification Report confirming that synthetic media outputs carry embedded provenance metadata or watermarks and that these markers survive standard distribution formats.",
+    "jkMaturity": "Medium",
+    "map_ids": [
+      "MAP-044"
+    ]
+  },
+  {
+    "control_id": "CTRL-045",
+    "control_name": "Encrypted Registry Channels & Trusted Image Enforcement",
+    "control_text": "All build tools, CI/CD pipelines, and Kubernetes nodes must pull and push container images exclusively over TLS-encrypted registry endpoints \u2014 plain HTTP must be disabled in every container runtime configuration. An admission controller must enforce that only images from an approved registry allowlist are admitted, and where image signing is in use, signature verification must pass before admission.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.1.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To ensure that every image in transit is encrypted against interception and that only images from cryptographically trusted, explicitly approved sources can run in the cluster \u2014 closing both the in-transit tampering path and the untrusted image admission path with a single enforcement chain.",
+    "jkImplementationEvidence": "Container runtime configuration files showing no insecure-registry entries, admission controller policy logs confirming rejection of non-TLS registry URLs and unapproved image sources, and where signing is in use, signature verification audit logs.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-045"
+    ]
+  },
+  {
+    "control_id": "CTRL-046",
+    "control_name": "Registry Pruning & Secret Hygiene",
+    "control_text": "A scheduled registry pruning job must run at least weekly and delete images older than the defined retention period or flagged as critical or high severity by the image scanner, excluding currently deployed digests. Dockerfiles and image layers must contain no hardcoded credentials or API keys \u2014 a secret scanning gate must run in CI and block image promotion on any finding, with all secret material injected at runtime from an encrypted secret store.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.1.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To prevent old, vulnerable, or secret-bearing images from persisting in the registry where they can be re-deployed by mistake or have their layers extracted to recover credentials \u2014 combining lifecycle pruning and secret hygiene into a single image hygiene control.",
+    "jkImplementationEvidence": "Pruning job execution logs showing images removed per run with no impact on deployed digests, image scan reports confirming zero critical/high images remain beyond the retention window, and CI secret scan reports confirming zero hardcoded secrets in promoted images.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-046"
+    ]
+  },
+  {
+    "control_id": "CTRL-047",
+    "control_name": "Registry RBAC & Admin MFA/SSO",
+    "control_text": "Fine-grained RBAC must restrict registry write permissions to CI/CD service accounts and a named set of release engineers, with all write operations audited. The Kubernetes control plane must be integrated with the corporate IdP via OIDC or SAML with MFA enforced for all cluster-admin accounts \u2014 static long-lived credentials must be disabled where supported.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.2.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To ensure that both the registry and the cluster control plane require verified, scoped identity before any write or administrative action \u2014 so that a single compromised account cannot overwrite production images or gain full cluster control without passing a second authentication factor.",
+    "jkImplementationEvidence": "Registry RBAC configuration export showing no general-purpose developer accounts with write access to production model repositories, IdP configuration confirming MFA is enforced for the cluster-admin group, and the orchestrator authentication configuration pointing to the OIDC or SAML provider.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-047"
+    ]
+  },
+  {
+    "control_id": "CTRL-048",
+    "control_name": "Non-Root Execution & Privilege Escalation Controls",
+    "control_text": "All AI component Dockerfiles must specify a non-root USER directive. All pod and container securityContext configurations must set 'runAsNonRoot: true', a non-zero 'runAsUser' and 'runAsGroup', 'allowPrivilegeEscalation: false', and minimal capability grants. Kernel-level security mechanisms (AppArmor or SELinux) must be enabled for AI workload nodes. Admission policies must reject any pod running as UID 0, with 'privileged: true', or with hostPID or hostNetwork enabled.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.2.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To close the privilege escalation path at both the container and host layers \u2014 ensuring that code execution inside a container operates with the minimum privilege required, and that kernel-enforced mandatory access control prevents escalation to host root even when container-level controls are bypassed.",
+    "jkImplementationEvidence": "Dockerfiles showing a non-root USER directive, deployment manifests showing 'runAsNonRoot: true', non-zero 'runAsUser' and 'runAsGroup', and 'allowPrivilegeEscalation: false', AppArmor or SELinux profiles applied to AI workload nodes, and admission policy logs confirming rejection of UID 0 and privileged pod specs.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-048"
+    ]
+  },
+  {
+    "control_id": "CTRL-049",
+    "control_name": "Network Segmentation & Policy Isolation",
+    "control_text": "Sensitivity-based namespaces must be defined with a default-deny NetworkPolicy applied to each. Explicit allow rules must permit only documented ingress and egress paths per namespace, with egress from sensitive AI workloads restricted to required services only. AI-serving namespaces must accept ingress only from authorised frontend services.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.3.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To ensure that a compromise in any lower-sensitivity workload cannot be used to pivot into AI model-serving or data-handling components \u2014 making lateral movement structurally impossible without an explicit, declared network policy allow rule.",
+    "jkImplementationEvidence": "NetworkPolicy manifests showing default-deny posture and explicit allow rules per namespace, and connectivity test results confirming pods in non-sensitive namespaces cannot reach pods or databases in sensitive namespaces.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-049"
+    ]
+  },
+  {
+    "control_id": "CTRL-050",
+    "control_name": "API Authentication, Authorisation & Rate Limiting",
+    "control_text": "All AI-serving and orchestration APIs must be placed behind an API gateway or ingress controller enforcing strong authentication (OAuth2, OIDC, or signed API keys), fine-grained authorisation by role or consumer ID, and per-consumer rate limits. Unauthenticated requests must be rejected with 401 or 403; clients exceeding their rate limit must receive 429. All requests must be logged with the authenticated identity.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.3.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To ensure every AI API request is attributed to an authenticated, authorised identity and that no single consumer can exhaust inference capacity \u2014 preventing both unauthorised access and volumetric denial of service from the first external exposure of any AI endpoint.",
+    "jkImplementationEvidence": "API gateway configuration showing authentication, authorisation, and rate-limiting policies in force, and access logs mapping every request to an authenticated identity with 401, 403, and 429 responses visible for unauthenticated and rate-limited consumers.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-050"
+    ]
+  },
+  {
+    "control_id": "CTRL-051",
+    "control_name": "Host OS Hardening & Workload Segregation",
+    "control_text": "Kubernetes nodes must run minimal, hardened OS images with unnecessary services disabled and kernel packages patched via an automated pipeline. Host instances dedicated to containerised workloads must run no non-containerised processes outside the container runtime. Node labels and taints must enforce that sensitive AI workloads schedule only on hardened, monitored nodes and that general workloads cannot tolerate those nodes.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.4.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To ensure that a container escape from any workload \u2014 including a lower-trust CI job co-located with AI model-serving pods \u2014 reaches a host with the smallest possible attack surface, no exploitable legacy services, and no non-containerised processes that could expose the container runtime APIs.",
+    "jkImplementationEvidence": "Patch management reports and security scan results showing no unpatched critical OS CVEs beyond the defined SLA, host configuration baseline confirming minimal OS install with unnecessary services disabled, node label and taint configuration showing sensitive AI workloads are restricted to hardened nodes, and host inventory confirming no non-containerised processes run on container-only nodes.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-051"
+    ]
+  },
+  {
+    "control_id": "CTRL-052",
+    "control_name": "Immutable Containers & Minimal Filesystem Permissions",
+    "control_text": "All AI-serving containers must run with 'readOnlyRootFilesystem: true' in their securityContext, with write operations performed only on explicitly mounted volumes. Admission policies must forbid hostPath mounts to sensitive host directories (e.g., '/', '/var/run', '/etc', '/var/run/docker.sock'). CI/CD pipelines must deliver changes by building a new image \u2014 never by mutating a running container.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.5.R1]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To prevent an attacker who achieves code execution inside a container from writing persistent backdoors to the root filesystem or gaining host-level access via sensitive hostPath mounts \u2014 making post-exploit persistence and host filesystem access structurally impossible for the container.",
+    "jkImplementationEvidence": "Deployment manifests showing 'readOnlyRootFilesystem: true' and explicitly declared writable volume mounts, admission controller policy logs confirming rejection of sensitive hostPath mount attempts, and CI/CD pipeline configuration showing changes are delivered by new image builds.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-052"
+    ]
+  },
+  {
+    "control_id": "CTRL-053",
+    "control_name": "Platform Security Baseline & Resource Limits",
+    "control_text": "All production and non-production AI clusters must have Pod Security Standards set to enforcing mode, RBAC configured, audit logging enabled, and admission controllers active \u2014 documented as a cluster security baseline that every new cluster must inherit. All AI-related pods must have explicit CPU and memory requests and limits defined. Admission policies must reject or mutate to safe defaults any pod submitted without resource limits.",
+    "control_source": "Harmonised_Standard",
+    "requirement_control_number": "[18282.4],[18286.10]",
+    "control_number": "[1.5.R2]",
+    "owasp_id": null,
+    "owasp_mitigation": null,
+    "jkObjective": "To ensure that the platform's built-in security enforcement is active and consistent across every cluster, and that no AI workload can consume unbounded resources \u2014 preventing both the security regression that occurs when a new cluster inherits no baseline and the self-inflicted denial of service caused by resource-unlimited batch workloads.",
+    "jkImplementationEvidence": "Cluster security baseline document listing all enabled platform security features per cluster, cluster inspection results confirming Pod Security Standards are in enforcing mode, and deployment manifests showing CPU and memory requests and limits defined for all AI-related containers.",
+    "jkMaturity": "High",
+    "map_ids": [
+      "MAP-053"
+    ]
+  },
+  {
+    "control_id": "OWASP-LLM01-M1",
+    "control_name": "Least-Privilege LLM Backend Access",
+    "control_text": "Enforce least-privilege access controls on all systems the LLM can reach. The LLM should have only the minimum permissions required to complete its designated task; sensitive backend actions must require explicit, human-verified authorisation.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM01",
+    "owasp_mitigation": "Enforce least-privilege access controls on all systems the LLM can reach. The LLM should have only the minimum permissions required to complete its designated task; sensitive backend actions must require explicit, human-verified authorisation.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM01-M2",
+    "control_name": "Prompt Injection Detection and Input Filtering",
+    "control_text": "Implement multi-layer prompt injection detection at the input stage, including adversarial pattern scanning, instruction-data boundary enforcement, and Unicode normalisation. Reject or sanitise inputs that attempt to override system instructions.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM01",
+    "owasp_mitigation": "Implement multi-layer prompt injection detection at the input stage, including adversarial pattern scanning, instruction-data boundary enforcement, and Unicode normalisation. Reject or sanitise inputs that attempt to override system instructions.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM01-M3",
+    "control_name": "Parameterised Prompts and Structured I/O",
+    "control_text": "Use parameterised prompt templates that structurally separate system instructions from user-supplied data. Enforce output schemas so that instruction-override attempts are rejected at the parser stage rather than executed by the model.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM01",
+    "owasp_mitigation": "Use parameterised prompt templates that structurally separate system instructions from user-supplied data. Enforce output schemas so that instruction-override attempts are rejected at the parser stage rather than executed by the model.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM02-M1",
+    "control_name": "Training Data Sanitisation and PII Removal",
+    "control_text": "Apply data sanitisation and de-identification techniques to all training, fine-tuning, and RAG knowledge-base data. Prevent personally identifiable information, credentials, and proprietary business data from entering the model context.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM02",
+    "owasp_mitigation": "Apply data sanitisation and de-identification techniques to all training, fine-tuning, and RAG knowledge-base data. Prevent personally identifiable information, credentials, and proprietary business data from entering the model context.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM02-M2",
+    "control_name": "Strict Access Controls on Data Sources",
+    "control_text": "Apply least-privilege access controls on all data sources accessible to the retrieval layer. Segment data by sensitivity level and enforce row-level or document-level access policies that respect the end-user's authorisation scope.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM02",
+    "owasp_mitigation": "Apply least-privilege access controls on all data sources accessible to the retrieval layer. Segment data by sensitivity level and enforce row-level or document-level access policies that respect the end-user's authorisation scope.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM02-M3",
+    "control_name": "Output Filtering and Data Leakage Detection",
+    "control_text": "Implement post-generation output filtering that detects and redacts sensitive patterns (PII, credentials, secrets) before the response reaches the user. Log all flagged instances for security review.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM02",
+    "owasp_mitigation": "Implement post-generation output filtering that detects and redacts sensitive patterns (PII, credentials, secrets) before the response reaches the user. Log all flagged instances for security review.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM03-M1",
+    "control_name": "Trusted Source Verification and Component Signing",
+    "control_text": "Vet and cryptographically sign all third-party models, datasets, plugins, and infrastructure components before use. Restrict model ingestion to trusted, audited registries with immutable provenance records.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM03",
+    "owasp_mitigation": "Vet and cryptographically sign all third-party models, datasets, plugins, and infrastructure components before use. Restrict model ingestion to trusted, audited registries with immutable provenance records.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM03-M2",
+    "control_name": "Software Bill of Materials (SBOM) for LLM Pipelines",
+    "control_text": "Maintain a current software bill of materials covering all models, libraries, datasets, and infrastructure dependencies in the LLM pipeline. Use the SBOM to track known vulnerabilities and enforce deprecation policies.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM03",
+    "owasp_mitigation": "Maintain a current software bill of materials covering all models, libraries, datasets, and infrastructure dependencies in the LLM pipeline. Use the SBOM to track known vulnerabilities and enforce deprecation policies.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM04-M1",
+    "control_name": "Training Data Validation and Lineage Tracking",
+    "control_text": "Validate, curate, and track the full lineage of all training, fine-tuning, and retrieval data. Enforce data source allow-lists, schema validation, and representative-sampling requirements before any data enters the model pipeline.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM04",
+    "owasp_mitigation": "Validate, curate, and track the full lineage of all training, fine-tuning, and retrieval data. Enforce data source allow-lists, schema validation, and representative-sampling requirements before any data enters the model pipeline.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM04-M2",
+    "control_name": "Poisoning Anomaly Detection",
+    "control_text": "Implement anomaly detection on model outputs and embedding distributions to identify signs of data or model poisoning. Monitor for unexpected behavioural drifts, back-door trigger patterns, and subgroup performance degradation.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM04",
+    "owasp_mitigation": "Implement anomaly detection on model outputs and embedding distributions to identify signs of data or model poisoning. Monitor for unexpected behavioural drifts, back-door trigger patterns, and subgroup performance degradation.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM05-M1",
+    "control_name": "Treat LLM Output as Untrusted Input",
+    "control_text": "Apply the same validation, sanitisation, and encoding discipline to LLM-generated content as to any external user input. Never pass raw LLM output directly to interpreters, shells, SQL engines, or HTML renderers without contextual encoding.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM05",
+    "owasp_mitigation": "Apply the same validation, sanitisation, and encoding discipline to LLM-generated content as to any external user input. Never pass raw LLM output directly to interpreters, shells, SQL engines, or HTML renderers without contextual encoding.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM05-M2",
+    "control_name": "Context-Aware Output Encoding",
+    "control_text": "Encode LLM outputs for the downstream rendering context (HTML-encode for web, parameterise for SQL, escape for shell). Enforce output length limits and content policy filtering before delivery to the response interface.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM05",
+    "owasp_mitigation": "Encode LLM outputs for the downstream rendering context (HTML-encode for web, parameterise for SQL, escape for shell). Enforce output length limits and content policy filtering before delivery to the response interface.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM06-M1",
+    "control_name": "Minimum Necessary Agent Permissions",
+    "control_text": "Grant LLM agents only the minimum permissions required to execute their assigned task. Revoke unused capabilities, enforce deny-by-default action policies, and scope all tool access to the specific resources needed for the current session.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM06",
+    "owasp_mitigation": "Grant LLM agents only the minimum permissions required to execute their assigned task. Revoke unused capabilities, enforce deny-by-default action policies, and scope all tool access to the specific resources needed for the current session.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM06-M2",
+    "control_name": "Human-in-the-Loop for High-Impact Actions",
+    "control_text": "Require explicit human confirmation before any LLM-initiated action that is high-impact, irreversible, or crosses defined risk thresholds. Implement an approval gateway that presents the proposed action and its consequences to a human operator.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM06",
+    "owasp_mitigation": "Require explicit human confirmation before any LLM-initiated action that is high-impact, irreversible, or crosses defined risk thresholds. Implement an approval gateway that presents the proposed action and its consequences to a human operator.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM06-M3",
+    "control_name": "Action Rate Limiting and Audit Logging",
+    "control_text": "Implement rate limits on all LLM-initiated actions and maintain a complete, tamper-evident audit log of every agentic action taken. Use the log to detect runaway behaviour, enable forensic review, and support kill-switch activation.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM06",
+    "owasp_mitigation": "Implement rate limits on all LLM-initiated actions and maintain a complete, tamper-evident audit log of every agentic action taken. Use the log to detect runaway behaviour, enable forensic review, and support kill-switch activation.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM07-M1",
+    "control_name": "Externalise Credentials from System Prompts",
+    "control_text": "Never store credentials, API keys, access tokens, or sensitive business rules directly in system prompts. Use secured configuration stores (e.g., secrets managers) that the orchestration layer injects at runtime without exposing to the model context.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM07",
+    "owasp_mitigation": "Never store credentials, API keys, access tokens, or sensitive business rules directly in system prompts. Use secured configuration stores (e.g., secrets managers) that the orchestration layer injects at runtime without exposing to the model context.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM07-M2",
+    "control_name": "System Prompt Exfiltration Detection",
+    "control_text": "Monitor all LLM outputs for patterns that indicate system prompt leakage, including verbatim instruction reproduction and internal variable disclosure. Block and alert on detected exfiltration attempts before they reach the response interface.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM07",
+    "owasp_mitigation": "Monitor all LLM outputs for patterns that indicate system prompt leakage, including verbatim instruction reproduction and internal variable disclosure. Block and alert on detected exfiltration attempts before they reach the response interface.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM08-M1",
+    "control_name": "Vector Database Access Controls and Namespace Isolation",
+    "control_text": "Implement strict access controls and namespace isolation for all vector databases. Enforce query-time authorisation checks so that users can only retrieve embeddings from document namespaces they are authorised to access.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM08",
+    "owasp_mitigation": "Implement strict access controls and namespace isolation for all vector databases. Enforce query-time authorisation checks so that users can only retrieve embeddings from document namespaces they are authorised to access.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM08-M2",
+    "control_name": "Pre-Embedding Data Validation and Sanitisation",
+    "control_text": "Validate and sanitise all data before it is embedded and stored in the vector database. Screen for injected adversarial content, PII, and demographic biases in the embedding corpus to prevent retrieval-time amplification of those risks.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM08",
+    "owasp_mitigation": "Validate and sanitise all data before it is embedded and stored in the vector database. Screen for injected adversarial content, PII, and demographic biases in the embedding corpus to prevent retrieval-time amplification of those risks.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM09-M1",
+    "control_name": "Verified-Source RAG Grounding",
+    "control_text": "Ground all LLM responses in a retrieval-augmented generation pipeline backed by verified, authoritative knowledge sources. Implement retrieval confidence scoring to avoid generating responses from low-quality or unverified documents.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM09",
+    "owasp_mitigation": "Ground all LLM responses in a retrieval-augmented generation pipeline backed by verified, authoritative knowledge sources. Implement retrieval confidence scoring to avoid generating responses from low-quality or unverified documents.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM09-M2",
+    "control_name": "Cross-Referencing and Factual Accuracy Checks",
+    "control_text": "Implement post-generation factual accuracy checks using automated cross-referencing against trusted knowledge bases. Flag or block responses where factual claims cannot be corroborated by the retrieval layer before delivery.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM09",
+    "owasp_mitigation": "Implement post-generation factual accuracy checks using automated cross-referencing against trusted knowledge bases. Flag or block responses where factual claims cannot be corroborated by the retrieval layer before delivery.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM09-M3",
+    "control_name": "Uncertainty Communication and Source Citation",
+    "control_text": "Require the model to communicate its confidence level and provide traceable source citations for all factual claims. Clearly label responses that exceed the model's knowledge boundaries as uncertain, and present sources for user verification.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM09",
+    "owasp_mitigation": "Require the model to communicate its confidence level and provide traceable source citations for all factual claims. Clearly label responses that exceed the model's knowledge boundaries as uncertain, and present sources for user verification.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM10-M1",
+    "control_name": "Rate Limiting, Token Budgets, and Resource Quotas",
+    "control_text": "Enforce per-user, per-session, and per-API-key rate limits, token budgets, and computational resource quotas. Block requests that exceed defined thresholds before they reach the inference layer to prevent resource exhaustion attacks.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM10",
+    "owasp_mitigation": "Enforce per-user, per-session, and per-API-key rate limits, token budgets, and computational resource quotas. Block requests that exceed defined thresholds before they reach the inference layer to prevent resource exhaustion attacks.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM10-M2",
+    "control_name": "Consumption Anomaly Monitoring and Alerting",
+    "control_text": "Monitor token consumption, request volume, and computational costs in real time. Alert on statistically anomalous usage patterns that may indicate adversarial probing, runaway agents, or denial-of-service attempts.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM10",
+    "owasp_mitigation": "Monitor token consumption, request volume, and computational costs in real time. Alert on statistically anomalous usage patterns that may indicate adversarial probing, runaway agents, or denial-of-service attempts.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  },
+  {
+    "control_id": "OWASP-LLM10-M3",
+    "control_name": "Circuit Breakers for Runaway Inference",
+    "control_text": "Deploy circuit breakers that automatically terminate LLM inference processes exceeding defined time, token, or cost thresholds. Integrate with the orchestrator kill-switch so that runaway inference is halted without human intervention when limits are breached.",
+    "control_source": "OWASP",
+    "requirement_control_number": null,
+    "control_number": null,
+    "owasp_id": "LLM10",
+    "owasp_mitigation": "Deploy circuit breakers that automatically terminate LLM inference processes exceeding defined time, token, or cost thresholds. Integrate with the orchestrator kill-switch so that runaway inference is halted without human intervention when limits are breached.",
+    "jkObjective": null,
+    "jkImplementationEvidence": null,
+    "jkMaturity": null,
+    "map_ids": []
+  }
+]
