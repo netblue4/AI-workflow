@@ -1,5 +1,5 @@
 /* Step 8 — Risk Assessment Wizard (Guided)
-   Hierarchy: fieldGroup.jkName → risks → Attack Vectors
+   Grouping: article.StepName → risks → Attack Vectors (each risk appears exactly once)
    Guidance (analogues, applies-if, relevance, categories) loaded from step8-guidance.json.
    Selection at risk level. Identity from central _meta.
    Informed by Step 3 (RCN filter + relevance) and Step 7 (DPIA data types + relevance).
@@ -11,7 +11,7 @@
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _framework = null, _guidance = null, _record = null;
   let _step3Data = null, _step7Data = null;
-  let _filteredFGItems = []; // [{fieldGroupName, risks:[...]}]
+  let _filteredFGItems = []; // [{groupName, risks:[...]}]
 
   const _state = {
     selected_risks:  {},  // riskName → boolean
@@ -122,70 +122,55 @@
     _renderPanes(pw);
   }
 
-  // ---- RCN → fieldGroup name map ------------------------------
-  function _buildRcnToFGMap() {
-    const map = {};
-    (_framework?.['1. Compliance Requirements'] || []).forEach(article => {
-      (article.Fields || []).forEach(field => {
-        if (field.jkType === 'fieldGroup') {
-          (field.controls || []).forEach(ctrl => {
-            if (ctrl.requirement_control_number) map[ctrl.requirement_control_number] = field.jkName;
-          });
-        }
-      });
-    });
-    return map;
-  }
-
-  // ---- Build fieldGroup → risks structure ---------------------
+  // ---- Build StepName → risks structure ----------------------
+  // Groups risks by their parent article's StepName.
+  // Each risk belongs to exactly one StepName — no repetition.
   function _buildFGItems() {
     if (!_framework) return [];
-    const rcnToFG  = _buildRcnToFGMap();
+
     const applicable = _step3Data?.all_requirement_control_numbers
       ? new Set(_step3Data.all_requirement_control_numbers) : null;
-    const allItems = Object.values(_framework).reduce(
-      (acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []
-    );
-    const fgMap = new Map();
 
-    for (const item of allItems) {
-      for (const field of (item.Fields || [])) {
-        if (field.jkType !== 'risk') continue;
-        const matchedFGs = new Set();
-        const matchedControls = [];
+    const groupMap = new Map(); // StepName → [riskObj, ...]
 
-        for (const ctrl of (field.controls || [])) {
-          const rcns = (ctrl.requirement_control_number || '')
-            .split(',').map(s => s.trim()).filter(Boolean);
-          const applicable_ = applicable ? rcns.some(r => applicable.has(r)) : true;
-          if (!applicable_) continue;
-          matchedControls.push(ctrl);
-          rcns.forEach(rcn => { const fg = rcnToFG[rcn]; if (fg) matchedFGs.add(fg); });
-        }
+    for (const section of Object.values(_framework)) {
+      if (!Array.isArray(section)) continue;
+      for (const article of section) {
+        const stepName = article.StepName;
+        if (!stepName) continue;
 
-        if (matchedControls.length === 0) continue;
+        for (const field of (article.Fields || [])) {
+          if (field.jkType !== 'risk') continue;
 
-        const attackVectors = matchedControls.map(c => c.jkAttackVector).filter(Boolean);
-        const riskObj = {
-          jkName:          field.jkName,
-          RiskDescription: field.RiskDescription || '',
-          role:            field.Role || '',
-          attackVectors,
-          fieldGroups:     Array.from(matchedFGs)
-        };
+          // Apply RCN applicability filter from Step 3
+          const matchedControls = [];
+          for (const ctrl of (field.controls || [])) {
+            const rcns = (ctrl.requirement_control_number || '')
+              .split(',').map(s => s.trim()).filter(Boolean);
+            const isApplicable = applicable ? rcns.some(r => applicable.has(r)) : true;
+            if (isApplicable) matchedControls.push(ctrl);
+          }
+          if (matchedControls.length === 0) continue;
 
-        if (matchedFGs.size === 0) continue;
-        matchedFGs.forEach(fg => {
-          if (!fgMap.has(fg)) fgMap.set(fg, []);
-          const arr = fgMap.get(fg);
+          const attackVectors = matchedControls.map(c => c.jkAttackVector).filter(Boolean);
+          const riskObj = {
+            jkName:          field.jkName,
+            RiskDescription: field.RiskDescription || '',
+            role:            field.Role || '',
+            attackVectors,
+            stepName                          // which standard group this risk belongs to
+          };
+
+          if (!groupMap.has(stepName)) groupMap.set(stepName, []);
+          const arr = groupMap.get(stepName);
           if (!arr.find(r => r.jkName === riskObj.jkName)) arr.push(riskObj);
-        });
+        }
       }
     }
 
-    // Sort risks within each fieldGroup: HIGH relevance first
-    return Array.from(fgMap.entries()).map(([fieldGroupName, risks]) => ({
-      fieldGroupName,
+    // Sort risks within each group: HIGH relevance first
+    return Array.from(groupMap.entries()).map(([groupName, risks]) => ({
+      groupName,
       risks: risks.slice().sort((a, b) => {
         const ra = _computeRelevance(a.jkName);
         const rb = _computeRelevance(b.jkName);
@@ -612,7 +597,7 @@
       // Summary line
       const instr = _el('p', 'wiz8-instruction');
       const guidanceSuffix = _guidance ? '' : ' (install step8-guidance.json for relevance scoring and guidance)';
-      instr.innerHTML = `<strong>${totalRisks} risk${totalRisks !== 1 ? 's' : ''}</strong> across <strong>${totalFGs} compliance control area${totalFGs !== 1 ? 's' : ''}</strong>${_step3Data ? '' : ' (all risks — complete Step 3 for filtered view)'}. ${highCount > 0 ? `<strong class="wiz8-high-count">${highCount} HIGH-relevance</strong> risks identified for your system. ` : ''}Review each risk below.${guidanceSuffix}`;
+      instr.innerHTML = `<strong>${totalRisks} risk${totalRisks !== 1 ? 's' : ''}</strong> across <strong>${totalFGs} standard${totalFGs !== 1 ? 's' : ''}</strong>${_step3Data ? '' : ' (all risks — complete Step 3 for filtered view)'}. ${highCount > 0 ? `<strong class="wiz8-high-count">${highCount} HIGH-relevance</strong> risks identified for your system. ` : ''}Review each risk below.${guidanceSuffix}`;
       card.appendChild(instr);
 
       // Filter bar
@@ -740,7 +725,7 @@
 
     const header = _el('div', 'wiz8-fg-header');
     const left   = _el('div', 'wiz8-fg-header-left');
-    const nm = _el('span', 'wiz8-fg-name'); nm.textContent = fg.fieldGroupName; left.appendChild(nm);
+    const nm = _el('span', 'wiz8-fg-name'); nm.textContent = fg.groupName; left.appendChild(nm);
     const rb = _el('span', 'wiz8-badge-risks');
     rb.textContent = `${fg.risks.length} risk${fg.risks.length !== 1 ? 's' : ''}`; left.appendChild(rb);
     if (highInFG > 0) {
@@ -1089,7 +1074,7 @@
             risk_name:           r.jkName,
             risk_description:    r.RiskDescription,
             category:            guidance?.category || null,
-            field_groups:        r.fieldGroups,
+            standard_group:      r.stepName || null,
             relevance:           _computeRelevance(r.jkName),
             attack_vector_count: r.attackVectors.length,
             selected:            !!_state.selected_risks[r.jkName]
@@ -1155,7 +1140,7 @@
     const card = _el('div', 'step-detail-card');
     const title = _el('h2', 'step-detail-title'); title.textContent = 'Risk Catalogue Reference'; card.appendChild(title);
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Complete risk catalogue grouped by compliance control area, with guidance from step8-guidance.json. Edit that file to adapt analogues, conditions, and relevance rules for your organisation.';
+    sub.textContent = 'Complete risk catalogue grouped by standard / requirement, with guidance from step8-guidance.json. Edit that file to adapt analogues, conditions, and relevance rules for your organisation.';
     card.appendChild(sub);
 
     // Category legend
@@ -1175,30 +1160,29 @@
       card.appendChild(legend);
     }
 
-    card.appendChild(_sectionLabel('All Risks by Compliance Control Area'));
+    card.appendChild(_sectionLabel('All Risks by Standard / Requirement'));
 
-    const rcnToFG  = _buildRcnToFGMap();
-    const allItems = Object.values(_framework || {}).reduce((acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []);
-    const fgMap    = new Map();
-    allItems.forEach(item => {
-      (item.Fields || []).filter(f => f.jkType === 'risk').forEach(risk => {
-        const fgs = new Set();
-        (risk.controls || []).forEach(ctrl => {
-          (ctrl.requirement_control_number || '').split(',').map(s => s.trim()).forEach(rcn => {
-            const fg = rcnToFG[rcn]; if (fg) fgs.add(fg);
-          });
-        });
-        fgs.forEach(fg => {
-          if (!fgMap.has(fg)) fgMap.set(fg, []);
-          if (!fgMap.get(fg).find(r => r.jkName === risk.jkName)) fgMap.get(fg).push(risk);
-        });
-      });
-    });
+    // Group by StepName (same logic as Browse All — no fieldGroup duplication)
+    const stepMap = new Map(); // StepName → [risk field, ...]
+    for (const section of Object.values(_framework || {})) {
+      if (!Array.isArray(section)) continue;
+      for (const article of section) {
+        const stepName = article.StepName;
+        if (!stepName) continue;
+        for (const field of (article.Fields || [])) {
+          if (field.jkType !== 'risk') continue;
+          if (!stepMap.has(stepName)) stepMap.set(stepName, []);
+          if (!stepMap.get(stepName).find(r => r.jkName === field.jkName)) {
+            stepMap.get(stepName).push(field);
+          }
+        }
+      }
+    }
 
-    fgMap.forEach((risks, fgName) => {
+    stepMap.forEach((risks, stepName) => {
       const sec = _el('div', 'wiz8-ref-fg');
       const h3  = _el('div', 'wiz8-ref-fg-header');
-      const nm  = _el('span', 'wiz8-ref-fg-name'); nm.textContent = fgName; h3.appendChild(nm);
+      const nm  = _el('span', 'wiz8-ref-fg-name'); nm.textContent = stepName; h3.appendChild(nm);
       const cnt = _el('span', 'wiz8-count-badge'); cnt.textContent = `${risks.length} risk${risks.length !== 1 ? 's' : ''}`; h3.appendChild(cnt);
       sec.appendChild(h3);
       risks.forEach(risk => {
