@@ -26,6 +26,8 @@
   };
 
   let _searchQuery = '';
+  let _diagData = null; // { risks, controls, tasks } loaded from tbl_* files
+  const _diagState = { selectedBox: null, filterMode: 'owasp' };
 
   // Category color palette — maps JSON color keys to CSS values
   const _CAT_COLORS = {
@@ -59,6 +61,9 @@
     _wizState.step_index = 0;
     _wizState.answers    = {};
     _wizState.complete   = false;
+    _diagData = null;
+    _diagState.selectedBox = null;
+    _diagState.filterMode  = 'owasp';
 
     _injectStyles();
 
@@ -73,10 +78,13 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    // Load framework and guidance in parallel
-    const [fwRes, gdRes] = await Promise.allSettled([
+    // Load framework, guidance, and diagram data in parallel
+    const [fwRes, gdRes, risksRes, ctrlsRes, tasksRes] = await Promise.allSettled([
       fetch('ai_Risk_Control_Framework.json'),
-      fetch('step8-guidance.json')
+      fetch('step8-guidance.json'),
+      fetch('tbl_Risks.json'),
+      fetch('tbl_Risk_Controls.json'),
+      fetch('tbl_Control_Task_Code.json')
     ]);
 
     if (fwRes.status === 'rejected' || !fwRes.value.ok) {
@@ -87,6 +95,19 @@
 
     if (gdRes.status === 'fulfilled' && gdRes.value.ok) {
       try { _guidance = await gdRes.value.json(); } catch (_) {}
+    }
+
+    if (risksRes.status === 'fulfilled' && risksRes.value.ok &&
+        ctrlsRes.status === 'fulfilled' && ctrlsRes.value.ok &&
+        tasksRes.status === 'fulfilled' && tasksRes.value.ok) {
+      try {
+        const [risks, controls, tasks] = await Promise.all([
+          risksRes.value.json(),
+          ctrlsRes.value.json(),
+          tasksRes.value.json()
+        ]);
+        _diagData = { risks, controls, tasks };
+      } catch (_) {}
     }
 
     try {
@@ -229,7 +250,7 @@
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     const strip = _el('div', 'wiz-tab-strip');
-    [['guided', 'Guided'], ['browse', 'Browse All'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
+    [['diagram', 'RAG Risk Diagram'], ['guided', 'Guided'], ['browse', 'Browse All'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
       const btn = document.createElement('button');
       btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
       btn.dataset.tab = id; btn.textContent = lbl;
@@ -249,13 +270,339 @@
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const guided = _el('div', 'wiz-pane');             guided.dataset.pane = 'guided';
+    const diag   = _el('div', 'wiz-pane');                  diag.dataset.pane   = 'diagram';
+    const guided = _el('div', 'wiz-pane wiz-pane--hidden'); guided.dataset.pane = 'guided';
     const browse = _el('div', 'wiz-pane wiz-pane--hidden'); browse.dataset.pane = 'browse';
     const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
+    diag.appendChild(_buildDiagramPane());
     guided.appendChild(_buildGuidedPane());
     browse.appendChild(_buildWizardPane());
     ref.appendChild(_buildReferencePane());
-    pw.appendChild(guided); pw.appendChild(browse); pw.appendChild(ref);
+    pw.appendChild(diag); pw.appendChild(guided); pw.appendChild(browse); pw.appendChild(ref);
+  }
+
+  // ---- RAG Diagram: box definitions ---------------------------
+  const _DIAGRAM_BOXES = [
+    {
+      id: 'user_interface',
+      label: 'User Interface',
+      sublabel: 'Query · Guardrails · Response',
+      components: ['Query Processor', 'Input Guardrail', 'Response Interface', 'Output Guardrail', 'Downstream Systems'],
+      cssRow: 1, cssColStart: 1, cssColSpan: 2
+    },
+    {
+      id: 'orchestrator_llm',
+      label: 'Orchestrator / LLM',
+      sublabel: 'Reasoning · Execution · System Prompt',
+      components: ['Orchestrator', 'Generator (LLM)', 'System Prompt Manager'],
+      cssRow: 2, cssColStart: 1, cssColSpan: 2
+    },
+    {
+      id: 'retriever',
+      label: 'Retriever',
+      sublabel: 'Context assembly · Embeddings',
+      components: ['Retriever', 'Context Assembler', 'Embedding Model'],
+      cssRow: 3, cssColStart: 1, cssColSpan: 1
+    },
+    {
+      id: 'api_layer',
+      label: 'API / Integration Layer',
+      sublabel: 'Gateway · Tools · Rate limits',
+      components: ['API Gateway', 'External Tool Interface', 'Rate Limiter'],
+      cssRow: 3, cssColStart: 2, cssColSpan: 1
+    },
+    {
+      id: 'vector_store',
+      label: 'Vector Store',
+      sublabel: 'Semantic index · Embeddings store',
+      components: ['Vector Store'],
+      cssRow: 4, cssColStart: 1, cssColSpan: 1
+    },
+    {
+      id: 'knowledge_base',
+      label: 'Knowledge Base',
+      sublabel: 'Documents · Data ingestion',
+      components: ['Data Store', 'Data Pipeline'],
+      cssRow: 5, cssColStart: 1, cssColSpan: 1
+    },
+    {
+      id: 'external_sources',
+      label: 'External Data Sources',
+      sublabel: 'Models · Build · Infrastructure',
+      components: ['Training Pipeline', 'Model Registry', 'Build Pipeline', 'Container Runtime', 'Infrastructure Layer'],
+      cssRow: 5, cssColStart: 2, cssColSpan: 1
+    }
+  ];
+
+  // ---- RAG Diagram: data helpers ------------------------------
+  function _diagGetOwaspIdsForBox(box) {
+    if (!_diagData) return new Set();
+    const comps = new Set(box.components);
+    const ids = new Set();
+    _diagData.risks
+      .filter(r => r.risk_source === 'OWASP')
+      .forEach(r => {
+        if ((r.owasp_rag_components || []).some(c => comps.has(c))) ids.add(r.owasp_id);
+      });
+    return ids;
+  }
+
+  function _diagGetRisksForBox(box) {
+    if (!_diagData) return [];
+    const owaspIds = _diagGetOwaspIdsForBox(box);
+    if (owaspIds.size === 0) return [];
+    const { filterMode } = _diagState;
+    const result = [];
+    if (filterMode === 'owasp' || filterMode === 'both') {
+      _diagData.risks
+        .filter(r => r.risk_source === 'OWASP' && owaspIds.has(r.owasp_id))
+        .forEach(r => result.push(r));
+    }
+    if (filterMode === 'harmonised' || filterMode === 'both') {
+      _diagData.risks
+        .filter(r => r.risk_source === 'EU_AI_Act' && owaspIds.has(r.owasp_id))
+        .forEach(r => result.push(r));
+    }
+    return result;
+  }
+
+  function _diagGetControlsForRisk(risk) {
+    if (!_diagData) return [];
+    return _diagData.controls.filter(c => c.fk_Risk_ID === risk.pk_Risk_ID);
+  }
+
+  function _diagGetTasksForControl(ctrl) {
+    if (!_diagData) return [];
+    return _diagData.tasks.filter(t => t.fk_Risk_Control_ID === ctrl.pk_Risk_Control_ID);
+  }
+
+  // ---- RAG Diagram: pane builder ------------------------------
+  function _buildDiagramPane() {
+    const wrap = _el('div', 'wiz8-diag-wrap');
+
+    // Left panel: interactive diagram
+    const left = _el('div', 'wiz8-diag-left');
+
+    const hdr = _el('div', 'wiz8-diag-hdr');
+    const hdrTitle = _el('h3', 'wiz8-diag-hdr-title');
+    hdrTitle.textContent = 'RAG Architecture — OWASP LLM Top 10 Risk Map';
+    hdr.appendChild(hdrTitle);
+    const hdrSub = _el('p', 'wiz8-diag-hdr-sub');
+    hdrSub.textContent = 'Click a component to explore risks and controls';
+    hdr.appendChild(hdrSub);
+    left.appendChild(hdr);
+    left.appendChild(_buildDiagFilterBar());
+
+    const grid = _el('div', 'wiz8-diag-grid');
+    _DIAGRAM_BOXES.forEach(box => grid.appendChild(_buildDiagBox(box)));
+    left.appendChild(grid);
+
+    const legend = _el('div', 'wiz8-diag-legend');
+    const legItem = _el('span', 'wiz8-diag-leg-item');
+    legItem.innerHTML = `<span class="wiz8-diag-rbadge wiz8-diag-rbadge--demo">5</span>&nbsp;= OWASP risk count`;
+    legend.appendChild(legItem);
+    left.appendChild(legend);
+
+    wrap.appendChild(left);
+
+    // Right panel: detail
+    const right = _el('div', 'wiz8-diag-right');
+    right.id = 'wiz8-diag-detail';
+    _renderDiagDetail(right, null);
+    wrap.appendChild(right);
+
+    return wrap;
+  }
+
+  function _buildDiagFilterBar() {
+    const bar = _el('div', 'wiz8-diag-filter-bar');
+    const lbl = _el('span', 'wiz8-diag-filter-lbl');
+    lbl.textContent = 'Risk language:';
+    bar.appendChild(lbl);
+    [
+      ['owasp',      'OWASP LLM Top 10'],
+      ['harmonised', 'EU AI Act'],
+      ['both',       'Both']
+    ].forEach(([val, label]) => {
+      const btn = _el('button', `wiz8-diag-filter-btn${_diagState.filterMode === val ? ' wiz8-diag-filter-btn--active' : ''}`);
+      btn.dataset.dfv = val;
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        _diagState.filterMode = val;
+        _container.querySelectorAll('.wiz8-diag-filter-btn').forEach(b =>
+          b.classList.toggle('wiz8-diag-filter-btn--active', b.dataset.dfv === val));
+        if (_diagState.selectedBox) {
+          const det = _container.querySelector('#wiz8-diag-detail');
+          if (det) _renderDiagDetail(det, _diagState.selectedBox);
+        }
+      });
+      bar.appendChild(btn);
+    });
+    return bar;
+  }
+
+  function _buildDiagBox(box) {
+    const owaspCount = _diagGetOwaspIdsForBox(box).size;
+    const isSelected = _diagState.selectedBox === box.id;
+    const el = _el('div', `wiz8-diag-box${isSelected ? ' wiz8-diag-box--selected' : ''}`);
+    el.dataset.boxId = box.id;
+    el.style.gridRow    = String(box.cssRow);
+    el.style.gridColumn = `${box.cssColStart} / span ${box.cssColSpan}`;
+
+    const inner = _el('div', 'wiz8-diag-box-inner');
+    const nm  = _el('span', 'wiz8-diag-box-name'); nm.textContent  = box.label;
+    const sub = _el('span', 'wiz8-diag-box-sub');  sub.textContent = box.sublabel;
+    inner.appendChild(nm); inner.appendChild(sub);
+    el.appendChild(inner);
+
+    if (owaspCount > 0) {
+      const badge = _el('span', 'wiz8-diag-rbadge');
+      badge.textContent = String(owaspCount);
+      badge.title = `${owaspCount} OWASP risk${owaspCount !== 1 ? 's' : ''}`;
+      el.appendChild(badge);
+    }
+
+    el.addEventListener('click', () => {
+      _diagState.selectedBox = box.id;
+      _container.querySelectorAll('.wiz8-diag-box').forEach(b =>
+        b.classList.toggle('wiz8-diag-box--selected', b.dataset.boxId === box.id));
+      const det = _container.querySelector('#wiz8-diag-detail');
+      if (det) _renderDiagDetail(det, box.id);
+    });
+    return el;
+  }
+
+  function _renderDiagDetail(panel, boxId) {
+    panel.innerHTML = '';
+
+    if (!boxId) {
+      const ph = _el('div', 'wiz8-diag-ph');
+      ph.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.3"><rect x="2" y="3" width="9" height="7" rx="1.5"/><rect x="13" y="3" width="9" height="7" rx="1.5"/><rect x="2" y="14" width="9" height="7" rx="1.5"/><rect x="13" y="14" width="9" height="7" rx="1.5"/></svg>`;
+      const msg = _el('p', 'wiz8-diag-ph-msg');
+      msg.textContent = 'Click a component in the diagram to explore its OWASP LLM Top 10 risks, controls, and implementation tasks.';
+      ph.appendChild(msg);
+      panel.appendChild(ph);
+      return;
+    }
+
+    const box = _DIAGRAM_BOXES.find(b => b.id === boxId);
+    if (!box) return;
+
+    // Header
+    const hdr = _el('div', 'wiz8-diag-det-hdr');
+    const title = _el('h3', 'wiz8-diag-det-title'); title.textContent = box.label;
+    hdr.appendChild(title);
+    const chips = _el('div', 'wiz8-diag-det-chips');
+    box.components.forEach(c => {
+      const chip = _el('span', 'wiz8-diag-chip'); chip.textContent = c; chips.appendChild(chip);
+    });
+    hdr.appendChild(chips);
+    panel.appendChild(hdr);
+
+    const risks = _diagGetRisksForBox(box);
+
+    if (risks.length === 0) {
+      const empty = _el('p', 'wiz8-diag-det-empty');
+      empty.textContent = 'No risks found for the current filter. Try switching to "Both".';
+      panel.appendChild(empty);
+      return;
+    }
+
+    const countLine = _el('p', 'wiz8-diag-det-count');
+    countLine.textContent = `${risks.length} risk${risks.length !== 1 ? 's' : ''} — click a card to expand controls`;
+    panel.appendChild(countLine);
+
+    risks.forEach(risk => panel.appendChild(_buildDiagRiskCard(risk)));
+  }
+
+  function _buildDiagRiskCard(risk) {
+    const isOwasp = risk.risk_source === 'OWASP';
+    const card = _el('div', `wiz8-diag-risk-card${isOwasp ? ' wiz8-diag-risk-card--owasp' : ' wiz8-diag-risk-card--eu'}`);
+
+    const rh = _el('div', 'wiz8-diag-risk-hdr');
+    const srcBadge = _el('span', `wiz8-diag-src-badge${isOwasp ? ' wiz8-diag-src-badge--owasp' : ' wiz8-diag-src-badge--eu'}`);
+    srcBadge.textContent = isOwasp ? `OWASP ${risk.owasp_id}` : 'EU AI Act';
+    rh.appendChild(srcBadge);
+    const rn = _el('span', 'wiz8-diag-risk-name'); rn.textContent = risk.risk_name;
+    rh.appendChild(rn);
+    card.appendChild(rh);
+
+    // Component chips (OWASP only — they have the explicit component list)
+    if (isOwasp && risk.owasp_rag_components?.length) {
+      const compRow = _el('div', 'wiz8-diag-comp-row');
+      risk.owasp_rag_components.forEach(c => {
+        const t = _el('span', 'wiz8-diag-comp-tag'); t.textContent = c; compRow.appendChild(t);
+      });
+      card.appendChild(compRow);
+    }
+
+    // Description (truncated)
+    if (risk.risk_description) {
+      const desc = _el('p', 'wiz8-diag-risk-desc');
+      const s = risk.risk_description;
+      desc.textContent = s.length > 200 ? s.slice(0, 200) + '…' : s;
+      card.appendChild(desc);
+    }
+
+    // Controls accordion
+    const controls = _diagGetControlsForRisk(risk);
+    if (controls.length > 0) card.appendChild(_buildDiagCtrlSection(controls));
+
+    return card;
+  }
+
+  function _buildDiagCtrlSection(controls) {
+    const wrap = _el('div', 'wiz8-diag-ctrl-wrap');
+    const hdr  = _el('div', 'wiz8-diag-ctrl-hdr');
+    const icon = _el('span', 'wiz8-diag-ctrl-icon');
+    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+    hdr.appendChild(icon);
+    const lbl = _el('span', 'wiz8-diag-ctrl-lbl');
+    lbl.textContent = `${controls.length} control${controls.length !== 1 ? 's' : ''}`;
+    hdr.appendChild(lbl);
+    const chv = _el('span', 'wiz8-diag-ctrl-chv');
+    chv.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    chv.style.transform = 'rotate(-90deg)';
+    hdr.appendChild(chv);
+    wrap.appendChild(hdr);
+
+    const body = _el('div', 'wiz8-diag-ctrl-body wiz8-collapsed');
+
+    controls.forEach(ctrl => {
+      const row = _el('div', 'wiz8-diag-ctrl-row');
+      const rh  = _el('div', 'wiz8-diag-ctrl-row-hdr');
+      const cid = _el('span', 'wiz8-diag-ctrl-id'); cid.textContent = ctrl.pk_Risk_Control_ID;
+      const cnm = _el('span', 'wiz8-diag-ctrl-name'); cnm.textContent = ctrl.jkName || '';
+      rh.appendChild(cid); rh.appendChild(cnm);
+      row.appendChild(rh);
+      if (ctrl.jkObjective) {
+        const obj = _el('p', 'wiz8-diag-ctrl-obj'); obj.textContent = ctrl.jkObjective; row.appendChild(obj);
+      }
+      // Implementation tasks
+      const tasks = _diagGetTasksForControl(ctrl);
+      if (tasks.length > 0) {
+        const tw = _el('div', 'wiz8-diag-tasks');
+        const tl = _el('p', 'wiz8-diag-tasks-lbl');
+        tl.textContent = `${tasks.length} implementation task${tasks.length !== 1 ? 's' : ''}:`;
+        tw.appendChild(tl);
+        tasks.forEach(t => {
+          const tr = _el('div', 'wiz8-diag-task-row');
+          const tn = _el('span', 'wiz8-diag-task-num'); tn.textContent = String(t.task_number || '');
+          const tt = _el('p', 'wiz8-diag-task-text'); tt.textContent = t.task || '';
+          tr.appendChild(tn); tr.appendChild(tt);
+          tw.appendChild(tr);
+        });
+        row.appendChild(tw);
+      }
+      body.appendChild(row);
+    });
+
+    wrap.appendChild(body);
+    hdr.addEventListener('click', () => {
+      const col = body.classList.toggle('wiz8-collapsed');
+      chv.style.transform = col ? 'rotate(-90deg)' : '';
+    });
+    return wrap;
   }
 
   // ---- Re-render guided pane in place -------------------------
@@ -1403,6 +1750,88 @@
 .wiz8-ref-risk-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
 .wiz8-ref-risk-name{font-size:12px;font-weight:700;color:#b91c1c;margin:0}
 .wiz8-ref-analog{font-size:11px;color:var(--color-text-secondary);margin:0;line-height:1.55;font-style:italic}
+
+/* ---- RAG Diagram tab ---- */
+/* Two-panel wrapper */
+.wiz8-diag-wrap{display:flex;height:100%;min-height:600px}
+.wiz8-diag-left{width:40%;min-width:260px;border-right:1px solid var(--color-border);overflow-y:auto;padding:18px 16px;flex-shrink:0;background:var(--color-bg,#fff)}
+.wiz8-diag-right{flex:1;overflow-y:auto;padding:20px 22px;background:var(--color-bg-subtle,#f8fafc)}
+
+/* Left panel header */
+.wiz8-diag-hdr{margin-bottom:12px}
+.wiz8-diag-hdr-title{font-size:12px;font-weight:700;color:var(--color-text-primary);margin:0 0 3px;line-height:1.4}
+.wiz8-diag-hdr-sub{font-size:11px;color:var(--color-text-tertiary);margin:0}
+
+/* Filter toggle */
+.wiz8-diag-filter-bar{display:flex;align-items:center;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.wiz8-diag-filter-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary);white-space:nowrap;margin-right:2px}
+.wiz8-diag-filter-btn{padding:3px 9px;font-size:11px;font-weight:500;border:1px solid var(--color-border);border-radius:20px;cursor:pointer;background:#fff;color:var(--color-text-secondary);font-family:inherit;transition:background .12s,border-color .12s,color .12s}
+.wiz8-diag-filter-btn:hover{background:var(--color-bg-subtle,#f8fafc)}
+.wiz8-diag-filter-btn--active{background:#f0fdfa;border-color:var(--teal-400,#2dd4bf);color:var(--teal-700,#0f766e);font-weight:700}
+
+/* Diagram grid */
+.wiz8-diag-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.wiz8-diag-box{border:2px solid var(--color-border);border-radius:8px;padding:11px 13px;cursor:pointer;position:relative;background:#fff;transition:border-color .15s,background .15s;user-select:none}
+.wiz8-diag-box:hover{border-color:var(--teal-300,#5eead4);background:#f0fdfa}
+.wiz8-diag-box--selected{border-color:var(--teal-600,#0d9488)!important;background:#f0fdfa!important;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.wiz8-diag-box-inner{display:flex;flex-direction:column;gap:3px}
+.wiz8-diag-box-name{font-size:11px;font-weight:700;color:var(--color-text-primary);line-height:1.3}
+.wiz8-diag-box-sub{font-size:9px;color:var(--color-text-tertiary);line-height:1.4}
+
+/* Risk count badges on boxes */
+.wiz8-diag-rbadge{position:absolute;top:-8px;right:-8px;background:#ef4444;color:#fff;border-radius:10px;min-width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;line-height:1;z-index:1}
+.wiz8-diag-rbadge--demo{position:static;display:inline-flex;vertical-align:middle;min-width:16px;height:16px;font-size:9px;padding:0 3px;border-width:1px;margin-right:1px}
+
+/* Legend */
+.wiz8-diag-legend{font-size:10px;color:var(--color-text-tertiary);display:flex;align-items:center;gap:4px;padding-top:8px;border-top:1px solid var(--color-border)}
+.wiz8-diag-leg-item{display:inline-flex;align-items:center;gap:3px}
+
+/* Right panel: placeholder */
+.wiz8-diag-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;gap:14px;color:var(--color-text-tertiary)}
+.wiz8-diag-ph-msg{font-size:13px;color:var(--color-text-tertiary);max-width:300px;line-height:1.65;margin:0}
+
+/* Right panel: detail header */
+.wiz8-diag-det-hdr{border-bottom:1px solid var(--color-border);padding-bottom:12px;margin-bottom:14px}
+.wiz8-diag-det-title{font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 8px}
+.wiz8-diag-det-chips{display:flex;flex-wrap:wrap;gap:4px}
+.wiz8-diag-chip{font-size:10px;font-weight:600;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;border-radius:10px;padding:2px 8px;white-space:nowrap}
+.wiz8-diag-det-count{font-size:12px;color:var(--color-text-secondary);margin:0 0 10px;line-height:1.5}
+.wiz8-diag-det-empty{font-size:13px;color:var(--color-text-tertiary);padding:24px 0;text-align:center}
+
+/* Risk cards in detail panel */
+.wiz8-diag-risk-card{background:#fff;border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.wiz8-diag-risk-card--owasp{border-left:3px solid #fb923c}
+.wiz8-diag-risk-card--eu{border-left:3px solid #60a5fa}
+.wiz8-diag-risk-hdr{display:flex;align-items:flex-start;gap:7px;margin-bottom:7px;flex-wrap:wrap}
+.wiz8-diag-src-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;line-height:1.4}
+.wiz8-diag-src-badge--owasp{background:#ffedd5;color:#9a3412}
+.wiz8-diag-src-badge--eu{background:#dbeafe;color:#1e40af}
+.wiz8-diag-risk-name{font-size:13px;font-weight:700;color:var(--color-text-primary);line-height:1.35;flex:1;min-width:100px}
+.wiz8-diag-comp-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
+.wiz8-diag-comp-tag{font-size:9px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:8px;padding:1px 6px;white-space:nowrap}
+.wiz8-diag-risk-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 8px}
+
+/* Controls accordion in risk cards */
+.wiz8-diag-ctrl-wrap{border:1px solid var(--color-border);border-radius:6px;overflow:hidden;margin-top:4px}
+.wiz8-diag-ctrl-hdr{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none}
+.wiz8-diag-ctrl-hdr:hover{background:var(--color-bg-hover,#f1f5f9)}
+.wiz8-diag-ctrl-icon{display:flex;color:#0d9488;flex-shrink:0}
+.wiz8-diag-ctrl-lbl{font-size:12px;font-weight:600;color:#0f766e;flex:1}
+.wiz8-diag-ctrl-chv{display:flex;color:var(--color-text-tertiary);transition:transform .2s}
+.wiz8-diag-ctrl-body{padding:12px 14px;display:flex;flex-direction:column;gap:14px;background:#fff}
+.wiz8-diag-ctrl-row{border-left:3px solid #99f6e4;padding-left:10px}
+.wiz8-diag-ctrl-row-hdr{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;flex-wrap:wrap}
+.wiz8-diag-ctrl-id{font-size:10px;font-weight:700;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;line-height:1.4}
+.wiz8-diag-ctrl-name{font-size:12px;font-weight:700;color:var(--color-text-primary);line-height:1.4;flex:1;min-width:80px}
+.wiz8-diag-ctrl-obj{font-size:11px;color:var(--color-text-secondary);line-height:1.6;margin:4px 0 0}
+
+/* Implementation tasks */
+.wiz8-diag-tasks{background:var(--color-bg-subtle,#f8fafc);border-radius:5px;padding:8px 10px;margin-top:8px}
+.wiz8-diag-tasks-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 6px}
+.wiz8-diag-task-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+.wiz8-diag-task-row:last-child{margin-bottom:0}
+.wiz8-diag-task-num{font-size:10px;font-weight:700;background:#e0e7ff;color:#4338ca;border-radius:10px;padding:1px 6px;white-space:nowrap;flex-shrink:0;margin-top:2px}
+.wiz8-diag-task-text{font-size:11px;color:var(--color-text-secondary);line-height:1.55;margin:0}
 `;
     document.head.appendChild(s);
   }
