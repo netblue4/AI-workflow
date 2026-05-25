@@ -1,0 +1,67 @@
+[
+  {
+    "pk_AI_Article_ID": "ART-001",
+    "article_name": "Article 13: Transparency and Provision of Information to Deployers",
+    "article_objective": "Defining the precise scope of the AI system, including what it is designed to do (its intended use) and establishing clear, documented boundaries for what it should not be used for (its known limitations)."
+  },
+  {
+    "pk_AI_Article_ID": "ART-002",
+    "article_name": "Article 14: Human Oversight",
+    "article_objective": "Defining the precise scope of the AI system, including what it is designed to do (its intended use) and establishing clear, documented boundaries for what it should not be used for (its known limitations)."
+  },
+  {
+    "pk_AI_Article_ID": "ART-003",
+    "article_name": "Article 15: Accuracy, Robustness and Cybersecurity",
+    "article_objective": "Defining the precise scope of the AI system, including what it is designed to do (its intended use) and establishing clear, documented boundaries for what it should not be used for (its known limitations)."
+  },
+  {
+    "pk_AI_Article_ID": "ART-004",
+    "article_name": "Article 10: Data and Data Governance",
+    "article_objective": "Defining the precise scope of the AI system, including what it is designed to do (its intended use) and establishing clear, documented boundaries for what it should not be used for (its known limitations)."
+  },
+  {
+    "pk_AI_Article_ID": "ART-005",
+    "article_name": "Article 12: Record-Keeping",
+    "article_objective": "Defining the precise scope of the AI system, including what it is designed to do (its intended use) and establishing clear, documented boundaries for what it should not be used for (its known limitations)."
+  },
+  {
+    "pk_AI_Article_ID": "ART-006",
+    "article_name": "Article 17: Quality Management System",
+    "article_objective": "Defining the precise scope of the AI system, including what it is designed to do (its intended use) and establishing clear, documented boundaries for what it should not be used for (its known limitations)."
+  },
+  {
+    "pk_AI_Article_ID": "ART-007",
+    "article_name": "Article 9: Risk Management System",
+    "article_objective": "Establishing, implementing, and maintaining a continuous iterative process throughout the entire lifecycle of a high-risk AI system to identify, estimate, and evaluate known and foreseeable risks, and to implement systematic mitigation measures."
+  },
+  {
+    "pk_AI_Article_ID": "ART-008",
+    "article_name": "Article 11: Technical Documentation",
+    "article_objective": ""
+  },
+  {
+    "pk_AI_Article_ID": "ART-009",
+    "article_name": "Article 25: Substantial Modification",
+    "article_objective": ""
+  },
+  {
+    "pk_AI_Article_ID": "ART-010",
+    "article_name": "Article 26: Deployer Obligations",
+    "article_objective": ""
+  },
+  {
+    "pk_AI_Article_ID": "ART-011",
+    "article_name": "Article 43: Conformity Assessment",
+    "article_objective": ""
+  },
+  {
+    "pk_AI_Article_ID": "ART-012",
+    "article_name": "Article 50: Transparency Obligations for Certain AI Systems",
+    "article_objective": ""
+  },
+  {
+    "pk_AI_Article_ID": "ART-013",
+    "article_name": "Article 72: Post-Market Monitoring",
+    "article_objective": ""
+  }
+]
