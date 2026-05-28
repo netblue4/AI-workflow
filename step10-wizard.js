@@ -1,8 +1,7 @@
 /* Step 10 — Content Verification Testing
-   Reads selected controls from record['step-9'].
-   For each selected control, finds the matching test control via control_number prefix linking:
-     [X.Y.Rn] (risk control) ↔ [X.Y.Tn] (test control) — shared numeric prefix X.Y + index n.
-   Groups test controls under their parent test plan.
+   Reads selected controls from record['step-9'].clusters[].controls[].
+   FK chain: selected control → tbl_Risk_Controls.fk_Risk_ID → tbl_Test_Plans → tbl_Test_Controls + tbl_Test_Cases.
+   All 17 test plans link to EU AI Act risks; OWASP controls (no test plan) appear in the uncovered section.
    Tester marks each test as: pending | completed | not_applicable.
    Saves to record['step-10'].
 */
@@ -11,12 +10,12 @@
 
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
-  let _container = null, _framework = null, _record = null;
-  let _planData  = [];  // [{plan_id, objective, role, dataset, test_controls:[...]}]
-  let _uncovered = [];  // [{risk_name, ctrl_name, cn, rcn}] — no matching test control
+  let _container = null, _tblData = null, _record = null;
+  let _planData  = [];  // [{plan_id, plan_ref, plan_name, objective, role, risk_name, test_controls:[], test_cases:[]}]
+  let _uncovered = [];  // [{control_id, control_name, control_source, cluster_id}]
 
   const _state = {
-    testStatus: {} // key = control_number e.g. "[2.6.T1]" → "pending"|"completed"|"not_applicable"
+    testStatus: {} // key = pk_Test_Control_ID → "pending"|"completed"|"not_applicable"
   };
 
   // ---- Public API ---------------------------------------------
@@ -25,7 +24,7 @@
     _step       = step;
     _colorKey   = colorKey;
     _phaseTitle = phaseTitle;
-    _framework  = null;
+    _tblData    = null;
     _record     = null;
     _planData   = [];
     _uncovered  = [];
@@ -45,11 +44,20 @@
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
     try {
-      const res = await fetch('ai_Risk_Control_Framework.json');
-      if (!res.ok) throw new Error('fetch failed');
-      _framework = await res.json();
+      const [rRes, rcRes, tpRes, tcRes, tcsRes] = await Promise.all([
+        fetch('tbl_Risks.json'),
+        fetch('tbl_Risk_Controls.json'),
+        fetch('tbl_Test_Plans.json'),
+        fetch('tbl_Test_Controls.json'),
+        fetch('tbl_Test_Cases.json')
+      ]);
+      if (!rRes.ok || !rcRes.ok || !tpRes.ok || !tcRes.ok || !tcsRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, testPlans, testControls, testCases] = await Promise.all([
+        rRes.json(), rcRes.json(), tpRes.json(), tcRes.json(), tcsRes.json()
+      ]);
+      _tblData = { risks, riskControls, testPlans, testControls, testCases };
     } catch (_) {
-      pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load ai_Risk_Control_Framework.json</p>`;
+      pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files (tbl_Risks.json, tbl_Risk_Controls.json, tbl_Test_Plans.json, tbl_Test_Controls.json, tbl_Test_Cases.json)</p>`;
       return;
     }
 
@@ -58,7 +66,7 @@
       if (s) _record = JSON.parse(s);
     } catch (_) {}
 
-    // Build plan data from framework, filtered to step-9 selections
+    // Build plan data from tbl_* files, filtered to step-9 selections
     const { plans, uncovered } = _buildPlanData();
     _planData  = plans;
     _uncovered = uncovered;
@@ -68,135 +76,88 @@
     if (saved10?.plans) {
       saved10.plans.forEach(p => {
         (p.test_controls || []).forEach(tc => {
-          if (tc.status && tc.control_number) {
-            _state.testStatus[tc.control_number] = tc.status;
+          if (tc.status && tc.test_control_id) {
+            _state.testStatus[tc.test_control_id] = tc.status;
           }
         });
       });
     } else {
       // Default: all pending
       _planData.forEach(p => p.test_controls.forEach(tc => {
-        _state.testStatus[tc.cn] = 'pending';
+        _state.testStatus[tc.pk_Test_Control_ID] = 'pending';
       }));
     }
 
     _renderPanes(pw);
   }
 
-  // ---- Build plan data from framework -------------------------
+  // ---- Build plan data from tbl_* filtered to step-9 selections ----
   function _buildPlanData() {
-    // 1. Collect step-9 selected controls
     const step9 = _record?.['step-9'];
-    const selectedRCtrls = []; // [{risk_name, ctrl_name, cn, rcn}]
+    if (!step9?.clusters) return { plans: [], uncovered: [] };
 
-    if (step9?.risks) {
-      step9.risks.forEach(r => {
-        (r.controls || []).forEach(c => {
-          if (c.selected && c.control_number) {
-            selectedRCtrls.push({
-              risk_name: r.risk_name,
-              ctrl_name: c.control_name,
-              cn:        c.control_number,
-              rcn:       c.rcn || ''
-            });
-          }
-        });
+    // Collect all selected controls from step-9
+    const selectedControls = [];
+    step9.clusters.forEach(cluster => {
+      (cluster.controls || []).forEach(c => {
+        if (c.selected) {
+          selectedControls.push({
+            control_id:       c.control_id,
+            control_name:     c.control_name,
+            control_source:   c.control_source,
+            cluster_id:       cluster.cluster_id,
+            owasp_risk_name:  cluster.owasp_risk_name || null,
+            legal_risk_names: cluster.legal_risk_names || []
+          });
+        }
       });
-    }
-
-    if (!selectedRCtrls.length) return { plans: [], uncovered: [] };
-
-    // 2. Build index of selected risk controls: normalizedKey → info
-    // [X.Y.Rn] → key: "X.Y|n"
-    const selectedIndex = new Map();
-    selectedRCtrls.forEach(rc => {
-      const key = _normalizeRCN(rc.cn);
-      if (key) selectedIndex.set(key, rc);
     });
 
-    // 3. Scan framework for test plans and test controls
-    const allItems = Object.values(_framework).reduce(
-      (acc, val) => Array.isArray(val) ? acc.concat(val) : acc, []
-    );
+    if (!selectedControls.length) return { plans: [], uncovered: [] };
 
-    // Build plan list — include only plans where ≥1 test control matches a selected risk control
-    const planMap = new Map(); // plan full jkName → plan data
+    // Build lookup maps
+    const rcById         = new Map(_tblData.riskControls.map(rc => [rc.pk_Risk_Control_ID, rc]));
+    const testPlanByRisk = new Map(_tblData.testPlans.map(p => [p.fk_Risk_ID, p]));
+    const riskById       = new Map(_tblData.risks.map(r => [r.pk_Risk_ID, r]));
 
-    for (const item of allItems) {
-      for (const field of (item.Fields || [])) {
-        if (field.jkType !== 'plan') continue;
+    const tcsByPlan = new Map();
+    _tblData.testControls.forEach(tc => {
+      if (!tcsByPlan.has(tc.fk_Test_Plan_ID)) tcsByPlan.set(tc.fk_Test_Plan_ID, []);
+      tcsByPlan.get(tc.fk_Test_Plan_ID).push(tc);
+    });
 
-        const planId  = field.jkName || '';
-        const planObj = field.PlanObjective || '';
-        const planRole = field.Role || '';
-        const planDataset = field.TestDataset || [];
-        const matchedTests = [];
+    const casesByPlan = new Map();
+    _tblData.testCases.forEach(tc => {
+      if (!casesByPlan.has(tc.fk_Test_Plan_ID)) casesByPlan.set(tc.fk_Test_Plan_ID, []);
+      casesByPlan.get(tc.fk_Test_Plan_ID).push(tc);
+    });
 
-        for (const ctrl of (field.controls || [])) {
-          if (ctrl.jkType !== 'test_control') continue;
-          const tcn = ctrl.control_number || '';
-          const key = _normalizeTCN(tcn);
-          if (!key) continue;
+    const planMap  = new Map(); // pk_Test_Plan_ID → plan data
+    const uncovered = [];
 
-          const linkedRC = selectedIndex.get(key);
-          if (!linkedRC) continue; // this test not needed for user's selected controls
+    selectedControls.forEach(sc => {
+      const rc = rcById.get(sc.control_id);
+      if (!rc) { uncovered.push(sc); return; }
 
-          matchedTests.push({
-            cn:           tcn,
-            rcn:          ctrl.requirement_control_number || '',
-            jkName:       ctrl.jkName || '',
-            jkText:       ctrl.jkText || '',
-            jkObjective:  ctrl.jkObjective || '',
-            jkImplementationEvidence: ctrl.jkImplementationEvidence || '',
-            linked_risk_cn:   linkedRC.cn,
-            linked_risk_name: linkedRC.ctrl_name,
-            risk_name:        linkedRC.risk_name
-          });
-        }
+      const plan = testPlanByRisk.get(rc.fk_Risk_ID);
+      if (!plan) { uncovered.push(sc); return; }
 
-        if (!matchedTests.length) continue;
-
-        // Use plan full name as key to avoid duplicate-id collision (two TEST-AL-01 plans exist)
-        if (!planMap.has(planId)) {
-          planMap.set(planId, {
-            plan_id:       planId,
-            objective:     planObj,
-            role:          planRole,
-            dataset:       planDataset,
-            test_controls: []
-          });
-        }
-        planMap.get(planId).test_controls.push(...matchedTests);
+      if (!planMap.has(plan.pk_Test_Plan_ID)) {
+        const risk = riskById.get(plan.fk_Risk_ID);
+        planMap.set(plan.pk_Test_Plan_ID, {
+          plan_id:       plan.pk_Test_Plan_ID,
+          plan_ref:      plan.test_plan_ref,
+          plan_name:     plan.test_plan_name,
+          objective:     plan.test_plan_objective,
+          role:          plan.test_role,
+          risk_name:     risk?.risk_name || '',
+          test_controls: tcsByPlan.get(plan.pk_Test_Plan_ID)  || [],
+          test_cases:    casesByPlan.get(plan.pk_Test_Plan_ID) || []
+        });
       }
-    }
-
-    // 4. Find uncovered (no matching T control)
-    const coveredKeys = new Set();
-    for (const plan of planMap.values()) {
-      plan.test_controls.forEach(tc => {
-        const key = _normalizeTCN(tc.cn);
-        if (key) coveredKeys.add(key);
-      });
-    }
-
-    const uncovered = selectedRCtrls.filter(rc => {
-      const key = _normalizeRCN(rc.cn);
-      return !key || !coveredKeys.has(key);
     });
 
     return { plans: Array.from(planMap.values()), uncovered };
-  }
-
-  // Normalize [X.Y.Rn] → "X.Y|n"  (risk control)
-  function _normalizeRCN(cn) {
-    const m = cn && cn.match(/^\[([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)\.R(\d+)\]$/);
-    return m ? `${m[1]}|${m[2]}` : null;
-  }
-
-  // Normalize [X.Y.Tn] → "X.Y|n"  (test control)
-  function _normalizeTCN(cn) {
-    const m = cn && cn.match(/^\[([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*)\.T(\d+)\]$/);
-    return m ? `${m[1]}|${m[2]}` : null;
   }
 
   // ---- Tabs ---------------------------------------------------
@@ -309,9 +270,9 @@
       const vEl = _el('span', mod ? `wiz10-cell-value wiz10-cell-value--${mod}` : 'wiz10-cell-value');
       vEl.textContent = v || '—'; c.appendChild(vEl); grid.appendChild(c);
     };
-    cell('Risks addressed',    String(step9.total_risks || 0));
-    cell('Controls selected',  String(step9.selected_controls || 0), 'num');
-    cell('Test plans found',   String(_planData.length), 'num');
+    cell('Risk clusters',        String(step9.total_clusters   || 0));
+    cell('Controls selected',    String(step9.selected_controls || 0), 'num');
+    cell('Test plans found',     String(_planData.length),             'num');
     cell('Controls without tests', String(_uncovered.length),
          _uncovered.length > 0 ? 'warn' : 'ok');
     card.appendChild(grid); return card;
@@ -328,9 +289,9 @@
   function _updateValidationBanner(wrap) {
     const el = wrap || _container.querySelector('#wiz10-val-banner');
     if (!el) return;
-    const allTests = _planData.reduce((a, p) => a.concat(p.test_controls), []);
-    const completed  = allTests.filter(t => _state.testStatus[t.cn] === 'completed').length;
-    const notAppl    = allTests.filter(t => _state.testStatus[t.cn] === 'not_applicable').length;
+    const allTests   = _planData.reduce((a, p) => a.concat(p.test_controls), []);
+    const completed  = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'completed').length;
+    const notAppl    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable').length;
     const pending    = allTests.length - completed - notAppl;
     el.innerHTML = '';
     if (pending === 0 && allTests.length > 0) {
@@ -358,8 +319,13 @@
     planIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`;
     hdrLeft.appendChild(planIcon);
 
+    const planRef = _el('span', 'wiz10-cn-badge');
+    planRef.textContent = plan.plan_ref; hdrLeft.appendChild(planRef);
+
     const planName = _el('span', 'wiz10-plan-name');
-    planName.textContent = plan.plan_id; hdrLeft.appendChild(planName);
+    // Strip the leading ref from the name to avoid duplication
+    planName.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
+    hdrLeft.appendChild(planName);
 
     if (plan.role) {
       const roleBadge = _el('span', 'wiz10-role-badge');
@@ -376,6 +342,13 @@
 
     sec.appendChild(hdr);
 
+    // Risk context subtitle
+    if (plan.risk_name) {
+      const riskSub = _el('p', 'wiz10-plan-risk-sub');
+      riskSub.innerHTML = `<span class="wiz10-risk-label">EU AI Act risk:</span> ${plan.risk_name}`;
+      sec.appendChild(riskSub);
+    }
+
     // Plan objective
     if (plan.objective) {
       const obj = _el('p', 'wiz10-plan-obj');
@@ -387,30 +360,31 @@
     plan.test_controls.forEach(tc => ctrlList.appendChild(_buildTestControlCard(tc, plan, idx)));
     sec.appendChild(ctrlList);
 
-    // Test dataset (collapsible)
-    if (plan.dataset && plan.dataset.length > 0) {
-      sec.appendChild(_buildDatasetSection(plan));
+    // Test cases (collapsible)
+    if (plan.test_cases && plan.test_cases.length > 0) {
+      sec.appendChild(_buildTestCasesSection(plan));
     }
 
     return sec;
   }
 
   function _updatePlanCount(plan, el) {
-    const total     = plan.test_controls.length;
-    const done      = plan.test_controls.filter(t =>
-      _state.testStatus[t.cn] === 'completed' || _state.testStatus[t.cn] === 'not_applicable'
+    const total = plan.test_controls.length;
+    const done  = plan.test_controls.filter(t =>
+      _state.testStatus[t.pk_Test_Control_ID] === 'completed' ||
+      _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable'
     ).length;
-    el.textContent  = `${done} / ${total} reviewed`;
-    el.className    = done === total
+    el.textContent = `${done} / ${total} reviewed`;
+    el.className   = done === total
       ? 'wiz10-plan-count wiz10-plan-count--ok'
       : 'wiz10-plan-count wiz10-plan-count--pending';
   }
 
   // ---- Test control card --------------------------------------
   function _buildTestControlCard(tc, plan, planIdx) {
-    const status = _state.testStatus[tc.cn] || 'pending';
+    const status = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
     const card = _el('div', `wiz10-tc-card wiz10-tc-card--${status}`);
-    card.dataset.tcn = tc.cn;
+    card.dataset.tcId = tc.pk_Test_Control_ID;
 
     // Card header
     const hdr = _el('div', 'wiz10-tc-hdr');
@@ -427,23 +401,16 @@
     const name = _el('span', 'wiz10-tc-name');
     name.textContent = tc.jkName; hdr.appendChild(name);
 
-    // Badges
-    if (tc.cn) {
-      const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.cn; hdr.appendChild(cnb);
+    // Control reference badge
+    if (tc.control_ref) {
+      const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.control_ref; hdr.appendChild(cnb);
     }
-    if (tc.rcn) {
-      const rcnb = _el('span', 'wiz9-rcn-badge'); rcnb.textContent = tc.rcn; hdr.appendChild(rcnb);
+    // Standard reference badge
+    if (tc.standard_ref) {
+      const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.standard_ref; hdr.appendChild(sref);
     }
 
     card.appendChild(hdr);
-
-    // Linked risk control
-    const link = _el('div', 'wiz10-tc-link');
-    link.innerHTML = `<span class="wiz10-link-label">Linked to:</span>
-      <span class="wiz10-link-rc">${tc.linked_risk_cn}</span>
-      <span class="wiz10-link-rcname">${tc.linked_risk_name}</span>
-      <span class="wiz10-link-risk">${tc.risk_name}</span>`;
-    card.appendChild(link);
 
     // Objective (collapsed by default)
     if (tc.jkObjective) {
@@ -484,26 +451,26 @@
     return wrap;
   }
 
-  // ---- Test dataset section -----------------------------------
-  function _buildDatasetSection(plan) {
+  // ---- Test cases section ------------------------------------
+  function _buildTestCasesSection(plan) {
     const wrap = _el('div', 'wiz10-collapsible wiz10-dataset-wrap');
     const btn  = document.createElement('button');
     btn.className = 'wiz10-coll-btn wiz10-dataset-btn';
-    btn.innerHTML = `<svg class="wiz10-coll-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>Test Cases (${plan.dataset.length})`;
+    btn.innerHTML = `<svg class="wiz10-coll-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>Test Cases (${plan.test_cases.length})`;
     const body = _el('div', 'wiz10-coll-body');
     body.hidden = true;
 
     const table = _el('div', 'wiz10-dataset-table');
-    plan.dataset.forEach(tc => {
+    plan.test_cases.forEach(tc => {
       const row = _el('div', 'wiz10-dataset-row');
-      const idCell = _el('span', 'wiz10-dataset-id'); idCell.textContent = tc.ID || ''; row.appendChild(idCell);
+      const idCell = _el('span', 'wiz10-dataset-id'); idCell.textContent = tc.test_case_id || ''; row.appendChild(idCell);
       const main = _el('div', 'wiz10-dataset-main');
-      const q = _el('p', 'wiz10-dataset-query'); q.textContent = tc.Query || ''; main.appendChild(q);
+      const q = _el('p', 'wiz10-dataset-query'); q.textContent = tc.query || ''; main.appendChild(q);
       const eo = _el('p', 'wiz10-dataset-outcome');
-      eo.innerHTML = `<strong>Expected:</strong> ${tc.Expected_Outcome || ''}`;
+      eo.innerHTML = `<strong>Expected:</strong> ${tc.expected_outcome || ''}`;
       main.appendChild(eo);
-      if (tc.Rationale_Summary) {
-        const rs = _el('p', 'wiz10-dataset-rationale'); rs.textContent = tc.Rationale_Summary || ''; main.appendChild(rs);
+      if (tc.rationale_summary) {
+        const rs = _el('p', 'wiz10-dataset-rationale'); rs.textContent = tc.rationale_summary; main.appendChild(rs);
       }
       row.appendChild(main);
       table.appendChild(row);
@@ -525,19 +492,19 @@
     const lbl = _el('span', 'wiz10-status-label'); lbl.textContent = 'Status:'; row.appendChild(lbl);
 
     const options = [
-      { value: 'pending',         label: 'Pending',        cls: 'wiz10-status-btn--pending' },
-      { value: 'completed',       label: 'Completed',      cls: 'wiz10-status-btn--completed' },
-      { value: 'not_applicable',  label: 'Not Applicable', cls: 'wiz10-status-btn--na' }
+      { value: 'pending',        label: 'Pending',        cls: 'wiz10-status-btn--pending' },
+      { value: 'completed',      label: 'Completed',      cls: 'wiz10-status-btn--completed' },
+      { value: 'not_applicable', label: 'Not Applicable', cls: 'wiz10-status-btn--na' }
     ];
 
     options.forEach(opt => {
       const btn = document.createElement('button');
-      const current = _state.testStatus[tc.cn] || 'pending';
+      const current = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
       btn.className = `wiz10-status-btn ${opt.cls}${current === opt.value ? ' wiz10-status-btn--active' : ''}`;
       btn.textContent = opt.label;
       btn.dataset.statusValue = opt.value;
       btn.addEventListener('click', () => {
-        _state.testStatus[tc.cn] = opt.value;
+        _state.testStatus[tc.pk_Test_Control_ID] = opt.value;
 
         // Update all status buttons in this card
         const card = btn.closest('.wiz10-tc-card');
@@ -546,7 +513,6 @@
           card.querySelectorAll('.wiz10-status-btn').forEach(b => {
             b.classList.toggle('wiz10-status-btn--active', b.dataset.statusValue === opt.value);
           });
-          // Update pip
           const pip = card.querySelector('.wiz10-tc-pip');
           if (pip) pip.className = `wiz10-tc-pip wiz10-tc-pip--${opt.value}`;
         }
@@ -577,15 +543,21 @@
     sec.appendChild(hdr);
 
     const note = _el('p', 'wiz10-unc-note');
-    note.textContent = 'The following controls do not have a corresponding test control in the framework (typically infrastructure and container security controls). Manual evidence review is required.';
+    note.textContent = 'The following controls do not have a corresponding test plan (OWASP technical controls and EU AI Act controls not yet covered by a test plan). Manual evidence review is required.';
     sec.appendChild(note);
 
     const list = _el('div', 'wiz10-unc-list');
     _uncovered.forEach(rc => {
       const item = _el('div', 'wiz10-unc-item');
-      const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = rc.cn; item.appendChild(cnb);
-      const nm = _el('span', 'wiz10-unc-ctrl-name'); nm.textContent = rc.ctrl_name; item.appendChild(nm);
-      const risk = _el('span', 'wiz10-unc-risk'); risk.textContent = rc.risk_name; item.appendChild(risk);
+      // Source badge
+      const srcBadge = _el('span', rc.control_source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
+      srcBadge.textContent = rc.control_source === 'OWASP' ? 'OWASP' : 'EU AI Act';
+      item.appendChild(srcBadge);
+      // Cluster badge
+      if (rc.cluster_id) {
+        const clb = _el('span', 'wiz10-cn-badge'); clb.textContent = rc.cluster_id; item.appendChild(clb);
+      }
+      const nm = _el('span', 'wiz10-unc-ctrl-name'); nm.textContent = rc.control_name; item.appendChild(nm);
       list.appendChild(item);
     });
     sec.appendChild(list);
@@ -621,16 +593,16 @@
     const meta  = _record?._meta || {};
 
     const plans = _planData.map(p => ({
-      plan_id:       p.plan_id,
-      objective:     p.objective,
+      plan_id:   p.plan_id,
+      plan_ref:  p.plan_ref,
+      plan_name: p.plan_name,
+      risk_name: p.risk_name,
       test_controls: p.test_controls.map(tc => ({
-        control_number:              tc.cn,
-        control_name:                tc.jkName,
-        rcn:                         tc.rcn,
-        linked_risk_control_number:  tc.linked_risk_cn,
-        linked_risk_control_name:    tc.linked_risk_name,
-        risk_name:                   tc.risk_name,
-        status:                      _state.testStatus[tc.cn] || 'pending'
+        test_control_id: tc.pk_Test_Control_ID,
+        control_ref:     tc.control_ref  || '',
+        control_name:    tc.jkName       || '',
+        standard_ref:    tc.standard_ref || '',
+        status:          _state.testStatus[tc.pk_Test_Control_ID] || 'pending'
       }))
     }));
 
@@ -642,19 +614,19 @@
     return {
       step_id:     'step-10',
       step_title:  'Content Verification Testing',
-      assessment_date: today,
-      assessed_by:  meta.assessed_by || '',
-      use_case_id:  meta.use_case_id || '',
+      assessment_date:      today,
+      assessed_by:          meta.assessed_by || '',
+      use_case_id:          meta.use_case_id || '',
       total_tests:          allTests.length,
       completed_tests:      completed,
       not_applicable_tests: notAppl,
       pending_tests:        pending,
       plans,
       uncovered_controls: _uncovered.map(rc => ({
-        control_number:   rc.cn,
-        control_name:     rc.ctrl_name,
-        risk_name:        rc.risk_name,
-        rcn:              rc.rcn
+        control_id:     rc.control_id,
+        control_name:   rc.control_name,
+        control_source: rc.control_source,
+        cluster_id:     rc.cluster_id
       }))
     };
   }
@@ -697,10 +669,10 @@
     }
 
     // Summary
-    const allTests = _planData.reduce((a, p) => a.concat(p.test_controls), []);
-    const completed = allTests.filter(t => _state.testStatus[t.cn] === 'completed').length;
-    const notAppl   = allTests.filter(t => _state.testStatus[t.cn] === 'not_applicable').length;
-    const pending   = allTests.length - completed - notAppl;
+    const allTests   = _planData.reduce((a, p) => a.concat(p.test_controls), []);
+    const completed  = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'completed').length;
+    const notAppl    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable').length;
+    const pending    = allTests.length - completed - notAppl;
 
     const summary = _el('div', 'wiz10-ref-summary');
     const badge = _el('span', pending === 0
@@ -724,9 +696,13 @@
       const planSec = _el('div', 'wiz10-ref-plan-sec');
 
       const ph = _el('div', 'wiz10-ref-plan-hdr');
-      const pn = _el('span', 'wiz10-ref-plan-name'); pn.textContent = plan.plan_id; ph.appendChild(pn);
+      const pref = _el('span', 'wiz10-cn-badge'); pref.textContent = plan.plan_ref; ph.appendChild(pref);
+      const pn  = _el('span', 'wiz10-ref-plan-name');
+      pn.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
+      ph.appendChild(pn);
       const reviewed = plan.test_controls.filter(t =>
-        _state.testStatus[t.cn] === 'completed' || _state.testStatus[t.cn] === 'not_applicable'
+        _state.testStatus[t.pk_Test_Control_ID] === 'completed' ||
+        _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable'
       ).length;
       const rb = _el('span', reviewed === plan.test_controls.length
         ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--all'
@@ -737,21 +713,28 @@
       ph.appendChild(rb);
       planSec.appendChild(ph);
 
+      if (plan.risk_name) {
+        const rs = _el('p', 'wiz10-ref-risk-sub');
+        rs.innerHTML = `<span class="wiz10-risk-label">EU AI Act risk:</span> ${plan.risk_name}`;
+        planSec.appendChild(rs);
+      }
+
       plan.test_controls.forEach(tc => {
-        const status = _state.testStatus[tc.cn] || 'pending';
+        const status  = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
         const tc_card = _el('div', `wiz10-ref-tc wiz10-ref-tc--${status}`);
-        const tch = _el('div', 'wiz10-ref-tc-hdr');
+        const tch     = _el('div', 'wiz10-ref-tc-hdr');
 
         const statusDot = _el('span', `wiz10-ref-status-dot wiz10-ref-status-dot--${status}`);
         tch.appendChild(statusDot);
 
         const tcName = _el('span', 'wiz10-ref-tc-name'); tcName.textContent = tc.jkName; tch.appendChild(tcName);
-        const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.cn; tch.appendChild(cnb);
+        if (tc.control_ref) {
+          const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.control_ref; tch.appendChild(cnb);
+        }
+        if (tc.standard_ref) {
+          const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.standard_ref; tch.appendChild(sref);
+        }
         tc_card.appendChild(tch);
-
-        const tcLink = _el('div', 'wiz10-ref-tc-link');
-        tcLink.innerHTML = `<span class="wiz10-link-label">→</span> <span class="wiz10-link-rc">${tc.linked_risk_cn}</span> ${tc.linked_risk_name}`;
-        tc_card.appendChild(tcLink);
 
         if (tc.jkObjective) {
           const obj = _el('p', 'wiz10-ref-tc-obj'); obj.textContent = tc.jkObjective; tc_card.appendChild(obj);
@@ -769,11 +752,17 @@
       const uh = _el('div', 'wiz10-ref-plan-hdr');
       const un = _el('span', 'wiz10-ref-plan-name'); un.textContent = 'Controls without automated test coverage'; uh.appendChild(un);
       const rb = _el('span', 'wiz9-risk-sel-badge wiz9-risk-sel-badge--none');
-      rb.textContent = `${_uncovered.length} controls`; uh.appendChild(rb);
+      rb.textContent = `${_uncovered.length} control${_uncovered.length !== 1 ? 's' : ''}`; uh.appendChild(rb);
       uncSec.appendChild(uh);
       _uncovered.forEach(rc => {
         const item = _el('div', 'wiz10-ref-tc wiz10-ref-tc--pending');
-        item.innerHTML = `<span class="wiz10-cn-badge">${rc.cn}</span> <span class="wiz10-ref-tc-name">${rc.ctrl_name}</span> <span class="wiz10-unc-risk">${rc.risk_name}</span>`;
+        const srcBadge = _el('span', rc.control_source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
+        srcBadge.textContent = rc.control_source === 'OWASP' ? 'OWASP' : 'EU AI Act';
+        item.appendChild(srcBadge);
+        if (rc.cluster_id) {
+          const clb = _el('span', 'wiz10-cn-badge'); clb.textContent = rc.cluster_id; item.appendChild(clb);
+        }
+        const nm = _el('span', 'wiz10-ref-tc-name'); nm.textContent = rc.control_name; item.appendChild(nm);
         uncSec.appendChild(item);
       });
       card.appendChild(uncSec);
@@ -844,9 +833,11 @@
 .wiz10-plan-list{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
 .wiz10-plan-sec{background:var(--color-bg,#fff);border:1px solid var(--color-border);border-radius:10px;overflow:hidden}
 .wiz10-plan-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border)}
-.wiz10-plan-hdr-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.wiz10-plan-hdr-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
 .wiz10-plan-icon{display:flex;align-items:center;color:var(--teal-600,#0d9488);flex-shrink:0}
-.wiz10-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wiz10-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wiz10-plan-risk-sub{font-size:11px;color:var(--color-text-tertiary);padding:6px 16px;margin:0;border-bottom:1px solid var(--color-border);background:var(--color-bg-subtle,#f8fafc)}
+.wiz10-risk-label{font-weight:600;color:var(--color-text-secondary)}
 .wiz10-role-badge{font-size:10px;font-weight:500;padding:2px 7px;background:#ccfbf1;color:#115e59;border-radius:4px;white-space:nowrap;flex-shrink:0}
 .wiz10-plan-count{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;white-space:nowrap;flex-shrink:0}
 .wiz10-plan-count--pending{background:#dbeafe;color:#1e40af}
@@ -868,13 +859,7 @@
 .wiz10-tc-icon{display:flex;align-items:center;color:var(--color-text-tertiary);flex-shrink:0}
 .wiz10-tc-name{font-size:13px;font-weight:600;color:var(--color-text-primary)}
 .wiz10-cn-badge{font-size:10px;font-weight:600;padding:2px 6px;background:#e0e7ff;color:#4338ca;border-radius:4px;font-family:var(--font-mono,monospace);white-space:nowrap}
-
-/* Linked control */
-.wiz10-tc-link{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;margin-bottom:10px;padding:6px 10px;background:var(--color-bg-subtle,#f8fafc);border-radius:4px;border-left:2px solid var(--color-border)}
-.wiz10-link-label{color:var(--color-text-tertiary);font-weight:500}
-.wiz10-link-rc{font-family:var(--font-mono,monospace);font-size:10px;font-weight:600;padding:1px 5px;background:#fce7f3;color:#9d174d;border-radius:3px}
-.wiz10-link-rcname{color:var(--color-text-primary);font-weight:500}
-.wiz10-link-risk{color:var(--color-text-tertiary)}
+.wiz10-std-badge{font-size:10px;font-weight:500;padding:2px 6px;background:#f1f5f9;color:#475569;border-radius:4px;white-space:nowrap;word-break:break-all}
 
 /* Collapsible */
 .wiz10-collapsible{margin-bottom:8px}
@@ -887,7 +872,7 @@
 .wiz10-tc-text .wiz10-coll-text{border-left-color:#93c5fd}
 .wiz10-tc-evidence .wiz10-coll-text{border-left-color:#fcd34d;font-family:var(--font-mono,monospace);font-size:11px;white-space:pre-wrap}
 
-/* Dataset */
+/* Dataset / test cases */
 .wiz10-dataset-wrap{border-top:1px solid var(--color-border);padding:10px 16px}
 .wiz10-dataset-btn{font-size:11px}
 .wiz10-dataset-table{display:flex;flex-direction:column;gap:8px;margin-top:8px}
@@ -929,8 +914,9 @@
 
 /* Reference pane */
 .wiz10-ref-plan-sec{margin-bottom:20px}
-.wiz10-ref-plan-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.wiz10-ref-plan-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
 .wiz10-ref-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wiz10-ref-risk-sub{font-size:11px;color:var(--color-text-tertiary);margin:0 0 8px;font-style:italic}
 .wiz10-ref-tc{padding:10px 12px;border:1px solid var(--color-border);border-radius:6px;margin-bottom:6px}
 .wiz10-ref-tc--completed{border-left:3px solid #22c55e}
 .wiz10-ref-tc--not_applicable{border-left:3px solid #f59e0b}
@@ -941,7 +927,6 @@
 .wiz10-ref-status-dot--completed{background:#22c55e}
 .wiz10-ref-status-dot--not_applicable{background:#f59e0b}
 .wiz10-ref-tc-name{font-size:12px;font-weight:600;color:var(--color-text-primary)}
-.wiz10-ref-tc-link{font-size:11px;color:var(--color-text-secondary);margin:3px 0}
 .wiz10-ref-tc-obj{font-size:11px;color:var(--color-text-tertiary);margin:4px 0 0;line-height:1.5}
 .wiz10-ref-summary{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 `;
