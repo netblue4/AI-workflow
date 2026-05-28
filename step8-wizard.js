@@ -14,8 +14,8 @@
   let _filteredFGItems = []; // [{groupName, risks:[...]}]
 
   const _state = {
-    selected_risks:  {},  // riskName → boolean
-    relevance_filter: 'all' // 'all' | 'high'
+    technical_risks: {},  // pk_Risk_ID → boolean (OWASP risks from tbl_Risks.json)
+    legal_risks:     {},  // riskName → boolean  (EU AI Act risks from guidance)
   };
 
   // Guided wizard state
@@ -25,9 +25,8 @@
     complete:   false
   };
 
-  let _searchQuery = '';
   let _diagData = null; // { risks, controls, tasks } loaded from tbl_* files
-  const _diagState = { selectedBox: null, filterMode: 'owasp' };
+  const _diagState = { selectedBox: null };
 
   // Category color palette — maps JSON color keys to CSS values
   const _CAT_COLORS = {
@@ -55,15 +54,13 @@
     _step3Data  = null;
     _step7Data  = null;
     _filteredFGItems = [];
-    _state.selected_risks  = {};
-    _state.relevance_filter = 'all';
-    _searchQuery = '';
+    _state.technical_risks = {};
+    _state.legal_risks     = {};
     _wizState.step_index = 0;
     _wizState.answers    = {};
     _wizState.complete   = false;
     _diagData = null;
     _diagState.selectedBox = null;
-    _diagState.filterMode  = 'owasp';
 
     _injectStyles();
 
@@ -118,13 +115,20 @@
     _step3Data = _record?.['step-3'] ?? null;
     _step7Data = _record?.['step-7'] ?? null;
 
-    // Restore prior selections + wizard answers
+    // Restore prior selections + wizard answers (additive — never overwrites sibling sub-object)
     const saved8 = _record?.['step-8'];
-    if (saved8?.risks) {
-      saved8.risks.forEach(r => { _state.selected_risks[r.risk_name] = r.selected; });
+    if (saved8?.technical_assessment?.risks) {
+      saved8.technical_assessment.risks.forEach(r => {
+        _state.technical_risks[r.risk_id] = r.selected;
+      });
     }
-    if (saved8?.wizard_answers) {
-      Object.assign(_wizState.answers, saved8.wizard_answers);
+    if (saved8?.legal_assessment?.risks) {
+      saved8.legal_assessment.risks.forEach(r => {
+        _state.legal_risks[r.risk_name] = r.selected;
+      });
+    }
+    if (saved8?.legal_assessment?.wizard_answers) {
+      Object.assign(_wizState.answers, saved8.legal_assessment.wizard_answers);
       const wqs = _guidance?.wizard_questions;
       if (wqs && Object.keys(_wizState.answers).length >= wqs.length) {
         _wizState.complete = true;
@@ -133,10 +137,16 @@
 
     _filteredFGItems = _buildFGItems();
 
-    // Default: select all if no prior state
-    if (Object.keys(_state.selected_risks).length === 0) {
+    // Default: select all OWASP risks if no prior technical state
+    if (_diagData && Object.keys(_state.technical_risks).length === 0) {
+      _diagData.risks
+        .filter(r => r.risk_source === 'OWASP')
+        .forEach(r => { _state.technical_risks[r.pk_Risk_ID] = true; });
+    }
+    // Default: select all legal risks if no prior legal state
+    if (Object.keys(_state.legal_risks).length === 0) {
       _filteredFGItems.forEach(fg =>
-        fg.risks.forEach(r => { _state.selected_risks[r.jkName] = true; })
+        fg.risks.forEach(r => { _state.legal_risks[r.jkName] = true; })
       );
     }
 
@@ -250,7 +260,7 @@
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     const strip = _el('div', 'wiz-tab-strip');
-    [['diagram', 'RAG Risk Diagram'], ['guided', 'Guided'], ['browse', 'Browse All'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
+    [['diagram', 'RAG Technical Risk Identification'], ['legal', 'Legal/Regulatory Risk Identification'], ['review', 'Combined Review'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
       const btn = document.createElement('button');
       btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
       btn.dataset.tab = id; btn.textContent = lbl;
@@ -265,20 +275,25 @@
       t.classList.toggle('wiz-tab--active', t.dataset.tab === id));
     _container.querySelectorAll('.wiz-pane').forEach(p =>
       p.classList.toggle('wiz-pane--hidden', p.dataset.pane !== id));
+    // Always rebuild Combined Review so it reflects latest saved state
+    if (id === 'review') {
+      const pane = _container.querySelector('[data-pane="review"]');
+      if (pane) { pane.innerHTML = ''; pane.appendChild(_buildCombinedReviewPane()); }
+    }
   }
 
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const diag   = _el('div', 'wiz-pane');                  diag.dataset.pane   = 'diagram';
-    const guided = _el('div', 'wiz-pane wiz-pane--hidden'); guided.dataset.pane = 'guided';
-    const browse = _el('div', 'wiz-pane wiz-pane--hidden'); browse.dataset.pane = 'browse';
+    const legal  = _el('div', 'wiz-pane wiz-pane--hidden'); legal.dataset.pane  = 'legal';
+    const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
     const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
     diag.appendChild(_buildDiagramPane());
-    guided.appendChild(_buildGuidedPane());
-    browse.appendChild(_buildWizardPane());
+    legal.appendChild(_buildLegalPane());
+    review.appendChild(_buildCombinedReviewPane());
     ref.appendChild(_buildReferencePane());
-    pw.appendChild(diag); pw.appendChild(guided); pw.appendChild(browse); pw.appendChild(ref);
+    pw.appendChild(diag); pw.appendChild(legal); pw.appendChild(review); pw.appendChild(ref);
   }
 
   // ---- RAG Diagram: box definitions ---------------------------
@@ -351,19 +366,7 @@
     if (!_diagData) return [];
     const owaspIds = _diagGetOwaspIdsForBox(box);
     if (owaspIds.size === 0) return [];
-    const { filterMode } = _diagState;
-    const result = [];
-    if (filterMode === 'owasp' || filterMode === 'both') {
-      _diagData.risks
-        .filter(r => r.risk_source === 'OWASP' && owaspIds.has(r.owasp_id))
-        .forEach(r => result.push(r));
-    }
-    if (filterMode === 'harmonised' || filterMode === 'both') {
-      _diagData.risks
-        .filter(r => r.risk_source === 'EU_AI_Act' && owaspIds.has(r.owasp_id))
-        .forEach(r => result.push(r));
-    }
-    return result;
+    return _diagData.risks.filter(r => r.risk_source === 'OWASP' && owaspIds.has(r.owasp_id));
   }
 
   function _diagGetControlsForRisk(risk) {
@@ -385,13 +388,12 @@
 
     const hdr = _el('div', 'wiz8-diag-hdr');
     const hdrTitle = _el('h3', 'wiz8-diag-hdr-title');
-    hdrTitle.textContent = 'RAG Architecture — OWASP LLM Top 10 Risk Map';
+    hdrTitle.textContent = 'RAG Architecture — Technical Risk Identification (OWASP LLM Top 10)';
     hdr.appendChild(hdrTitle);
     const hdrSub = _el('p', 'wiz8-diag-hdr-sub');
-    hdrSub.textContent = 'Click a component to explore risks and controls';
+    hdrSub.textContent = 'Click a component to explore OWASP risks and controls. Check each risk that applies to your system.';
     hdr.appendChild(hdrSub);
     left.appendChild(hdr);
-    left.appendChild(_buildDiagFilterBar());
 
     const grid = _el('div', 'wiz8-diag-grid');
     _DIAGRAM_BOXES.forEach(box => grid.appendChild(_buildDiagBox(box)));
@@ -403,6 +405,17 @@
     legend.appendChild(legItem);
     left.appendChild(legend);
 
+    // Save row
+    const saveRow = _el('div', 'wiz8-tech-save-row');
+    const countBadge = _el('span', 'wiz8-tech-count');
+    countBadge.id = 'wiz8-tech-count';
+    saveRow.appendChild(countBadge);
+    const saveBtn = _el('button', 'wiz-btn-primary');
+    saveBtn.textContent = 'Save Technical Assessment';
+    saveBtn.addEventListener('click', _handleSaveTechnical);
+    saveRow.appendChild(saveBtn);
+    left.appendChild(saveRow);
+
     wrap.appendChild(left);
 
     // Right panel: detail
@@ -411,34 +424,8 @@
     _renderDiagDetail(right, null);
     wrap.appendChild(right);
 
+    _updateTechCountBadge();
     return wrap;
-  }
-
-  function _buildDiagFilterBar() {
-    const bar = _el('div', 'wiz8-diag-filter-bar');
-    const lbl = _el('span', 'wiz8-diag-filter-lbl');
-    lbl.textContent = 'Risk language:';
-    bar.appendChild(lbl);
-    [
-      ['owasp',      'OWASP LLM Top 10'],
-      ['harmonised', 'EU AI Act'],
-      ['both',       'Both']
-    ].forEach(([val, label]) => {
-      const btn = _el('button', `wiz8-diag-filter-btn${_diagState.filterMode === val ? ' wiz8-diag-filter-btn--active' : ''}`);
-      btn.dataset.dfv = val;
-      btn.textContent = label;
-      btn.addEventListener('click', () => {
-        _diagState.filterMode = val;
-        _container.querySelectorAll('.wiz8-diag-filter-btn').forEach(b =>
-          b.classList.toggle('wiz8-diag-filter-btn--active', b.dataset.dfv === val));
-        if (_diagState.selectedBox) {
-          const det = _container.querySelector('#wiz8-diag-detail');
-          if (det) _renderDiagDetail(det, _diagState.selectedBox);
-        }
-      });
-      bar.appendChild(btn);
-    });
-    return bar;
   }
 
   function _buildDiagBox(box) {
@@ -503,7 +490,7 @@
 
     if (risks.length === 0) {
       const empty = _el('p', 'wiz8-diag-det-empty');
-      empty.textContent = 'No risks found for the current filter. Try switching to "Both".';
+      empty.textContent = 'No OWASP risks found for this component.';
       panel.appendChild(empty);
       return;
     }
@@ -520,6 +507,19 @@
     const card = _el('div', `wiz8-diag-risk-card${isOwasp ? ' wiz8-diag-risk-card--owasp' : ' wiz8-diag-risk-card--eu'}`);
 
     const rh = _el('div', 'wiz8-diag-risk-hdr');
+    if (isOwasp) {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'wiz8-diag-risk-cb';
+      cb.dataset.riskId = risk.pk_Risk_ID;
+      cb.checked = !!_state.technical_risks[risk.pk_Risk_ID];
+      cb.title = 'Mark as applicable to this system';
+      cb.addEventListener('change', e => {
+        _state.technical_risks[risk.pk_Risk_ID] = e.target.checked;
+        _updateTechCountBadge();
+      });
+      rh.appendChild(cb);
+    }
     const srcBadge = _el('span', `wiz8-diag-src-badge${isOwasp ? ' wiz8-diag-src-badge--owasp' : ' wiz8-diag-src-badge--eu'}`);
     srcBadge.textContent = isOwasp ? `OWASP ${risk.owasp_id}` : 'EU AI Act';
     rh.appendChild(srcBadge);
@@ -605,16 +605,59 @@
     return wrap;
   }
 
-  // ---- Re-render guided pane in place -------------------------
-  function _renderGuidedPane() {
-    const pane = _container.querySelector('[data-pane="guided"]');
-    if (!pane) return;
-    pane.innerHTML = '';
-    pane.appendChild(_buildGuidedPane());
+  // ---- Technical assessment save helpers ----------------------
+  function _updateTechCountBadge() {
+    const badge = _container.querySelector('#wiz8-tech-count');
+    if (!badge) return;
+    const total = _diagData ? _diagData.risks.filter(r => r.risk_source === 'OWASP').length : 0;
+    const sel = Object.values(_state.technical_risks).filter(Boolean).length;
+    badge.textContent = `${sel} / ${total} technical risks confirmed`;
   }
 
-  // ---- Guided pane dispatcher ---------------------------------
-  function _buildGuidedPane() {
+  function _handleSaveTechnical() {
+    if (!_record) {
+      _record = { _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
+    }
+    _record._meta.last_modified = new Date().toISOString();
+    if (!_record['step-8']) _record['step-8'] = {};
+    _record['step-8'].technical_assessment = _buildTechnicalOutputRecord();
+    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Technical assessment saved ✓');
+    const existing = _container.querySelector('.wiz8-tech-saved-banner');
+    if (existing) existing.remove();
+    const banner = _el('div', 'wiz8-tech-saved-banner');
+    const sel = Object.values(_state.technical_risks).filter(Boolean).length;
+    banner.innerHTML = `✓ Technical assessment saved — <strong>${sel} OWASP risk${sel !== 1 ? 's' : ''}</strong> confirmed. Switch to <strong>Combined Review</strong> to see both assessments together.`;
+    const left = _container.querySelector('.wiz8-diag-left');
+    if (left) left.insertBefore(banner, left.firstChild);
+    setTimeout(() => banner?.remove(), 10000);
+  }
+
+  function _buildTechnicalOutputRecord() {
+    const today = new Date().toISOString().slice(0, 10);
+    const risks = _diagData
+      ? _diagData.risks.filter(r => r.risk_source === 'OWASP').map(r => ({
+          risk_id:     r.pk_Risk_ID,
+          owasp_id:    r.owasp_id,
+          risk_name:   r.risk_name,
+          risk_source: 'OWASP',
+          selected:    !!_state.technical_risks[r.pk_Risk_ID]
+        }))
+      : [];
+    const sel = risks.filter(r => r.selected).length;
+    return { completed: true, assessment_date: today, total_risks: risks.length, selected_count: sel, risks };
+  }
+
+  // ---- Re-render legal pane in place --------------------------
+  function _renderLegalPane() {
+    const pane = _container.querySelector('[data-pane="legal"]');
+    if (!pane) return;
+    pane.innerHTML = '';
+    pane.appendChild(_buildLegalPane());
+  }
+
+  // ---- Legal pane dispatcher ----------------------------------
+  function _buildLegalPane() {
     const wqs = _guidance?.wizard_questions;
     if (!wqs?.length) {
       const card = _el('div', 'step-detail-card');
@@ -623,8 +666,17 @@
       card.appendChild(p);
       return card;
     }
-    if (_wizState.complete) return _buildWizardSummary();
-    return _buildQuestionScreen(_wizState.step_index);
+    const wrap = _el('div', 'wiz8-legal-wrap');
+    const legalSaved = _record?.['step-8']?.legal_assessment?.completed;
+    if (legalSaved) {
+      const note = _el('div', 'wiz8-legal-saved-note');
+      const date = _record['step-8'].legal_assessment.assessment_date || '';
+      const count = _record['step-8'].legal_assessment.selected_count ?? 0;
+      note.innerHTML = `✓ Legal/regulatory assessment last saved on <strong>${date}</strong> — <strong>${count} risk${count !== 1 ? 's' : ''}</strong> confirmed. Complete the wizard again to update, or switch to <strong>Combined Review</strong>.`;
+      wrap.appendChild(note);
+    }
+    wrap.appendChild(_wizState.complete ? _buildWizardSummary() : _buildQuestionScreen(_wizState.step_index));
+    return wrap;
   }
 
   // ---- Single question screen ---------------------------------
@@ -645,7 +697,7 @@
     const progWrap = _el('div', 'wiz8-guided-prog-wrap');
     const progMeta = _el('div', 'wiz8-guided-prog-meta');
     const progTitle = _el('span', 'wiz8-guided-prog-title');
-    progTitle.textContent = 'Guided Risk Assessment';
+    progTitle.textContent = 'Legal/Regulatory Risk Assessment';
     const progLabel = _el('span', 'wiz8-guided-prog-label');
     progLabel.textContent = `${idx + 1} of ${total}`;
     progMeta.appendChild(progTitle); progMeta.appendChild(progLabel);
@@ -725,7 +777,7 @@
       } else {
         _wizState.complete = true;
       }
-      _renderGuidedPane();
+      _renderLegalPane();
     };
 
     [
@@ -745,7 +797,7 @@
     if (idx > 0) {
       const backBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
       backBtn.textContent = '← Back';
-      backBtn.addEventListener('click', () => { _wizState.step_index = idx - 1; _renderGuidedPane(); });
+      backBtn.addEventListener('click', () => { _wizState.step_index = idx - 1; _renderLegalPane(); });
       navRow.appendChild(backBtn);
     } else {
       navRow.appendChild(_el('span', '')); // left spacer
@@ -759,12 +811,12 @@
     if (idx < total - 1) {
       const nextBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--next');
       nextBtn.textContent = 'Next →';
-      nextBtn.addEventListener('click', () => { _wizState.step_index = idx + 1; _renderGuidedPane(); });
+      nextBtn.addEventListener('click', () => { _wizState.step_index = idx + 1; _renderLegalPane(); });
       navRight.appendChild(nextBtn);
     } else {
       const finBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--finish');
       finBtn.textContent = 'Finish ✓';
-      finBtn.addEventListener('click', () => { _wizState.complete = true; _renderGuidedPane(); });
+      finBtn.addEventListener('click', () => { _wizState.complete = true; _renderLegalPane(); });
       navRight.appendChild(finBtn);
     }
     navRow.appendChild(navRight);
@@ -798,7 +850,7 @@
     const tickIcon = _el('span', 'wiz8-summary-tick-icon');
     tickIcon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
     const tickTitle = _el('h2', 'wiz8-summary-title');
-    tickTitle.textContent = 'Guided Assessment Complete';
+    tickTitle.textContent = 'Legal/Regulatory Assessment Complete';
     tickRow.appendChild(tickIcon); tickRow.appendChild(tickTitle);
     card.appendChild(tickRow);
 
@@ -840,7 +892,7 @@
 
     if (skipped.length) {
       const skipNote = _el('p', 'wiz8-summary-skip-note');
-      skipNote.textContent = `${skipped.length} risk${skipped.length !== 1 ? 's' : ''} skipped — they will keep their existing selection in Browse All.`;
+      skipNote.textContent = `${skipped.length} risk${skipped.length !== 1 ? 's' : ''} skipped — unanswered questions will default to not applicable.`;
       card.appendChild(skipNote);
     }
 
@@ -848,8 +900,8 @@
     const actRow = _el('div', 'wiz-action-row');
     const applyBtn = document.createElement('button');
     applyBtn.className = 'wiz-btn-primary';
-    applyBtn.textContent = 'Apply to Risk Assessment →';
-    applyBtn.addEventListener('click', _applyWizardAnswers);
+    applyBtn.textContent = 'Save Legal Assessment ✓';
+    applyBtn.addEventListener('click', _handleSaveLegal);
     actRow.appendChild(applyBtn);
 
     const restartBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
@@ -859,7 +911,7 @@
       _wizState.step_index = 0;
       _wizState.answers    = {};
       _wizState.complete   = false;
-      _renderGuidedPane();
+      _renderLegalPane();
     });
     actRow.appendChild(restartBtn);
     card.appendChild(actRow);
@@ -868,100 +920,153 @@
     return wrap;
   }
 
-  // ---- Apply wizard answers to Browse All ---------------------
-  function _applyWizardAnswers() {
+  // ---- Legal assessment save helpers --------------------------
+  function _handleSaveLegal() {
     const wqs = _guidance?.wizard_questions || [];
     wqs.forEach(wq => {
       const ans = _wizState.answers[wq.risk_name];
-      if (ans === 'yes' || ans === 'partially') {
-        _state.selected_risks[wq.risk_name] = true;
-      } else if (ans === 'no') {
-        _state.selected_risks[wq.risk_name] = false;
-      }
-      // 'skip' / undefined → leave existing selection unchanged
+      if (ans === 'yes' || ans === 'partially') _state.legal_risks[wq.risk_name] = true;
+      else if (ans === 'no') _state.legal_risks[wq.risk_name] = false;
     });
-    _syncAllCheckboxes();
-    _switchTab('browse');
-
-    // Banner confirmation at top of Browse All
-    const browsePane = _container.querySelector('[data-pane="browse"]');
-    if (browsePane) {
-      const existing = browsePane.querySelector('.wiz8-applied-banner');
-      if (existing) existing.remove();
-      const applied = wqs.filter(wq => ['yes', 'partially'].includes(_wizState.answers[wq.risk_name])).length;
-      const banner = _el('div', 'wiz8-applied-banner');
-      banner.innerHTML = `✓ Guided assessment applied — <strong>${applied} risk${applied !== 1 ? 's' : ''}</strong> confirmed as applicable. Review the selections below, then click <strong>Save Risk Assessment</strong>.`;
-      const firstCard = browsePane.querySelector('.step-detail-card');
-      if (firstCard) firstCard.insertBefore(banner, firstCard.firstChild);
-      setTimeout(() => banner?.remove(), 10000);
+    if (!_record) {
+      _record = { _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
     }
+    _record._meta.last_modified = new Date().toISOString();
+    if (!_record['step-8']) _record['step-8'] = {};
+    _record['step-8'].legal_assessment = _buildLegalOutputRecord();
+    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Legal assessment saved ✓');
+    _renderLegalPane();
   }
 
-  // ---- Wizard pane --------------------------------------------
-  function _buildWizardPane() {
+  function _buildLegalOutputRecord() {
+    const today = new Date().toISOString().slice(0, 10);
+    const wqs = _guidance?.wizard_questions || [];
+    const risks = wqs.map(wq => {
+      const ans = _wizState.answers[wq.risk_name] || 'skipped';
+      return {
+        risk_name:     wq.risk_name,
+        risk_source:   'EU_AI_Act',
+        selected:      ans === 'yes' || ans === 'partially',
+        wizard_answer: ans,
+        relevance:     _computeRelevance(wq.risk_name)
+      };
+    });
+    const sel = risks.filter(r => r.selected).length;
+    return {
+      completed:       true,
+      assessment_date: today,
+      wizard_answers:  { ..._wizState.answers },
+      total_risks:     wqs.length,
+      selected_count:  sel,
+      risks
+    };
+  }
+
+  // ---- Combined Review pane -----------------------------------
+  function _buildCombinedReviewPane() {
     const card = _el('div', 'step-detail-card');
 
-    const ey = _el('p', `step-detail-eyebrow color-${_colorKey}`);
-    ey.textContent = _phaseTitle; card.appendChild(ey);
-
     const title = _el('h2', 'step-detail-title');
-    title.textContent = `Step ${_step.number} — ${_step.title}`; card.appendChild(title);
+    title.textContent = 'Combined Risk Assessment Review';
+    card.appendChild(title);
 
-    const meta = _el('div', 'step-detail-meta');
-    (_step.owners || []).forEach(o => {
-      const t = _el('span', 'owner-tag'); t.textContent = o; meta.appendChild(t);
-    });
-    card.appendChild(meta);
-
-    const summ = _el('p', 'step-detail-summary');
-    summ.textContent = _step.summary || ''; card.appendChild(summ);
-
-    if (_step.deliverables?.length) {
-      card.appendChild(_sectionLabel('Deliverables'));
-      const dl = _el('ul', 'deliverables-list');
-      _step.deliverables.forEach(d => {
-        const li = _el('li', 'deliverable-item'); li.textContent = d; dl.appendChild(li);
-      });
-      card.appendChild(dl);
-    }
+    const sub = _el('p', 'step-detail-summary');
+    sub.textContent = 'Read-only view of both assessments. Complete each role-specific tab to populate both sections, then proceed to Step 9.';
+    card.appendChild(sub);
 
     card.appendChild(_sectionLabel('Input Sources'));
     card.appendChild(_buildStep3Card());
     card.appendChild(_buildDpiaCard());
 
-    card.appendChild(_sectionLabel('Risk Assessment'));
+    card.appendChild(_sectionLabel('Technical Risk Assessment (OWASP LLM Top 10)'));
+    const saved8 = _record?.['step-8'];
+    card.appendChild(_buildReviewSection(
+      'Technical Risk Assessment (OWASP LLM Top 10)',
+      'Completed by the engineering / security team using the RAG Technical Risk Identification tab.',
+      saved8?.technical_assessment, 'technical'
+    ));
 
-    const uniqueRisks = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
-    const highCount   = Array.from(uniqueRisks).filter(n => _computeRelevance(n) === 'high').length;
-    const totalFGs    = _filteredFGItems.length;
-    const totalRisks  = uniqueRisks.size;
+    card.appendChild(_sectionLabel('Legal / Regulatory Risk Assessment (EU AI Act)'));
+    card.appendChild(_buildReviewSection(
+      'Legal / Regulatory Risk Assessment (EU AI Act)',
+      'Completed by the compliance / DPO team using the Legal/Regulatory Risk Identification tab.',
+      saved8?.legal_assessment, 'legal'
+    ));
 
-    if (totalRisks === 0 && _step3Data) {
-      const notice = _el('p', 'wiz8-notice');
-      notice.textContent = 'No applicable risks found for this classification.';
-      card.appendChild(notice);
+    const techDone  = !!saved8?.technical_assessment?.completed;
+    const legalDone = !!saved8?.legal_assessment?.completed;
+    const gateRow   = _el('div', 'wiz8-review-gate');
+
+    if (!techDone || !legalDone) {
+      const warn = _el('div', 'wiz8-review-warn');
+      const pending = [!techDone && 'Technical', !legalDone && 'Legal/Regulatory'].filter(Boolean);
+      warn.innerHTML = `<strong>⚠ Incomplete:</strong> ${pending.join(' and ')} assessment${pending.length > 1 ? 's' : ''} not yet saved. Complete ${pending.length > 1 ? 'both tabs' : 'that tab'} before proceeding to Step 9. Download the system record to share with the other team if needed.`;
+      gateRow.appendChild(warn);
     } else {
-      // Summary line
-      const instr = _el('p', 'wiz8-instruction');
-      const guidanceSuffix = _guidance ? '' : ' (install step8-guidance.json for relevance scoring and guidance)';
-      instr.innerHTML = `<strong>${totalRisks} risk${totalRisks !== 1 ? 's' : ''}</strong> across <strong>${totalFGs} standard${totalFGs !== 1 ? 's' : ''}</strong>${_step3Data ? '' : ' (all risks — complete Step 3 for filtered view)'}. ${highCount > 0 ? `<strong class="wiz8-high-count">${highCount} HIGH-relevance</strong> risks identified for your system. ` : ''}Review each risk below.${guidanceSuffix}`;
-      card.appendChild(instr);
+      const ok = _el('div', 'wiz8-review-complete');
+      const total = (saved8.technical_assessment.selected_count || 0) + (saved8.legal_assessment.selected_count || 0);
+      ok.innerHTML = `<strong>✓ Both assessments complete.</strong> ${total} total risk${total !== 1 ? 's' : ''} confirmed. Proceed to Step 9 (Control Identification).`;
+      gateRow.appendChild(ok);
+    }
+    card.appendChild(gateRow);
+    return card;
+  }
 
-      // Filter bar
-      if (_guidance) card.appendChild(_buildFilterBar());
+  function _buildReviewSection(title, subtitle, assessment, type) {
+    const sec = _el('div', 'wiz8-review-sec');
 
-      // Search box
-      card.appendChild(_buildSearchBox());
+    const hdr = _el('div', 'wiz8-review-sec-hdr');
+    const statusBadge = _el('span', `wiz8-review-status${assessment?.completed ? ' wiz8-review-status--done' : ' wiz8-review-status--pending'}`);
+    statusBadge.textContent = assessment?.completed ? `✓ Saved ${assessment.assessment_date || ''}` : '⚠ Not yet saved';
+    hdr.appendChild(statusBadge);
+    sec.appendChild(hdr);
 
-      // Risk list
-      const riskList = _el('div', 'wiz8-risk-list');
-      _filteredFGItems.forEach(fg => riskList.appendChild(_buildFGSection(fg)));
-      card.appendChild(riskList);
+    const subEl = _el('p', 'wiz8-review-sec-sub'); subEl.textContent = subtitle; sec.appendChild(subEl);
+
+    if (!assessment?.risks?.length) {
+      const empty = _el('p', 'wiz8-review-empty');
+      empty.textContent = `Open the ${type === 'technical' ? 'RAG Technical Risk Identification' : 'Legal/Regulatory Risk Identification'} tab and save to populate this section.`;
+      sec.appendChild(empty);
+      return sec;
     }
 
-    card.appendChild(_buildActionRow());
-    card.appendChild(_el('div', 'wiz8-results'));
-    return card;
+    const selRisks = assessment.risks.filter(r => r.selected);
+    const notSel   = (assessment.total_risks || 0) - (assessment.selected_count ?? selRisks.length);
+    const stats    = _el('div', 'wiz8-review-stats');
+    [
+      [assessment.total_risks,                         'Total risks'],
+      [assessment.selected_count ?? selRisks.length,   'Confirmed applicable'],
+      [notSel,                                         'Not applicable']
+    ].forEach(([num, lbl]) => {
+      const s = _el('div', 'wiz8-stat');
+      const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num);
+      const l = _el('span', 'wiz8-stat-lbl'); l.textContent = lbl;
+      s.appendChild(n); s.appendChild(l); stats.appendChild(s);
+    });
+    sec.appendChild(stats);
+
+    if (selRisks.length > 0) {
+      const list = _el('div', 'wiz8-review-risk-list');
+      selRisks.forEach(r => {
+        const row  = _el('div', 'wiz8-review-risk-row');
+        const icon = _el('span', type === 'technical' ? 'wiz8-review-risk-icon--tech' : 'wiz8-review-risk-icon--legal');
+        icon.textContent = type === 'technical' ? '⚙' : '⚖';
+        row.appendChild(icon);
+        const nm = _el('span', 'wiz8-review-risk-name'); nm.textContent = r.risk_name || r.risk_id || ''; row.appendChild(nm);
+        if (type === 'technical' && r.owasp_id) {
+          const badge = _el('span', 'wiz8-diag-src-badge wiz8-diag-src-badge--owasp');
+          badge.textContent = `OWASP ${r.owasp_id}`; row.appendChild(badge);
+        }
+        if (type === 'legal' && r.wizard_answer === 'partially') {
+          const badge = _el('span', 'wiz8-review-partial-badge');
+          badge.textContent = 'partial'; row.appendChild(badge);
+        }
+        list.appendChild(row);
+      });
+      sec.appendChild(list);
+    }
+    return sec;
   }
 
   // ---- Source cards -------------------------------------------
@@ -1012,475 +1117,6 @@
     card.appendChild(grid); return card;
   }
 
-  // ---- Filter bar ---------------------------------------------
-  function _buildFilterBar() {
-    const bar = _el('div', 'wiz8-filter-bar');
-    const lbl = _el('span', 'wiz8-filter-label'); lbl.textContent = 'Show:'; bar.appendChild(lbl);
-
-    const allBtn = document.createElement('button');
-    allBtn.className = `wiz8-filter-btn${_state.relevance_filter === 'all' ? ' wiz8-filter-btn--active' : ''}`;
-    allBtn.textContent = 'All risks';
-    allBtn.addEventListener('click', () => {
-      _state.relevance_filter = 'all';
-      _syncFilterButtons();
-      _applyRelevanceFilter();
-    });
-    bar.appendChild(allBtn);
-
-    const highBtn = document.createElement('button');
-    highBtn.className = `wiz8-filter-btn wiz8-filter-btn--high${_state.relevance_filter === 'high' ? ' wiz8-filter-btn--active' : ''}`;
-    highBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>HIGH relevance only`;
-    highBtn.addEventListener('click', () => {
-      _state.relevance_filter = 'high';
-      _syncFilterButtons();
-      _applyRelevanceFilter();
-    });
-    bar.appendChild(highBtn);
-
-    return bar;
-  }
-
-  function _syncFilterButtons() {
-    const bar = _container.querySelector('.wiz8-filter-bar');
-    if (!bar) return;
-    const [allBtn, highBtn] = bar.querySelectorAll('.wiz8-filter-btn');
-    if (allBtn)  allBtn.classList.toggle('wiz8-filter-btn--active',  _state.relevance_filter === 'all');
-    if (highBtn) highBtn.classList.toggle('wiz8-filter-btn--active', _state.relevance_filter === 'high');
-  }
-
-  function _applyRelevanceFilter() {
-    const riskList = _container.querySelector('.wiz8-risk-list');
-    if (!riskList) return;
-    const filterHigh = _state.relevance_filter === 'high';
-
-    riskList.querySelectorAll('.wiz8-fg').forEach(fgEl => {
-      let fgHasVisible = false;
-      fgEl.querySelectorAll('.wiz8-risk-card').forEach(riskEl => {
-        const relevance = riskEl.dataset.relevance;
-        const hide = filterHigh && relevance !== 'high';
-        riskEl.classList.toggle('wiz8-filter-hidden', hide);
-        if (!hide) fgHasVisible = true;
-      });
-      fgEl.classList.toggle('wiz8-filter-hidden', filterHigh && !fgHasVisible);
-    });
-  }
-
-  // ---- FieldGroup accordion (top level) -----------------------
-  function _buildFGSection(fg) {
-    const highInFG = fg.risks.filter(r => _computeRelevance(r.jkName) === 'high').length;
-    const sec = _el('div', 'wiz8-fg');
-
-    const header = _el('div', 'wiz8-fg-header');
-    const left   = _el('div', 'wiz8-fg-header-left');
-    const nm = _el('span', 'wiz8-fg-name'); nm.textContent = fg.groupName; left.appendChild(nm);
-    const rb = _el('span', 'wiz8-badge-risks');
-    rb.textContent = `${fg.risks.length} risk${fg.risks.length !== 1 ? 's' : ''}`; left.appendChild(rb);
-    if (highInFG > 0) {
-      const hb = _el('span', 'wiz8-badge-high');
-      hb.textContent = `${highInFG} HIGH`; left.appendChild(hb);
-    }
-    header.appendChild(left);
-
-    const right = _el('div', 'wiz8-fg-header-right');
-    const selAll = document.createElement('button'); selAll.className = 'wiz8-sel-btn'; selAll.textContent = 'Select all';
-    selAll.addEventListener('click', e => { e.stopPropagation(); _setFGSel(fg, true); }); right.appendChild(selAll);
-    const deselAll = document.createElement('button'); deselAll.className = 'wiz8-sel-btn'; deselAll.textContent = 'Deselect all';
-    deselAll.addEventListener('click', e => { e.stopPropagation(); _setFGSel(fg, false); }); right.appendChild(deselAll);
-    const selCount = _el('span', 'wiz8-fg-sel-count'); right.appendChild(selCount);
-    const chevron = _el('span', 'wiz8-chevron');
-    chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chevron.style.transform = 'rotate(-90deg)';
-    right.appendChild(chevron);
-    header.appendChild(right);
-    sec.appendChild(header);
-
-    const body = _el('div', 'wiz8-fg-body wiz8-collapsed');
-    fg.risks.forEach(risk => body.appendChild(_buildRiskCard(risk)));
-    sec.appendChild(body);
-    _updateFGBadge(sec);
-
-    header.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('wiz8-collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
-    });
-    return sec;
-  }
-
-  function _setFGSel(fg, selected) {
-    fg.risks.forEach(r => { _state.selected_risks[r.jkName] = selected; });
-    _syncAllCheckboxes();
-  }
-
-  // ---- Risk card (with guidance) ------------------------------
-  function _buildRiskCard(risk) {
-    const relevance = _computeRelevance(risk.jkName);
-    const guidance  = _guidance?.risks?.[risk.jkName];
-    const category  = guidance?.category || null;
-    const catColor  = category
-      ? (_guidance?.categories?.[category]?.color || 'slate')
-      : 'slate';
-    const catColors = _CAT_COLORS[catColor] || _CAT_COLORS.slate;
-
-    const card = _el('div', 'wiz8-risk-card');
-    card.dataset.riskName  = risk.jkName;
-    card.dataset.relevance = relevance;
-
-    // ---- Header row: checkbox + icon + name + category + relevance ----
-    const riskHeader = _el('div', 'wiz8-risk-header');
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.className = 'wiz8-risk-cb';
-    cb.dataset.riskName = risk.jkName;
-    cb.checked = !!_state.selected_risks[risk.jkName];
-    cb.addEventListener('change', e => {
-      _state.selected_risks[risk.jkName] = e.target.checked;
-      _container.querySelectorAll(`.wiz8-risk-cb[data-risk-name="${CSS.escape(risk.jkName)}"]`)
-        .forEach(c => { c.checked = e.target.checked; });
-      _updateAllFGBadges(); _updateCountBadge();
-    });
-    riskHeader.appendChild(cb);
-
-    const riskIcon = _el('span', 'wiz8-risk-icon');
-    riskIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
-    riskHeader.appendChild(riskIcon);
-
-    const riskName = _el('span', 'wiz8-risk-name'); riskName.textContent = risk.jkName; riskHeader.appendChild(riskName);
-
-    // Category tag (from guidance JSON)
-    if (category) {
-      const catTag = _el('span', 'wiz8-cat-tag');
-      catTag.textContent = category;
-      catTag.style.background = catColors.bg;
-      catTag.style.color = catColors.text;
-      riskHeader.appendChild(catTag);
-    }
-
-    // Relevance badge
-    if (relevance !== 'unassessed') {
-      const relBadge = _el('span', `wiz8-rel-badge wiz8-rel-badge--${relevance}`);
-      relBadge.textContent = relevance === 'high' ? '▲ HIGH' : '◆ MEDIUM';
-      riskHeader.appendChild(relBadge);
-    }
-
-    if (risk.role) {
-      const rb = _el('span', 'wiz8-role-badge'); rb.textContent = risk.role; riskHeader.appendChild(rb);
-    }
-    card.appendChild(riskHeader);
-
-    // ---- Traditional IT analogue --------------------------------
-    if (guidance?.traditional_analog) {
-      const analogRow = _el('div', 'wiz8-analog-row');
-      const analogIcon = _el('span', 'wiz8-analog-icon');
-      analogIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-      analogRow.appendChild(analogIcon);
-      const analogText = _el('span', 'wiz8-analog-text');
-      analogText.textContent = guidance.traditional_analog;
-      analogRow.appendChild(analogText);
-      card.appendChild(analogRow);
-    }
-
-    // ---- Applies-if checklist -----------------------------------
-    if (guidance?.applies_if?.length) {
-      const aiWrap = _el('div', 'wiz8-applies-wrap');
-      const aiLabel = _el('p', 'wiz8-applies-label');
-      aiLabel.textContent = 'Applies if any of:';
-      aiWrap.appendChild(aiLabel);
-      const aiList = _el('ul', 'wiz8-applies-list');
-      guidance.applies_if.forEach(condition => {
-        const li = _el('li', 'wiz8-applies-item'); li.textContent = condition; aiList.appendChild(li);
-      });
-      aiWrap.appendChild(aiList);
-      card.appendChild(aiWrap);
-    }
-
-    // ---- Detailed risk description (collapsible) ----------------
-    if (risk.RiskDescription) {
-      card.appendChild(_buildCollapsibleDesc(risk.RiskDescription));
-    }
-
-    // ---- Attack Vectors (collapsible) ---------------------------
-    if (risk.attackVectors.length > 0) {
-      card.appendChild(_buildAttackVectorsDiv(risk.attackVectors));
-    }
-
-    return card;
-  }
-
-  function _buildCollapsibleDesc(text) {
-    const wrap    = _el('div', 'wiz8-desc-wrap');
-    const hdr     = _el('div', 'wiz8-desc-header');
-    const icon    = _el('span', 'wiz8-desc-icon');
-    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-    hdr.appendChild(icon);
-    const lbl = _el('span', 'wiz8-desc-label'); lbl.textContent = 'Detailed risk description'; hdr.appendChild(lbl);
-    const chv = _el('span', 'wiz8-desc-chevron');
-    chv.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chv.style.transform = 'rotate(-90deg)'; hdr.appendChild(chv);
-    wrap.appendChild(hdr);
-    const body = _el('div', 'wiz8-desc-body wiz8-collapsed');
-    const p = _el('p', 'wiz8-risk-desc-text'); p.textContent = text; body.appendChild(p);
-    wrap.appendChild(body);
-    hdr.addEventListener('click', () => {
-      const col = body.classList.toggle('wiz8-collapsed');
-      chv.style.transform = col ? 'rotate(-90deg)' : '';
-    });
-    return wrap;
-  }
-
-  function _buildAttackVectorsDiv(attackVectors) {
-    const wrap = _el('div', 'wiz8-av-wrap');
-    const hdr  = _el('div', 'wiz8-av-header');
-    const icon = _el('span', 'wiz8-av-icon');
-    icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-    hdr.appendChild(icon);
-    const lbl = _el('span', 'wiz8-av-label');
-    lbl.textContent = `Attack Vectors (${attackVectors.length})`; hdr.appendChild(lbl);
-    const chv = _el('span', 'wiz8-av-chevron');
-    chv.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chv.style.transform = 'rotate(-90deg)'; hdr.appendChild(chv);
-    wrap.appendChild(hdr);
-    const body = _el('div', 'wiz8-av-body wiz8-collapsed');
-    attackVectors.forEach((av, i) => {
-      const item = _el('div', 'wiz8-av-item');
-      const num  = _el('span', 'wiz8-av-num'); num.textContent = String(i + 1); item.appendChild(num);
-      const txt  = _el('p', 'wiz8-av-text'); txt.textContent = av; item.appendChild(txt);
-      body.appendChild(item);
-    });
-    wrap.appendChild(body);
-    hdr.addEventListener('click', () => {
-      const col = body.classList.toggle('wiz8-collapsed');
-      chv.style.transform = col ? 'rotate(-90deg)' : '';
-    });
-    return wrap;
-  }
-
-  // ---- Sync helpers -------------------------------------------
-  function _syncAllCheckboxes() {
-    _container.querySelectorAll('.wiz8-risk-cb').forEach(cb => {
-      cb.checked = !!_state.selected_risks[cb.dataset.riskName];
-    });
-    _updateAllFGBadges(); _updateCountBadge();
-  }
-
-  function _updateAllFGBadges() {
-    _container.querySelectorAll('.wiz8-fg').forEach(el => _updateFGBadge(el));
-  }
-
-  function _updateFGBadge(secEl) {
-    const all   = secEl.querySelectorAll('.wiz8-risk-cb');
-    const chkd  = secEl.querySelectorAll('.wiz8-risk-cb:checked');
-    const badge = secEl.querySelector('.wiz8-fg-sel-count');
-    if (!badge) return;
-    const sel = chkd.length, tot = all.length;
-    badge.textContent = `${sel} / ${tot}`;
-    badge.className = sel === 0
-      ? 'wiz8-fg-sel-count wiz8-fg-sel-count--none'
-      : sel === tot
-        ? 'wiz8-fg-sel-count wiz8-fg-sel-count--all'
-        : 'wiz8-fg-sel-count wiz8-fg-sel-count--partial';
-  }
-
-  function _updateCountBadge() {
-    const unique = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
-    const sel = Array.from(unique).filter(n => _state.selected_risks[n]).length;
-    const badge = _container.querySelector('#wiz8-count');
-    if (badge) badge.textContent = `${sel} / ${unique.size} risks confirmed`;
-  }
-
-  // ---- Search box ---------------------------------------------
-  function _buildSearchBox() {
-    const wrap = _el('div', 'wiz8-search-wrap');
-    const icon = _el('span', 'wiz8-search-icon');
-    icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-    wrap.appendChild(icon);
-    const inp = document.createElement('input');
-    inp.type = 'text'; inp.className = 'wiz8-search-input';
-    inp.placeholder = 'Search risks, analogues, applies-if, attack vectors… e.g. MFA, bias, logging';
-    inp.value = _searchQuery;
-    const matchCount = _el('span', 'wiz8-search-count');
-    const clearBtn   = _el('button', 'wiz8-search-clear');
-    clearBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-    clearBtn.style.display = _searchQuery ? 'flex' : 'none';
-    clearBtn.title = 'Clear search';
-    inp.addEventListener('input', e => {
-      _searchQuery = e.target.value;
-      _applySearch(_searchQuery);
-      clearBtn.style.display = _searchQuery ? 'flex' : 'none';
-      matchCount.textContent = _searchQuery ? _countVisibleRisks() : '';
-    });
-    clearBtn.addEventListener('click', () => {
-      inp.value = ''; _searchQuery = ''; _applySearch('');
-      clearBtn.style.display = 'none'; matchCount.textContent = ''; inp.focus();
-    });
-    wrap.appendChild(inp); wrap.appendChild(clearBtn); wrap.appendChild(matchCount);
-    return wrap;
-  }
-
-  function _applySearch(query) {
-    const riskList = _container.querySelector('.wiz8-risk-list');
-    if (!riskList) return;
-    const q = query.trim().toLowerCase();
-    if (!q) {
-      riskList.querySelectorAll('.wiz8-fg, .wiz8-risk-card').forEach(el => el.classList.remove('wiz8-search-hidden'));
-      _updateVisibilityAfterSearch();
-      return;
-    }
-    const tokens = q.split(/\s+/).filter(Boolean);
-    const matches = text => tokens.every(t => text.toLowerCase().includes(t));
-
-    riskList.querySelectorAll('.wiz8-fg').forEach(fgEl => {
-      let fgVisible = false;
-      const fgName  = fgEl.querySelector('.wiz8-fg-name')?.textContent || '';
-
-      fgEl.querySelectorAll('.wiz8-risk-card').forEach(riskEl => {
-        const rn     = riskEl.querySelector('.wiz8-risk-name')?.textContent || '';
-        const analog = riskEl.querySelector('.wiz8-analog-text')?.textContent || '';
-        const applyT = Array.from(riskEl.querySelectorAll('.wiz8-applies-item')).map(e => e.textContent).join(' ');
-        const avTx   = Array.from(riskEl.querySelectorAll('.wiz8-av-text')).map(e => e.textContent).join(' ');
-        const descTx = riskEl.querySelector('.wiz8-risk-desc-text')?.textContent || '';
-        const catT   = riskEl.querySelector('.wiz8-cat-tag')?.textContent || '';
-
-        const fullText = rn + ' ' + analog + ' ' + applyT + ' ' + avTx + ' ' + descTx + ' ' + fgName + ' ' + catT;
-        const visible  = matches(fullText);
-        riskEl.classList.toggle('wiz8-search-hidden', !visible);
-        if (visible) {
-          fgVisible = true;
-          // Auto-expand attack vectors if they match
-          if (!matches(rn + ' ' + analog + ' ' + applyT) && matches(avTx)) {
-            const avBody = riskEl.querySelector('.wiz8-av-body');
-            const avChv  = riskEl.querySelector('.wiz8-av-chevron');
-            if (avBody) avBody.classList.remove('wiz8-collapsed');
-            if (avChv)  avChv.style.transform = '';
-          }
-        }
-      });
-
-      fgEl.classList.toggle('wiz8-search-hidden', !fgVisible);
-      if (fgVisible) {
-        const body = fgEl.querySelector('.wiz8-fg-body');
-        const chv  = fgEl.querySelector('.wiz8-chevron');
-        if (body) body.classList.remove('wiz8-collapsed');
-        if (chv)  chv.style.transform = '';
-      }
-    });
-
-    _updateVisibilityAfterSearch();
-  }
-
-  function _updateVisibilityAfterSearch() {
-    // Re-apply relevance filter on top of search results
-    _applyRelevanceFilter();
-  }
-
-  function _countVisibleRisks() {
-    const riskList = _container.querySelector('.wiz8-risk-list');
-    if (!riskList) return '';
-    const n = riskList.querySelectorAll('.wiz8-risk-card:not(.wiz8-search-hidden):not(.wiz8-filter-hidden)').length;
-    return n === 0 ? 'No matches' : `${n} risk${n !== 1 ? 's' : ''} match`;
-  }
-
-  // ---- Action row ---------------------------------------------
-  function _buildActionRow() {
-    const row  = _el('div', 'wiz-action-row');
-    const left = _el('div');
-    const badge = document.createElement('span');
-    badge.id = 'wiz8-count'; badge.className = 'wiz8-count-lg';
-    const unique = new Set(_filteredFGItems.flatMap(fg => fg.risks.map(r => r.jkName)));
-    const sel = Array.from(unique).filter(n => _state.selected_risks[n]).length;
-    badge.textContent = `${sel} / ${unique.size} risks confirmed`;
-    left.appendChild(badge); row.appendChild(left);
-    const right = _el('div', 'wiz8-action-right');
-    const btn = document.createElement('button');
-    btn.className = 'wiz-btn-primary'; btn.textContent = 'Save Risk Assessment';
-    btn.addEventListener('click', _handleSave); right.appendChild(btn); row.appendChild(right);
-    return row;
-  }
-
-  // ---- Save ---------------------------------------------------
-  function _handleSave() {
-    const rec8 = _buildOutputRecord();
-    if (!_record) {
-      _record = { _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
-    }
-    _record._meta.last_modified = new Date().toISOString();
-    _record['step-8'] = rec8;
-    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
-    if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 8 saved ✓');
-    _renderResults(rec8);
-  }
-
-  function _buildOutputRecord() {
-    const today = new Date().toISOString().slice(0, 10);
-    const meta  = _record?._meta || {};
-    const uniqueMap = new Map();
-    _filteredFGItems.forEach(fg => {
-      fg.risks.forEach(r => {
-        if (!uniqueMap.has(r.jkName)) {
-          const guidance = _guidance?.risks?.[r.jkName];
-          uniqueMap.set(r.jkName, {
-            risk_name:           r.jkName,
-            risk_description:    r.RiskDescription,
-            category:            guidance?.category || null,
-            standard_group:      r.stepName || null,
-            relevance:           _computeRelevance(r.jkName),
-            attack_vector_count: r.attackVectors.length,
-            selected:            !!_state.selected_risks[r.jkName]
-          });
-        }
-      });
-    });
-    const risks         = Array.from(uniqueMap.values());
-    const selectedCount = risks.filter(r => r.selected).length;
-    const highSelected  = risks.filter(r => r.selected && r.relevance === 'high').length;
-    return {
-      step_id: 'step-8', step_title: 'Risk assessment',
-      assessment_date: today,
-      assessed_by:  meta.assessed_by || '',
-      use_case_id:  meta.use_case_id || '',
-      source_classification: _step3Data ? {
-        ai_act_outcome:  _step3Data.axis_b?.ai_act_outcome,
-        governance_tier: _step3Data.axis_a?.tier,
-        combined_outcome: _step3Data.combined_outcome?.outcome_label
-      } : null,
-      dpia_summary: _step7Data ? {
-        residual_risk_rating:      _step7Data.residual_risk_rating,
-        special_category_data:     _step7Data.data_types_identified?.special_category_data || [],
-        automated_decision_making: _step7Data.data_types_identified?.automated_decision_making
-      } : null,
-      total_risks: risks.length,
-      selected_risks: selectedCount,
-      high_relevance_selected: highSelected,
-      excluded_risks: risks.length - selectedCount,
-      wizard_answers: Object.keys(_wizState.answers).length ? { ..._wizState.answers } : null,
-      risks
-    };
-  }
-
-  function _renderResults(rec8) {
-    const area = _container.querySelector('.wiz8-results');
-    if (!area) return;
-    area.innerHTML = '';
-    const card = _el('div', 'wiz8-result-card');
-    const h = _el('h3', 'wiz8-result-title'); h.textContent = 'Risk Assessment Saved'; card.appendChild(h);
-    const stats = _el('div', 'wiz8-result-stats');
-    [
-      [rec8.total_risks,             'Total risks'],
-      [rec8.selected_risks,          'Confirmed applicable'],
-      [rec8.high_relevance_selected, 'HIGH-relevance confirmed'],
-      [rec8.excluded_risks,          'Excluded as not applicable']
-    ].forEach(([num, lbl]) => {
-      const s = _el('div', 'wiz8-stat');
-      const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num);
-      const l = _el('span', 'wiz8-stat-lbl'); l.textContent = lbl;
-      s.appendChild(n); s.appendChild(l); stats.appendChild(s);
-    });
-    card.appendChild(stats);
-    const note = _el('p', 'wiz8-result-note');
-    note.innerHTML = `Risk assessment saved. <strong>${rec8.selected_risks} confirmed risk${rec8.selected_risks !== 1 ? 's' : ''}</strong> (including <strong>${rec8.high_relevance_selected} HIGH-relevance</strong>) will feed into Step 9 (Control identification). Use <strong>Save Record</strong> in the sidebar to download the full system record.`;
-    card.appendChild(note);
-    area.appendChild(card);
-    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
 
   // ---- Reference pane -----------------------------------------
   function _buildReferencePane() {
@@ -1832,6 +1468,35 @@
 .wiz8-diag-task-row:last-child{margin-bottom:0}
 .wiz8-diag-task-num{font-size:10px;font-weight:700;background:#e0e7ff;color:#4338ca;border-radius:10px;padding:1px 6px;white-space:nowrap;flex-shrink:0;margin-top:2px}
 .wiz8-diag-task-text{font-size:11px;color:var(--color-text-secondary);line-height:1.55;margin:0}
+
+/* ---- Technical save row ---- */
+.wiz8-tech-save-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:10px 12px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px;flex-wrap:wrap}
+.wiz8-tech-count{font-size:12px;font-weight:600;color:var(--teal-700,#0f766e)}
+.wiz8-diag-risk-cb{flex-shrink:0;accent-color:var(--teal-600,#0d9488);width:15px;height:15px;cursor:pointer;margin-top:1px}
+.wiz8-tech-saved-banner{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 14px;font-size:13px;color:#166534;margin-bottom:10px;line-height:1.5}
+
+/* ---- Legal pane ---- */
+.wiz8-legal-wrap{display:flex;flex-direction:column}
+.wiz8-legal-saved-note{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 14px;font-size:13px;color:#166534;line-height:1.5;margin:12px 24px 0}
+
+/* ---- Combined Review pane ---- */
+.wiz8-review-sec{border:1px solid var(--color-border);border-radius:8px;padding:16px 18px;margin-bottom:16px}
+.wiz8-review-sec-hdr{display:flex;align-items:center;justify-content:flex-end;margin-bottom:6px}
+.wiz8-review-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap}
+.wiz8-review-status--done{background:#dcfce7;color:#15803d}
+.wiz8-review-status--pending{background:#fef3c7;color:#92400e}
+.wiz8-review-sec-sub{font-size:12px;color:var(--color-text-secondary);line-height:1.55;margin:0 0 12px;font-style:italic}
+.wiz8-review-empty{font-size:13px;color:var(--color-text-tertiary);padding:8px 0;margin:0}
+.wiz8-review-stats{display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap}
+.wiz8-review-risk-list{display:flex;flex-direction:column;gap:5px}
+.wiz8-review-risk-row{display:flex;align-items:center;gap:7px;padding:5px 8px;background:var(--color-bg-subtle,#f8fafc);border-radius:5px;flex-wrap:wrap}
+.wiz8-review-risk-name{font-size:12px;font-weight:600;color:var(--color-text-primary);flex:1;min-width:120px}
+.wiz8-review-risk-icon--tech{font-size:14px;color:#0d9488;flex-shrink:0}
+.wiz8-review-risk-icon--legal{font-size:14px;color:#1d4ed8;flex-shrink:0}
+.wiz8-review-partial-badge{font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
+.wiz8-review-gate{margin-top:20px}
+.wiz8-review-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:12px 16px;font-size:13px;color:#92400e;line-height:1.6}
+.wiz8-review-complete{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:12px 16px;font-size:13px;color:#166534;line-height:1.6}
 `;
     document.head.appendChild(s);
   }
