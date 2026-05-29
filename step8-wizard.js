@@ -582,10 +582,6 @@
       card.appendChild(desc);
     }
 
-    // Controls accordion
-    const controls = _diagGetControlsForRisk(risk);
-    if (controls.length > 0) card.appendChild(_buildDiagCtrlSection(controls));
-
     return card;
   }
 
