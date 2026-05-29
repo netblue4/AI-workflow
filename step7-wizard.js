@@ -41,6 +41,61 @@
     const s7 = _record?.['step-7'];
     if (s7?.answers) Object.assign(_answers, s7.answers);
     _renderPanes(pw);
+    _evalConditions();
+  }
+
+  // ---- Condition helpers --------------------------------------
+  function _hasPersonalData() {
+    const subjects = _answers['s2_f1'];
+    const types    = _answers['s2_f2'];
+    return (Array.isArray(subjects) && subjects.length > 0) ||
+           (Array.isArray(types)    && types.length    > 0);
+  }
+
+  function _hasSpecialCategoryData() {
+    const v = _answers['s3_f1'];
+    if (!Array.isArray(v) || v.length === 0) return false;
+    return !v.every(x => x === 'None — no special category data');
+  }
+
+  function _isADMApplicable() {
+    const v = _answers['s5_f1'] || '';
+    return v.startsWith('Partially') || v.startsWith('Yes —');
+  }
+
+  // ---- Conditional logic --------------------------------------
+  function _evalConditions() {
+    const hasData    = _hasPersonalData();
+    const hasSpecial = _hasSpecialCategoryData();
+    const hasADM     = _isADMApplicable();
+    const isLIA      = (_answers['s4_f1'] || '') === 'Art.6(1)(f) — Legitimate interests';
+
+    // Section gates: s4, s6, s9 require personal data to be identified
+    ['s4', 's6', 's9'].forEach(sid => {
+      const el = _container.querySelector(`[data-section-id="${sid}"]`);
+      if (el) el.classList.toggle('dpia-section--disabled', !hasData);
+    });
+
+    // Field-level gates
+    _toggleField('s3_f2', !hasSpecial);
+    _toggleField('s3_f3', !hasSpecial);
+    _toggleField('s4_f2', !isLIA);
+    _toggleField('s5_f2', !hasADM);
+    _toggleField('s5_f3', !hasADM);
+
+    // Refresh all badges
+    if (_detail?.sections) {
+      _detail.sections.forEach(s => _updateSectionBadge(s));
+    }
+
+    // Refresh progress label
+    const prog = _container.querySelector('#dpia-progress');
+    if (prog) prog.textContent = _computeProgress();
+  }
+
+  function _toggleField(fieldId, hide) {
+    const el = _container.querySelector(`[data-field-id="${fieldId}"]`);
+    if (el) el.classList.toggle('dpia-field--hidden', hide);
   }
 
   // ---- Tabs ---------------------------------------------------
@@ -135,13 +190,14 @@
   // ---- Section accordion --------------------------------------
   function _buildSectionAccordion(section, idx) {
     const wrap = _el('div', 'dpia-section');
+    wrap.dataset.sectionId = section.id;
 
     // Header
     const header = _el('div', 'dpia-section-header');
 
     const left = _el('div', 'dpia-section-header-left');
     const num  = _el('span', 'dpia-section-num');
-    num.textContent = section.id.toUpperCase();
+    num.textContent = String(idx + 1);
     left.appendChild(num);
     const sTitle = _el('span', 'dpia-section-title');
     sTitle.textContent = section.title;
@@ -166,6 +222,12 @@
 
     // Body
     const body = _el('div', `dpia-section-body${idx !== 0 ? ' dpia-collapsed' : ''}`);
+
+    // N/A notice — visible only when section is disabled
+    const naNotice = _el('div', 'dpia-na-notice');
+    naNotice.innerHTML = '<strong>Not applicable</strong> — Identify personal data in Section 2 (Data inventory) to activate this section.';
+    body.appendChild(naNotice);
+
     if (section.description) {
       const desc = _el('p', 'dpia-section-desc');
       desc.textContent = section.description;
@@ -185,6 +247,15 @@
 
   // ---- Field rendering ----------------------------------------
   function _buildField(field, section) {
+    // Dividers render as visual separators — no data-field-id wrapper
+    if (field.type === 'divider') {
+      const div = _el('div', 'dpia-divider');
+      const lbl = _el('span', 'dpia-divider-label');
+      lbl.textContent = field.label;
+      div.appendChild(lbl);
+      return div;
+    }
+
     const wrap = _el('div', 'dpia-field-wrap');
     wrap.dataset.fieldId = field.id;
 
@@ -202,7 +273,8 @@
     }
 
     const cur = _answers[field.id];
-    const onChange = () => _updateSectionBadge(section);
+    // Every field change re-evaluates all conditions (badges, progress, visibility)
+    const onChange = () => _evalConditions();
 
     if (field.type === 'text') {
       const inp = document.createElement('input');
@@ -261,17 +333,36 @@
   function _updateSectionBadge(section) {
     const badge = document.getElementById(`dpia-badge-${section.id}`);
     if (!badge) return;
-    const required = (section.fields || []).filter(f => f.required);
+
+    // Show N/A badge when section is disabled
+    const sectionEl = _container.querySelector(`[data-section-id="${section.id}"]`);
+    if (sectionEl?.classList.contains('dpia-section--disabled')) {
+      badge.textContent = 'N/A';
+      badge.className = 'dpia-section-badge dpia-section-badge--na';
+      return;
+    }
+
+    // Required fields — exclude dividers and hidden fields
+    const required = (section.fields || []).filter(f => f.required && f.type !== 'divider');
     if (!required.length) { badge.textContent = ''; badge.className = 'dpia-section-badge'; return; }
-    const filled = required.filter(f => {
+
+    const visibleRequired = required.filter(f => {
+      const el = _container.querySelector(`[data-field-id="${f.id}"]`);
+      return !el?.classList.contains('dpia-field--hidden');
+    });
+
+    if (!visibleRequired.length) { badge.textContent = ''; badge.className = 'dpia-section-badge'; return; }
+
+    const filled = visibleRequired.filter(f => {
       const v = _answers[f.id];
       if (!v) return false;
       return Array.isArray(v) ? v.length > 0 : v.trim() !== '';
     });
-    badge.textContent = `${filled.length} / ${required.length}`;
+
+    badge.textContent = `${filled.length} / ${visibleRequired.length}`;
     badge.className = filled.length === 0
       ? 'dpia-section-badge dpia-section-badge--none'
-      : filled.length === required.length
+      : filled.length === visibleRequired.length
         ? 'dpia-section-badge dpia-section-badge--all'
         : 'dpia-section-badge dpia-section-badge--partial';
   }
@@ -279,13 +370,24 @@
   // ---- Progress counter ---------------------------------------
   function _computeProgress() {
     if (!_detail?.sections) return '';
-    const all = _detail.sections.flatMap(s => s.fields.filter(f => f.required));
-    const filled = all.filter(f => {
-      const v = _answers[f.id];
-      if (!v) return false;
-      return Array.isArray(v) ? v.length > 0 : v.trim() !== '';
+    let totalRequired = 0, filled = 0;
+
+    _detail.sections.forEach(s => {
+      // Skip disabled sections entirely
+      const sectionEl = _container.querySelector(`[data-section-id="${s.id}"]`);
+      if (sectionEl?.classList.contains('dpia-section--disabled')) return;
+
+      (s.fields || []).filter(f => f.required && f.type !== 'divider').forEach(f => {
+        // Skip hidden fields
+        const el = _container.querySelector(`[data-field-id="${f.id}"]`);
+        if (el?.classList.contains('dpia-field--hidden')) return;
+        totalRequired++;
+        const v = _answers[f.id];
+        if (v && (Array.isArray(v) ? v.length > 0 : v.trim() !== '')) filled++;
+      });
     });
-    return `${filled.length} / ${all.length} required fields completed`;
+
+    return `${filled} / ${totalRequired} required fields completed`;
   }
 
   // ---- Action row ---------------------------------------------
@@ -342,6 +444,7 @@
         automated_decision_making: getStr('s5_f1'),
         training_data_use:        getStr('s6_f3'),
         security_measures:        getArr('s7_f1'),
+        erasure_capability:       getStr('s8_f2'),
         privacy_risks:            getArr('s10_f1')
       },
       lawful_basis:             getStr('s4_f1'),
@@ -497,6 +600,18 @@
 .dpia-section-body{padding:16px;display:flex;flex-direction:column;gap:16px}
 .dpia-collapsed{display:none}
 .dpia-section-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0;padding:10px 12px;background:var(--color-bg);border-radius:6px;border:1px solid var(--color-border)}
+
+/* ---- Conditional sections ---- */
+.dpia-section--disabled .dpia-section-header{opacity:.5}
+.dpia-na-notice{display:none;font-size:12px;color:var(--color-text-tertiary);background:var(--color-bg-subtle,#f8fafc);border:1px dashed var(--color-border);border-radius:5px;padding:10px 12px;line-height:1.55}
+.dpia-section--disabled .dpia-na-notice{display:block}
+.dpia-section--disabled .dpia-section-body > :not(.dpia-na-notice){display:none!important}
+.dpia-section-badge--na{background:var(--color-bg-subtle,#f1f5f9);color:var(--color-text-tertiary);font-weight:600}
+.dpia-field--hidden{display:none!important}
+
+/* ---- Divider ---- */
+.dpia-divider{display:flex;align-items:center;gap:12px;padding:10px 0 4px;border-top:1px solid var(--color-border);margin-top:6px}
+.dpia-divider-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-tertiary);white-space:nowrap}
 
 /* ---- Fields ---- */
 .dpia-field-wrap{display:flex;flex-direction:column;gap:6px}

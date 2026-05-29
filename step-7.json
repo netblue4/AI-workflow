@@ -2,7 +2,7 @@
   "step_id": "step-7",
   "title": "Data Protection Impact Assessment (DPIA)",
   "standard_reference": "GDPR Article 35",
-  "version": "1.0",
+  "version": "1.1",
   "description": "A DPIA must be completed where an AI system is likely to result in a high risk to the rights and freedoms of natural persons (GDPR Art.35). This wizard captures the mandatory DPIA elements. The data types inventory produced here feeds directly into the Risk Assessment in Step 8.",
 
   "sections": [
@@ -49,7 +49,7 @@
       "id": "s2",
       "title": "Data inventory",
       "gdpr_ref": "Art.35(7)(a) — necessity & proportionality assessment basis",
-      "description": "Identify all personal data categories processed by the AI system. This inventory is used by the Risk Assessment in Step 8 to scope applicable risks.",
+      "description": "Identify all personal data categories processed by the AI system. This inventory is used by the Risk Assessment in Step 8 to scope applicable risks. Sections 4, 6 and 9 will become active once personal data is identified here.",
       "fields": [
         {
           "id": "s2_f1",
@@ -167,6 +167,7 @@
       "title": "Lawful basis for processing",
       "gdpr_ref": "GDPR Art.6",
       "description": "Identify the Art.6 lawful basis for each processing purpose. A lawful basis must be established before processing begins.",
+      "conditional_on": "personal_data",
       "fields": [
         {
           "id": "s4_f1",
@@ -249,7 +250,8 @@
           "type": "textarea",
           "placeholder": "Describe the human review checkpoint or override mechanism for decisions made by or significantly influenced by the AI system.",
           "required": false,
-          "hint": "Art.22(3) requires the right to obtain human intervention, express one's point of view, and contest the decision where Art.22 applies."
+          "hint": "Art.22(3) requires the right to obtain human intervention, express one's point of view, and contest the decision where Art.22 applies.",
+          "conditional_show_if": "s5_f1_is_automated"
         },
         {
           "id": "s5_f4",
@@ -271,6 +273,7 @@
       "title": "Data flows and third parties",
       "gdpr_ref": "Art.35(7)(a) — processing description",
       "description": "Map where personal data flows to and from, including any third-party AI providers or international transfers.",
+      "conditional_on": "personal_data",
       "fields": [
         {
           "id": "s6_f1",
@@ -310,82 +313,11 @@
     },
 
     {
-      "id": "s7",
-      "title": "Security measures",
-      "gdpr_ref": "Art.32 — security of processing",
-      "description": "Confirm the technical and organisational measures protecting personal data processed by the AI system.",
-      "fields": [
-        {
-          "id": "s7_f1",
-          "label": "Technical security measures in place",
-          "type": "checkbox_group",
-          "options": [
-            "Encryption at rest",
-            "Encryption in transit (TLS 1.2+)",
-            "Access controls / role-based access",
-            "Multi-factor authentication (MFA)",
-            "Audit logging of access and processing",
-            "Data masking / pseudonymisation before AI input",
-            "Automated anomaly detection",
-            "Penetration testing of AI interface",
-            "Data loss prevention (DLP) controls",
-            "None currently in place"
-          ],
-          "required": true,
-          "output_key": "security_measures"
-        },
-        {
-          "id": "s7_f2",
-          "label": "Data minimisation approach",
-          "type": "textarea",
-          "placeholder": "Describe how personal data is minimised before being input to the AI system (e.g. anonymisation, pseudonymisation, field exclusion).",
-          "required": false
-        }
-      ]
-    },
-
-    {
-      "id": "s8",
-      "title": "Data subject rights",
-      "gdpr_ref": "Arts.15–22",
-      "description": "Confirm that mechanisms exist to fulfil data subject rights, particularly given the complexity of AI-driven processing.",
-      "fields": [
-        {
-          "id": "s8_f1",
-          "label": "Data subject rights fulfilment",
-          "type": "checkbox_group",
-          "options": [
-            "Right of access (Art.15) — process documented",
-            "Right to rectification (Art.16) — process documented",
-            "Right to erasure (Art.17) — process documented",
-            "Right to restriction (Art.18) — process documented",
-            "Right to data portability (Art.20) — process documented",
-            "Right to object (Art.21) — process documented",
-            "Rights re automated decisions (Art.22) — process documented"
-          ],
-          "required": false
-        },
-        {
-          "id": "s8_f2",
-          "label": "Can personal data be erased from AI model outputs / logs?",
-          "type": "select",
-          "options": [
-            "Yes — erasure process confirmed with vendor",
-            "Partial — logs erased but model weights cannot be adjusted",
-            "No — technical limitation prevents erasure",
-            "Not assessed"
-          ],
-          "required": true,
-          "hint": "AI systems may 'remember' training data in model weights. Confirm vendor's position on erasure requests."
-        }
-      ]
-    },
-
-    {
       "id": "s9",
       "title": "Necessity and proportionality",
       "gdpr_ref": "Art.35(7)(b)",
       "description": "Assess whether the processing is necessary for the stated purposes and proportionate to the risk it poses.",
+      "conditional_on": "personal_data",
       "fields": [
         {
           "id": "s9_f1",
@@ -411,9 +343,9 @@
 
     {
       "id": "s10",
-      "title": "Risk identification and rating",
+      "title": "Risk identification, controls & rating",
       "gdpr_ref": "Art.35(7)(c) — risks to rights and freedoms",
-      "description": "Identify and rate the privacy risks posed by the AI system's processing. This rating feeds into the overall risk register in Step 8.",
+      "description": "Identify the privacy risks this AI system poses, then document the controls and safeguards in place. Use those controls to justify the residual risk rating. This rating feeds into the overall risk register in Step 8.",
       "fields": [
         {
           "id": "s10_f1",
@@ -433,6 +365,56 @@
           ],
           "required": true,
           "output_key": "privacy_risks"
+        },
+        {
+          "id": "s10_div1",
+          "label": "Controls in place",
+          "type": "divider"
+        },
+        {
+          "id": "s7_f1",
+          "label": "Technical security measures in place",
+          "type": "checkbox_group",
+          "options": [
+            "Encryption at rest",
+            "Encryption in transit (TLS 1.2+)",
+            "Access controls / role-based access",
+            "Multi-factor authentication (MFA)",
+            "Audit logging of access and processing",
+            "Data masking / pseudonymisation before AI input",
+            "Automated anomaly detection",
+            "Penetration testing of AI interface",
+            "Data loss prevention (DLP) controls",
+            "None currently in place"
+          ],
+          "required": true,
+          "output_key": "security_measures"
+        },
+        {
+          "id": "s7_f2",
+          "label": "Data minimisation approach",
+          "type": "textarea",
+          "placeholder": "Describe how personal data is minimised before being input to the AI system (e.g. anonymisation, pseudonymisation, field exclusion).",
+          "required": false
+        },
+        {
+          "id": "s8_f2",
+          "label": "Can personal data be erased from AI model outputs / logs?",
+          "type": "select",
+          "options": [
+            "Yes — erasure process confirmed with vendor",
+            "Partial — logs erased but model weights cannot be adjusted",
+            "No — technical limitation prevents erasure",
+            "Not assessed"
+          ],
+          "required": true,
+          "hint": "AI systems may 'remember' training data in model weights. Confirm vendor's position on erasure requests.",
+          "output_key": "erasure_capability"
+        },
+        {
+          "id": "s10_div2",
+          "label": "Risk rating",
+          "type": "divider"
         },
         {
           "id": "s10_f2",
@@ -515,6 +497,7 @@
         "training_data_use": "string from s6_f3",
         "automated_decision_making": "string from s5_f1",
         "security_measures": "array from s7_f1",
+        "erasure_capability": "string from s8_f2",
         "privacy_risks": "array from s10_f1"
       },
       "lawful_basis": "string from s4_f1",
