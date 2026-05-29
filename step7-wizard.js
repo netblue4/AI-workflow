@@ -45,11 +45,21 @@
   }
 
   // ---- Condition helpers --------------------------------------
+  const _NONE_PD = 'None — no personal data processed';
+
   function _hasPersonalData() {
     const subjects = _answers['s2_f1'];
     const types    = _answers['s2_f2'];
-    return (Array.isArray(subjects) && subjects.length > 0) ||
-           (Array.isArray(types)    && types.length    > 0);
+    const realSubjects = Array.isArray(subjects) ? subjects.filter(x => x !== _NONE_PD) : [];
+    const realTypes    = Array.isArray(types)    ? types.filter(x => x !== _NONE_PD)    : [];
+    return realSubjects.length > 0 || realTypes.length > 0;
+  }
+
+  function _hasNoneInS2() {
+    const s1 = _answers['s2_f1'];
+    const s2 = _answers['s2_f2'];
+    return (Array.isArray(s1) && s1.includes(_NONE_PD)) ||
+           (Array.isArray(s2) && s2.includes(_NONE_PD));
   }
 
   function _hasSpecialCategoryData() {
@@ -66,6 +76,7 @@
   // ---- Conditional logic --------------------------------------
   function _evalConditions() {
     const hasData    = _hasPersonalData();
+    const noneInS2   = _hasNoneInS2();
     const hasSpecial = _hasSpecialCategoryData();
     const hasADM     = _isADMApplicable();
     const isLIA      = (_answers['s4_f1'] || '') === 'Art.6(1)(f) — Legitimate interests';
@@ -77,6 +88,8 @@
     });
 
     // Field-level gates
+    _toggleField('s2_f3', noneInS2);
+    _toggleField('s2_f4', noneInS2);
     _toggleField('s3_f2', !hasSpecial);
     _toggleField('s3_f3', !hasSpecial);
     _toggleField('s4_f2', !isLIA);

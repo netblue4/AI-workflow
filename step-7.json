@@ -64,7 +64,8 @@
             "Vulnerable adults",
             "Members of the public",
             "Suppliers / contractors",
-            "Other"
+            "Other",
+            "None — no personal data processed"
           ],
           "required": true,
           "hint": "Select all categories of data subjects whose personal data the AI system processes."
@@ -85,7 +86,8 @@
             "Photographs / images",
             "Voice recordings / transcripts",
             "Inferred / derived data (AI-generated scores, predictions)",
-            "Other non-special-category personal data"
+            "Other non-special-category personal data",
+            "None — no personal data processed"
           ],
           "required": true,
           "output_key": "standard_personal_data"
