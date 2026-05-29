@@ -12,21 +12,25 @@
   let _container = null, _framework = null, _legalGuidance = null, _techGuidance = null, _record = null;
   let _step3Data = null, _step7Data = null;
   let _filteredFGItems = []; // [{groupName, risks:[...]}]
+  let _owaspRisks = []; // OWASP risks from tbl_Risks.json — used only for pk_Risk_ID lookup on save
 
   const _state = {
-    technical_risks: {},  // pk_Risk_ID → boolean (OWASP risks from tbl_Risks.json)
-    legal_risks:     {},  // riskName → boolean  (EU AI Act risks from guidance)
+    legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
   };
 
-  // Guided wizard state
+  // Legal guided wizard state
   const _wizState = {
-    step_index: 0,      // current question index (0-based)
-    answers:    {},     // riskName → 'yes'|'partially'|'no'
+    step_index: 0,
+    answers:    {}, // riskName → 'yes'|'partially'|'no'
     complete:   false
   };
 
-  let _diagData = null; // { risks, controls, tasks } loaded from tbl_* files
-  const _diagState = { selectedBox: null };
+  // Technical guided wizard state (mirrors _wizState for OWASP risks)
+  const _techWizState = {
+    step_index: 0,
+    answers:    {}, // risk_name → 'yes'|'partially'|'no'
+    complete:   false
+  };
 
   // Category color palette — maps JSON color keys to CSS values
   const _CAT_COLORS = {
@@ -52,16 +56,17 @@
     _legalGuidance = null;
     _techGuidance  = null;
     _record        = null;
-    _step3Data  = null;
-    _step7Data  = null;
-    _filteredFGItems = [];
-    _state.technical_risks = {};
-    _state.legal_risks     = {};
-    _wizState.step_index = 0;
-    _wizState.answers    = {};
-    _wizState.complete   = false;
-    _diagData = null;
-    _diagState.selectedBox = null;
+    _step3Data     = null;
+    _step7Data     = null;
+    _filteredFGItems      = [];
+    _owaspRisks           = [];
+    _state.legal_risks    = {};
+    _wizState.step_index  = 0;
+    _wizState.answers     = {};
+    _wizState.complete    = false;
+    _techWizState.step_index = 0;
+    _techWizState.answers    = {};
+    _techWizState.complete   = false;
 
     _injectStyles();
 
@@ -76,14 +81,12 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    // Load framework, guidance files, and diagram data in parallel
-    const [fwRes, lgdRes, tgdRes, risksRes, ctrlsRes, tasksRes] = await Promise.allSettled([
+    // Load framework, both guidance files, and tbl_Risks (for pk_Risk_ID lookup on save)
+    const [fwRes, lgdRes, tgdRes, risksRes] = await Promise.allSettled([
       fetch('ai_Risk_Control_Framework.json'),
       fetch('step8-legal-risk-guidance.json'),
       fetch('step8-technical-risk-guidance.json'),
-      fetch('tbl_Risks.json'),
-      fetch('tbl_Risk_Controls.json'),
-      fetch('tbl_Control_Task_Code.json')
+      fetch('tbl_Risks.json')
     ]);
 
     if (fwRes.status === 'rejected' || !fwRes.value.ok) {
@@ -98,17 +101,10 @@
     if (tgdRes.status === 'fulfilled' && tgdRes.value.ok) {
       try { _techGuidance = await tgdRes.value.json(); } catch (_) {}
     }
-
-    if (risksRes.status === 'fulfilled' && risksRes.value.ok &&
-        ctrlsRes.status === 'fulfilled' && ctrlsRes.value.ok &&
-        tasksRes.status === 'fulfilled' && tasksRes.value.ok) {
+    if (risksRes.status === 'fulfilled' && risksRes.value.ok) {
       try {
-        const [risks, controls, tasks] = await Promise.all([
-          risksRes.value.json(),
-          ctrlsRes.value.json(),
-          tasksRes.value.json()
-        ]);
-        _diagData = { risks, controls, tasks };
+        const allRisks = await risksRes.value.json();
+        _owaspRisks = allRisks.filter(r => r.risk_source === 'OWASP');
       } catch (_) {}
     }
 
@@ -120,12 +116,14 @@
     _step3Data = _record?.['step-3'] ?? null;
     _step7Data = _record?.['step-7'] ?? null;
 
-    // Restore prior selections + wizard answers (additive — never overwrites sibling sub-object)
+    // Restore prior wizard answers (additive — never overwrites sibling sub-object)
     const saved8 = _record?.['step-8'];
-    if (saved8?.technical_assessment?.risks) {
-      saved8.technical_assessment.risks.forEach(r => {
-        _state.technical_risks[r.risk_id] = r.selected;
-      });
+    if (saved8?.technical_assessment?.wizard_answers) {
+      Object.assign(_techWizState.answers, saved8.technical_assessment.wizard_answers);
+      const twqs = _techWizQuestions();
+      if (twqs.length && Object.keys(_techWizState.answers).length >= twqs.length) {
+        _techWizState.complete = true;
+      }
     }
     if (saved8?.legal_assessment?.risks) {
       saved8.legal_assessment.risks.forEach(r => {
@@ -142,12 +140,6 @@
 
     _filteredFGItems = _buildFGItems();
 
-    // Default: select all OWASP risks if no prior technical state
-    if (_diagData && Object.keys(_state.technical_risks).length === 0) {
-      _diagData.risks
-        .filter(r => r.risk_source === 'OWASP')
-        .forEach(r => { _state.technical_risks[r.pk_Risk_ID] = true; });
-    }
     // Default: select all legal risks if no prior legal state
     if (Object.keys(_state.legal_risks).length === 0) {
       _filteredFGItems.forEach(fg =>
@@ -265,7 +257,7 @@
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     const strip = _el('div', 'wiz-tab-strip');
-    [['diagram', 'RAG Technical Risk Identification'], ['legal', 'Legal/Regulatory Risk Identification'], ['review', 'Combined Review'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
+    [['technical', 'OWASP Technical Risk Assessment'], ['legal', 'Legal/Regulatory Risk Assessment'], ['review', 'Combined Review'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
       const btn = document.createElement('button');
       btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
       btn.dataset.tab = id; btn.textContent = lbl;
@@ -290,15 +282,15 @@
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const diag   = _el('div', 'wiz-pane');                  diag.dataset.pane   = 'diagram';
+    const tech   = _el('div', 'wiz-pane');                  tech.dataset.pane   = 'technical';
     const legal  = _el('div', 'wiz-pane wiz-pane--hidden'); legal.dataset.pane  = 'legal';
     const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
     const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
-    diag.appendChild(_buildDiagramPane());
+    tech.appendChild(_buildTechnicalPane());
     legal.appendChild(_buildLegalPane());
     review.appendChild(_buildCombinedReviewPane());
     ref.appendChild(_buildReferencePane());
-    pw.appendChild(diag); pw.appendChild(legal); pw.appendChild(review); pw.appendChild(ref);
+    pw.appendChild(tech); pw.appendChild(legal); pw.appendChild(review); pw.appendChild(ref);
   }
 
   // ---- RAG Diagram: box definitions ---------------------------
