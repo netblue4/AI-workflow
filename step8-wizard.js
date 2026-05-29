@@ -293,353 +293,271 @@
     pw.appendChild(tech); pw.appendChild(legal); pw.appendChild(review); pw.appendChild(ref);
   }
 
-  // ---- RAG Diagram: box definitions ---------------------------
-  const _DIAGRAM_BOXES = [
-    {
-      id: 'user_interface',
-      label: 'User Interface',
-      sublabel: 'Query · Guardrails · Response',
-      components: ['Query Processor', 'Input Guardrail', 'Response Interface', 'Output Guardrail', 'Downstream Systems'],
-      cssRow: 1, cssColStart: 1, cssColSpan: 2
-    },
-    {
-      id: 'orchestrator_llm',
-      label: 'Orchestrator / LLM',
-      sublabel: 'Reasoning · Execution · System Prompt',
-      components: ['Orchestrator', 'Generator (LLM)', 'System Prompt Manager'],
-      cssRow: 2, cssColStart: 1, cssColSpan: 2
-    },
-    {
-      id: 'retriever',
-      label: 'Retriever',
-      sublabel: 'Context assembly · Embeddings',
-      components: ['Retriever', 'Context Assembler', 'Embedding Model'],
-      cssRow: 3, cssColStart: 1, cssColSpan: 1
-    },
-    {
-      id: 'api_layer',
-      label: 'API / Integration Layer',
-      sublabel: 'Gateway · Tools · Rate limits',
-      components: ['API Gateway', 'External Tool Interface', 'Rate Limiter'],
-      cssRow: 3, cssColStart: 2, cssColSpan: 1
-    },
-    {
-      id: 'vector_store',
-      label: 'Vector Store',
-      sublabel: 'Semantic index · Embeddings store',
-      components: ['Vector Store'],
-      cssRow: 4, cssColStart: 1, cssColSpan: 1
-    },
-    {
-      id: 'knowledge_base',
-      label: 'Knowledge Base',
-      sublabel: 'Documents · Data ingestion',
-      components: ['Data Store', 'Data Pipeline'],
-      cssRow: 5, cssColStart: 1, cssColSpan: 1
-    },
-    {
-      id: 'external_sources',
-      label: 'External Data Sources',
-      sublabel: 'Models · Build · Infrastructure',
-      components: ['Training Pipeline', 'Model Registry', 'Build Pipeline', 'Container Runtime', 'Infrastructure Layer'],
-      cssRow: 5, cssColStart: 2, cssColSpan: 1
+  // ---- Technical wizard helpers ------------------------------
+  // Returns sorted array of OWASP question objects from _techGuidance
+  function _techWizQuestions() {
+    if (!_techGuidance?.risks) return [];
+    return Object.entries(_techGuidance.risks)
+      .map(([name, g]) => ({ risk_name: name, ...g }))
+      .sort((a, b) => a.owasp_id.localeCompare(b.owasp_id));
+  }
+
+  // ---- Re-render technical pane in place ----------------------
+  function _renderTechPane() {
+    const pane = _container.querySelector('[data-pane="technical"]');
+    if (!pane) return;
+    pane.innerHTML = '';
+    pane.appendChild(_buildTechnicalPane());
+  }
+
+  // ---- Technical pane dispatcher ------------------------------
+  function _buildTechnicalPane() {
+    const twqs = _techWizQuestions();
+    if (!twqs.length) {
+      const card = _el('div', 'step-detail-card');
+      const p = _el('p', 'wiz8-notice');
+      p.innerHTML = 'No technical risk questions defined. Check <strong>step8-technical-risk-guidance.json</strong>.';
+      card.appendChild(p);
+      return card;
     }
-  ];
-
-  // ---- RAG Diagram: data helpers ------------------------------
-  function _diagGetOwaspIdsForBox(box) {
-    if (!_diagData) return new Set();
-    const comps = new Set(box.components);
-    const ids = new Set();
-    _diagData.risks
-      .filter(r => r.risk_source === 'OWASP')
-      .forEach(r => {
-        if ((r.owasp_rag_components || []).some(c => comps.has(c))) ids.add(r.owasp_id);
-      });
-    return ids;
-  }
-
-  function _diagGetRisksForBox(box) {
-    if (!_diagData) return [];
-    const owaspIds = _diagGetOwaspIdsForBox(box);
-    if (owaspIds.size === 0) return [];
-    return _diagData.risks.filter(r => r.risk_source === 'OWASP' && owaspIds.has(r.owasp_id));
-  }
-
-  function _diagGetControlsForRisk(risk) {
-    if (!_diagData) return [];
-    return _diagData.controls.filter(c => c.fk_Risk_ID === risk.pk_Risk_ID);
-  }
-
-  function _diagGetTasksForControl(ctrl) {
-    if (!_diagData) return [];
-    return _diagData.tasks.filter(t => t.fk_Risk_Control_ID === ctrl.pk_Risk_Control_ID);
-  }
-
-  // ---- RAG Diagram: pane builder ------------------------------
-  function _buildDiagramPane() {
-    const wrap = _el('div', 'wiz8-diag-wrap');
-
-    // Left panel: interactive diagram
-    const left = _el('div', 'wiz8-diag-left');
-
-    const hdr = _el('div', 'wiz8-diag-hdr');
-    const hdrTitle = _el('h3', 'wiz8-diag-hdr-title');
-    hdrTitle.textContent = 'RAG Architecture — Technical Risk Identification (OWASP LLM Top 10)';
-    hdr.appendChild(hdrTitle);
-    const hdrSub = _el('p', 'wiz8-diag-hdr-sub');
-    hdrSub.textContent = 'Click a component to explore OWASP risks and controls. Check each risk that applies to your system.';
-    hdr.appendChild(hdrSub);
-    left.appendChild(hdr);
-
-    const grid = _el('div', 'wiz8-diag-grid');
-    _DIAGRAM_BOXES.forEach(box => grid.appendChild(_buildDiagBox(box)));
-    left.appendChild(grid);
-
-    const legend = _el('div', 'wiz8-diag-legend');
-    const legItem = _el('span', 'wiz8-diag-leg-item');
-    legItem.innerHTML = `<span class="wiz8-diag-rbadge wiz8-diag-rbadge--demo">5</span>&nbsp;= OWASP risk count`;
-    legend.appendChild(legItem);
-    left.appendChild(legend);
-
-    // Save row
-    const saveRow = _el('div', 'wiz8-tech-save-row');
-    const countBadge = _el('span', 'wiz8-tech-count');
-    countBadge.id = 'wiz8-tech-count';
-    saveRow.appendChild(countBadge);
-    const saveBtn = _el('button', 'wiz-btn-primary');
-    saveBtn.textContent = 'Save Technical Assessment';
-    saveBtn.addEventListener('click', _handleSaveTechnical);
-    saveRow.appendChild(saveBtn);
-    left.appendChild(saveRow);
-
-    wrap.appendChild(left);
-
-    // Right panel: detail
-    const right = _el('div', 'wiz8-diag-right');
-    right.id = 'wiz8-diag-detail';
-    _renderDiagDetail(right, null);
-    wrap.appendChild(right);
-
-    _updateTechCountBadge();
+    const wrap = _el('div', 'wiz8-legal-wrap');
+    const techSaved = _record?.['step-8']?.technical_assessment?.completed;
+    if (techSaved) {
+      const note = _el('div', 'wiz8-legal-saved-note');
+      const date  = _record['step-8'].technical_assessment.assessment_date || '';
+      const count = _record['step-8'].technical_assessment.selected_count ?? 0;
+      note.innerHTML = `✓ Technical assessment last saved on <strong>${date}</strong> — <strong>${count} risk${count !== 1 ? 's' : ''}</strong> confirmed. Complete the wizard again to update, or switch to <strong>Combined Review</strong>.`;
+      wrap.appendChild(note);
+    }
+    wrap.appendChild(_techWizState.complete ? _buildTechWizardSummary() : _buildTechQuestionScreen(_techWizState.step_index));
     return wrap;
   }
 
-  function _buildDiagBox(box) {
-    const owaspCount = _diagGetOwaspIdsForBox(box).size;
-    const isSelected = _diagState.selectedBox === box.id;
-    const el = _el('div', `wiz8-diag-box${isSelected ? ' wiz8-diag-box--selected' : ''}`);
-    el.dataset.boxId = box.id;
-    el.style.gridRow    = String(box.cssRow);
-    el.style.gridColumn = `${box.cssColStart} / span ${box.cssColSpan}`;
-
-    const inner = _el('div', 'wiz8-diag-box-inner');
-    const nm  = _el('span', 'wiz8-diag-box-name'); nm.textContent  = box.label;
-    const sub = _el('span', 'wiz8-diag-box-sub');  sub.textContent = box.sublabel;
-    inner.appendChild(nm); inner.appendChild(sub);
-    el.appendChild(inner);
-
-    if (owaspCount > 0) {
-      const badge = _el('span', 'wiz8-diag-rbadge');
-      badge.textContent = String(owaspCount);
-      badge.title = `${owaspCount} OWASP risk${owaspCount !== 1 ? 's' : ''}`;
-      el.appendChild(badge);
-    }
-
-    el.addEventListener('click', () => {
-      _diagState.selectedBox = box.id;
-      _container.querySelectorAll('.wiz8-diag-box').forEach(b =>
-        b.classList.toggle('wiz8-diag-box--selected', b.dataset.boxId === box.id));
-      const det = _container.querySelector('#wiz8-diag-detail');
-      if (det) _renderDiagDetail(det, box.id);
-    });
-    return el;
-  }
-
-  function _renderDiagDetail(panel, boxId) {
-    panel.innerHTML = '';
-
-    if (!boxId) {
-      const ph = _el('div', 'wiz8-diag-ph');
-      ph.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.3"><rect x="2" y="3" width="9" height="7" rx="1.5"/><rect x="13" y="3" width="9" height="7" rx="1.5"/><rect x="2" y="14" width="9" height="7" rx="1.5"/><rect x="13" y="14" width="9" height="7" rx="1.5"/></svg>`;
-      const msg = _el('p', 'wiz8-diag-ph-msg');
-      msg.textContent = 'Click a component in the diagram to explore its OWASP LLM Top 10 risks, controls, and implementation tasks.';
-      ph.appendChild(msg);
-      panel.appendChild(ph);
-      return;
-    }
-
-    const box = _DIAGRAM_BOXES.find(b => b.id === boxId);
-    if (!box) return;
-
-    // Header
-    const hdr = _el('div', 'wiz8-diag-det-hdr');
-    const title = _el('h3', 'wiz8-diag-det-title'); title.textContent = box.label;
-    hdr.appendChild(title);
-    const chips = _el('div', 'wiz8-diag-det-chips');
-    box.components.forEach(c => {
-      const chip = _el('span', 'wiz8-diag-chip'); chip.textContent = c; chips.appendChild(chip);
-    });
-    hdr.appendChild(chips);
-    panel.appendChild(hdr);
-
-    const risks = _diagGetRisksForBox(box);
-
-    if (risks.length === 0) {
-      const empty = _el('p', 'wiz8-diag-det-empty');
-      empty.textContent = 'No OWASP risks found for this component.';
-      panel.appendChild(empty);
-      return;
-    }
-
-    const countLine = _el('p', 'wiz8-diag-det-count');
-    countLine.textContent = `${risks.length} risk${risks.length !== 1 ? 's' : ''} — click a card to expand controls`;
-    panel.appendChild(countLine);
-
-    risks.forEach(risk => panel.appendChild(_buildDiagRiskCard(risk)));
-  }
-
-  function _buildDiagRiskCard(risk) {
-    const isOwasp = risk.risk_source === 'OWASP';
-    const card = _el('div', `wiz8-diag-risk-card${isOwasp ? ' wiz8-diag-risk-card--owasp' : ' wiz8-diag-risk-card--eu'}`);
-
-    // Look up technical guidance for OWASP risks
-    const techG     = isOwasp ? _techGuidance?.risks?.[risk.risk_name] : null;
-    const category  = techG?.category || null;
+  // ---- Single OWASP question screen ---------------------------
+  function _buildTechQuestionScreen(idx) {
+    const twqs  = _techWizQuestions();
+    const total = twqs.length;
+    const wq    = twqs[idx];
+    const category  = wq.category || null;
     const catColor  = category ? (_techGuidance?.categories?.[category]?.color || 'slate') : 'slate';
     const catColors = _CAT_COLORS[catColor] || _CAT_COLORS.slate;
+    const answer    = _techWizState.answers[wq.risk_name] || null;
 
-    const rh = _el('div', 'wiz8-diag-risk-hdr');
-    if (isOwasp) {
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.className = 'wiz8-diag-risk-cb';
-      cb.dataset.riskId = risk.pk_Risk_ID;
-      cb.checked = !!_state.technical_risks[risk.pk_Risk_ID];
-      cb.title = 'Mark as applicable to this system';
-      cb.addEventListener('change', e => {
-        _state.technical_risks[risk.pk_Risk_ID] = e.target.checked;
-        _updateTechCountBadge();
-      });
-      rh.appendChild(cb);
-    }
-    const srcBadge = _el('span', `wiz8-diag-src-badge${isOwasp ? ' wiz8-diag-src-badge--owasp' : ' wiz8-diag-src-badge--eu'}`);
-    srcBadge.textContent = isOwasp ? `OWASP ${risk.owasp_id}` : 'EU AI Act';
-    rh.appendChild(srcBadge);
-    const rn = _el('span', 'wiz8-diag-risk-name'); rn.textContent = risk.risk_name;
-    rh.appendChild(rn);
+    const wrap = _el('div', 'wiz8-guided-wrap');
+
+    // Progress bar
+    const progWrap  = _el('div', 'wiz8-guided-prog-wrap');
+    const progMeta  = _el('div', 'wiz8-guided-prog-meta');
+    const progTitle = _el('span', 'wiz8-guided-prog-title');
+    progTitle.textContent = 'OWASP LLM Top 10 — Technical Risk Assessment';
+    const progLabel = _el('span', 'wiz8-guided-prog-label');
+    progLabel.textContent = `${idx + 1} of ${total}`;
+    progMeta.appendChild(progTitle); progMeta.appendChild(progLabel);
+    const progBar  = _el('div', 'wiz8-guided-prog-bar');
+    const progFill = _el('div', 'wiz8-guided-prog-fill');
+    progFill.style.width = Math.round((idx / total) * 100) + '%';
+    progBar.appendChild(progFill);
+    progWrap.appendChild(progMeta); progWrap.appendChild(progBar);
+    wrap.appendChild(progWrap);
+
+    // Question card
+    const qCard = _el('div', 'wiz8-q-card');
+
+    // Meta row: OWASP ID badge + category tag
+    const qMeta = _el('div', 'wiz8-q-meta');
+    const owaspBadge = _el('span', 'wiz8-diag-src-badge wiz8-diag-src-badge--owasp');
+    owaspBadge.textContent = wq.owasp_id;
+    qMeta.appendChild(owaspBadge);
     if (category) {
       const catTag = _el('span', 'wiz8-cat-tag');
       catTag.textContent = category;
       catTag.style.background = catColors.bg; catTag.style.color = catColors.text;
-      rh.appendChild(catTag);
+      qMeta.appendChild(catTag);
     }
-    card.appendChild(rh);
+    qCard.appendChild(qMeta);
 
-    // Component chips (OWASP only — they have the explicit component list)
-    if (isOwasp && risk.owasp_rag_components?.length) {
-      const compRow = _el('div', 'wiz8-diag-comp-row');
-      risk.owasp_rag_components.forEach(c => {
-        const t = _el('span', 'wiz8-diag-comp-tag'); t.textContent = c; compRow.appendChild(t);
-      });
-      card.appendChild(compRow);
-    }
+    // Risk name
+    const rName = _el('h3', 'wiz8-q-risk-name');
+    rName.textContent = wq.risk_name; qCard.appendChild(rName);
 
-    // Question text (OWASP risks with tech guidance)
-    if (techG?.question) {
+    // Interrogative question text
+    if (wq.question) {
       const qText = _el('p', 'wiz8-q-text');
-      qText.textContent = techG.question;
-      card.appendChild(qText);
+      qText.textContent = wq.question; qCard.appendChild(qText);
     }
 
-    // Applies-if conditions (OWASP risks with tech guidance)
-    if (techG?.applies_if?.length) {
+    // Applies-if conditions
+    if (wq.applies_if?.length) {
       const aiWrap  = _el('div', 'wiz8-applies-wrap');
       const aiLabel = _el('p', 'wiz8-applies-label');
       aiLabel.textContent = 'This risk applies if any of:';
       aiWrap.appendChild(aiLabel);
       const aiList = _el('ul', 'wiz8-applies-list');
-      techG.applies_if.forEach(cond => {
+      wq.applies_if.forEach(cond => {
         const li = _el('li', 'wiz8-applies-item'); li.textContent = cond; aiList.appendChild(li);
       });
       aiWrap.appendChild(aiList);
-      card.appendChild(aiWrap);
+      qCard.appendChild(aiWrap);
     }
 
-    // Description (truncated) — shown only as fallback when no tech guidance question is available
-    if (risk.risk_description && !techG?.question) {
-      const desc = _el('p', 'wiz8-diag-risk-desc');
-      const s = risk.risk_description;
-      desc.textContent = s.length > 200 ? s.slice(0, 200) + '…' : s;
-      card.appendChild(desc);
+    wrap.appendChild(qCard);
+
+    // Answer label
+    const ansLabel = _el('p', 'wiz8-q-answer-label');
+    ansLabel.textContent = 'Does this risk apply to your system?';
+    wrap.appendChild(ansLabel);
+
+    // Answer buttons
+    const btnRow = _el('div', 'wiz8-q-btn-row');
+
+    const advance = () => {
+      if (idx < total - 1) {
+        _techWizState.step_index = idx + 1;
+      } else {
+        _techWizState.complete = true;
+      }
+      _renderTechPane();
+    };
+
+    [
+      ['yes',       '✓  Yes, this risk applies', 'wiz8-q-btn--yes'],
+      ['partially', '~  Partially applies',       'wiz8-q-btn--part'],
+      ['no',        '✗  No / not applicable',     'wiz8-q-btn--no']
+    ].forEach(([val, label, mod]) => {
+      const btn = _el('button', `wiz8-q-btn ${mod}${answer === val ? ' wiz8-q-btn--selected' : ''}`);
+      btn.textContent = label;
+      btn.addEventListener('click', () => { _techWizState.answers[wq.risk_name] = val; advance(); });
+      btnRow.appendChild(btn);
+    });
+    wrap.appendChild(btnRow);
+
+    // Navigation row
+    const navRow = _el('div', 'wiz8-q-nav-row');
+    if (idx > 0) {
+      const backBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
+      backBtn.textContent = '← Back';
+      backBtn.addEventListener('click', () => { _techWizState.step_index = idx - 1; _renderTechPane(); });
+      navRow.appendChild(backBtn);
+    } else {
+      navRow.appendChild(_el('span', ''));
     }
 
-    return card;
-  }
+    const navRight = _el('div', 'wiz8-q-nav-right');
+    const posLabel = _el('span', 'wiz8-q-nav-pos');
+    posLabel.textContent = `${idx + 1} / ${total}`;
+    navRight.appendChild(posLabel);
 
-  function _buildDiagCtrlSection(controls) {
-    const wrap = _el('div', 'wiz8-diag-ctrl-wrap');
-    const hdr  = _el('div', 'wiz8-diag-ctrl-hdr');
-    const icon = _el('span', 'wiz8-diag-ctrl-icon');
-    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-    hdr.appendChild(icon);
-    const lbl = _el('span', 'wiz8-diag-ctrl-lbl');
-    lbl.textContent = `${controls.length} control${controls.length !== 1 ? 's' : ''}`;
-    hdr.appendChild(lbl);
-    const chv = _el('span', 'wiz8-diag-ctrl-chv');
-    chv.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chv.style.transform = 'rotate(-90deg)';
-    hdr.appendChild(chv);
-    wrap.appendChild(hdr);
+    if (idx < total - 1) {
+      const nextBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--next');
+      nextBtn.textContent = 'Next →';
+      nextBtn.addEventListener('click', () => { _techWizState.step_index = idx + 1; _renderTechPane(); });
+      navRight.appendChild(nextBtn);
+    } else {
+      const finBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--finish');
+      finBtn.textContent = 'Finish ✓';
+      finBtn.addEventListener('click', () => { _techWizState.complete = true; _renderTechPane(); });
+      navRight.appendChild(finBtn);
+    }
+    navRow.appendChild(navRight);
+    wrap.appendChild(navRow);
 
-    const body = _el('div', 'wiz8-diag-ctrl-body wiz8-collapsed');
-
-    controls.forEach(ctrl => {
-      const row = _el('div', 'wiz8-diag-ctrl-row');
-      const rh  = _el('div', 'wiz8-diag-ctrl-row-hdr');
-      const cid = _el('span', 'wiz8-diag-ctrl-id'); cid.textContent = ctrl.pk_Risk_Control_ID;
-      const cnm = _el('span', 'wiz8-diag-ctrl-name'); cnm.textContent = ctrl.jkName || '';
-      rh.appendChild(cid); rh.appendChild(cnm);
-      row.appendChild(rh);
-      if (ctrl.jkObjective) {
-        const obj = _el('p', 'wiz8-diag-ctrl-obj'); obj.textContent = ctrl.jkObjective; row.appendChild(obj);
-      }
-      // Implementation tasks
-      const tasks = _diagGetTasksForControl(ctrl);
-      if (tasks.length > 0) {
-        const tw = _el('div', 'wiz8-diag-tasks');
-        const tl = _el('p', 'wiz8-diag-tasks-lbl');
-        tl.textContent = `${tasks.length} implementation task${tasks.length !== 1 ? 's' : ''}:`;
-        tw.appendChild(tl);
-        tasks.forEach(t => {
-          const tr = _el('div', 'wiz8-diag-task-row');
-          const tn = _el('span', 'wiz8-diag-task-num'); tn.textContent = String(t.task_number || '');
-          const tt = _el('p', 'wiz8-diag-task-text'); tt.textContent = t.task || '';
-          tr.appendChild(tn); tr.appendChild(tt);
-          tw.appendChild(tr);
-        });
-        row.appendChild(tw);
-      }
-      body.appendChild(row);
-    });
-
-    wrap.appendChild(body);
-    hdr.addEventListener('click', () => {
-      const col = body.classList.toggle('wiz8-collapsed');
-      chv.style.transform = col ? 'rotate(-90deg)' : '';
-    });
     return wrap;
   }
 
-  // ---- Technical assessment save helpers ----------------------
-  function _updateTechCountBadge() {
-    const badge = _container.querySelector('#wiz8-tech-count');
-    if (!badge) return;
-    const total = _diagData ? _diagData.risks.filter(r => r.risk_source === 'OWASP').length : 0;
-    const sel = Object.values(_state.technical_risks).filter(Boolean).length;
-    badge.textContent = `${sel} / ${total} technical risks confirmed`;
+  // ---- Technical summary screen (after wizard completes) ------
+  function _buildTechWizardSummary() {
+    const twqs = _techWizQuestions();
+
+    const applicable = twqs.filter(wq => ['yes', 'partially'].includes(_techWizState.answers[wq.risk_name]));
+    const excluded   = twqs.filter(wq => _techWizState.answers[wq.risk_name] === 'no');
+    const skipped    = twqs.filter(wq => !_techWizState.answers[wq.risk_name]);
+
+    // Group applicable by category
+    const byCategory = {};
+    applicable.forEach(wq => {
+      const cat = wq.category || 'Other';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(wq);
+    });
+
+    const wrap = _el('div', 'wiz8-guided-wrap');
+    const card = _el('div', 'step-detail-card');
+
+    // Heading
+    const tickRow  = _el('div', 'wiz8-summary-tick-row');
+    const tickIcon = _el('span', 'wiz8-summary-tick-icon');
+    tickIcon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+    const tickTitle = _el('h2', 'wiz8-summary-title');
+    tickTitle.textContent = 'Technical Risk Assessment Complete';
+    tickRow.appendChild(tickIcon); tickRow.appendChild(tickTitle);
+    card.appendChild(tickRow);
+
+    // Stats
+    const stats = _el('div', 'wiz8-summary-stats');
+    [
+      [applicable.length, 'Risks identified', '#15803d'],
+      [excluded.length,   'Excluded',         '#64748b'],
+      [skipped.length,    'Skipped',          '#94a3b8']
+    ].forEach(([num, lbl, col]) => {
+      const s = _el('div', 'wiz8-stat');
+      const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num); n.style.color = col;
+      const l = _el('span', 'wiz8-stat-lbl'); l.textContent = lbl;
+      s.appendChild(n); s.appendChild(l); stats.appendChild(s);
+    });
+    card.appendChild(stats);
+
+    // Category breakdown
+    if (Object.keys(byCategory).length) {
+      card.appendChild(_sectionLabel('Identified Risks by Category'));
+      const catList = _el('div', 'wiz8-summary-cat-list');
+      Object.entries(byCategory).forEach(([cat, risks]) => {
+        const row = _el('div', 'wiz8-summary-cat-row');
+        const catTag = _el('span', 'wiz8-cat-tag');
+        catTag.textContent = cat;
+        const c = _CAT_COLORS[_techGuidance?.categories?.[cat]?.color || 'slate'] || _CAT_COLORS.slate;
+        catTag.style.background = c.bg; catTag.style.color = c.text;
+        row.appendChild(catTag);
+        const names = _el('span', 'wiz8-summary-risk-names');
+        names.textContent = risks.map(wq =>
+          wq.owasp_id + ' ' + wq.risk_name + (_techWizState.answers[wq.risk_name] === 'partially' ? ' (partial)' : '')
+        ).join(' · ');
+        row.appendChild(names);
+        catList.appendChild(row);
+      });
+      card.appendChild(catList);
+    }
+
+    if (skipped.length) {
+      const skipNote = _el('p', 'wiz8-summary-skip-note');
+      skipNote.textContent = `${skipped.length} risk${skipped.length !== 1 ? 's' : ''} skipped — unanswered questions will default to not applicable.`;
+      card.appendChild(skipNote);
+    }
+
+    // Actions
+    const actRow = _el('div', 'wiz-action-row');
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'wiz-btn-primary';
+    saveBtn.textContent = 'Save Technical Assessment ✓';
+    saveBtn.addEventListener('click', _handleSaveTechnical);
+    actRow.appendChild(saveBtn);
+
+    const restartBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
+    restartBtn.textContent = '↺  Start over';
+    restartBtn.style.marginLeft = 'auto';
+    restartBtn.addEventListener('click', () => {
+      _techWizState.step_index = 0;
+      _techWizState.answers    = {};
+      _techWizState.complete   = false;
+      _renderTechPane();
+    });
+    actRow.appendChild(restartBtn);
+    card.appendChild(actRow);
+
+    wrap.appendChild(card);
+    return wrap;
   }
 
+  // ---- Technical assessment save ---------------------------------
   function _handleSaveTechnical() {
     if (!_record) {
       _record = { _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
@@ -649,29 +567,35 @@
     _record['step-8'].technical_assessment = _buildTechnicalOutputRecord();
     try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Technical assessment saved ✓');
-    const existing = _container.querySelector('.wiz8-tech-saved-banner');
-    if (existing) existing.remove();
-    const banner = _el('div', 'wiz8-tech-saved-banner');
-    const sel = Object.values(_state.technical_risks).filter(Boolean).length;
-    banner.innerHTML = `✓ Technical assessment saved — <strong>${sel} OWASP risk${sel !== 1 ? 's' : ''}</strong> confirmed. Switch to <strong>Combined Review</strong> to see both assessments together.`;
-    const left = _container.querySelector('.wiz8-diag-left');
-    if (left) left.insertBefore(banner, left.firstChild);
-    setTimeout(() => banner?.remove(), 10000);
+    _renderTechPane();
   }
 
   function _buildTechnicalOutputRecord() {
     const today = new Date().toISOString().slice(0, 10);
-    const risks = _diagData
-      ? _diagData.risks.filter(r => r.risk_source === 'OWASP').map(r => ({
-          risk_id:     r.pk_Risk_ID,
-          owasp_id:    r.owasp_id,
-          risk_name:   r.risk_name,
-          risk_source: 'OWASP',
-          selected:    !!_state.technical_risks[r.pk_Risk_ID]
-        }))
-      : [];
+    const twqs  = _techWizQuestions();
+    // Build owasp_id → pk_Risk_ID lookup so Step 9 FK chain is preserved
+    const owaspIdToRiskId = new Map();
+    _owaspRisks.forEach(r => { if (r.owasp_id) owaspIdToRiskId.set(r.owasp_id, r.pk_Risk_ID); });
+    const risks = twqs.map(wq => {
+      const ans = _techWizState.answers[wq.risk_name] || 'skipped';
+      return {
+        risk_id:       owaspIdToRiskId.get(wq.owasp_id) || wq.owasp_id,
+        owasp_id:      wq.owasp_id,
+        risk_name:     wq.risk_name,
+        risk_source:   'OWASP',
+        selected:      ans === 'yes' || ans === 'partially',
+        wizard_answer: ans
+      };
+    });
     const sel = risks.filter(r => r.selected).length;
-    return { completed: true, assessment_date: today, total_risks: risks.length, selected_count: sel, risks };
+    return {
+      completed:       true,
+      assessment_date: today,
+      wizard_answers:  { ..._techWizState.answers },
+      total_risks:     twqs.length,
+      selected_count:  sel,
+      risks
+    };
   }
 
   // ---- Re-render legal pane in place --------------------------
@@ -1413,93 +1337,10 @@
 .wiz8-ref-risk-name{font-size:12px;font-weight:700;color:#b91c1c;margin:0}
 .wiz8-ref-analog{font-size:11px;color:var(--color-text-secondary);margin:0;line-height:1.55;font-style:italic}
 
-/* ---- RAG Diagram tab ---- */
-/* Two-panel wrapper */
-.wiz8-diag-wrap{display:flex;height:100%;min-height:600px}
-.wiz8-diag-left{width:40%;min-width:260px;border-right:1px solid var(--color-border);overflow-y:auto;padding:18px 16px;flex-shrink:0;background:var(--color-bg,#fff)}
-.wiz8-diag-right{flex:1;overflow-y:auto;padding:20px 22px;background:var(--color-bg-subtle,#f8fafc)}
-
-/* Left panel header */
-.wiz8-diag-hdr{margin-bottom:12px}
-.wiz8-diag-hdr-title{font-size:12px;font-weight:700;color:var(--color-text-primary);margin:0 0 3px;line-height:1.4}
-.wiz8-diag-hdr-sub{font-size:11px;color:var(--color-text-tertiary);margin:0}
-
-/* Filter toggle */
-.wiz8-diag-filter-bar{display:flex;align-items:center;gap:5px;margin-bottom:12px;flex-wrap:wrap}
-.wiz8-diag-filter-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary);white-space:nowrap;margin-right:2px}
-.wiz8-diag-filter-btn{padding:3px 9px;font-size:11px;font-weight:500;border:1px solid var(--color-border);border-radius:20px;cursor:pointer;background:#fff;color:var(--color-text-secondary);font-family:inherit;transition:background .12s,border-color .12s,color .12s}
-.wiz8-diag-filter-btn:hover{background:var(--color-bg-subtle,#f8fafc)}
-.wiz8-diag-filter-btn--active{background:#f0fdfa;border-color:var(--teal-400,#2dd4bf);color:var(--teal-700,#0f766e);font-weight:700}
-
-/* Diagram grid */
-.wiz8-diag-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
-.wiz8-diag-box{border:2px solid var(--color-border);border-radius:8px;padding:11px 13px;cursor:pointer;position:relative;background:#fff;transition:border-color .15s,background .15s;user-select:none}
-.wiz8-diag-box:hover{border-color:var(--teal-300,#5eead4);background:#f0fdfa}
-.wiz8-diag-box--selected{border-color:var(--teal-600,#0d9488)!important;background:#f0fdfa!important;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
-.wiz8-diag-box-inner{display:flex;flex-direction:column;gap:3px}
-.wiz8-diag-box-name{font-size:11px;font-weight:700;color:var(--color-text-primary);line-height:1.3}
-.wiz8-diag-box-sub{font-size:9px;color:var(--color-text-tertiary);line-height:1.4}
-
-/* Risk count badges on boxes */
-.wiz8-diag-rbadge{position:absolute;top:-8px;right:-8px;background:#ef4444;color:#fff;border-radius:10px;min-width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;line-height:1;z-index:1}
-.wiz8-diag-rbadge--demo{position:static;display:inline-flex;vertical-align:middle;min-width:16px;height:16px;font-size:9px;padding:0 3px;border-width:1px;margin-right:1px}
-
-/* Legend */
-.wiz8-diag-legend{font-size:10px;color:var(--color-text-tertiary);display:flex;align-items:center;gap:4px;padding-top:8px;border-top:1px solid var(--color-border)}
-.wiz8-diag-leg-item{display:inline-flex;align-items:center;gap:3px}
-
-/* Right panel: placeholder */
-.wiz8-diag-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;gap:14px;color:var(--color-text-tertiary)}
-.wiz8-diag-ph-msg{font-size:13px;color:var(--color-text-tertiary);max-width:300px;line-height:1.65;margin:0}
-
-/* Right panel: detail header */
-.wiz8-diag-det-hdr{border-bottom:1px solid var(--color-border);padding-bottom:12px;margin-bottom:14px}
-.wiz8-diag-det-title{font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 8px}
-.wiz8-diag-det-chips{display:flex;flex-wrap:wrap;gap:4px}
-.wiz8-diag-chip{font-size:10px;font-weight:600;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;border-radius:10px;padding:2px 8px;white-space:nowrap}
-.wiz8-diag-det-count{font-size:12px;color:var(--color-text-secondary);margin:0 0 10px;line-height:1.5}
-.wiz8-diag-det-empty{font-size:13px;color:var(--color-text-tertiary);padding:24px 0;text-align:center}
-
-/* Risk cards in detail panel */
-.wiz8-diag-risk-card{background:#fff;border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;margin-bottom:8px}
-.wiz8-diag-risk-card--owasp{border-left:3px solid #fb923c}
-.wiz8-diag-risk-card--eu{border-left:3px solid #60a5fa}
-.wiz8-diag-risk-hdr{display:flex;align-items:flex-start;gap:7px;margin-bottom:7px;flex-wrap:wrap}
+/* ---- Source badges (OWASP / EU AI Act) — used in tech wizard and combined review ---- */
 .wiz8-diag-src-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;line-height:1.4}
 .wiz8-diag-src-badge--owasp{background:#ffedd5;color:#9a3412}
 .wiz8-diag-src-badge--eu{background:#dbeafe;color:#1e40af}
-.wiz8-diag-risk-name{font-size:13px;font-weight:700;color:var(--color-text-primary);line-height:1.35;flex:1;min-width:100px}
-.wiz8-diag-comp-row{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
-.wiz8-diag-comp-tag{font-size:9px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:8px;padding:1px 6px;white-space:nowrap}
-.wiz8-diag-risk-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 8px}
-
-/* Controls accordion in risk cards */
-.wiz8-diag-ctrl-wrap{border:1px solid var(--color-border);border-radius:6px;overflow:hidden;margin-top:4px}
-.wiz8-diag-ctrl-hdr{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none}
-.wiz8-diag-ctrl-hdr:hover{background:var(--color-bg-hover,#f1f5f9)}
-.wiz8-diag-ctrl-icon{display:flex;color:#0d9488;flex-shrink:0}
-.wiz8-diag-ctrl-lbl{font-size:12px;font-weight:600;color:#0f766e;flex:1}
-.wiz8-diag-ctrl-chv{display:flex;color:var(--color-text-tertiary);transition:transform .2s}
-.wiz8-diag-ctrl-body{padding:12px 14px;display:flex;flex-direction:column;gap:14px;background:#fff}
-.wiz8-diag-ctrl-row{border-left:3px solid #99f6e4;padding-left:10px}
-.wiz8-diag-ctrl-row-hdr{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;flex-wrap:wrap}
-.wiz8-diag-ctrl-id{font-size:10px;font-weight:700;background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;line-height:1.4}
-.wiz8-diag-ctrl-name{font-size:12px;font-weight:700;color:var(--color-text-primary);line-height:1.4;flex:1;min-width:80px}
-.wiz8-diag-ctrl-obj{font-size:11px;color:var(--color-text-secondary);line-height:1.6;margin:4px 0 0}
-
-/* Implementation tasks */
-.wiz8-diag-tasks{background:var(--color-bg-subtle,#f8fafc);border-radius:5px;padding:8px 10px;margin-top:8px}
-.wiz8-diag-tasks-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 6px}
-.wiz8-diag-task-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
-.wiz8-diag-task-row:last-child{margin-bottom:0}
-.wiz8-diag-task-num{font-size:10px;font-weight:700;background:#e0e7ff;color:#4338ca;border-radius:10px;padding:1px 6px;white-space:nowrap;flex-shrink:0;margin-top:2px}
-.wiz8-diag-task-text{font-size:11px;color:var(--color-text-secondary);line-height:1.55;margin:0}
-
-/* ---- Technical save row ---- */
-.wiz8-tech-save-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:10px 12px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px;flex-wrap:wrap}
-.wiz8-tech-count{font-size:12px;font-weight:600;color:var(--teal-700,#0f766e)}
-.wiz8-diag-risk-cb{flex-shrink:0;accent-color:var(--teal-600,#0d9488);width:15px;height:15px;cursor:pointer;margin-top:1px}
-.wiz8-tech-saved-banner{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 14px;font-size:13px;color:#166534;margin-bottom:10px;line-height:1.5}
 
 /* ---- Legal pane ---- */
 .wiz8-legal-wrap{display:flex;flex-direction:column}
