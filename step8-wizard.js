@@ -1,6 +1,6 @@
 /* Step 8 — Risk Assessment Wizard (Guided)
    Grouping: article.StepName → risks → Attack Vectors (each risk appears exactly once)
-   Guidance (analogues, applies-if, relevance, categories) loaded from step8-guidance.json.
+   Guidance (analogues, applies-if, relevance, categories) loaded from step8-legal-risk-guidance.json and step8-technical-risk-guidance.json.
    Selection at risk level. Identity from central _meta.
    Informed by Step 3 (RCN filter + relevance) and Step 7 (DPIA data types + relevance).
 */
@@ -9,7 +9,7 @@
 
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
-  let _container = null, _framework = null, _guidance = null, _record = null;
+  let _container = null, _framework = null, _legalGuidance = null, _techGuidance = null, _record = null;
   let _step3Data = null, _step7Data = null;
   let _filteredFGItems = []; // [{groupName, risks:[...]}]
 
@@ -48,9 +48,10 @@
     _step       = step;
     _colorKey   = colorKey;
     _phaseTitle = phaseTitle;
-    _framework  = null;
-    _guidance   = null;
-    _record     = null;
+    _framework     = null;
+    _legalGuidance = null;
+    _techGuidance  = null;
+    _record        = null;
     _step3Data  = null;
     _step7Data  = null;
     _filteredFGItems = [];
@@ -75,10 +76,11 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    // Load framework, guidance, and diagram data in parallel
-    const [fwRes, gdRes, risksRes, ctrlsRes, tasksRes] = await Promise.allSettled([
+    // Load framework, guidance files, and diagram data in parallel
+    const [fwRes, lgdRes, tgdRes, risksRes, ctrlsRes, tasksRes] = await Promise.allSettled([
       fetch('ai_Risk_Control_Framework.json'),
-      fetch('step8-guidance.json'),
+      fetch('step8-legal-risk-guidance.json'),
+      fetch('step8-technical-risk-guidance.json'),
       fetch('tbl_Risks.json'),
       fetch('tbl_Risk_Controls.json'),
       fetch('tbl_Control_Task_Code.json')
@@ -90,8 +92,11 @@
     }
     _framework = await fwRes.value.json();
 
-    if (gdRes.status === 'fulfilled' && gdRes.value.ok) {
-      try { _guidance = await gdRes.value.json(); } catch (_) {}
+    if (lgdRes.status === 'fulfilled' && lgdRes.value.ok) {
+      try { _legalGuidance = await lgdRes.value.json(); } catch (_) {}
+    }
+    if (tgdRes.status === 'fulfilled' && tgdRes.value.ok) {
+      try { _techGuidance = await tgdRes.value.json(); } catch (_) {}
     }
 
     if (risksRes.status === 'fulfilled' && risksRes.value.ok &&
@@ -129,7 +134,7 @@
     }
     if (saved8?.legal_assessment?.wizard_answers) {
       Object.assign(_wizState.answers, saved8.legal_assessment.wizard_answers);
-      const wqs = _guidance?.wizard_questions;
+      const wqs = _legalGuidance?.wizard_questions;
       if (wqs && Object.keys(_wizState.answers).length >= wqs.length) {
         _wizState.complete = true;
       }
@@ -211,10 +216,10 @@
     }));
   }
 
-  // ---- Relevance computation (uses step8-guidance.json) ------
+  // ---- Relevance computation (uses step8-legal-risk-guidance.json) ------
   function _computeRelevance(riskName) {
-    if (!_guidance) return 'unassessed';
-    const g = _guidance.risks?.[riskName];
+    if (!_legalGuidance) return 'unassessed';
+    const g = _legalGuidance.risks?.[riskName];
     if (!g) return 'unassessed';
     if (!_step3Data && !_step7Data) return 'unassessed';
 
@@ -506,6 +511,12 @@
     const isOwasp = risk.risk_source === 'OWASP';
     const card = _el('div', `wiz8-diag-risk-card${isOwasp ? ' wiz8-diag-risk-card--owasp' : ' wiz8-diag-risk-card--eu'}`);
 
+    // Look up technical guidance for OWASP risks
+    const techG     = isOwasp ? _techGuidance?.risks?.[risk.risk_name] : null;
+    const category  = techG?.category || null;
+    const catColor  = category ? (_techGuidance?.categories?.[category]?.color || 'slate') : 'slate';
+    const catColors = _CAT_COLORS[catColor] || _CAT_COLORS.slate;
+
     const rh = _el('div', 'wiz8-diag-risk-hdr');
     if (isOwasp) {
       const cb = document.createElement('input');
@@ -525,6 +536,12 @@
     rh.appendChild(srcBadge);
     const rn = _el('span', 'wiz8-diag-risk-name'); rn.textContent = risk.risk_name;
     rh.appendChild(rn);
+    if (category) {
+      const catTag = _el('span', 'wiz8-cat-tag');
+      catTag.textContent = category;
+      catTag.style.background = catColors.bg; catTag.style.color = catColors.text;
+      rh.appendChild(catTag);
+    }
     card.appendChild(rh);
 
     // Component chips (OWASP only — they have the explicit component list)
@@ -536,8 +553,29 @@
       card.appendChild(compRow);
     }
 
-    // Description (truncated)
-    if (risk.risk_description) {
+    // Question text (OWASP risks with tech guidance)
+    if (techG?.question) {
+      const qText = _el('p', 'wiz8-q-text');
+      qText.textContent = techG.question;
+      card.appendChild(qText);
+    }
+
+    // Applies-if conditions (OWASP risks with tech guidance)
+    if (techG?.applies_if?.length) {
+      const aiWrap  = _el('div', 'wiz8-applies-wrap');
+      const aiLabel = _el('p', 'wiz8-applies-label');
+      aiLabel.textContent = 'This risk applies if any of:';
+      aiWrap.appendChild(aiLabel);
+      const aiList = _el('ul', 'wiz8-applies-list');
+      techG.applies_if.forEach(cond => {
+        const li = _el('li', 'wiz8-applies-item'); li.textContent = cond; aiList.appendChild(li);
+      });
+      aiWrap.appendChild(aiList);
+      card.appendChild(aiWrap);
+    }
+
+    // Description (truncated) — shown only as fallback when no tech guidance question is available
+    if (risk.risk_description && !techG?.question) {
       const desc = _el('p', 'wiz8-diag-risk-desc');
       const s = risk.risk_description;
       desc.textContent = s.length > 200 ? s.slice(0, 200) + '…' : s;
@@ -658,11 +696,11 @@
 
   // ---- Legal pane dispatcher ----------------------------------
   function _buildLegalPane() {
-    const wqs = _guidance?.wizard_questions;
+    const wqs = _legalGuidance?.wizard_questions;
     if (!wqs?.length) {
       const card = _el('div', 'step-detail-card');
       const p = _el('p', 'wiz8-notice');
-      p.innerHTML = 'No wizard questions defined. Add a <code>wizard_questions</code> array to <strong>step8-guidance.json</strong> to enable guided mode.';
+      p.innerHTML = 'No wizard questions defined. Add a <code>wizard_questions</code> array to <strong>step8-legal-risk-guidance.json</strong> to enable guided mode.';
       card.appendChild(p);
       return card;
     }
@@ -681,13 +719,13 @@
 
   // ---- Single question screen ---------------------------------
   function _buildQuestionScreen(idx) {
-    const wqs   = _guidance.wizard_questions;
+    const wqs   = _legalGuidance.wizard_questions;
     const total = wqs.length;
     const wq    = wqs[idx];
-    const riskG = _guidance.risks?.[wq.risk_name];
+    const riskG = _legalGuidance.risks?.[wq.risk_name];
     const relevance = _computeRelevance(wq.risk_name);
     const category  = riskG?.category || null;
-    const catColor  = category ? (_guidance.categories?.[category]?.color || 'slate') : 'slate';
+    const catColor  = category ? (_legalGuidance.categories?.[category]?.color || 'slate') : 'slate';
     const catColors = _CAT_COLORS[catColor] || _CAT_COLORS.slate;
     const answer    = _wizState.answers[wq.risk_name] || null;
 
@@ -827,7 +865,7 @@
 
   // ---- Summary screen (after wizard completes) ----------------
   function _buildWizardSummary() {
-    const wqs = _guidance.wizard_questions;
+    const wqs = _legalGuidance.wizard_questions;
 
     const applicable = wqs.filter(wq => ['yes', 'partially'].includes(_wizState.answers[wq.risk_name]));
     const excluded   = wqs.filter(wq => _wizState.answers[wq.risk_name] === 'no');
@@ -837,7 +875,7 @@
     // Group applicable by category
     const byCategory = {};
     applicable.forEach(wq => {
-      const cat = _guidance.risks?.[wq.risk_name]?.category || 'Other';
+      const cat = _legalGuidance.risks?.[wq.risk_name]?.category || 'Other';
       if (!byCategory[cat]) byCategory[cat] = [];
       byCategory[cat].push(wq);
     });
@@ -877,7 +915,7 @@
         const row = _el('div', 'wiz8-summary-cat-row');
         const catTag = _el('span', 'wiz8-cat-tag');
         catTag.textContent = cat;
-        const c = _CAT_COLORS[_guidance.categories?.[cat]?.color || 'slate'] || _CAT_COLORS.slate;
+        const c = _CAT_COLORS[_legalGuidance.categories?.[cat]?.color || 'slate'] || _CAT_COLORS.slate;
         catTag.style.background = c.bg; catTag.style.color = c.text;
         row.appendChild(catTag);
         const names = _el('span', 'wiz8-summary-risk-names');
@@ -922,7 +960,7 @@
 
   // ---- Legal assessment save helpers --------------------------
   function _handleSaveLegal() {
-    const wqs = _guidance?.wizard_questions || [];
+    const wqs = _legalGuidance?.wizard_questions || [];
     wqs.forEach(wq => {
       const ans = _wizState.answers[wq.risk_name];
       if (ans === 'yes' || ans === 'partially') _state.legal_risks[wq.risk_name] = true;
@@ -941,7 +979,7 @@
 
   function _buildLegalOutputRecord() {
     const today = new Date().toISOString().slice(0, 10);
-    const wqs = _guidance?.wizard_questions || [];
+    const wqs = _legalGuidance?.wizard_questions || [];
     const risks = wqs.map(wq => {
       const ans = _wizState.answers[wq.risk_name] || 'skipped';
       return {
@@ -1123,14 +1161,14 @@
     const card = _el('div', 'step-detail-card');
     const title = _el('h2', 'step-detail-title'); title.textContent = 'Risk Catalogue Reference'; card.appendChild(title);
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Complete risk catalogue grouped by standard / requirement, with guidance from step8-guidance.json. Edit that file to adapt analogues, conditions, and relevance rules for your organisation.';
+    sub.textContent = 'Complete risk catalogue grouped by standard / requirement, with guidance from step8-legal-risk-guidance.json. Edit that file to adapt analogues, conditions, and relevance rules for your organisation.';
     card.appendChild(sub);
 
     // Category legend
-    if (_guidance?.categories) {
+    if (_legalGuidance?.categories) {
       card.appendChild(_sectionLabel('Risk Categories'));
       const legend = _el('div', 'wiz8-cat-legend');
-      Object.entries(_guidance.categories).forEach(([name, info]) => {
+      Object.entries(_legalGuidance.categories).forEach(([name, info]) => {
         const item = _el('div', 'wiz8-cat-legend-item');
         const tag  = _el('span', 'wiz8-cat-tag');
         tag.textContent = name;
@@ -1170,13 +1208,13 @@
       sec.appendChild(h3);
       risks.forEach(risk => {
         const rd  = _el('div', 'wiz8-ref-risk');
-        const g   = _guidance?.risks?.[risk.jkName];
+        const g   = _legalGuidance?.risks?.[risk.jkName];
         const rnh = _el('div', 'wiz8-ref-risk-header');
         const rn  = _el('p', 'wiz8-ref-risk-name'); rn.textContent = risk.jkName; rnh.appendChild(rn);
         if (g?.category) {
           const catTag = _el('span', 'wiz8-cat-tag');
           catTag.textContent = g.category;
-          const c = _CAT_COLORS[_guidance.categories?.[g.category]?.color || 'slate'] || _CAT_COLORS.slate;
+          const c = _CAT_COLORS[_legalGuidance.categories?.[g.category]?.color || 'slate'] || _CAT_COLORS.slate;
           catTag.style.background = c.bg; catTag.style.color = c.text;
           rnh.appendChild(catTag);
         }

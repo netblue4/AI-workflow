@@ -1,0 +1,126 @@
+{
+  "categories": {
+    "Input Security":      { "color": "red"    },
+    "Data Privacy":        { "color": "purple" },
+    "Supply Chain":        { "color": "orange" },
+    "Data Integrity":      { "color": "amber"  },
+    "Output Security":     { "color": "rose"   },
+    "Access & Agency":     { "color": "indigo" },
+    "Confidentiality":     { "color": "blue"   },
+    "Retrieval Security":  { "color": "teal"   },
+    "Output Quality":      { "color": "green"  },
+    "Availability":        { "color": "slate"  }
+  },
+  "risks": {
+    "Prompt Injection": {
+      "owasp_id": "LLM01",
+      "category": "Input Security",
+      "question": "Does your system pass user-supplied text directly into the LLM prompt, or does it process content from untrusted external sources such as documents, emails, or web pages?",
+      "applies_if": [
+        "User-supplied content is concatenated into the LLM prompt without structural separation from system instructions",
+        "The system ingests and processes documents, emails, or web content that reach the LLM context via the Context Assembler",
+        "The LLM can invoke tools or APIs, and instructions embedded in user input could influence which tools are called",
+        "No adversarial input filtering or prompt injection detection is applied at the Input Guardrail"
+      ]
+    },
+    "Sensitive Information Disclosure": {
+      "owasp_id": "LLM02",
+      "category": "Data Privacy",
+      "question": "Does your RAG knowledge base contain confidential, personal, or sensitive information that not all users should be able to retrieve?",
+      "applies_if": [
+        "The knowledge base contains PII, employee records, financial data, or confidential business documents",
+        "Different users have different access rights but the vector store applies no per-user document-level filtering",
+        "The LLM could reconstruct sensitive training data when prompted with specific extraction queries",
+        "Responses are returned to users without a content filter that screens for unintended data leakage at the Response Interface"
+      ]
+    },
+    "Supply Chain": {
+      "owasp_id": "LLM03",
+      "category": "Supply Chain",
+      "question": "Does your system rely on third-party pre-trained models, open-source ML libraries, or externally sourced datasets for training, fine-tuning, or retrieval?",
+      "applies_if": [
+        "The LLM is a third-party hosted model or an open-source model obtained from a public registry such as Hugging Face",
+        "Embedding models or ranking models used in the Retriever are sourced from external providers without integrity verification",
+        "ML framework dependencies (e.g. transformers, LangChain, llama-index) are updated via package managers without a pinned, audited bill of materials",
+        "Training or fine-tuning datasets include any content from third-party providers, public data repositories, or web scraping pipelines"
+      ]
+    },
+    "Data and Model Poisoning": {
+      "owasp_id": "LLM04",
+      "category": "Data Integrity",
+      "question": "Is data ingested into your knowledge base sourced from web scraping, user uploads, or any partially untrusted automated pipeline?",
+      "applies_if": [
+        "Knowledge base documents are ingested automatically from external websites, user submissions, or third-party APIs without a review gate",
+        "The vector store can be updated at runtime without human review or content moderation of incoming documents",
+        "Fine-tuning datasets include user-generated, crowd-sourced, or publicly scraped content",
+        "Retrieval results are not screened for adversarial or manipulated content before inclusion in the LLM context by the Context Assembler"
+      ]
+    },
+    "Improper Output Handling": {
+      "owasp_id": "LLM05",
+      "category": "Output Security",
+      "question": "Are LLM-generated responses passed to downstream systems, rendered in a browser UI, or used to construct API calls or database queries without sanitisation?",
+      "applies_if": [
+        "LLM output is rendered in a web interface and could contain injected HTML, JavaScript, or markdown that executes in the browser",
+        "Model responses are used to construct SQL queries, shell commands, or further API or tool calls",
+        "A downstream service consumes LLM output as structured data (JSON, XML) without schema validation",
+        "No output sanitisation or content filter is applied at the Response Interface before delivery to end users or downstream systems"
+      ]
+    },
+    "Excessive Agency": {
+      "owasp_id": "LLM06",
+      "category": "Access & Agency",
+      "question": "Does the system grant the LLM the ability to call external APIs, modify databases, execute code, or take any action beyond read-only document retrieval?",
+      "applies_if": [
+        "The Orchestrator can invoke tools, plugins, or functions based on LLM decisions with no mandatory human checkpoint",
+        "The LLM can create, update, or delete records in connected data systems or backend services",
+        "Tool permissions granted to the LLM exceed the minimum necessary for its defined task",
+        "An autonomous multi-step agent operates without a human confirmation step before consequential or irreversible actions"
+      ]
+    },
+    "System Prompt Leakage": {
+      "owasp_id": "LLM07",
+      "category": "Confidentiality",
+      "question": "Does your system prompt contain confidential business logic, operational instructions, persona definitions, or proprietary information that must not be disclosed to users?",
+      "applies_if": [
+        "The system prompt encodes business rules, safety restrictions, or capability limitations that must remain confidential",
+        "The system prompt references internal API endpoints, credentials, or environment-specific configuration details",
+        "Users interact directly with the LLM and could craft queries designed to elicit or reconstruct the system prompt contents",
+        "Persona instructions or safety filter details are embedded in the prompt rather than enforced at the application or guardrail layer"
+      ]
+    },
+    "Vector and Embedding Weaknesses": {
+      "owasp_id": "LLM08",
+      "category": "Retrieval Security",
+      "question": "Does your RAG pipeline use a vector database or embedding model, and are any documents or queries sourced from potentially adversarial or untrusted channels?",
+      "applies_if": [
+        "The vector database is populated from external, user-contributed, or partially untrusted document sources without integrity checks",
+        "The embedding model has not been evaluated for adversarial robustness or susceptibility to nearest-neighbour manipulation",
+        "Retrieval results are not validated for relevance or screened for adversarially crafted content before passing to the Context Assembler",
+        "A single malicious document in the Data Store could systematically bias retrieval results across a wide range of user queries"
+      ]
+    },
+    "Misinformation": {
+      "owasp_id": "LLM09",
+      "category": "Output Quality",
+      "question": "Could users act on AI-generated responses without independent verification, or does the system operate in a domain where inaccurate outputs carry regulatory, financial, or safety risk?",
+      "applies_if": [
+        "The system provides advice or information in regulated domains such as healthcare, legal services, financial advice, or HR decisions",
+        "Users are likely to treat LLM outputs as authoritative facts rather than probabilistic suggestions requiring verification",
+        "The knowledge base may contain outdated, conflicting, or domain-specific information the LLM could misrepresent or hallucinate",
+        "The system does not surface confidence scores, source citations, or hallucination warnings alongside responses at the Response Interface"
+      ]
+    },
+    "Unbounded Consumption": {
+      "owasp_id": "LLM10",
+      "category": "Availability",
+      "question": "Is your system accessible to external users or automated pipelines, and could a single actor trigger a high volume of LLM inference requests?",
+      "applies_if": [
+        "The system is exposed via a public API or web interface without per-user or per-IP rate limiting",
+        "Automated processes, third-party integrations, or batch pipelines can submit requests at machine speed without throttling",
+        "No token budget, context-window cap, or per-session cost ceiling is enforced by the Orchestrator",
+        "A single large or adversarially crafted query could consume disproportionate compute, memory, or cost resources"
+      ]
+    }
+  }
+}
