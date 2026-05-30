@@ -1,20 +1,48 @@
 {
   "version": "1.0",
   "description": "Guidance data for Step 8 Risk Assessment. Edit this file to adapt the language, categories, applies-if conditions, and relevance rules to suit your organisation. This file is loaded at runtime by step8-wizard.js — no code changes are required.",
-
   "categories": {
-    "Human Control":         { "color": "amber",  "description": "Risks that arise when AI systems act without adequate human oversight, intervention capability, or explainability." },
-    "Bias & Fairness":       { "color": "rose",   "description": "Risks that AI systems produce outcomes that are systematically unfair or discriminatory toward identifiable groups." },
-    "Data Integrity":        { "color": "teal",   "description": "Risks arising from poor quality, undocumented, or improperly governed training and input data." },
-    "Monitoring & Audit":    { "color": "slate",  "description": "Risks that AI decisions cannot be traced, audited, or reconstructed due to inadequate logging." },
-    "Cybersecurity":         { "color": "red",    "description": "Risks from adversarial attacks, model manipulation, and unauthorised extraction of model logic or data." },
-    "Access Control":        { "color": "purple", "description": "Risks arising from insufficient identity management, privilege controls, or access governance over AI systems and their data." },
-    "Performance Integrity": { "color": "indigo", "description": "Risks that AI accuracy, reliability, or reproducibility degrades in production without detection." },
-    "Availability & Resilience": { "color": "orange", "description": "Risks that AI system failures are not handled safely, causing operational disruption or harm." },
-    "Transparency":          { "color": "green",  "description": "Risks arising from failure to disclose AI involvement, AI-generated content, or AI-driven decisions to affected parties." },
-    "Infrastructure Security": { "color": "blue", "description": "Risks to the AI deployment environment: containers, registries, network exposure, and host isolation." }
+    "Human Control": {
+      "color": "amber",
+      "description": "Risks that arise when AI systems act without adequate human oversight, intervention capability, or explainability."
+    },
+    "Bias & Fairness": {
+      "color": "rose",
+      "description": "Risks that AI systems produce outcomes that are systematically unfair or discriminatory toward identifiable groups."
+    },
+    "Data Integrity": {
+      "color": "teal",
+      "description": "Risks arising from poor quality, undocumented, or improperly governed training and input data."
+    },
+    "Monitoring & Audit": {
+      "color": "slate",
+      "description": "Risks that AI decisions cannot be traced, audited, or reconstructed due to inadequate logging."
+    },
+    "Cybersecurity": {
+      "color": "red",
+      "description": "Risks from adversarial attacks, model manipulation, and unauthorised extraction of model logic or data."
+    },
+    "Access Control": {
+      "color": "purple",
+      "description": "Risks arising from insufficient identity management, privilege controls, or access governance over AI systems and their data."
+    },
+    "Performance Integrity": {
+      "color": "indigo",
+      "description": "Risks that AI accuracy, reliability, or reproducibility degrades in production without detection."
+    },
+    "Availability & Resilience": {
+      "color": "orange",
+      "description": "Risks that AI system failures are not handled safely, causing operational disruption or harm."
+    },
+    "Transparency": {
+      "color": "green",
+      "description": "Risks arising from failure to disclose AI involvement, AI-generated content, or AI-driven decisions to affected parties."
+    },
+    "Infrastructure Security": {
+      "color": "blue",
+      "description": "Risks to the AI deployment environment: containers, registries, network exposure, and host isolation."
+    }
   },
-
   "relevance_factor_keys": {
     "high_if_step3_ai_act_outcome": "HIGH if Step 3 AI Act classification is one of the listed outcomes",
     "high_if_step7_automated_decisions_contains": "HIGH if Step 7 automated decision-making answer contains any of the listed substrings",
@@ -22,9 +50,7 @@
     "high_if_step7_has_personal_data": "HIGH if Step 7 DPIA identified any standard personal data",
     "high_if_step7_training_data_used": "HIGH if Step 7 DPIA indicates personal data is or may be used to train/fine-tune the model"
   },
-
   "risks": {
-
     "Human Oversight Bypass Failure": {
       "category": "Human Control",
       "traditional_analog": "Automation over-reliance — like unchecked automated trading or credit-scoring systems with no kill switch or mandatory human review checkpoint before consequential action is taken.",
@@ -34,14 +60,19 @@
         "The AI system provides no confidence indicator or explanation alongside its outputs"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Subgroup Coverage Failure": {
       "category": "Bias & Fairness",
       "traditional_analog": "Sampling bias in analytics — like an underrepresented demographic in credit-scoring training data, where sparse records cause systematically worse outcomes for that group at inference time.",
@@ -51,14 +82,19 @@
         "The AI system's outputs affect employment, credit, benefits, healthcare access, or other individually significant decisions"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": true,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Proxy Discrimination Propagation Failure": {
       "category": "Bias & Fairness",
       "traditional_analog": "Redlining / indirect discrimination — where a seemingly neutral variable (e.g. postcode, browsing history) acts as a statistical proxy for a protected characteristic, producing discriminatory outcomes that are harder to detect than direct discrimination.",
@@ -68,14 +104,19 @@
         "Historical decisions are used as training labels and may embed past discriminatory patterns"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": true,
         "high_if_step7_has_personal_data": true,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Dataset Lifecycle Integrity Failure": {
       "category": "Data Integrity",
       "traditional_analog": "Database change management failure — like a version-controlled ETL pipeline where an undocumented schema change silently corrupts downstream analytical models, discovered only during an audit.",
@@ -92,24 +133,25 @@
         "high_if_step7_training_data_used": true
       }
     },
-
     "Data Governance Documentation Failure": {
       "category": "Data Integrity",
       "traditional_analog": "Undocumented data lineage / missing information asset register — like an ETL pipeline with no data dictionary, where no one can trace the origin, transformation logic, or quality of data feeding a regulatory report.",
       "applies_if": [
-        "The AI system uses training data that must be documented to satisfy regulatory or legal obligations",
-        "Data lineage traceability is required for audit, legal proceedings, or GDPR Article 30 records",
-        "Multiple data sources are combined and their provenance and quality must be tracked and evidenced"
+        "The AI system uses training or retrieval data whose selection rationale, legal permission, and preparation history are not formally documented",
+        "The organisation cannot trace which datasets were used, when they were collected, or why they were selected — meaning it cannot produce this evidence to a regulator examining Art.10(2) or Art.11/Annex IV compliance",
+        "Multiple data sources are combined without a documented provenance chain that records origin, transformation steps, and legal basis for each source"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
         "high_if_step7_automated_decisions_contains": [],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": true,
         "high_if_step7_training_data_used": true
       }
     },
-
     "Data Quality Measurement Failure": {
       "category": "Data Integrity",
       "traditional_analog": "Silent data quality degradation in production — like a financial reporting system that passes incomplete or duplicate records through an ETL pipeline with no quality checks, producing incorrect regulatory submissions.",
@@ -119,31 +161,41 @@
         "Errors in input data would propagate into AI-driven decisions without triggering an alert or rejection"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Audit Log Integrity Failure": {
       "category": "Monitoring & Audit",
       "traditional_analog": "SOX / GDPR audit trail tampering — like a financial transaction log that can be modified or deleted, making post-incident investigation and regulatory audit impossible and creating legal exposure.",
       "applies_if": [
-        "The AI system is subject to regulatory logging requirements (GDPR Art.22, EU AI Act Art.12, internal compliance policy)",
+        "The AI system is subject to regulatory logging requirements (EU AI Act Art.12, GDPR Art.5(1)(f) accountability obligations, internal compliance policy)",
         "Audit trails are required to reconstruct or justify AI decisions in the event of a complaint, legal challenge, or regulatory review",
         "AI decision logs are stored in a system where they could be modified, deleted, or are not protected from tampering"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": true,
         "high_if_step7_has_personal_data": true,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Log Retention Violation": {
       "category": "Monitoring & Audit",
       "traditional_analog": "Log retention policy breach / evidence spoliation — like security event logs deleted before the mandatory retention window, preventing forensic investigation after an incident and creating regulatory exposure.",
@@ -153,14 +205,16 @@
         "Historical AI decision logs may be required for regulatory audit, data subject requests, or post-incident investigation"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
         "high_if_step7_automated_decisions_contains": [],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": true,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Adversarial Input Evasion Failure": {
       "category": "Cybersecurity",
       "traditional_analog": "Input validation bypass / AI-layer SQL injection — where a malicious user crafts inputs designed to manipulate the model's logic or extract sensitive information, analogous to how SQL injection exploits improperly sanitised database queries.",
@@ -170,48 +224,16 @@
         "Security controls rely on the AI model itself to detect and reject malicious inputs rather than a separate validation layer"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
         "high_if_step7_automated_decisions_contains": [],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": true,
         "high_if_step7_training_data_used": false
       }
     },
-
-    "Model Extraction Attack Failure": {
-      "category": "Cybersecurity",
-      "traditional_analog": "Intellectual property theft via API probing — like systematically querying a competitor's pricing or credit-scoring API to reverse-engineer and replicate their proprietary algorithm without authorisation.",
-      "applies_if": [
-        "The AI model embodies commercially valuable, proprietary, or competitively sensitive decision logic",
-        "The model is accessible via an API, web interface, or other queryable endpoint that could be systematically interrogated",
-        "Replication of the model's behaviour by a competitor, adversary, or data subject would cause commercial or reputational harm"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-
-    "Development Environment Integrity Failure": {
-      "category": "Cybersecurity",
-      "traditional_analog": "Software supply chain attack (SolarWinds-style) — where a compromised development environment or third-party library injects malicious code or biased data into the AI model before it reaches production.",
-      "applies_if": [
-        "The AI model is built, fine-tuned, or customised in-house using an internal development or training pipeline",
-        "Third-party libraries, pre-trained foundation models, or external data sources are incorporated into the AI build",
-        "The development or CI/CD pipeline has access to sensitive systems, credentials, or production data"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": true
-      }
-    },
-
     "Unauthorised Access and Privilege Escalation Failure": {
       "category": "Access Control",
       "traditional_analog": "Privileged access management (PAM) failure / RBAC violation — like a compromised service account with excessive permissions giving an attacker access to sensitive model weights, training data, or the AI decision pipeline.",
@@ -228,7 +250,6 @@
         "high_if_step7_training_data_used": false
       }
     },
-
     "Cyber Attack Detection Failure": {
       "category": "Cybersecurity",
       "traditional_analog": "IDS/SIEM gap — like a web server silently exfiltrating sensitive data for weeks because anomalous query patterns were not monitored, leaving the organisation without early warning of an active attack.",
@@ -238,14 +259,16 @@
         "No automated monitoring exists to detect unusual query volumes, anomalous output patterns, or potential AI-layer attacks"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
         "high_if_step7_automated_decisions_contains": [],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": true,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Accuracy Measurement and Drift Failure": {
       "category": "Performance Integrity",
       "traditional_analog": "Model drift / SLA degradation in production — like a fraud detection model that was 95% accurate at launch but silently degraded to 70% over 18 months as fraud patterns changed, with no monitoring alert to trigger retraining.",
@@ -255,14 +278,19 @@
         "No baseline accuracy metric, monitoring threshold, or automated drift detection alert has been defined"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Feedback Loop Contamination Failure": {
       "category": "Performance Integrity",
       "traditional_analog": "Self-reinforcing algorithmic error — like a recommendation engine trained on user clicks that progressively amplifies engagement-optimising content, embedding and amplifying its own biases with each retraining cycle.",
@@ -279,7 +307,6 @@
         "high_if_step7_training_data_used": true
       }
     },
-
     "Output Reproducibility Failure": {
       "category": "Performance Integrity",
       "traditional_analog": "Audit reproducibility requirement — like a regulatory capital model that cannot reproduce a prior month's output because an undocumented parameter was changed, making supervisory review and model validation impossible.",
@@ -289,14 +316,19 @@
         "Post-incident investigation requires the ability to reconstruct and replay a specific AI decision or output"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Input Corruption Propagation Failure": {
       "category": "Performance Integrity",
       "traditional_analog": "Garbage-in-garbage-out / upstream data quality cascade — like a risk model silently ingesting corrupted market data feeds and producing incorrect risk calculations for hours before detection, with no validation gate between ingest and processing.",
@@ -307,13 +339,15 @@
       ],
       "relevance_factors": {
         "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": ["Yes", "Partially"],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes",
+          "Partially"
+        ],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
       }
     },
-
     "Fail-Safe Activation Failure": {
       "category": "Availability & Resilience",
       "traditional_analog": "Circuit breaker / graceful degradation failure — like a critical payment processing system with no fallback mode, where a software fault causes total service loss rather than a safe degraded state or manual override.",
@@ -323,14 +357,18 @@
         "No defined safe-state, limited-functionality mode, or emergency halt mechanism has been designed and tested"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": ["Yes"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [
+          "Yes"
+        ],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
       }
     },
-
     "AI Disclosure Mechanism Failure": {
       "category": "Transparency",
       "traditional_analog": "Consumer protection / advertising standards non-disclosure — like undisclosed AI-generated product reviews or a chatbot that does not identify itself as AI, violating EU AI Act Art.50 and consumer protection law transparency obligations.",
@@ -340,101 +378,17 @@
         "The EU AI Act Art.50 transparency obligations apply to this system's output or interaction modality"
       ],
       "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
         "high_if_step7_automated_decisions_contains": [],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-
-    "Image Integrity & Supply Chain Failure": {
-      "category": "Infrastructure Security",
-      "traditional_analog": "Software supply chain attack (dependency confusion / typosquatting) — like a malicious npm package injecting credential-stealing code during a CI/CD build, or a tampered Docker base image silently adding a backdoor to the production system.",
-      "applies_if": [
-        "The AI system is deployed as a containerised application and base images or model artefacts are pulled from public or shared registries",
-        "The CI/CD pipeline does not verify the integrity (cryptographic hash or signature) of all dependencies before build",
-        "Model artefacts or weights are downloaded from external sources (e.g. HuggingFace) without hash verification"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": true
-      }
-    },
-
-    "Registry & Identity Access Failure": {
-      "category": "Infrastructure Security",
-      "traditional_analog": "Service account credential theft / registry access control failure — like a compromised CI/CD service account allowing an attacker to push malicious images to a private container registry, silently replacing production workloads.",
-      "applies_if": [
-        "The AI deployment uses a container or model registry authenticated via service accounts, API keys, or machine credentials",
-        "Multiple teams or automated pipelines share access to the deployment infrastructure with potentially overlapping permissions",
-        "A compromised credential would allow an attacker to modify, replace, or exfiltrate AI model artefacts"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": true,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-
-    "Network Exposure & API Abuse Failure": {
-      "category": "Infrastructure Security",
-      "traditional_analog": "Exposed API endpoint / network segmentation failure — like an internal administrative API accidentally exposed to the internet, allowing unauthorised query submission, data extraction, or resource exhaustion via automated probing.",
-      "applies_if": [
-        "The AI system is accessible via an API endpoint, whether internal or external-facing",
-        "Network access controls are required to restrict which users or systems can query the AI model",
-        "High or unlimited query volumes could be used to extract model behaviour, exhaust resources, or perform denial-of-service attacks"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": ["HIGH_RISK", "PROHIBITED"],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-
-    "Host & Workload Isolation Failure": {
-      "category": "Infrastructure Security",
-      "traditional_analog": "VM escape / container breakout in shared cloud — like a malicious workload in a shared cloud environment exploiting a hypervisor vulnerability to access memory or storage belonging to a co-located sensitive AI workload.",
-      "applies_if": [
-        "The AI system runs in a shared or multi-tenant infrastructure environment (public cloud, co-located data centre, shared Kubernetes cluster)",
-        "Sensitive training data, model weights, or inference outputs could be exposed if workload isolation fails",
-        "The AI system processes personal or sensitive data in an environment shared with other workloads of varying trust levels"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": true,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-
-    "Container Runtime Security Failure": {
-      "category": "Infrastructure Security",
-      "traditional_analog": "RASP gap / container running as root — like a containerised application with no runtime monitoring and elevated privileges, where an attacker who gains code execution has unrestricted access to the host and adjacent workloads.",
-      "applies_if": [
-        "The AI system is deployed in containers that require runtime security controls and behavioural monitoring",
-        "Containers run with elevated privileges or with access to sensitive host resources (volumes, network namespaces)",
-        "No runtime anomaly detection exists to identify compromised container behaviour, unusual process execution, or lateral movement"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": true,
-        "high_if_step7_has_personal_data": true,
         "high_if_step7_training_data_used": false
       }
     }
-
   },
-
   "wizard_questions": [
     {
       "id": "wq01",
@@ -482,16 +436,6 @@
       "question": "Does the AI system accept external or user-supplied inputs that directly influence its predictions or decisions?"
     },
     {
-      "id": "wq10",
-      "risk_name": "Model Extraction Attack Failure",
-      "question": "Is the trained model or its outputs exposed through APIs or interfaces accessible to users or systems outside your organisation?"
-    },
-    {
-      "id": "wq11",
-      "risk_name": "Development Environment Integrity Failure",
-      "question": "Are the development and training pipelines protected against supply-chain attacks or unauthorised injection of code or data?"
-    },
-    {
       "id": "wq12",
       "risk_name": "Cyber Attack Detection Failure",
       "question": "Does the AI system have monitoring controls to detect anomalous query patterns, unusual output behaviour, or attempted intrusions?"
@@ -530,32 +474,6 @@
       "id": "wq19",
       "risk_name": "AI Disclosure Mechanism Failure",
       "question": "Are users or individuals affected by the system's outputs notified that they are interacting with, or being assessed by, an AI system?"
-    },
-    {
-      "id": "wq20",
-      "risk_name": "Image Integrity & Supply Chain Failure",
-      "question": "Are container images and model artefacts cryptographically signed or verified for integrity before deployment?"
-    },
-    {
-      "id": "wq21",
-      "risk_name": "Registry & Identity Access Failure",
-      "question": "Are container or model registries protected with access controls, authentication, and audit logging?"
-    },
-    {
-      "id": "wq22",
-      "risk_name": "Network Exposure & API Abuse Failure",
-      "question": "Are AI system APIs and service endpoints protected against unauthorised external access, rate abuse, and data exfiltration?"
-    },
-    {
-      "id": "wq23",
-      "risk_name": "Host & Workload Isolation Failure",
-      "question": "Are AI workloads isolated from other systems at the host, VM, or container level to prevent lateral movement in the event of a compromise?"
-    },
-    {
-      "id": "wq24",
-      "risk_name": "Container Runtime Security Failure",
-      "question": "Are container runtime security controls applied — such as read-only filesystems, dropped capabilities, non-root execution, and syscall filtering?"
     }
   ]
-
 }
