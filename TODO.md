@@ -2,7 +2,7 @@
 
 ## Open
 
-- [ ] **Check AI Act ↔ Harmonised Standards mapping** — verify that every ART-ID in `tbl_Harmonised_Standards.json` is correctly linked to its intended EU AI Act Article. The internal ART-ID numbering does not correspond directly to Act Article numbers; mapping must be derived from `standard_group` text and cross-referenced against `tbl_AI_Articles.json`. Flag any misclassified standards (see HS-004/HS-005 as first example already fixed).
+- [ ] **ART-011 (Art.43 Conformity Assessment) — consider replacing standard source** — HS-081 to HS-085 currently use `[18286.16–20]` (prEN 18286 QMS sub-references) to describe conformity assessment requirements. The dedicated official standard is **ISO/IEC 42006** (AI Management System Auditors, currently at DIS stage). Review whether to rebase ART-011 entries onto 42006 clauses once that standard is published, or keep the current 18286-derived content as an interim measure.
 
 - [ ] **Step 7 — DPIA: explore reshaping the DPIA to match the risk assessment layout** — ask Claude whether the DPIA wizard can be restyled or restructured to look and feel like the Step 8 risk assessments, for a more consistent user experience across the workflow.
 
@@ -16,4 +16,4 @@
 
 ## Completed
 
-_(none yet)_
+- [x] **Check AI Act ↔ Harmonised Standards mapping** — completed. Three issues found and resolved: (1) HS-004/005 `[18229-1.4–5]` logging standards moved from ART-001 (Art.13) → ART-005 (Art.12); (2) ART-012 (Art.50) standard refs corrected from `[24368.x]` (ISO/IEC TR 24368 — ethics/societal concerns) → `[12792.x]` (prEN ISO/IEC 12792 — Transparency Taxonomy, the correct Art.50 standard); (3) ART-011 (Art.43) noted as using prEN 18286 sub-refs instead of ISO/IEC 42006 — flagged as open item above pending 42006 publication.

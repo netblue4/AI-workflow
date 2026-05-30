@@ -682,40 +682,40 @@
   {
     "pk_Harmonised_Standard_ID": "HS-086",
     "fk_AI_Article_ID": "ART-012",
-    "standard_ref": "[24368.1]",
-    "standard_group": "[24368: AI Transparency] - Disclosure Requirements",
+    "standard_ref": "[12792.1]",
+    "standard_group": "[12792: AI Transparency Taxonomy] - Disclosure Requirements",
     "standard_name": "AI Identity Disclosure",
     "standard_text": "Natural persons interacting with the system are informed in a clear, timely, and unambiguous manner that they are interacting with an AI system, unless this is obvious from context."
   },
   {
     "pk_Harmonised_Standard_ID": "HS-087",
     "fk_AI_Article_ID": "ART-012",
-    "standard_ref": "[24368.2]",
-    "standard_group": "[24368: AI Transparency] - Disclosure Requirements",
+    "standard_ref": "[12792.2]",
+    "standard_group": "[12792: AI Transparency Taxonomy] - Disclosure Requirements",
     "standard_name": "Disclosure Timing & Clarity",
     "standard_text": "The AI disclosure is presented at the start of the interaction or before any consequential output is produced, and is expressed in plain language accessible to the intended audience."
   },
   {
     "pk_Harmonised_Standard_ID": "HS-088",
     "fk_AI_Article_ID": "ART-012",
-    "standard_ref": "[24368.3]",
-    "standard_group": "[24368: AI Transparency] - Synthetic Content",
+    "standard_ref": "[12792.3]",
+    "standard_group": "[12792: AI Transparency Taxonomy] - Synthetic Content",
     "standard_name": "AI-Generated Content Labelling",
     "standard_text": "Content generated or manipulated by the system that could be mistaken for authentic human-created content is labelled as AI-generated in a machine-readable format and, where technically feasible, in a manner visible to the end user."
   },
   {
     "pk_Harmonised_Standard_ID": "HS-089",
     "fk_AI_Article_ID": "ART-012",
-    "standard_ref": "[24368.4]",
-    "standard_group": "[24368: AI Transparency] - Synthetic Content",
+    "standard_ref": "[12792.4]",
+    "standard_group": "[12792: AI Transparency Taxonomy] - Synthetic Content",
     "standard_name": "Deep Fake Detection Support",
     "standard_text": "Where the system generates synthetic audio, image, or video content depicting real persons or events, technical measures are in place to embed provenance metadata or watermarking to support downstream detection."
   },
   {
     "pk_Harmonised_Standard_ID": "HS-090",
     "fk_AI_Article_ID": "ART-012",
-    "standard_ref": "[24368.5]",
-    "standard_group": "[24368: AI Transparency] - Deployer Duties",
+    "standard_ref": "[12792.5]",
+    "standard_group": "[12792: AI Transparency Taxonomy] - Deployer Duties",
     "standard_name": "Deployer Disclosure Implementation",
     "standard_text": "The deployer has implemented the provider's transparency instructions and can demonstrate that the disclosure mechanism is active in the production environment and has been tested for visibility and accessibility."
   },
