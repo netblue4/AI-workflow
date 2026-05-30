@@ -1,5 +1,5 @@
 /* Step 8 — Risk Assessment Wizard (Guided)
-   Grouping: article.StepName → risks → Attack Vectors (each risk appears exactly once)
+   Data sources: tbl_Risks.json, tbl_Risk_Controls.json, tbl_AI_Articles.json
    Guidance (analogues, applies-if, relevance, categories) loaded from step8-legal-risk-guidance.json and step8-technical-risk-guidance.json.
    Selection at risk level. Identity from central _meta.
    Informed by Step 3 (RCN filter + relevance) and Step 7 (DPIA data types + relevance).
@@ -9,10 +9,16 @@
 
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
-  let _container = null, _framework = null, _legalGuidance = null, _techGuidance = null, _record = null;
+  let _container = null, _legalGuidance = null, _techGuidance = null, _record = null;
   let _step3Data = null, _step7Data = null;
   let _filteredFGItems = []; // [{groupName, risks:[...]}]
-  let _owaspRisks = []; // OWASP risks from tbl_Risks.json — used only for pk_Risk_ID lookup on save
+  // tbl_ data stores
+  let _tblRisks    = [];   // all rows from tbl_Risks.json
+  let _tblControls = [];   // all rows from tbl_Risk_Controls.json
+  let _tblArticles = [];   // all rows from tbl_AI_Articles.json
+  let _owaspRisks  = [];   // EU AI Act risks filtered from _tblRisks — pk_Risk_ID lookup on save
+  let _controlsByRisk = new Map(); // pk_Risk_ID → [control, ...]
+  let _articleById    = new Map(); // pk_AI_Article_ID → article
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
@@ -52,14 +58,18 @@
     _step       = step;
     _colorKey   = colorKey;
     _phaseTitle = phaseTitle;
-    _framework     = null;
-    _legalGuidance = null;
-    _techGuidance  = null;
-    _record        = null;
-    _step3Data     = null;
-    _step7Data     = null;
-    _filteredFGItems      = [];
-    _owaspRisks           = [];
+    _legalGuidance  = null;
+    _techGuidance   = null;
+    _record         = null;
+    _step3Data      = null;
+    _step7Data      = null;
+    _filteredFGItems = [];
+    _tblRisks        = [];
+    _tblControls     = [];
+    _tblArticles     = [];
+    _owaspRisks      = [];
+    _controlsByRisk  = new Map();
+    _articleById     = new Map();
     _state.legal_risks    = {};
     _wizState.step_index  = 0;
     _wizState.answers     = {};
@@ -81,31 +91,48 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    // Load framework, both guidance files, and tbl_Risks (for pk_Risk_ID lookup on save)
-    const [fwRes, lgdRes, tgdRes, risksRes] = await Promise.allSettled([
-      fetch('ai_Risk_Control_Framework.json'),
+    // Load all tbl_ data sources and guidance files
+    const [risksRes, ctrlsRes, artsRes, lgdRes, tgdRes] = await Promise.allSettled([
+      fetch('tbl_Risks.json'),
+      fetch('tbl_Risk_Controls.json'),
+      fetch('tbl_AI_Articles.json'),
       fetch('step8-legal-risk-guidance.json'),
-      fetch('step8-technical-risk-guidance.json'),
-      fetch('tbl_Risks.json')
+      fetch('step8-technical-risk-guidance.json')
     ]);
 
-    if (fwRes.status === 'rejected' || !fwRes.value.ok) {
-      pw.innerHTML = `<p style="padding:24px;color:var(--danger-600,#dc2626)">Could not load ai_Risk_Control_Framework.json</p>`;
+    if (risksRes.status === 'rejected' || !risksRes.value.ok) {
+      pw.innerHTML = `<p style="padding:24px;color:var(--danger-600,#dc2626)">Could not load tbl_Risks.json</p>`;
       return;
     }
-    _framework = await fwRes.value.json();
+    try {
+      _tblRisks   = await risksRes.value.json();
+      _owaspRisks = _tblRisks.filter(r => r.risk_source === 'OWASP');
+    } catch (_) { _tblRisks = []; }
+
+    if (ctrlsRes.status === 'fulfilled' && ctrlsRes.value.ok) {
+      try {
+        _tblControls = await ctrlsRes.value.json();
+        _controlsByRisk = new Map();
+        _tblControls.forEach(c => {
+          if (!_controlsByRisk.has(c.fk_Risk_ID)) _controlsByRisk.set(c.fk_Risk_ID, []);
+          _controlsByRisk.get(c.fk_Risk_ID).push(c);
+        });
+      } catch (_) {}
+    }
+
+    if (artsRes.status === 'fulfilled' && artsRes.value.ok) {
+      try {
+        _tblArticles = await artsRes.value.json();
+        _articleById = new Map();
+        _tblArticles.forEach(a => _articleById.set(a.pk_AI_Article_ID, a));
+      } catch (_) {}
+    }
 
     if (lgdRes.status === 'fulfilled' && lgdRes.value.ok) {
       try { _legalGuidance = await lgdRes.value.json(); } catch (_) {}
     }
     if (tgdRes.status === 'fulfilled' && tgdRes.value.ok) {
       try { _techGuidance = await tgdRes.value.json(); } catch (_) {}
-    }
-    if (risksRes.status === 'fulfilled' && risksRes.value.ok) {
-      try {
-        const allRisks = await risksRes.value.json();
-        _owaspRisks = allRisks.filter(r => r.risk_source === 'OWASP');
-      } catch (_) {}
     }
 
     try {
@@ -150,50 +177,47 @@
     _renderPanes(pw);
   }
 
-  // ---- Build StepName → risks structure ----------------------
-  // Groups risks by their parent article's StepName.
-  // Each risk belongs to exactly one StepName — no repetition.
+  // ---- Build article → risks structure -----------------------
+  // Groups EU AI Act risks by their parent article name.
+  // Each risk belongs to exactly one article — no repetition.
   function _buildFGItems() {
-    if (!_framework) return [];
+    if (!_tblRisks.length) return [];
 
     const applicable = _step3Data?.all_requirement_control_numbers
       ? new Set(_step3Data.all_requirement_control_numbers) : null;
 
-    const groupMap = new Map(); // StepName → [riskObj, ...]
+    const groupMap = new Map(); // article_name → [riskObj, ...]
 
-    for (const section of Object.values(_framework)) {
-      if (!Array.isArray(section)) continue;
-      for (const article of section) {
-        const stepName = article.StepName;
-        if (!stepName) continue;
+    const euRisks = _tblRisks.filter(r => r.risk_source === 'EU_AI_Act');
 
-        for (const field of (article.Fields || [])) {
-          if (field.jkType !== 'risk') continue;
+    for (const risk of euRisks) {
+      const controls = _controlsByRisk.get(risk.pk_Risk_ID) || [];
 
-          // Apply RCN applicability filter from Step 3
-          const matchedControls = [];
-          for (const ctrl of (field.controls || [])) {
-            const rcns = (ctrl.requirement_control_number || '')
+      // Apply RCN applicability filter from Step 3 using tbl_Risk_Controls.standard_ref
+      const matchedControls = applicable
+        ? controls.filter(ctrl => {
+            const rcns = (ctrl.standard_ref || '')
               .split(',').map(s => s.trim()).filter(Boolean);
-            const isApplicable = applicable ? rcns.some(r => applicable.has(r)) : true;
-            if (isApplicable) matchedControls.push(ctrl);
-          }
-          if (matchedControls.length === 0) continue;
+            return rcns.some(r => applicable.has(r));
+          })
+        : controls;
 
-          const attackVectors = matchedControls.map(c => c.jkAttackVector).filter(Boolean);
-          const riskObj = {
-            jkName:          field.jkName,
-            RiskDescription: field.RiskDescription || '',
-            role:            field.Role || '',
-            attackVectors,
-            stepName                          // which standard group this risk belongs to
-          };
+      if (applicable && matchedControls.length === 0) continue;
 
-          if (!groupMap.has(stepName)) groupMap.set(stepName, []);
-          const arr = groupMap.get(stepName);
-          if (!arr.find(r => r.jkName === riskObj.jkName)) arr.push(riskObj);
-        }
-      }
+      const articleName = _articleById.get(risk.fk_AI_Article_ID)?.article_name
+        || risk.fk_AI_Article_ID;
+
+      const riskObj = {
+        jkName:          risk.risk_name,
+        RiskDescription: risk.risk_description || '',
+        role:            risk.risk_role || '',
+        attackVectors:   matchedControls.map(c => c.jkAttackVector).filter(Boolean),
+        stepName:        articleName
+      };
+
+      if (!groupMap.has(articleName)) groupMap.set(articleName, []);
+      const arr = groupMap.get(articleName);
+      if (!arr.find(r => r.jkName === riskObj.jkName)) arr.push(riskObj);
     }
 
     // Sort risks within each group: HIGH relevance first
@@ -1093,22 +1117,17 @@
       card.appendChild(legend);
     }
 
-    card.appendChild(_sectionLabel('All Risks by Standard / Requirement'));
+    card.appendChild(_sectionLabel('All Risks by Article'));
 
-    // Group by StepName (same logic as Browse All — no fieldGroup duplication)
-    const stepMap = new Map(); // StepName → [risk field, ...]
-    for (const section of Object.values(_framework || {})) {
-      if (!Array.isArray(section)) continue;
-      for (const article of section) {
-        const stepName = article.StepName;
-        if (!stepName) continue;
-        for (const field of (article.Fields || [])) {
-          if (field.jkType !== 'risk') continue;
-          if (!stepMap.has(stepName)) stepMap.set(stepName, []);
-          if (!stepMap.get(stepName).find(r => r.jkName === field.jkName)) {
-            stepMap.get(stepName).push(field);
-          }
-        }
+    // Group EU AI Act risks by article name from tbl_ data
+    const stepMap = new Map(); // article_name → [{jkName, ...}]
+    const euRisks = _tblRisks ? _tblRisks.filter(r => r.risk_source === 'EU_AI_Act') : [];
+    for (const risk of euRisks) {
+      const articleName = _articleById?.get(risk.fk_AI_Article_ID)?.article_name
+        || risk.fk_AI_Article_ID;
+      if (!stepMap.has(articleName)) stepMap.set(articleName, []);
+      if (!stepMap.get(articleName).find(r => r.jkName === risk.risk_name)) {
+        stepMap.get(articleName).push({ jkName: risk.risk_name });
       }
     }
 
