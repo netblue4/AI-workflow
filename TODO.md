@@ -1,6 +1,7 @@
 # AI Workflow — ToDo List
 
 ## Open
+- [ ] **AI Act Compliance View* — Why do some articles not have risks, what does T1, T2, T3 mean next to the controls
 
 - [ ] **OWASP controls — review control descriptions for accuracy against OWASP source** *(follow-on to sourcing task below)* — The 44 OWASP controls in `tbl_Risk_Controls.json` now carry verifiable `owasp_ref` values traceable to the official OWASP LLM Top 10:2025 mitigations. The control descriptions (`jkText`) are still custom-written summaries. A future pass could verify that each description accurately reflects the source mitigation and tighten any loose phrasing.
 
