@@ -157,42 +157,90 @@
           {
             "id": "G3_Q1",
             "question": "Does the system perform biometric identification or categorisation of natural persons?",
-            "ai_act_reference": "Annex III(1)"
+            "ai_act_reference": "Annex III(1)",
+            "sub_questions": [
+              "Does the system identify or verify a person's identity from biometric data (face, fingerprint, iris, voice, or gait)?",
+              "Does the system categorise people based on biometric characteristics such as gender, age, or ethnicity?",
+              "Does the system match individuals against a watchlist or identity database using biometric data?",
+              "Does the system infer personal attributes or intentions from biometric signals?"
+            ]
           },
           {
             "id": "G3_Q2",
             "question": "Is the system used in the management or operation of critical infrastructure (roads, water, gas, heating, electricity)?",
-            "ai_act_reference": "Annex III(2)"
+            "ai_act_reference": "Annex III(2)",
+            "sub_questions": [
+              "Does the system manage or control road, rail, aviation, or maritime traffic?",
+              "Does the system monitor or operate water supply, gas, electricity, or heating networks?",
+              "Does the system make operational decisions affecting the safety or continuity of critical digital infrastructure?",
+              "Does the system control industrial or environmental safety equipment in critical facilities?"
+            ]
           },
           {
             "id": "G3_Q3",
             "question": "Is the system used in education or vocational training — e.g. determining access, evaluating students, or monitoring during exams?",
-            "ai_act_reference": "Annex III(3)"
+            "ai_act_reference": "Annex III(3)",
+            "sub_questions": [
+              "Does the system determine or significantly influence admissions or access to educational programmes?",
+              "Does the system assess, score, or grade students or trainees?",
+              "Does the system monitor student behaviour, attention, or activity during exams?",
+              "Does the system predict educational outcomes or determine progression pathways?"
+            ]
           },
           {
             "id": "G3_Q4",
             "question": "Is the system used in employment, workers management, or self-employment — e.g. recruitment, promotion, task allocation, or performance monitoring?",
-            "ai_act_reference": "Annex III(4)"
+            "ai_act_reference": "Annex III(4)",
+            "sub_questions": [
+              "Does the system screen, rank, or score job candidates during recruitment?",
+              "Does the system inform or make recommendations on promotion, demotion, or termination?",
+              "Does the system allocate tasks, assign workloads, or direct how work activities are carried out?",
+              "Does the system monitor or evaluate employee performance, behaviour, or location?"
+            ]
           },
           {
             "id": "G3_Q5",
             "question": "Is the system used to evaluate eligibility for, or to assess, essential private or public services — e.g. credit scoring, insurance risk, emergency dispatch, social benefits?",
-            "ai_act_reference": "Annex III(5)"
+            "ai_act_reference": "Annex III(5)",
+            "sub_questions": [
+              "Does the system assess creditworthiness or determine eligibility for loans or credit?",
+              "Does the system calculate or influence insurance premiums or risk classification?",
+              "Does the system triage, prioritise, or route emergency services requests?",
+              "Does the system determine eligibility for social benefits, housing, or public assistance?"
+            ]
           },
           {
             "id": "G3_Q6",
             "question": "Is the system used by law enforcement authorities — e.g. individual risk assessment, polygraph testing, crime analytics, evidence reliability evaluation?",
-            "ai_act_reference": "Annex III(6)"
+            "ai_act_reference": "Annex III(6)",
+            "sub_questions": [
+              "Does the system assess the likelihood of an individual committing a crime or reoffending?",
+              "Does the system detect emotional state, stress, or deception in law enforcement contexts?",
+              "Does the system evaluate the reliability of evidence, witness statements, or polygraph results?",
+              "Does the system profile individuals or groups to predict criminal activity?"
+            ]
           },
           {
             "id": "G3_Q7",
             "question": "Is the system used for migration, asylum, or border control management — e.g. risk assessment of irregular migration, examination of applications, document verification?",
-            "ai_act_reference": "Annex III(7)"
+            "ai_act_reference": "Annex III(7)",
+            "sub_questions": [
+              "Does the system assess the risk of irregular migration or the likelihood of an individual absconding?",
+              "Does the system assist in examining asylum applications or determining refugee eligibility?",
+              "Does the system verify or authenticate identity documents at border checkpoints?",
+              "Does the system profile travellers or perform risk scoring for border security purposes?"
+            ]
           },
           {
             "id": "G3_Q8",
             "question": "Is the system used in the administration of justice or democratic processes — e.g. assisting courts in researching or applying law, influencing election outcomes?",
-            "ai_act_reference": "Annex III(8)"
+            "ai_act_reference": "Annex III(8)",
+            "sub_questions": [
+              "Does the system assist courts, tribunals, or legal professionals in researching or applying law to specific cases?",
+              "Does the system assist in alternative dispute resolution such as mediation or arbitration?",
+              "Does the system influence, predict, or target electoral outcomes or voting behaviour?",
+              "Does the system generate or distribute personalised political content at scale?"
+            ]
           }
         ],
         "outcomes": {
@@ -325,8 +373,8 @@
                 "title": "Transparency Obligations for Certain AI Systems",
                 "obligation_type": "provider_obligation_and_deployer_obligation",
                 "trigger_reason": "The system either interacts with humans directly, generates synthetic or deceptive content, or produces AI-generated text intended for public dissemination. Users must be informed they are interacting with AI, or that content is AI-generated, in a clear and timely manner.",
-                "harmonised_standards": ["ISO/IEC 42001 Annex A.6", "ISO/IEC TR 24368"],
-                "requirement_control_numbers": ["[24368.1]","[24368.2]","[24368.3]","[24368.4]","[24368.5]"]
+                "harmonised_standards": ["ISO/IEC 42001 Annex A.6", "prEN ISO/IEC 12792 Transparency Taxonomy"],
+                "requirement_control_numbers": ["[12792.1]","[12792.2]","[12792.3]","[12792.4]","[12792.5]"]
               }
             ],
             "next_gate": "G5"
@@ -339,14 +387,32 @@
       },
       {
         "gate_id": "G5",
-        "gate_name": "Deployer-specific obligations",
-        "gate_purpose": "Article 26 — Identifies whether the organisation is acting as a deployer of a high-risk AI system and carries its own obligations beyond those of the provider.",
+        "gate_name": "Organisation role and deployer obligations",
+        "gate_purpose": "Articles 3(4), 3(7), 25, 26 — Determines whether your organisation is a Provider (builder) or Deployer (subscriber), and identifies Article 26 obligations if applicable. Article 26 obligations only attach if the system was classified HIGH_RISK in G3.",
         "must_complete": true,
-        "note": "This gate only produces obligations if the system was classified HIGH_RISK in G3. If G3 produced LIMITED_OR_MINIMAL_RISK, record answers but no additional articles attach.",
+        "note": "G5_Q0 determines organisation role for all risk levels and cascades into Step 8 risk filtering. Article 26 deployer obligations (G5_Q1) only apply if the system was classified HIGH_RISK in G3.",
         "questions": [
           {
+            "id": "G5_Q0",
+            "type": "choice",
+            "question": "How is your organisation using this AI system?",
+            "ai_act_reference": "Art.3(4), Art.3(7)",
+            "options": [
+              {
+                "value": "provider",
+                "label": "We are building or developing it",
+                "description": "We are using APIs, open-source models, fine-tuning, or RAG to create a system tailored to our needs. We are responsible for the AI system's design and behaviour."
+              },
+              {
+                "value": "deployer",
+                "label": "We are subscribing to a ready-made service",
+                "description": "We are using a third-party AI product (e.g. Microsoft Copilot, Claude for Business, Google Workspace AI) largely as provided by the supplier."
+              }
+            ]
+          },
+          {
             "id": "G5_Q1",
-            "question": "Is your organisation deploying a high-risk AI system that was developed by a third-party provider (i.e. you did not build it)?",
+            "question": "Is the AI system your organisation is deploying classified as high-risk and developed by a third-party provider?",
             "ai_act_reference": "Art.26"
           },
           {
@@ -356,11 +422,45 @@
           },
           {
             "id": "G5_Q3",
-            "question": "Does your organisation make significant changes to the intended purpose of a high-risk AI system beyond what the provider specified?",
-            "ai_act_reference": "Art.25"
+            "type": "sub_questions",
+            "label": "Article 25 — Substantial modification check",
+            "description": "Answer each question about modifications you are making to the third-party AI system. Any 'Yes' may convert your Deployer role into a Provider role.",
+            "ai_act_reference": "Art.25",
+            "soft_warning": "One or more answers indicate a potential substantial modification under Article 25. This may convert your organisation's role from Deployer to Provider, triggering full Articles 9–17 obligations. Review with legal counsel before proceeding as Deployer.",
+            "override_label": "I have reviewed this with legal counsel — continue as Deployer",
+            "sub_questions": [
+              {
+                "id": "G5_Q3_SQ1",
+                "question": "Are you fine-tuning or retraining the model on your own data?",
+                "ai_act_reference": "Art.25(1)"
+              },
+              {
+                "id": "G5_Q3_SQ2",
+                "question": "Are you changing the system's intended purpose beyond what the provider designed it for?",
+                "ai_act_reference": "Art.25(1)"
+              },
+              {
+                "id": "G5_Q3_SQ3",
+                "question": "Are you adding retrieval-augmented generation (RAG) using your own proprietary datasets?",
+                "ai_act_reference": "Art.25(1)"
+              },
+              {
+                "id": "G5_Q3_SQ4",
+                "question": "Are you integrating the system into a product where it functions as a safety-critical or regulated component?",
+                "ai_act_reference": "Art.25(1)"
+              }
+            ]
           }
         ],
         "outcomes": {
+          "G5_Q0_provider": {
+            "organisation_role": "provider",
+            "note": "Your organisation is acting as a Provider. Full Articles 9–17 obligations apply. OWASP implementation controls and harmonised standards controls are both relevant in Step 8."
+          },
+          "G5_Q0_deployer": {
+            "organisation_role": "deployer",
+            "note": "Your organisation is acting as a Deployer. Article 26 obligations apply if the system is high-risk. Harmonised standards controls are shown as a supplier assessment checklist in Step 8."
+          },
           "G5_Q1_yes": {
             "applicable_articles": [
               {
@@ -507,8 +607,10 @@
         "gates_completed": "string[] — e.g. [G1, G2, G3, G4, G5]",
         "short_circuit_gate": "string | null — gate ID where assessment ended early, if applicable",
         "applicable_articles": "article[] — full article objects from gate outcomes, accumulated across all gates",
+        "organisation_role": "provider | deployer | null",
         "deployer_obligations_apply": "boolean",
         "substantial_modification_applies": "boolean",
+        "art25_override": "boolean — true if user acknowledged substantial modification warning and elected to continue as Deployer",
         "transparency_obligations_apply": "boolean"
       },
       "combined_outcome": {

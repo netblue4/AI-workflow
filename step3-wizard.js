@@ -16,8 +16,10 @@
   let _stylesInjected = false;
 
   let _state = {
-    axis_a_tier: null,    // 'tier_1' | 'tier_2'
-    gate_answers: {},     // { G1_Q1: 'yes'|'no', … }
+    axis_a_tier: null,         // 'tier_1' | 'tier_2'
+    gate_answers: {},          // { G1_Q1: 'yes'|'no', G5_Q0: 'provider'|'deployer', … }
+    organisation_role: null,   // 'provider' | 'deployer'
+    art25_override: false,     // true if user acknowledged Art.25 warning and elected to continue as Deployer
     result: null
   };
 
@@ -335,7 +337,11 @@
     if (collapsed) {
       body.appendChild(_buildCollapsedQuestion(collapsed.key, collapsed.question, gate.questions));
     } else {
-      gate.questions.forEach(q => body.appendChild(_buildQuestionRow(q)));
+      gate.questions.forEach(q => {
+        if (q.type === 'choice')        body.appendChild(_buildChoiceQuestion(q));
+        else if (q.type === 'sub_questions') body.appendChild(_buildSubQuestionGroup(q));
+        else                            body.appendChild(_buildQuestionRow(q));
+      });
     }
     section.appendChild(body);
     return section;
@@ -376,19 +382,161 @@
     });
     row.appendChild(pillGroup);
 
-    // Compact reference list of sub-items
-    const refLabel = _el('p', '', { style: 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin-bottom:6px', textContent: 'Covered items' });
-    const grid = _el('div', '', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:4px' });
+    // Domain items — each with optional collapsible sub-questions
+    const refLabel = _el('p', '', { style: 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin-bottom:8px', textContent: 'Covered domains' });
+    const list = _el('div', 'wiz-domain-list');
     subItems.forEach(q => {
-      const item = _el('div', '', { style: 'display:flex;gap:6px;align-items:baseline' });
-      item.appendChild(_el('span', 'wiz-ref-tag', { textContent: q.ai_act_reference }));
-      const text = _el('span', '', { style: 'font-size:11px;color:var(--color-text-secondary);line-height:1.4', textContent: q.question });
-      item.appendChild(text);
-      grid.appendChild(item);
+      const item = _el('div', 'wiz-domain-item');
+
+      const headerRow = _el('div', 'wiz-domain-header');
+      headerRow.appendChild(_el('span', 'wiz-ref-tag', { textContent: q.ai_act_reference }));
+      headerRow.appendChild(_el('span', 'wiz-domain-text', { textContent: q.question }));
+
+      item.appendChild(headerRow);
+
+      if (q.sub_questions && q.sub_questions.length > 0) {
+        const toggle = _el('button', 'wiz-sub-toggle', { textContent: '▸ See specific criteria' });
+        toggle.type = 'button';
+
+        const collapseDiv = _el('div', 'wiz-sub-collapse');
+        q.sub_questions.forEach(sq => {
+          const li = _el('div', 'wiz-sub-item');
+          li.appendChild(_el('span', 'wiz-sub-bullet', { textContent: '•' }));
+          li.appendChild(_el('span', '', { style: 'font-size:11px;color:var(--color-text-secondary);line-height:1.5', textContent: sq }));
+          collapseDiv.appendChild(li);
+        });
+
+        toggle.addEventListener('click', () => {
+          const isOpen = collapseDiv.classList.contains('open');
+          collapseDiv.classList.toggle('open', !isOpen);
+          toggle.textContent = isOpen ? '▸ See specific criteria' : '▾ Hide criteria';
+        });
+
+        item.append(toggle, collapseDiv);
+      }
+
+      list.appendChild(item);
     });
-    row.append(refLabel, grid);
+    row.append(refLabel, list);
 
     return row;
+  }
+
+  // Renders a two-option choice question (e.g. G5_Q0 Provider vs Deployer)
+  function _buildChoiceQuestion(q) {
+    const wrap = _el('div', 'wiz-choice-question');
+    wrap.id = `wiz-q-${q.id}`;
+    const saved = _state.gate_answers[q.id];
+
+    wrap.appendChild(_el('p', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px;line-height:1.5', textContent: q.question }));
+    wrap.appendChild(_el('span', '', { style: 'font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono);display:block;margin-bottom:12px', textContent: q.ai_act_reference }));
+
+    const optionsWrap = _el('div', 'wiz-choice-options');
+    (q.options || []).forEach(opt => {
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = `wiz-q-${q.id}`; input.value = opt.value;
+      input.id = `wiz-q-${q.id}-${opt.value}`; input.style.display = 'none';
+      if (saved === opt.value) input.checked = true;
+
+      const card = document.createElement('label');
+      card.htmlFor = input.id;
+      card.className = 'wiz-choice-card' + (saved === opt.value ? ' selected' : '');
+
+      const labelEl = _el('span', 'wiz-choice-label', { textContent: opt.label });
+      const descEl  = _el('span', 'wiz-choice-desc',  { textContent: opt.description });
+      card.append(labelEl, descEl);
+
+      input.addEventListener('change', () => {
+        _state.gate_answers[q.id] = opt.value;
+        _state.organisation_role = opt.value;
+        optionsWrap.querySelectorAll('.wiz-choice-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        _updateGateVisibility();
+      });
+
+      wrap.appendChild(input);
+      optionsWrap.appendChild(card);
+    });
+    wrap.appendChild(optionsWrap);
+    return wrap;
+  }
+
+  // Renders a sub-question group with soft warning (e.g. G5_Q3 Art.25 check)
+  function _buildSubQuestionGroup(q) {
+    const wrap = _el('div', 'wiz-subq-group');
+    wrap.id = `wiz-q-${q.id}`;
+
+    const headerLabel = _el('p', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px', textContent: q.label || q.question || '' });
+    const refTag = _el('span', '', { style: 'font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono);display:block;margin-bottom:6px', textContent: q.ai_act_reference });
+    const descEl = _el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;line-height:1.5', textContent: q.description || '' });
+    wrap.append(headerLabel, refTag, descEl);
+
+    const warningEl = _el('div', 'gate-note danger wiz-art25-warning');
+    warningEl.style.display = 'none';
+    warningEl.innerHTML = `<strong>⚠ Possible substantial modification (Art.25):</strong> ${q.soft_warning || ''}`;
+
+    const overrideEl = _el('div', 'wiz-art25-override');
+    overrideEl.style.display = 'none';
+    const overrideCheck = document.createElement('input');
+    overrideCheck.type = 'checkbox'; overrideCheck.id = 'wiz-art25-override-cb';
+    const overrideLabel = document.createElement('label');
+    overrideLabel.htmlFor = 'wiz-art25-override-cb';
+    overrideLabel.style.cssText = 'font-size:12px;color:var(--color-text-secondary);cursor:pointer;display:flex;gap:8px;align-items:flex-start';
+    overrideLabel.textContent = q.override_label || 'I have reviewed this — continue as Deployer';
+    overrideCheck.checked = _state.art25_override || false;
+    overrideCheck.addEventListener('change', () => {
+      _state.art25_override = overrideCheck.checked;
+      _state.gate_answers['G5_Q3_override'] = overrideCheck.checked;
+    });
+    overrideEl.append(overrideCheck, overrideLabel);
+
+    const updateWarning = () => {
+      const anyYes = (q.sub_questions || []).some(sq => _state.gate_answers[sq.id] === 'yes');
+      warningEl.style.display = anyYes ? 'block' : 'none';
+      overrideEl.style.display = anyYes ? 'flex' : 'none';
+    };
+
+    (q.sub_questions || []).forEach(sq => {
+      const row = _el('div', 'wiz-q-row');
+      row.id = `wiz-q-${sq.id}`;
+      const savedSq = _state.gate_answers[sq.id];
+      if (savedSq === 'yes') row.classList.add('answered-yes');
+      if (savedSq === 'no')  row.classList.add('answered-no');
+
+      row.appendChild(_el('p', '', { style: 'font-size:13px;color:var(--color-text-primary);margin-bottom:3px;line-height:1.5', textContent: sq.question }));
+      row.appendChild(_el('span', '', { style: 'font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono)', textContent: sq.ai_act_reference }));
+
+      const pillGroup = _el('div', '', { style: 'display:flex;gap:8px;margin-top:10px' });
+      ['yes', 'no'].forEach(value => {
+        const input = document.createElement('input');
+        input.type = 'radio'; input.name = `wiz-q-${sq.id}`; input.value = value;
+        input.id = `wiz-q-${sq.id}-${value}`; input.style.display = 'none';
+        if (savedSq === value) input.checked = true;
+
+        const label = document.createElement('label');
+        label.htmlFor = input.id;
+        label.className = 'wiz-pill' + (savedSq === value ? ` active-${value}` : '');
+        label.textContent = value === 'yes' ? 'Yes' : 'No';
+
+        input.addEventListener('change', () => {
+          _state.gate_answers[sq.id] = value;
+          row.classList.remove('answered-yes', 'answered-no');
+          row.classList.add(value === 'yes' ? 'answered-yes' : 'answered-no');
+          pillGroup.querySelectorAll('.wiz-pill').forEach(l => l.classList.remove('active-yes', 'active-no'));
+          label.classList.add(`active-${value}`);
+          updateWarning();
+        });
+
+        row.appendChild(input);
+        pillGroup.appendChild(label);
+      });
+      row.appendChild(pillGroup);
+      wrap.appendChild(row);
+    });
+
+    wrap.append(warningEl, overrideEl);
+    updateWarning();
+    return wrap;
   }
 
   function _buildQuestionRow(q) {
@@ -434,11 +582,9 @@
   function _updateGateVisibility() {
     if (!_detail) return;
     const gates = _detail.axis_b_classification.gates;
-    const g1 = gates.find(g => g.gate_id === 'G1');
     const g2 = gates.find(g => g.gate_id === 'G2');
     const g1AnyYes = _state.gate_answers['G1_any'] === 'yes';
     const g2AnyNo  = g2 && g2.questions.some(q => _state.gate_answers[q.id] === 'no');
-    // G3_any drives the collapsed G3 question — not used for visibility but kept for symmetry
 
     gates.forEach(gate => {
       const el = document.getElementById(`wiz-gate-${gate.gate_id}`);
@@ -450,6 +596,18 @@
       el.style.pointerEvents = disabled ? 'none' : '';
       el.dataset.disabled = disabled ? 'true' : '';
     });
+
+    // G5_Q0 (Provider/Deployer) controls visibility of G5_Q1, G5_Q2, G5_Q3
+    const role = _state.gate_answers['G5_Q0'];
+    ['G5_Q1', 'G5_Q2', 'G5_Q3'].forEach(qid => {
+      const el = document.getElementById(`wiz-q-${qid}`);
+      if (!el) return;
+      if (role === 'provider') {
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+      }
+    });
   }
 
   // ── Classify ──────────────────────────────────────────────────────────────────
@@ -460,6 +618,7 @@
       return;
     }
     const unanswered = [];
+    const isProvider = _state.gate_answers['G5_Q0'] === 'provider';
     detail.axis_b_classification.gates.forEach(gate => {
       const el = document.getElementById(`wiz-gate-${gate.gate_id}`);
       if (el && el.dataset.disabled === 'true') return;
@@ -467,7 +626,20 @@
       if (collapsed) {
         if (!_state.gate_answers[collapsed.key]) unanswered.push(collapsed.key);
       } else {
-        gate.questions.forEach(q => { if (!_state.gate_answers[q.id]) unanswered.push(q.id); });
+        gate.questions.forEach(q => {
+          // Skip deployer-only questions when organisation is Provider
+          if (isProvider && ['G5_Q1','G5_Q2','G5_Q3'].includes(q.id)) return;
+          if (q.type === 'choice') {
+            if (!_state.gate_answers[q.id]) unanswered.push(q.id);
+          } else if (q.type === 'sub_questions') {
+            // Check each sub-question individually
+            (q.sub_questions || []).forEach(sq => {
+              if (!_state.gate_answers[sq.id]) unanswered.push(sq.id);
+            });
+          } else {
+            if (!_state.gate_answers[q.id]) unanswered.push(q.id);
+          }
+        });
       }
     });
     if (unanswered.length > 0) {
@@ -498,7 +670,15 @@
   // ── Gate evaluation ───────────────────────────────────────────────────────────
 
   function _evaluateGates(answers, gates) {
-    const result = { classification: null, gates_completed: [], short_circuit_gate: null, articles: [], requirement_control_numbers: [], deployer_obligations_apply: false, substantial_modification_applies: false, transparency_obligations_apply: false };
+    const result = {
+      classification: null, gates_completed: [], short_circuit_gate: null,
+      articles: [], requirement_control_numbers: [],
+      organisation_role: null,
+      deployer_obligations_apply: false,
+      substantial_modification_applies: false,
+      art25_override: false,
+      transparency_obligations_apply: false
+    };
 
     for (const gate of gates) {
       const qA = gate.questions.map(q => ({ q, answer: answers[q.id] }));
@@ -522,12 +702,31 @@
 
       } else if (gate.gate_id === 'G5') {
         result.gates_completed.push('G5');
+        const isProvider = answers['G5_Q0'] === 'provider';
+        result.organisation_role = answers['G5_Q0'] || null;
+
         qA.forEach(({ q, answer }) => {
+          if (q.id === 'G5_Q0') return; // handled above via answers['G5_Q0']
+
+          if (q.type === 'sub_questions') {
+            // G5_Q3: synthesise from sub-questions
+            const art25SubIds = (q.sub_questions || []).map(sq => sq.id);
+            const anyYes = art25SubIds.some(id => answers[id] === 'yes');
+            if (anyYes && !isProvider) {
+              result.substantial_modification_applies = true;
+              result.art25_override = answers['G5_Q3_override'] === true;
+              const outcome = gate.outcomes['G5_Q3_yes'];
+              if (outcome && outcome.applicable_articles) _mergeArticles(result, outcome.applicable_articles);
+            }
+            return;
+          }
+
+          if (isProvider && ['G5_Q1','G5_Q2'].includes(q.id)) return; // not applicable for providers
+
           if (answer === 'yes') {
             const outcome = gate.outcomes[`${q.id}_yes`];
             if (outcome && outcome.applicable_articles) _mergeArticles(result, outcome.applicable_articles);
             if (q.id === 'G5_Q1') result.deployer_obligations_apply = true;
-            if (q.id === 'G5_Q3') result.substantial_modification_applies = true;
           }
         });
       }
@@ -569,8 +768,10 @@
         short_circuit_gate: axisBResult.short_circuit_gate,
         gate_answers: { ..._state.gate_answers },
         applicable_articles: axisBResult.articles,
+        organisation_role: axisBResult.organisation_role,
         deployer_obligations_apply: axisBResult.deployer_obligations_apply,
         substantial_modification_applies: axisBResult.substantial_modification_applies,
+        art25_override: axisBResult.art25_override,
         transparency_obligations_apply: axisBResult.transparency_obligations_apply
       },
       combined_outcome: combinedOutcome ? {
@@ -609,6 +810,11 @@
       _el('span', `badge ${record.axis_a.tier === 'tier_1' ? 'all' : 'tier2'}`, { textContent: record.axis_a.tier_label || record.axis_a.tier }),
       _el('span', `wiz-result-badge ${s.cls}`, { textContent: s.label })
     );
+    if (record.axis_b.organisation_role) {
+      const roleLabel = record.axis_b.organisation_role === 'provider' ? 'Provider (builder)' : 'Deployer (subscriber)';
+      const roleCls   = record.axis_b.organisation_role === 'provider' ? 'warning' : 'info';
+      headerRow.appendChild(_el('span', `wiz-result-badge ${roleCls}`, { textContent: roleLabel }));
+    }
     container.appendChild(headerRow);
 
     if (classification === 'PROHIBITED') {
@@ -725,9 +931,11 @@
   }
 
   function _restoreState(step3Data) {
-    _state.axis_a_tier  = step3Data.axis_a?.tier || null;
-    _state.gate_answers = step3Data.axis_b?.gate_answers || {};
-    _state.result       = step3Data;
+    _state.axis_a_tier       = step3Data.axis_a?.tier || null;
+    _state.gate_answers      = step3Data.axis_b?.gate_answers || {};
+    _state.organisation_role = step3Data.axis_b?.organisation_role || null;
+    _state.art25_override    = step3Data.axis_b?.art25_override || false;
+    _state.result            = step3Data;
   }
 
   // ── Inline error ──────────────────────────────────────────────────────────────
@@ -794,6 +1002,32 @@
       .wiz-article-card { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px; }
       .wiz-cn-badge { font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--purple-fill);border:1px solid var(--purple-border);color:var(--purple-text);font-family:var(--font-mono); }
       .wiz-ref-tag { flex-shrink:0;font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;background:var(--color-bg);border:1px solid var(--color-border-mid);color:var(--color-text-tertiary);font-family:var(--font-mono); }
+
+      /* G3 domain list with collapsible sub-questions */
+      .wiz-domain-list { display:flex;flex-direction:column;gap:6px; }
+      .wiz-domain-item { background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:8px 10px; }
+      .wiz-domain-header { display:flex;gap:6px;align-items:baseline;margin-bottom:4px; }
+      .wiz-domain-text { font-size:11px;color:var(--color-text-secondary);line-height:1.4; }
+      .wiz-sub-toggle { background:none;border:none;padding:0;font-size:11px;color:var(--teal-text,#0d9488);cursor:pointer;font-family:inherit;margin-top:2px;text-align:left; }
+      .wiz-sub-toggle:hover { text-decoration:underline; }
+      .wiz-sub-collapse { display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border); }
+      .wiz-sub-collapse.open { display:block; }
+      .wiz-sub-item { display:flex;gap:6px;align-items:baseline;padding:2px 0; }
+      .wiz-sub-bullet { flex-shrink:0;font-size:12px;color:var(--color-text-tertiary); }
+
+      /* G5_Q0 choice cards (Provider vs Deployer) */
+      .wiz-choice-question { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:14px 16px; }
+      .wiz-choice-options { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px; }
+      .wiz-choice-card { display:flex;flex-direction:column;gap:4px;border:2px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;cursor:pointer;transition:border-color var(--transition),background var(--transition);user-select:none; }
+      .wiz-choice-card:hover { border-color:var(--color-border-mid);background:var(--color-bg); }
+      .wiz-choice-card.selected { border-color:var(--teal-border);background:var(--teal-fill); }
+      .wiz-choice-label { font-size:13px;font-weight:500;color:var(--color-text-primary); }
+      .wiz-choice-desc { font-size:11px;color:var(--color-text-secondary);line-height:1.4; }
+
+      /* G5_Q3 sub-question group + Art.25 warning */
+      .wiz-subq-group { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:14px 16px;display:flex;flex-direction:column;gap:10px; }
+      .wiz-art25-warning { margin-top:4px; }
+      .wiz-art25-override { align-items:flex-start;gap:8px;margin-top:4px; }
 
       /* Reference pane helpers */
       .ov-tier-card { background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px; }
