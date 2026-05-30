@@ -2,7 +2,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": null,
+    "standard_ref": "[18282.6]",
     "control_source": "OWASP",
     "jkName": "Least-Privilege LLM Backend Access",
     "jkText": "Enforce least-privilege access controls on all systems the LLM can reach. Grant only the minimum permissions required; sensitive backend actions must require explicit, human-verified authorisation.",
@@ -14,7 +14,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": null,
+    "standard_ref": "[18282.1],[18282.8]",
     "control_source": "OWASP",
     "jkName": "Prompt Injection Detection and Input Filtering",
     "jkText": "Implement multi-layer prompt injection detection including adversarial pattern scanning, instruction-data boundary enforcement, and Unicode normalisation. Reject or sanitise inputs that attempt to override system instructions.",
@@ -26,7 +26,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": null,
+    "standard_ref": "[18282.1],[18282.7]",
     "control_source": "OWASP",
     "jkName": "Parameterised Prompts and Structured I/O",
     "jkText": "Use parameterised prompt templates that structurally separate system instructions from user-supplied data. Enforce output schemas so that instruction-override attempts are rejected at the parser stage.",
@@ -38,7 +38,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": null,
+    "standard_ref": "[18284.2],[18284.3]",
     "control_source": "OWASP",
     "jkName": "Training Data Sanitisation and PII Removal",
     "jkText": "Apply data sanitisation and de-identification to all training, fine-tuning, and RAG knowledge-base data. Prevent PII, credentials, and proprietary business data from entering the model context.",
@@ -50,7 +50,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": null,
+    "standard_ref": "[18282.3],[18282.6]",
     "control_source": "OWASP",
     "jkName": "Strict Access Controls on Data Sources",
     "jkText": "Apply least-privilege access controls on all data sources accessible to the retrieval layer. Segment by sensitivity level and enforce document-level access policies that respect the end-user's authorisation scope.",
@@ -62,7 +62,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": null,
+    "standard_ref": "[18282.3],[18282.8]",
     "control_source": "OWASP",
     "jkName": "Output Filtering and Data Leakage Detection",
     "jkText": "Implement post-generation output filtering that detects and redacts sensitive patterns (PII, credentials, secrets) before the response reaches the user. Log all flagged instances for security review.",
@@ -74,7 +74,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": null,
+    "standard_ref": "[18282.4],[18282.5]",
     "control_source": "OWASP",
     "jkName": "Trusted Source Verification and Component Signing",
     "jkText": "Vet and cryptographically sign all third-party models, datasets, plugins, and infrastructure components before use. Restrict model ingestion to trusted, audited registries with immutable provenance records.",
@@ -86,7 +86,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": null,
+    "standard_ref": "[18282.5],[18286.10]",
     "control_source": "OWASP",
     "jkName": "Software Bill of Materials (SBOM) for LLM Pipelines",
     "jkText": "Maintain a current SBOM covering all models, libraries, datasets, and infrastructure dependencies. Use it to track known vulnerabilities and enforce deprecation policies.",
@@ -98,7 +98,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM04-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM04",
-    "standard_ref": null,
+    "standard_ref": "[18282.2],[18284.2],[18284.3]",
     "control_source": "OWASP",
     "jkName": "Training Data Validation and Lineage Tracking",
     "jkText": "Validate, curate, and track the full lineage of all training, fine-tuning, and retrieval data. Enforce data source allow-lists, schema validation, and representative-sampling requirements before data enters the pipeline.",
@@ -110,7 +110,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM04-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM04",
-    "standard_ref": null,
+    "standard_ref": "[18282.2],[18282.8]",
     "control_source": "OWASP",
     "jkName": "Poisoning Anomaly Detection",
     "jkText": "Implement anomaly detection on model outputs and embedding distributions to identify signs of data or model poisoning. Monitor for unexpected behavioural drifts, back-door trigger patterns, and subgroup performance degradation.",
@@ -122,7 +122,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM05-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM05",
-    "standard_ref": null,
+    "standard_ref": "[18282.1],[18282.7]",
     "control_source": "OWASP",
     "jkName": "Treat LLM Output as Untrusted Input",
     "jkText": "Apply the same validation, sanitisation, and encoding discipline to LLM-generated content as to any external user input. Never pass raw LLM output directly to interpreters, shells, SQL engines, or HTML renderers without contextual encoding.",
@@ -134,7 +134,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM05-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM05",
-    "standard_ref": null,
+    "standard_ref": "[18229-2.19],[18282.7],[18282.8]",
     "control_source": "OWASP",
     "jkName": "Context-Aware Output Encoding",
     "jkText": "Encode LLM outputs for the downstream rendering context (HTML-encode for web, parameterise for SQL, escape for shell). Enforce output length limits and content-policy filtering before delivery to the response interface.",
@@ -146,7 +146,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": null,
+    "standard_ref": "[18282.6],[42001.6]",
     "control_source": "OWASP",
     "jkName": "Minimum Necessary Agent Permissions",
     "jkText": "Grant LLM agents only the minimum permissions required to execute their assigned task. Revoke unused capabilities, enforce deny-by-default action policies, and scope all tool access to the specific resources needed for the current session.",
@@ -158,7 +158,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": null,
+    "standard_ref": "[18229-1.6],[18229-1.7],[42001.6]",
     "control_source": "OWASP",
     "jkName": "Human-in-the-Loop for High-Impact Actions",
     "jkText": "Require explicit human confirmation before any LLM-initiated action that is high-impact, irreversible, or crosses defined risk thresholds. Implement an approval gateway that presents the proposed action and its consequences to a human operator.",
@@ -170,7 +170,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": null,
+    "standard_ref": "[18229-1.7],[18282.8],[24970.1]",
     "control_source": "OWASP",
     "jkName": "Action Rate Limiting and Audit Logging",
     "jkText": "Implement rate limits on all LLM-initiated actions and maintain a complete, tamper-evident audit log. Use logs to detect runaway behaviour, enable forensic review, and support kill-switch activation.",
@@ -182,7 +182,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM07-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM07",
-    "standard_ref": null,
+    "standard_ref": "[18282.4],[18282.6]",
     "control_source": "OWASP",
     "jkName": "Externalise Credentials from System Prompts",
     "jkText": "Never store credentials, API keys, access tokens, or sensitive business rules directly in system prompts. Use secured configuration stores that the orchestration layer injects at runtime without exposing to the model context.",
@@ -194,7 +194,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM07-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM07",
-    "standard_ref": null,
+    "standard_ref": "[18282.3],[18282.8]",
     "control_source": "OWASP",
     "jkName": "System Prompt Exfiltration Detection",
     "jkText": "Monitor all LLM outputs for patterns that indicate system prompt leakage, including verbatim instruction reproduction and internal variable disclosure. Block and alert on detected exfiltration attempts before they reach the response interface.",
@@ -206,7 +206,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM08-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM08",
-    "standard_ref": null,
+    "standard_ref": "[18282.6],[18284.2]",
     "control_source": "OWASP",
     "jkName": "Vector Database Access Controls and Namespace Isolation",
     "jkText": "Implement strict access controls and namespace isolation for all vector databases. Enforce query-time authorisation checks so that users can only retrieve embeddings from namespaces they are authorised to access.",
@@ -218,7 +218,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM08-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM08",
-    "standard_ref": null,
+    "standard_ref": "[18282.2],[18283.1],[18284.3]",
     "control_source": "OWASP",
     "jkName": "Pre-Embedding Data Validation and Sanitisation",
     "jkText": "Validate and sanitise all data before it is embedded and stored in the vector database. Screen for injected adversarial content, PII, and demographic biases in the embedding corpus to prevent retrieval-time amplification.",
@@ -230,7 +230,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM09-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM09",
-    "standard_ref": null,
+    "standard_ref": "[18229-2.10],[18284.1]",
     "control_source": "OWASP",
     "jkName": "Verified-Source RAG Grounding",
     "jkText": "Ground all LLM responses in a RAG pipeline backed by verified, authoritative knowledge sources. Implement retrieval confidence scoring to avoid generating responses from low-quality or unverified documents.",
@@ -242,7 +242,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM09-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM09",
-    "standard_ref": null,
+    "standard_ref": "[18229-2.10],[18229-2.12]",
     "control_source": "OWASP",
     "jkName": "Cross-Referencing and Factual Accuracy Checks",
     "jkText": "Implement post-generation factual accuracy checks using automated cross-referencing against trusted knowledge bases. Flag or block responses where factual claims cannot be corroborated before delivery.",
@@ -254,7 +254,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM09-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM09",
-    "standard_ref": null,
+    "standard_ref": "[18229-1.6],[18229-1.8]",
     "control_source": "OWASP",
     "jkName": "Uncertainty Communication and Source Citation",
     "jkText": "Require the model to communicate its confidence level and provide traceable source citations for all factual claims. Clearly label responses that exceed the model's knowledge boundary as uncertain.",
@@ -266,7 +266,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": null,
+    "standard_ref": "[18229-2.18],[18282.8]",
     "control_source": "OWASP",
     "jkName": "Rate Limiting, Token Budgets, and Resource Quotas",
     "jkText": "Enforce per-user, per-session, and per-API-key rate limits, token budgets, and computational resource quotas. Block requests exceeding defined thresholds before they reach the inference layer.",
@@ -278,7 +278,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": null,
+    "standard_ref": "[18282.8],[24970.1]",
     "control_source": "OWASP",
     "jkName": "Consumption Anomaly Monitoring and Alerting",
     "jkText": "Monitor token consumption, request volume, and computational costs in real time. Alert on statistically anomalous usage patterns that may indicate adversarial probing, runaway agents, or denial-of-service attempts.",
@@ -290,7 +290,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": null,
+    "standard_ref": "[18229-1.7],[18229-2.18],[18229-2.19]",
     "control_source": "OWASP",
     "jkName": "Circuit Breakers for Runaway Inference",
     "jkText": "Deploy circuit breakers that automatically terminate LLM inference processes exceeding defined time, token, or cost thresholds. Integrate with the orchestrator kill-switch so runaway inference is halted without human intervention when limits are breached.",
@@ -302,7 +302,7 @@
   {
     "pk_Risk_Control_ID": "[2.6.R1]",
     "fk_Risk_ID": "RISK-001",
-    "standard_ref": "[18229-1.6],[42001.6],[24368.5]",
+    "standard_ref": "[18229-1.6],[42001.6],[12792.5]",
     "control_source": "Harmonised_Standard",
     "jkName": "Confidence Warning Injection",
     "jkText": "The Output Guardrail must compute a confidence score for every LLM (Generator) response as the average of the Retriever's top-1 cosine similarity score and the LLM's token probability score, inject a fixed warning banner into the response payload when the score falls below 0.80, and write a structured log entry for every evaluation.",
@@ -758,7 +758,7 @@
   {
     "pk_Risk_Control_ID": "[9.5.R1]",
     "fk_Risk_ID": "RISK-019",
-    "standard_ref": "[24368.1],[24368.2],[24368.5]",
+    "standard_ref": "[12792.1],[12792.2],[12792.5]",
     "control_source": "Harmonised_Standard",
     "jkName": "AI Identity Disclosure Gate",
     "jkText": "The system must inject a clear AI identity disclosure at the start of every user session or interaction, confirming the user is interacting with an AI system. The disclosure must appear before any consequential output is delivered, be expressed in plain language, and be logged as a disclosure event in the audit log.",
@@ -770,7 +770,7 @@
   {
     "pk_Risk_Control_ID": "[9.5.R2]",
     "fk_Risk_ID": "RISK-019",
-    "standard_ref": "[24368.3]",
+    "standard_ref": "[12792.3]",
     "control_source": "Harmonised_Standard",
     "jkName": "AI-Generated Content Labelling",
     "jkText": "Any content generated by the system that could be mistaken for authentic human-created content must be labelled as AI-generated. The label must be present in a machine-readable format and, where technically feasible, visible to the end user in the response payload.",
@@ -782,7 +782,7 @@
   {
     "pk_Risk_Control_ID": "[9.5.R3]",
     "fk_Risk_ID": "RISK-019",
-    "standard_ref": "[24368.4]",
+    "standard_ref": "[12792.4]",
     "control_source": "Harmonised_Standard",
     "jkName": "Synthetic Content Provenance",
     "jkText": "Where the system generates synthetic audio, image, or video content depicting real persons or events, technical measures must be in place to embed provenance metadata or watermarking to support downstream detection of AI-generated content.",
