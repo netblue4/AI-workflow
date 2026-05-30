@@ -10,7 +10,7 @@
 
 - [ ] **Step 9 — DPIA-identified controls: should they surface in control identification?** — Ask Claude: when the Step 7 DPIA identifies controls that need to be added (e.g. data minimisation, access restrictions), should those controls also be displayed or pre-populated in Step 9 Control Identification and Disclosure Design? Clarify the intended data flow between DPIA outputs and the Step 9 control register.
 
-- [ ] **Review controls linked to OWASP risks** — audit the controls in `tbl_Risk_Controls.json` that are associated with OWASP-sourced risks (`risk_source: "OWASP"`). Assess whether controls are well-formed, appropriately scoped to the OWASP LLM Top 10 threat, and sufficient in coverage.
+- [x] **Review controls linked to OWASP risks** — completed. All 25 OWASP controls now carry `standard_ref` values mapped to the appropriate prEN harmonised standard clauses (prEN 18282 Cybersecurity, prEN 18229-1/2 Trustworthiness, prEN 18283 Bias, prEN 18284 Data Governance, prEN ISO/IEC 24970 Logging, ISO/IEC 42001 AI Management). Three stale `[24368.x]` references on RISK-019 controls also corrected to `[12792.x]`.
 
 ---
 
