@@ -25,7 +25,7 @@
   },
   {
     "pk_Harmonised_Standard_ID": "HS-004",
-    "fk_AI_Article_ID": "ART-001",
+    "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[18229-1.4]",
     "standard_group": "[18229-1: Trustworthiness] - Logging",
     "standard_name": "Event Recording",
@@ -33,7 +33,7 @@
   },
   {
     "pk_Harmonised_Standard_ID": "HS-005",
-    "fk_AI_Article_ID": "ART-001",
+    "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[18229-1.5]",
     "standard_group": "[18229-1: Trustworthiness] - Logging",
     "standard_name": "Traceability",
