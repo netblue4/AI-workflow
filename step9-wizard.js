@@ -1,8 +1,7 @@
 /* Step 9 — Control Identification
    Reads selected risks from record['step-8'].technical_assessment and record['step-8'].legal_assessment.
-   Groups risks into OWASP-keyed clusters with dual-citation controls (OWASP + EU AI Act / Harmonised Standards).
-   Developer/compliance team selects which controls are relevant to their architecture.
-   Rule: every cluster must have at least one control selected before save.
+   Risk team uses Step Wizard tab to select controls per individual risk.
+   Compliance team uses AI Act Compliance View tab to fill HS gaps.
 */
 (function () {
   'use strict';
@@ -10,10 +9,11 @@
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null;
-  let _riskData = []; // [{ cluster_id, display_name, owasp_risk, legal_risks, controls }]
+  let _riskData = []; // [{ risk_id, display_name, risk_type, owasp_id, risk_source, risk_description, controls }]
 
   const _state = {
-    selected: {} // key = pk_Risk_Control_ID → boolean
+    riskSelected: {},       // risk team picks (Step Wizard tab)
+    complianceSelected: {}  // compliance team additions (Compliance View tab)
   };
 
   // ---- Public API ---------------------------------------------
@@ -25,7 +25,8 @@
     _tblData    = null;
     _record     = null;
     _riskData   = [];
-    _state.selected = {};
+    _state.riskSelected = {};
+    _state.complianceSelected = {};
 
     _injectStyles();
 
@@ -69,23 +70,26 @@
 
     // Restore prior control selections
     const saved9 = _record?.['step-9'];
-    if (saved9?.clusters) {
-      saved9.clusters.forEach(cluster => {
-        (cluster.controls || []).forEach(c => {
-          if (c.selected) _state.selected[c.control_id] = true;
-        });
+    if (saved9?.risk_controls) {
+      saved9.risk_controls.forEach(c => {
+        if (c.selected) _state.riskSelected[c.control_id] = true;
       });
     } else {
       // Default: select all controls
       _riskData.forEach(r =>
-        r.controls.forEach(c => { _state.selected[c.pk_Risk_Control_ID] = true; })
+        r.controls.forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = true; })
       );
+    }
+    if (saved9?.compliance_additions) {
+      saved9.compliance_additions.forEach(c => {
+        if (c.selected) _state.complianceSelected[c.control_id] = true;
+      });
     }
 
     _renderPanes(pw);
   }
 
-  // ---- Build risk clusters from tbl_* data --------------------
+  // ---- Build individual risk data from tbl_* data -------------
   function _buildRiskControlData() {
     if (!_tblData) return [];
     const saved8        = _record?.['step-8'];
@@ -111,68 +115,52 @@
     }
     tasksByCtrl.forEach(ts => ts.sort((a, b) => a.task_number - b.task_number));
 
-    const clusters = new Map(); // owasp_id → { cluster_id, display_name, owasp_risk, legal_risks, controls_map }
-    const getCluster = (owaspId, name) => {
-      if (!clusters.has(owaspId)) {
-        clusters.set(owaspId, {
-          cluster_id:   owaspId,
-          display_name: name || owaspId,
-          owasp_risk:   null,
-          legal_risks:  [],
-          controls_map: new Map()
-        });
-      }
-      return clusters.get(owaspId);
-    };
+    const seenRiskIds = new Set();
+    const result = [];
 
     // Process technical (OWASP) risks
     techSelected.forEach(r8 => {
       const tblRisk = tblRiskById.get(r8.risk_id);
-      if (!tblRisk?.owasp_id) return;
-      const cluster = getCluster(tblRisk.owasp_id, tblRisk.risk_name);
-      cluster.owasp_risk = tblRisk;
-      (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || []).forEach(ctrl => {
-        if (!cluster.controls_map.has(ctrl.pk_Risk_Control_ID)) {
-          cluster.controls_map.set(ctrl.pk_Risk_Control_ID, {
-            ...ctrl, _source: 'OWASP',
-            tasks: tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || []
-          });
-        }
+      if (!tblRisk) return;
+      if (seenRiskIds.has(tblRisk.pk_Risk_ID)) return;
+      seenRiskIds.add(tblRisk.pk_Risk_ID);
+      const controls = (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || []).map(ctrl => ({
+        ...ctrl,
+        tasks: tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || []
+      }));
+      result.push({
+        risk_id:          tblRisk.pk_Risk_ID,
+        display_name:     tblRisk.risk_name,
+        risk_type:        'technical',
+        owasp_id:         tblRisk.owasp_id || null,
+        risk_source:      'OWASP',
+        risk_description: tblRisk.risk_description || '',
+        controls
       });
     });
 
     // Process legal (EU AI Act) risks
     legalSelected.forEach(r8 => {
       const tblRisk = tblRiskByName.get(r8.risk_name);
-      if (!tblRisk?.owasp_id) return;
-      const existingCluster = clusters.get(tblRisk.owasp_id);
-      const displayName = existingCluster?.owasp_risk?.risk_name || tblRisk.risk_name;
-      const cluster = getCluster(tblRisk.owasp_id, displayName);
-      if (!cluster.legal_risks.find(r => r.pk_Risk_ID === tblRisk.pk_Risk_ID)) {
-        cluster.legal_risks.push(tblRisk);
-      }
-      (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || []).forEach(ctrl => {
-        if (!cluster.controls_map.has(ctrl.pk_Risk_Control_ID)) {
-          cluster.controls_map.set(ctrl.pk_Risk_Control_ID, {
-            ...ctrl, _source: 'EU_AI_Act',
-            tasks: tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || []
-          });
-        }
+      if (!tblRisk) return;
+      if (seenRiskIds.has(tblRisk.pk_Risk_ID)) return;
+      seenRiskIds.add(tblRisk.pk_Risk_ID);
+      const controls = (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || []).map(ctrl => ({
+        ...ctrl,
+        tasks: tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || []
+      }));
+      result.push({
+        risk_id:          tblRisk.pk_Risk_ID,
+        display_name:     tblRisk.risk_name,
+        risk_type:        'legal',
+        owasp_id:         tblRisk.owasp_id || null,
+        risk_source:      'EU_AI_Act',
+        risk_description: tblRisk.risk_description || '',
+        controls
       });
     });
 
-    // Build result array — OWASP controls first, then EU_AI_Act within each cluster
-    return Array.from(clusters.values()).map(cl => {
-      const controls = Array.from(cl.controls_map.values())
-        .sort((a, b) => (a._source === 'OWASP' ? 0 : 1) - (b._source === 'OWASP' ? 0 : 1));
-      return {
-        cluster_id:   cl.cluster_id,
-        display_name: cl.display_name,
-        owasp_risk:   cl.owasp_risk,
-        legal_risks:  cl.legal_risks,
-        controls
-      };
-    });
+    return result;
   }
 
   // ---- Category colour palette --------------------------------
@@ -263,16 +251,29 @@
     card.appendChild(_sectionLabel('Control Selection'));
 
     const intro = _el('p', 'wiz9-intro');
-    intro.innerHTML = `Review OWASP and EU AI Act controls grouped by risk cluster. <strong>Each cluster must have at least one control selected</strong> before saving.`;
+    intro.innerHTML = `Review controls grouped by individual risk. <strong>Each risk must have at least one control selected</strong> before saving.`;
     card.appendChild(intro);
 
     // Validation summary
     card.appendChild(_buildValidationBanner());
 
-    // Risk cluster list
-    const riskList = _el('div', 'wiz9-risk-list');
-    _riskData.forEach((risk, idx) => riskList.appendChild(_buildRiskAccordion(risk, idx)));
-    card.appendChild(riskList);
+    // Risk lists grouped by type
+    const techRisks  = _riskData.filter(r => r.risk_type === 'technical');
+    const legalRisks = _riskData.filter(r => r.risk_type === 'legal');
+
+    if (techRisks.length > 0) {
+      card.appendChild(_sectionLabel(`Technical Risks (${techRisks.length})`));
+      const tl = _el('div', 'wiz9-risk-list');
+      techRisks.forEach((r, i) => tl.appendChild(_buildRiskAccordion(r, i)));
+      card.appendChild(tl);
+    }
+    if (legalRisks.length > 0) {
+      card.appendChild(_sectionLabel(`Legal / EU AI Act Risks (${legalRisks.length})`));
+      const ll = _el('div', 'wiz9-risk-list');
+      legalRisks.forEach((r, i) => ll.appendChild(_buildRiskAccordion(r, i)));
+      card.appendChild(ll);
+    }
+    card.appendChild(_buildComplianceAdditionsSection());
 
     card.appendChild(_buildActionRow());
     card.appendChild(_el('div', 'wiz9-results'));
@@ -302,7 +303,7 @@
     const legalCount = legal?.selected_count ?? (legal?.risks || []).filter(r => r.selected).length;
     cell('Technical risks confirmed', String(techCount),        'ok');
     cell('Legal risks confirmed',     String(legalCount),       'ok');
-    cell('Risk clusters identified',  String(_riskData.length), 'num');
+    cell('Individual risks identified', String(_riskData.length), 'num');
     cell('Assessment date',           tech?.assessment_date || legal?.assessment_date || '—');
     card.appendChild(grid); return card;
   }
@@ -322,27 +323,27 @@
     el.innerHTML = '';
     if (uncovered.length === 0) {
       const ok = _el('div', 'wiz9-val-ok');
-      ok.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All ${_riskData.length} risk cluster${_riskData.length !== 1 ? 's' : ''} have at least one control selected.`;
+      ok.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All ${_riskData.length} risk${_riskData.length !== 1 ? 's' : ''} have at least one control selected.`;
       el.appendChild(ok);
     } else {
       const err = _el('div', 'wiz9-val-err');
-      err.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>${uncovered.length} cluster${uncovered.length !== 1 ? 's' : ''}</strong> still need${uncovered.length === 1 ? 's' : ''} a control selected: ${uncovered.map(r => r.display_name).join(', ')}.`;
+      err.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>${uncovered.length} risk${uncovered.length !== 1 ? 's' : ''}</strong> still need${uncovered.length === 1 ? 's' : ''} a control selected: ${uncovered.map(r => r.display_name).join(', ')}.`;
       el.appendChild(err);
     }
   }
 
   function _selectedCountForRisk(risk) {
-    return risk.controls.filter(c => !!_state.selected[c.pk_Risk_Control_ID]).length;
+    return risk.controls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]).length;
   }
 
-  // ---- Risk accordion (cluster) -------------------------------
+  // ---- Risk accordion (individual risk) -----------------------
   function _buildRiskAccordion(risk, idx) {
     const sec = _el('div', 'wiz9-risk-sec');
-    sec.dataset.clusterId = risk.cluster_id;
+    sec.dataset.riskId = risk.risk_id;
 
     const hdr = _el('div', 'wiz9-risk-hdr');
 
-    // Left: cluster heading
+    // Left: risk heading
     const left = _el('div', 'wiz9-risk-hdr-left');
 
     const riskIcon = _el('span', 'wiz9-risk-icon');
@@ -353,21 +354,18 @@
     rName.textContent = risk.display_name;
     left.appendChild(rName);
 
-    // OWASP cluster-ID badge
-    if (risk.owasp_risk) {
+    // OWASP ID badge (if present)
+    if (risk.owasp_id) {
       const owBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--owasp');
-      owBadge.textContent = risk.cluster_id;
+      owBadge.textContent = risk.owasp_id;
       left.appendChild(owBadge);
     }
 
-    // EU AI Act badge + risk names
-    if (risk.legal_risks.length > 0) {
+    // EU AI Act badge (if legal risk)
+    if (risk.risk_type === 'legal') {
       const euBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
       euBadge.textContent = 'EU AI Act';
       left.appendChild(euBadge);
-      const legalNames = _el('span', 'wiz9-legal-risk-names');
-      legalNames.textContent = risk.legal_risks.map(l => l.risk_name).join(' · ');
-      left.appendChild(legalNames);
     }
 
     hdr.appendChild(left);
@@ -379,18 +377,18 @@
     const deselAll = document.createElement('button'); deselAll.className = 'wiz9-sel-btn'; deselAll.textContent = 'Deselect all';
     selAll.addEventListener('click', e => {
       e.stopPropagation();
-      risk.controls.forEach(c => { _state.selected[c.pk_Risk_Control_ID] = true; });
+      risk.controls.forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = true; });
       _syncRisk(sec, risk);
     });
     deselAll.addEventListener('click', e => {
       e.stopPropagation();
-      risk.controls.forEach(c => { _state.selected[c.pk_Risk_Control_ID] = false; });
+      risk.controls.forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = false; });
       _syncRisk(sec, risk);
     });
     right.appendChild(selAll); right.appendChild(deselAll);
 
     const selBadge = _el('span', 'wiz9-risk-sel-badge');
-    selBadge.id = `wiz9-rb-${_safeId(risk.cluster_id)}`;
+    selBadge.id = `wiz9-rb-${_safeId(risk.risk_id)}`;
     right.appendChild(selBadge);
 
     const chevron = _el('span', 'wiz9-chevron');
@@ -400,52 +398,25 @@
     hdr.appendChild(right);
     sec.appendChild(hdr);
 
-    // Body (collapsed by default, first cluster open)
+    // Body (collapsed by default, first risk open)
     const body = _el('div', `wiz9-risk-body${idx === 0 ? '' : ' wiz9-collapsed'}`);
 
-    // OWASP risk description
-    if (risk.owasp_risk?.risk_description) {
+    // Risk description
+    if (risk.risk_description) {
       const desc = _el('p', 'wiz9-risk-desc');
-      desc.textContent = risk.owasp_risk.risk_description;
+      desc.textContent = risk.risk_description;
       body.appendChild(desc);
     }
 
-    // EU AI Act risk descriptions
-    if (risk.legal_risks.length > 0) {
-      const euWrap = _el('div', 'wiz9-eu-risks-wrap');
-      risk.legal_risks.forEach(lr => {
-        if (lr.risk_description) {
-          const euDesc  = _el('div', 'wiz9-eu-risk-desc');
-          const euLabel = _el('span', 'wiz9-eu-risk-label'); euLabel.textContent = lr.risk_name;
-          const euText  = _el('p',    'wiz9-eu-risk-text');  euText.textContent  = lr.risk_description;
-          euDesc.appendChild(euLabel); euDesc.appendChild(euText);
-          euWrap.appendChild(euDesc);
-        }
-      });
-      if (euWrap.children.length > 0) body.appendChild(euWrap);
-    }
-
-    // Controls — grouped by source
-    const owaspCtrls = risk.controls.filter(c => c._source === 'OWASP');
-    const euCtrls    = risk.controls.filter(c => c._source === 'EU_AI_Act');
-
-    if (owaspCtrls.length > 0) {
-      const ol = _el('p', 'wiz9-ctrl-section-label');
-      ol.textContent = `OWASP technical controls (${owaspCtrls.length})`;
-      body.appendChild(ol);
-      owaspCtrls.forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
-    }
-
-    if (euCtrls.length > 0) {
-      const euLbl = _el('p', 'wiz9-ctrl-section-label wiz9-ctrl-section-label--eu');
-      euLbl.textContent = `EU AI Act / Harmonised Standard controls (${euCtrls.length})`;
-      body.appendChild(euLbl);
-      euCtrls.forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
-    }
-
-    if (risk.controls.length === 0) {
+    // Controls label + list
+    if (risk.controls.length > 0) {
+      const ctrlLbl = _el('p', 'wiz9-ctrl-section-label');
+      ctrlLbl.textContent = `Controls (${risk.controls.length})`;
+      body.appendChild(ctrlLbl);
+      risk.controls.forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
+    } else {
       const none = _el('p', 'wiz9-intro');
-      none.textContent = 'No controls available for this cluster.';
+      none.textContent = 'No controls available for this risk.';
       body.appendChild(none);
     }
 
@@ -462,9 +433,8 @@
   }
 
   function _syncRisk(secEl, risk) {
-    risk.controls.forEach(ctrl => {
-      const cbs = secEl.querySelectorAll(`.wiz9-ctrl-cb[data-key="${CSS.escape(ctrl.pk_Risk_Control_ID)}"]`);
-      cbs.forEach(cb => { cb.checked = !!_state.selected[ctrl.pk_Risk_Control_ID]; });
+    secEl.querySelectorAll('.wiz9-ctrl-cb[data-key]').forEach(cb => {
+      cb.checked = !!_state.riskSelected[cb.dataset.key];
     });
     _updateRiskBadge(secEl, risk);
     _updateValidationBanner();
@@ -474,7 +444,7 @@
   function _updateRiskBadge(secEl, risk) {
     const total = risk.controls.length;
     const sel   = _selectedCountForRisk(risk);
-    const badge = secEl.querySelector(`#wiz9-rb-${_safeId(risk.cluster_id)}`);
+    const badge = secEl.querySelector(`#wiz9-rb-${_safeId(risk.risk_id)}`);
     if (!badge) return;
     badge.textContent = `${sel} / ${total}`;
     badge.className = sel === 0
@@ -493,10 +463,10 @@
     const cb  = document.createElement('input');
     cb.type = 'checkbox'; cb.className = 'wiz9-ctrl-cb';
     cb.dataset.key = ctrl.pk_Risk_Control_ID;
-    cb.checked = !!_state.selected[ctrl.pk_Risk_Control_ID];
+    cb.checked = !!_state.riskSelected[ctrl.pk_Risk_Control_ID];
     cb.addEventListener('change', e => {
-      _state.selected[ctrl.pk_Risk_Control_ID] = e.target.checked;
-      const sec = _container.querySelector(`.wiz9-risk-sec[data-cluster-id="${CSS.escape(risk.cluster_id)}"]`);
+      _state.riskSelected[ctrl.pk_Risk_Control_ID] = e.target.checked;
+      const sec = _container.querySelector(`.wiz9-risk-sec[data-risk-id="${CSS.escape(risk.risk_id)}"]`);
       if (sec) _updateRiskBadge(sec, risk);
       _updateValidationBanner();
       _updateCountBadge();
@@ -508,8 +478,9 @@
     hdr.appendChild(ctrlIcon);
 
     // Source badge
-    const srcBadge = _el('span', ctrl._source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
-    srcBadge.textContent = ctrl._source === 'OWASP' ? 'OWASP' : 'EU AI Act';
+    const src = ctrl.control_source || ctrl._source || '';
+    const srcBadge = _el('span', src === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
+    srcBadge.textContent = src === 'OWASP' ? 'OWASP' : (src || 'EU AI Act');
     hdr.appendChild(srcBadge);
 
     const cName = _el('span', 'wiz9-ctrl-name'); cName.textContent = ctrl.jkName; hdr.appendChild(cName);
@@ -630,6 +601,45 @@
     return match ? match[1].trimEnd() : stripped.trim();
   }
 
+  // ---- Compliance Additions section (wizard tab) --------------
+  function _buildComplianceAdditionsSection() {
+    const wrap = _el('div', 'wiz9-comp-adds-wrap');
+    wrap.id = 'wiz9-comp-adds';
+
+    const hdr = _el('div', 'wiz9-comp-adds-hdr');
+    const icon = _el('span', 'wiz9-comp-adds-icon'); icon.textContent = '⚖';
+    hdr.appendChild(icon);
+    const titleWrap = _el('div', 'wiz9-comp-adds-title-wrap');
+    titleWrap.appendChild(_el('span', 'wiz9-comp-adds-title', { textContent: 'Compliance Additions' }));
+    titleWrap.appendChild(_el('span', 'wiz9-comp-adds-sub', { textContent: 'Controls added by the compliance team to cover HS requirements not addressed by the risk selections above.' }));
+    hdr.appendChild(titleWrap);
+    wrap.appendChild(hdr);
+
+    const body = _el('div', 'wiz9-comp-adds-body');
+    const adds = Object.keys(_state.complianceSelected).filter(id => _state.complianceSelected[id]);
+
+    if (adds.length === 0) {
+      const emp = _el('p', 'wiz9-comp-adds-empty');
+      emp.textContent = 'No compliance additions yet. Use the AI Act Compliance View tab to add controls for uncovered HS requirements.';
+      body.appendChild(emp);
+    } else {
+      adds.forEach(ctrlId => {
+        const ctrl = (_tblData.controls || []).find(c => c.pk_Risk_Control_ID === ctrlId);
+        if (!ctrl) return;
+        const row = _el('div', 'wiz9-comp-add-item');
+        const src = ctrl.control_source === 'OWASP' ? 'owasp' : 'hs';
+        const dot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`); row.appendChild(dot);
+        row.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
+        row.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
+        if (ctrl.standard_ref) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.standard_ref }));
+        const compBadge = _el('span', 'wiz9-comp-adds-badge'); compBadge.textContent = 'Compliance'; row.appendChild(compBadge);
+        body.appendChild(row);
+      });
+    }
+    wrap.appendChild(body);
+    return wrap;
+  }
+
   // ---- Action row + save --------------------------------------
   function _buildActionRow() {
     const row   = _el('div', 'wiz-action-row');
@@ -655,7 +665,7 @@
   function _updateCountBadgeEl(el) {
     const total   = _riskData.length;
     const covered = _riskData.filter(r => _selectedCountForRisk(r) > 0).length;
-    el.textContent = `${covered} / ${total} clusters controlled`;
+    el.textContent = `${covered} / ${total} risks controlled`;
     el.className   = covered === total
       ? 'wiz9-count-badge wiz9-count-badge--ok'
       : 'wiz9-count-badge wiz9-count-badge--warn';
@@ -663,12 +673,12 @@
 
   // ---- Save ---------------------------------------------------
   function _handleSave() {
-    // Validate: every cluster must have ≥1 control selected
+    // Validate: every risk must have ≥1 control selected
     const uncovered = _riskData.filter(r => _selectedCountForRisk(r) === 0);
     if (uncovered.length > 0) {
       _updateValidationBanner();
       const firstSec = _container.querySelector(
-        `.wiz9-risk-sec[data-cluster-id="${CSS.escape(uncovered[0].cluster_id)}"]`
+        `.wiz9-risk-sec[data-risk-id="${CSS.escape(uncovered[0].risk_id)}"]`
       );
       if (firstSec) {
         firstSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -693,32 +703,45 @@
     const today = new Date().toISOString().slice(0, 10);
     const meta  = _record?._meta || {};
 
-    const clusters = _riskData.map(r => ({
-      cluster_id:       r.cluster_id,
-      owasp_risk_name:  r.owasp_risk?.risk_name || null,
-      legal_risk_names: r.legal_risks.map(l => l.risk_name),
-      controls: r.controls.map(c => ({
-        control_id:     c.pk_Risk_Control_ID,
-        control_name:   c.jkName,
-        control_source: c._source,
-        standard_ref:   c.standard_ref || '',
-        selected:       !!_state.selected[c.pk_Risk_Control_ID]
-      }))
-    }));
+    // risk team's selections
+    const risk_controls = [];
+    _riskData.forEach(r => {
+      r.controls.forEach(c => {
+        risk_controls.push({
+          control_id:     c.pk_Risk_Control_ID,
+          control_name:   c.jkName,
+          control_source: c.control_source || c._source || '',
+          standard_ref:   c.standard_ref || '',
+          risk_id:        r.risk_id,
+          selected:       !!_state.riskSelected[c.pk_Risk_Control_ID]
+        });
+      });
+    });
 
-    const totalControls = clusters.reduce((n, r) => n + r.controls.length, 0);
-    const selectedCtrls = clusters.reduce((n, r) => n + r.controls.filter(c => c.selected).length, 0);
+    // compliance additions
+    const complianceAdditions = Object.keys(_state.complianceSelected)
+      .filter(id => _state.complianceSelected[id])
+      .map(id => {
+        const ctrl = (_tblData.controls || []).find(c => c.pk_Risk_Control_ID === id);
+        return { control_id: id, control_name: ctrl?.jkName || '', standard_ref: ctrl?.standard_ref || '', selected: true };
+      });
+
+    // counts
+    const selectedCount   = risk_controls.filter(c => c.selected).length;
+    const complianceCount = complianceAdditions.length;
 
     return {
       step_id: 'step-9', step_title: 'Control identification',
       assessment_date: today,
       assessed_by:  meta.assessed_by || '',
       use_case_id:  meta.use_case_id || '',
-      total_clusters:      clusters.length,
-      clusters_controlled: clusters.filter(r => r.controls.some(c => c.selected)).length,
-      total_controls:      totalControls,
-      selected_controls:   selectedCtrls,
-      clusters
+      total_risks:              _riskData.length,
+      risks_controlled:         _riskData.filter(r => _selectedCountForRisk(r) > 0).length,
+      total_controls_available: risk_controls.length,
+      selected_controls:        selectedCount,
+      compliance_additions_count: complianceCount,
+      risk_controls,
+      compliance_additions: complianceAdditions
     };
   }
 
@@ -730,10 +753,10 @@
     const h = _el('h3', 'wiz9-result-title'); h.textContent = 'Control Selection Saved'; card.appendChild(h);
     const stats = _el('div', 'wiz9-result-stats');
     [
-      [rec9.total_clusters,                          'Risk clusters'],
-      [rec9.clusters_controlled,                     'Clusters controlled'],
-      [rec9.selected_controls,                       'Controls selected'],
-      [rec9.total_controls - rec9.selected_controls, 'Controls excluded']
+      [rec9.total_risks,                  'Total risks'],
+      [rec9.risks_controlled,             'Risks controlled'],
+      [rec9.selected_controls,            'Controls selected'],
+      [rec9.compliance_additions_count,   'Compliance additions']
     ].forEach(([num, lbl]) => {
       const s = _el('div', 'wiz8-stat');
       const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num); s.appendChild(n);
@@ -742,7 +765,9 @@
     });
     card.appendChild(stats);
     const note = _el('p', 'wiz9-result-note');
-    note.innerHTML = `Control selection saved. <strong>${rec9.selected_controls} control${rec9.selected_controls !== 1 ? 's' : ''}</strong> selected across <strong>${rec9.clusters_controlled} cluster${rec9.clusters_controlled !== 1 ? 's' : ''}</strong>. This feeds into the Approval Gate (Step 11) submission pack.`;
+    note.innerHTML = `Control selection saved. <strong>${rec9.selected_controls} control${rec9.selected_controls !== 1 ? 's' : ''}</strong> selected across <strong>${rec9.risks_controlled} risk${rec9.risks_controlled !== 1 ? 's' : ''}</strong>` +
+      (rec9.compliance_additions_count > 0 ? ` plus <strong>${rec9.compliance_additions_count} compliance addition${rec9.compliance_additions_count !== 1 ? 's' : ''}</strong>` : '') +
+      `. This feeds into the Approval Gate (Step 11) submission pack.`;
     card.appendChild(note);
     area.appendChild(card);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -760,7 +785,7 @@
 
     // Live selection summary
     const totalCtrls = _riskData.reduce((n, r) => n + r.controls.length, 0);
-    const selCtrls   = _riskData.reduce((n, r) => n + r.controls.filter(c => !!_state.selected[c.pk_Risk_Control_ID]).length, 0);
+    const selCtrls   = _riskData.reduce((n, r) => n + r.controls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]).length, 0);
     const uncovered  = _riskData.filter(r => _selectedCountForRisk(r) === 0).length;
 
     const summary = _el('div', 'wiz9-ref-summary');
@@ -769,7 +794,7 @@
     summary.appendChild(sumBadge);
     if (uncovered > 0) {
       const unc = _el('span', 'wiz9-ref-uncovered');
-      unc.textContent = `${uncovered} cluster${uncovered !== 1 ? 's' : ''} without a control`;
+      unc.textContent = `${uncovered} risk${uncovered !== 1 ? 's' : ''} without a control`;
       summary.appendChild(unc);
     }
     const hint = _el('p', 'wiz9-ref-hint');
@@ -781,13 +806,13 @@
       const selCount = _selectedCountForRisk(risk);
       const sec = _el('div', 'wiz9-ref-risk-sec');
 
-      // Cluster header with source badges + live count
+      // Risk header with source badges + live count
       const hdr = _el('div', 'wiz9-ref-risk-hdr');
       const rn  = _el('span', 'wiz9-ref-risk-name'); rn.textContent = risk.display_name; hdr.appendChild(rn);
-      if (risk.owasp_risk) {
-        const ob = _el('span', 'wiz9-src-badge wiz9-src-badge--owasp'); ob.textContent = risk.cluster_id; hdr.appendChild(ob);
+      if (risk.owasp_id) {
+        const ob = _el('span', 'wiz9-src-badge wiz9-src-badge--owasp'); ob.textContent = risk.owasp_id; hdr.appendChild(ob);
       }
-      if (risk.legal_risks.length > 0) {
+      if (risk.risk_type === 'legal') {
         const eb = _el('span', 'wiz9-src-badge wiz9-src-badge--eu'); eb.textContent = 'EU AI Act'; hdr.appendChild(eb);
       }
       const rb = _el('span', selCount === 0
@@ -800,7 +825,7 @@
       sec.appendChild(hdr);
 
       risk.controls.forEach(ctrl => {
-        const isSelected = !!_state.selected[ctrl.pk_Risk_Control_ID];
+        const isSelected = !!_state.riskSelected[ctrl.pk_Risk_Control_ID];
 
         const cc = _el('div', isSelected ? 'wiz9-ref-ctrl' : 'wiz9-ref-ctrl wiz9-ref-ctrl--deselected');
         const ch = _el('div', 'wiz9-ref-ctrl-hdr');
@@ -815,8 +840,9 @@
         ch.appendChild(ci);
 
         // Source badge
-        const srcBadge = _el('span', ctrl._source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
-        srcBadge.textContent = ctrl._source === 'OWASP' ? 'OWASP' : 'EU AI Act';
+        const src = ctrl.control_source || ctrl._source || '';
+        const srcBadge = _el('span', src === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
+        srcBadge.textContent = src === 'OWASP' ? 'OWASP' : (src || 'EU AI Act');
         ch.appendChild(srcBadge);
 
         const cn = _el('span', 'wiz9-ref-ctrl-name'); cn.textContent = ctrl.jkName; ch.appendChild(cn);
@@ -886,6 +912,19 @@
     }
     wrap.appendChild(hdr);
 
+    // Save bar
+    const saveBar = _el('div', 'wiz9-cmp-save-bar');
+    const compCount = Object.values(_state.complianceSelected).filter(Boolean).length;
+    const saveSummary = _el('span', 'wiz9-cmp-save-summary');
+    saveSummary.textContent = compCount > 0
+      ? `${compCount} compliance addition${compCount !== 1 ? 's' : ''} pending save`
+      : 'No compliance additions to save';
+    saveBar.appendChild(saveSummary);
+    const saveBtn = _el('button', 'wiz9-cmp-save-btn'); saveBtn.textContent = 'Save Compliance Additions';
+    saveBtn.addEventListener('click', _handleComplianceSave);
+    saveBar.appendChild(saveBtn);
+    wrap.insertBefore(saveBar, wrap.children[1]); // after header
+
     if (!_tblData?.articles) {
       wrap.appendChild(_el('p', 'wiz9-cmp-empty', { textContent: 'Article data not loaded.' }));
       return wrap;
@@ -894,6 +933,42 @@
     const ix = _buildCmpIndexes();
     _tblData.articles.forEach(art => wrap.appendChild(_buildCmpArticleRow(art, ix)));
     return wrap;
+  }
+
+  // ---- Compliance save ----------------------------------------
+  function _handleComplianceSave() {
+    if (!_record) {
+      _record = { _meta: { schema_version: '1.0', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
+    }
+    _record._meta.last_modified = new Date().toISOString();
+
+    const today = new Date().toISOString().slice(0, 10);
+    const existing = _record['step-9'] || {};
+
+    const complianceAdditions = Object.keys(_state.complianceSelected)
+      .filter(id => _state.complianceSelected[id])
+      .map(id => {
+        const ctrl = (_tblData.controls || []).find(c => c.pk_Risk_Control_ID === id);
+        return { control_id: id, control_name: ctrl?.jkName || '', standard_ref: ctrl?.standard_ref || '', selected: true };
+      });
+
+    _record['step-9'] = {
+      ...existing,
+      assessment_date: existing.assessment_date || today,
+      compliance_additions_count: complianceAdditions.length,
+      compliance_additions: complianceAdditions
+    };
+
+    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Compliance additions saved ✓');
+
+    // Refresh wizard tab compliance section
+    const addsEl = _container.querySelector('#wiz9-comp-adds');
+    if (addsEl) { const fresh = _buildComplianceAdditionsSection(); addsEl.replaceWith(fresh); }
+
+    // Rebuild compliance pane to update save bar
+    const cmpPane = _container.querySelector('[data-pane="compliance"]');
+    if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
   }
 
   // Pre-build lookup maps for O(1) access during render
@@ -1006,6 +1081,23 @@
     const hs    = ix.hsByArticle.get(article.pk_AI_Article_ID)    || [];
     const risks = ix.risksByArticle.get(article.pk_AI_Article_ID) || [];
 
+    // Count unique selected controls (risk + compliance) covering this article's HS refs
+    const selCtrlIds = new Set();
+    hs.forEach(h => {
+      (ix.ctrlsByRef.get(h.standard_ref) || []).forEach(c => {
+        if (_state.riskSelected[c.pk_Risk_Control_ID] || _state.complianceSelected[c.pk_Risk_Control_ID])
+          selCtrlIds.add(c.pk_Risk_Control_ID);
+      });
+    });
+
+    // Count unique tests covering this article's HS refs
+    const testIds = new Set();
+    hs.forEach(h => {
+      (ix.testCtrlByRef.get(h.standard_ref) || []).forEach(tc => {
+        testIds.add(tc.pk_Test_Control_ID || tc.control_ref || tc.jkName);
+      });
+    });
+
     const row = _el('div', 'wiz9-cmp-article');
 
     // ── Header (always visible) ──────────────────────────────────
@@ -1019,8 +1111,10 @@
     right.appendChild(_el('span', `wiz9-cmp-badge wiz9-cmp-badge--${rel.status}`, { textContent: rel.label }));
     if (rel.obligation_type) right.appendChild(_el('span', 'wiz9-cmp-obl', { textContent: rel.obligation_type }));
     const counts = _el('div', 'wiz9-cmp-counts');
-    if (hs.length)    counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--hs',   { textContent: `${hs.length} HS` }));
-    if (risks.length) counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--risk', { textContent: `${risks.length} Risk${risks.length > 1 ? 's' : ''}` }));
+    if (hs.length)          counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--hs',   { textContent: `${hs.length} HS` }));
+    if (risks.length)       counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--risk', { textContent: `${risks.length} Risk${risks.length > 1 ? 's' : ''}` }));
+    if (selCtrlIds.size)    counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--ctrl', { textContent: `${selCtrlIds.size} Ctrl${selCtrlIds.size !== 1 ? 's' : ''}` }));
+    if (testIds.size)       counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--test', { textContent: `${testIds.size} Test${testIds.size !== 1 ? 's' : ''}` }));
     right.appendChild(counts);
     const chev = _el('span', 'wiz9-cmp-chevron', { textContent: '▸' });
     right.appendChild(chev);
@@ -1089,39 +1183,65 @@
         refRow.appendChild(txt);
         item.appendChild(refRow);
 
-        // Controls that implement this HS requirement (matched on standard_ref)
-        const matchingCtrls = (ctrlsByRef.get(h.standard_ref) || [])
+        // Coverage detection
+        const allCtrls = (ctrlsByRef.get(h.standard_ref) || [])
           .filter((c, i, a) => a.findIndex(x => x.pk_Risk_Control_ID === c.pk_Risk_Control_ID) === i);
 
-        const ctrlsArea = _el('div', 'wiz9-cmp-hs-impl');
-        if (matchingCtrls.length > 0) {
-          ctrlsArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Controls (${matchingCtrls.length})` }));
-          matchingCtrls.forEach(ctrl => {
-            const cRow = _el('div', 'wiz9-cmp-ctrl-row');
-            const srcDot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${ctrl.control_source === 'OWASP' ? 'owasp' : 'hs'}`);
-            cRow.appendChild(srcDot);
-            cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id', { textContent: ctrl.pk_Risk_Control_ID }));
-            cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-            const tasks = tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || [];
-            if (tasks.length > 0) {
-              const tw = _el('div', 'wiz9-cmp-task-chips');
-              tw.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '📋' }));
-              tasks.slice(0, 4).forEach(t => {
-                tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `T${t.task_number}`, title: t.task || '' }));
-              });
-              if (tasks.length > 4) tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `+${tasks.length - 4}` }));
-              cRow.appendChild(tw);
-            }
-            ctrlsArea.appendChild(cRow);
-          });
-        } else {
-          ctrlsArea.appendChild(_el('p', 'wiz9-cmp-empty', { textContent: 'No controls directly mapped to this requirement.' }));
+        const riskCtrls      = allCtrls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]);
+        const compCtrls      = allCtrls.filter(c => !!_state.complianceSelected[c.pk_Risk_Control_ID]);
+        const availableCtrls = allCtrls.filter(c => !_state.riskSelected[c.pk_Risk_Control_ID] && !_state.complianceSelected[c.pk_Risk_Control_ID]);
+        const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0;
+
+        // Gap badge
+        if (!isCovered) {
+          const gapBadge = _el('span', 'wiz9-cmp-gap-badge'); gapBadge.textContent = '⚠ Gap';
+          refRow.appendChild(gapBadge);
         }
 
-        // Tests that verify this HS requirement
+        // Coverage area
+        const implArea = _el('div', 'wiz9-cmp-hs-impl');
+
+        if (riskCtrls.length > 0) {
+          implArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Risk Controls (${riskCtrls.length})` }));
+          riskCtrls.forEach(ctrl => {
+            const cRow = _buildCmpCtrlRow(ctrl, tasksByCtrl, false);
+            implArea.appendChild(cRow);
+          });
+        }
+
+        if (compCtrls.length > 0) {
+          implArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl wiz9-cmp-sub-lbl--comp', { textContent: `Compliance Additions (${compCtrls.length})` }));
+          compCtrls.forEach(ctrl => {
+            const cRow = _buildCmpCtrlRow(ctrl, tasksByCtrl, true); // true = show remove btn
+            implArea.appendChild(cRow);
+          });
+        }
+
+        if (availableCtrls.length > 0) {
+          implArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl wiz9-cmp-sub-lbl--avail', { textContent: `Available to add (${availableCtrls.length})` }));
+          availableCtrls.forEach(ctrl => {
+            const aRow = _el('div', 'wiz9-cmp-avail-row');
+            const addBtn = _el('button', 'wiz9-cmp-add-btn'); addBtn.textContent = '+ Add';
+            addBtn.addEventListener('click', () => {
+              _state.complianceSelected[ctrl.pk_Risk_Control_ID] = true;
+              // rebuild compliance pane
+              const cmpPane = _container.querySelector('[data-pane="compliance"]');
+              if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
+            });
+            aRow.appendChild(addBtn);
+            const src = ctrl.control_source === 'OWASP' ? 'owasp' : 'hs';
+            aRow.appendChild(_el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`));
+            aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
+            aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
+            if (ctrl.standard_ref) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.standard_ref }));
+            implArea.appendChild(aRow);
+          });
+        }
+
+        // Tests for this HS
         const tests = testCtrlByRef.get(h.standard_ref) || [];
         if (tests.length > 0) {
-          ctrlsArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Tests (${tests.length})` }));
+          implArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Tests (${tests.length})` }));
           const trow = _el('div', 'wiz9-cmp-test-row');
           trow.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '🧪' }));
           const tlist = _el('div', 'wiz9-cmp-test-chips');
@@ -1131,10 +1251,10 @@
             tlist.appendChild(chip);
           });
           trow.appendChild(tlist);
-          ctrlsArea.appendChild(trow);
+          implArea.appendChild(trow);
         }
 
-        item.appendChild(ctrlsArea);
+        item.appendChild(implArea);
         hsList.appendChild(item);
       });
       v1Wrap.appendChild(hsList);
@@ -1222,6 +1342,38 @@
       });
     }
     body.appendChild(v2Wrap);
+  }
+
+  // ---- Compliance ctrl row helper -----------------------------
+  function _buildCmpCtrlRow(ctrl, tasksByCtrl, showRemove) {
+    const cRow = _el('div', 'wiz9-cmp-ctrl-row');
+    const src = ctrl.control_source === 'OWASP' ? 'owasp' : 'hs';
+    cRow.appendChild(_el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`));
+    cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
+    cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
+    const tasks = (tasksByCtrl || new Map()).get(ctrl.pk_Risk_Control_ID) || [];
+    if (tasks.length > 0) {
+      const tw = _el('div', 'wiz9-cmp-task-chips');
+      tw.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '📋' }));
+      tasks.slice(0, 4).forEach(t => {
+        tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `T${t.task_number}`, title: t.task || '' }));
+      });
+      if (tasks.length > 4) tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `+${tasks.length - 4}` }));
+      cRow.appendChild(tw);
+    }
+    if (showRemove) {
+      const rmBtn = _el('button', 'wiz9-cmp-remove-btn'); rmBtn.textContent = '✕ Remove';
+      rmBtn.addEventListener('click', () => {
+        _state.complianceSelected[ctrl.pk_Risk_Control_ID] = false;
+        const cmpPane = _container.querySelector('[data-pane="compliance"]');
+        if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
+        // also refresh compliance adds in wizard tab
+        const addsEl = _container.querySelector('#wiz9-comp-adds');
+        if (addsEl) { const fresh = _buildComplianceAdditionsSection(); addsEl.replaceWith(fresh); }
+      });
+      cRow.appendChild(rmBtn);
+    }
+    return cRow;
   }
 
   // ---- Style injection ----------------------------------------
@@ -1487,6 +1639,47 @@
 .wiz9-cmp-tp-wrap{border-top:1px solid #fecaca;padding-top:8px}
 .wiz9-cmp-tp-row{display:flex;align-items:flex-start;gap:8px;padding:4px 0;flex-wrap:wrap}
 .wiz9-cmp-tp-name{font-size:11px;color:var(--color-text-secondary);flex:1;min-width:0}
+
+/* Risk type section labels in wizard tab */
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--color-border)}
+
+/* Compliance additions section in wizard tab */
+.wiz9-comp-adds-wrap{margin-top:24px;border:1px solid #c7d2fe;border-radius:8px;overflow:hidden}
+.wiz9-comp-adds-hdr{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#eef2ff;border-bottom:1px solid #c7d2fe}
+.wiz9-comp-adds-icon{font-size:14px;flex-shrink:0}
+.wiz9-comp-adds-title-wrap{display:flex;flex-direction:column;gap:2px}
+.wiz9-comp-adds-title{font-size:12px;font-weight:700;color:#3730a3}
+.wiz9-comp-adds-sub{font-size:11px;color:var(--color-text-secondary);line-height:1.4}
+.wiz9-comp-adds-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.wiz9-comp-adds-empty{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:0}
+.wiz9-comp-add-item{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f5f3ff;border-radius:5px;flex-wrap:wrap}
+.wiz9-comp-adds-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#ede9fe;color:#6d28d9;white-space:nowrap}
+
+/* New counts in article header */
+.wiz9-cmp-count--ctrl{background:#d1fae5;color:#065f46}
+.wiz9-cmp-count--test{background:#fef3c7;color:#92400e}
+
+/* Gap badge on HS items */
+.wiz9-cmp-gap-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;white-space:nowrap;flex-shrink:0}
+
+/* Sub-label variants */
+.wiz9-cmp-sub-lbl--comp{color:#6d28d9}
+.wiz9-cmp-sub-lbl--avail{color:#c2410c}
+
+/* Available controls row (compliance team adds) */
+.wiz9-cmp-avail-row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;background:#fff7ed;border:1px solid #fed7aa;margin-bottom:3px;flex-wrap:wrap}
+.wiz9-cmp-add-btn{font-size:11px;font-weight:600;color:#fff;background:#6d28d9;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.wiz9-cmp-add-btn:hover{background:#5b21b6}
+
+/* Remove button on compliance additions */
+.wiz9-cmp-remove-btn{font-size:10px;font-weight:600;color:#b91c1c;background:none;border:1px solid #fca5a5;border-radius:4px;padding:2px 6px;cursor:pointer;white-space:nowrap;margin-left:auto;flex-shrink:0}
+.wiz9-cmp-remove-btn:hover{background:#fff1f2}
+
+/* Compliance save bar */
+.wiz9-cmp-save-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px;background:#f5f3ff;border-bottom:1px solid #c7d2fe;flex-wrap:wrap}
+.wiz9-cmp-save-summary{font-size:12px;color:#4c1d95;font-weight:500}
+.wiz9-cmp-save-btn{padding:7px 16px;background:#6d28d9;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.wiz9-cmp-save-btn:hover{background:#5b21b6}
 `;
 
     document.head.appendChild(s);
