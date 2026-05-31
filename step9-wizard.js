@@ -399,7 +399,7 @@
     sec.appendChild(hdr);
 
     // Body (collapsed by default, first risk open)
-    const body = _el('div', `wiz9-risk-body${idx === 0 ? '' : ' wiz9-collapsed'}`);
+    const body = _el('div', 'wiz9-risk-body wiz9-collapsed');
 
     // Risk description
     if (risk.risk_description) {
@@ -504,20 +504,6 @@
       const obj = _el('p', 'wiz9-ctrl-obj');
       obj.textContent = ctrl.jkObjective;
       card.appendChild(obj);
-    }
-
-    // Implementation evidence
-    if (ctrl.jkImplementationEvidence) {
-      const evWrap  = _el('div', 'wiz9-evidence-wrap');
-      const evLabel = _el('span', 'wiz9-evidence-label'); evLabel.textContent = 'Implementation evidence: ';
-      const evText  = _el('span', 'wiz9-evidence-text');  evText.textContent  = ctrl.jkImplementationEvidence;
-      evWrap.appendChild(evLabel); evWrap.appendChild(evText);
-      card.appendChild(evWrap);
-    }
-
-    // Tasks (collapsible)
-    if ((ctrl.tasks || []).length > 0) {
-      card.appendChild(_buildTaskCodeSection(ctrl.tasks));
     }
 
     return card;
