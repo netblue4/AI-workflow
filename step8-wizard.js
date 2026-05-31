@@ -167,10 +167,21 @@
 
     _filteredFGItems = _buildFGItems();
 
-    // Default: select all legal risks if no prior legal state
+    // Pre-populate wizard answers for risks whose article isn't triggered in Step 3
+    if (_legalGuidance?.wizard_questions && _step3Data?.axis_b?.applicable_articles?.length) {
+      _legalGuidance.wizard_questions.forEach(wq => {
+        if (_wizState.answers[wq.risk_name] === undefined && _isArticleApplicable(wq.risk_name) === false) {
+          _wizState.answers[wq.risk_name] = 'no';
+        }
+      });
+    }
+
+    // Default: select all legal risks if no prior legal state; pre-deselect non-applicable per Step 3
     if (Object.keys(_state.legal_risks).length === 0) {
       _filteredFGItems.forEach(fg =>
-        fg.risks.forEach(r => { _state.legal_risks[r.jkName] = true; })
+        fg.risks.forEach(r => {
+          _state.legal_risks[r.jkName] = _isArticleApplicable(r.jkName) !== false;
+        })
       );
     }
 
@@ -276,6 +287,24 @@
     }
 
     return isHigh ? 'high' : 'medium';
+  }
+
+  // Returns the tbl_AI_Articles row for a legal risk by name
+  function _getArticleForRisk(riskName) {
+    const risk = _tblRisks.find(r => r.risk_name === riskName && r.risk_source === 'EU_AI_Act');
+    if (!risk) return null;
+    return _articleById.get(risk.fk_AI_Article_ID) || null;
+  }
+
+  // Returns null (no Step 3 data → no filtering), true (article triggered), or false (article not triggered)
+  function _isArticleApplicable(riskName) {
+    const applicableArticles = _step3Data?.axis_b?.applicable_articles;
+    if (!applicableArticles?.length) return null;
+    const article = _getArticleForRisk(riskName);
+    if (!article) return null;
+    const m = article.article_name.match(/^(Article \d+[a-zA-Z]*)/);
+    if (!m) return null;
+    return applicableArticles.some(a => a.article_number === m[1]);
   }
 
   // ---- Tabs ---------------------------------------------------
@@ -701,6 +730,16 @@
     }
     qCard.appendChild(qMeta);
 
+    // Pre-filter banner — shown when Step 3 says this article isn't triggered
+    if (_isArticleApplicable(wq.risk_name) === false) {
+      const article = _getArticleForRisk(wq.risk_name);
+      const artNum  = article?.article_name.match(/^(Article \d+[a-zA-Z]*)/)?.[1] || 'this article';
+      const filterNote = _el('div', 'wiz8-prefilter-note');
+      filterNote.innerHTML = `<strong>Pre-filtered by Step 3 classification:</strong> ${artNum} is not triggered for this system. Pre-answered "No" — override below if needed.`;
+      qCard.appendChild(filterNote);
+      qCard.classList.add('wiz8-q-card--prefiltered');
+    }
+
     // Risk name
     const rName = _el('h3', 'wiz8-q-risk-name');
     rName.textContent = wq.risk_name; qCard.appendChild(rName);
@@ -803,10 +842,11 @@
   function _buildWizardSummary() {
     const wqs = _legalGuidance.wizard_questions;
 
-    const applicable = wqs.filter(wq => ['yes', 'partially'].includes(_wizState.answers[wq.risk_name]));
-    const excluded   = wqs.filter(wq => _wizState.answers[wq.risk_name] === 'no');
-    const skipped    = wqs.filter(wq => !_wizState.answers[wq.risk_name]);
-    const highApp    = applicable.filter(wq => _computeRelevance(wq.risk_name) === 'high');
+    const applicable    = wqs.filter(wq => ['yes', 'partially'].includes(_wizState.answers[wq.risk_name]));
+    const excluded      = wqs.filter(wq => _wizState.answers[wq.risk_name] === 'no');
+    const skipped       = wqs.filter(wq => !_wizState.answers[wq.risk_name]);
+    const highApp       = applicable.filter(wq => _computeRelevance(wq.risk_name) === 'high');
+    const preFiltered   = excluded.filter(wq => _isArticleApplicable(wq.risk_name) === false);
 
     // Group applicable by category
     const byCategory = {};
@@ -868,6 +908,23 @@
       const skipNote = _el('p', 'wiz8-summary-skip-note');
       skipNote.textContent = `${skipped.length} risk${skipped.length !== 1 ? 's' : ''} skipped — unanswered questions will default to not applicable.`;
       card.appendChild(skipNote);
+    }
+
+    if (preFiltered.length) {
+      card.appendChild(_sectionLabel('Pre-filtered by Step 3 Classification'));
+      const pfNote = _el('div', 'wiz8-prefilter-summary');
+      pfNote.innerHTML = `<strong>${preFiltered.length} risk${preFiltered.length !== 1 ? 's were' : ' was'} pre-answered "No"</strong> because the associated AI Act article is not triggered for this system. These are excluded from the assessment. Return to any question to override.`;
+      card.appendChild(pfNote);
+      const pfList = _el('div', 'wiz8-prefilter-list');
+      preFiltered.forEach(wq => {
+        const article = _getArticleForRisk(wq.risk_name);
+        const artNum  = article?.article_name.match(/^(Article \d+[a-zA-Z]*)/)?.[1] || '';
+        const row = _el('div', 'wiz8-prefilter-item');
+        row.appendChild(_el('span', 'wiz8-prefilter-risk-name', { textContent: wq.risk_name }));
+        if (artNum) row.appendChild(_el('span', 'wiz8-prefilter-art-tag', { textContent: artNum }));
+        pfList.appendChild(row);
+      });
+      card.appendChild(pfList);
     }
 
     // Actions
@@ -1383,6 +1440,15 @@
 .wiz8-review-gate{margin-top:20px}
 .wiz8-review-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:12px 16px;font-size:13px;color:#92400e;line-height:1.6}
 .wiz8-review-complete{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:12px 16px;font-size:13px;color:#166534;line-height:1.6}
+
+/* Pre-filter styles (Step 3 classification → legal risk filtering) */
+.wiz8-q-card--prefiltered{opacity:.75;border-left:3px solid #fed7aa}
+.wiz8-prefilter-note{background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:9px 13px;font-size:12px;color:#92400e;line-height:1.55;margin-bottom:14px}
+.wiz8-prefilter-summary{background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400e;line-height:1.6;margin-bottom:10px}
+.wiz8-prefilter-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.wiz8-prefilter-item{display:flex;align-items:center;gap:8px;padding:5px 10px;background:#fff;border:1px solid #fed7aa;border-radius:5px;flex-wrap:wrap}
+.wiz8-prefilter-risk-name{font-size:12px;font-weight:600;color:var(--color-text-primary);flex:1;min-width:0}
+.wiz8-prefilter-art-tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:#ffedd5;color:#9a3412;white-space:nowrap}
 `;
     document.head.appendChild(s);
   }
