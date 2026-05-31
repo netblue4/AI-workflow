@@ -918,6 +918,16 @@
       ctrlsByRisk.get(c.fk_Risk_ID).push(c);
     });
 
+    // Index controls by each individual standard_ref so we can find which controls
+    // implement a given HS requirement
+    const ctrlsByRef = new Map();
+    (d.controls || []).forEach(c => {
+      (c.standard_ref || '').split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
+        if (!ctrlsByRef.has(ref)) ctrlsByRef.set(ref, []);
+        ctrlsByRef.get(ref).push(c);
+      });
+    });
+
     const tasksByCtrl = new Map();
     (d.tasks || []).forEach(t => {
       if (!tasksByCtrl.has(t.fk_Risk_Control_ID)) tasksByCtrl.set(t.fk_Risk_Control_ID, []);
@@ -948,7 +958,7 @@
       testCtrlsByPlan.get(tc.fk_Test_Plan_ID).push(tc);
     });
 
-    return { hsByArticle, risksByArticle, ctrlsByRisk, tasksByCtrl, testCtrlByRef, testPlansByRisk, testCtrlsByPlan };
+    return { hsByArticle, risksByArticle, ctrlsByRisk, ctrlsByRef, tasksByCtrl, testCtrlByRef, testPlansByRisk, testCtrlsByPlan };
   }
 
   // Derive relevance of an article from the step-3 record
@@ -1041,7 +1051,7 @@
   }
 
   function _populateCmpBody(body, article, rel, hs, risks, ix) {
-    const { ctrlsByRisk, tasksByCtrl, testPlansByRisk, testCtrlsByPlan } = ix;
+    const { ctrlsByRisk, ctrlsByRef, tasksByCtrl, testPlansByRisk, testCtrlsByPlan, testCtrlByRef } = ix;
 
     // Relevance reason
     const reasonText = rel.trigger_reason || rel.reason;
@@ -1051,18 +1061,26 @@
       body.appendChild(rd);
     }
 
-    // ── Column 3: HS Requirements ──────────────────────────────
-    const hsSection = _el('div', 'wiz9-cmp-section');
-    const hsHdr = _el('div', 'wiz9-cmp-section-hdr');
-    hsHdr.appendChild(_el('span', 'wiz9-cmp-section-lbl wiz9-cmp-section-lbl--hs', { textContent: `HS Requirements (${hs.length})` }));
-    hsSection.appendChild(hsHdr);
+    // ══ VIEW 1: Compliance — AI Act → HS Requirements → Controls & Tests ══════
+    const v1Wrap = _el('div', 'wiz9-cmp-view-wrap');
+
+    const v1Header = _el('div', 'wiz9-cmp-view-hdr wiz9-cmp-view-hdr--compliance');
+    const v1Icon = _el('span', 'wiz9-cmp-view-icon'); v1Icon.textContent = '⚖';
+    v1Header.appendChild(v1Icon);
+    const v1Title = _el('div', 'wiz9-cmp-view-title-wrap');
+    v1Title.appendChild(_el('span', 'wiz9-cmp-view-title', { textContent: 'Compliance View' }));
+    v1Title.appendChild(_el('span', 'wiz9-cmp-view-sub', { textContent: 'AI Act obligation → HS requirement → controls that implement it → tests that verify it' }));
+    v1Header.appendChild(v1Title);
+    v1Wrap.appendChild(v1Header);
 
     if (hs.length === 0) {
-      hsSection.appendChild(_el('p', 'wiz9-cmp-empty', { textContent: 'No harmonised standard requirements mapped to this article.' }));
+      v1Wrap.appendChild(_el('p', 'wiz9-cmp-empty wiz9-cmp-empty--indent', { textContent: 'No harmonised standard requirements mapped to this article.' }));
     } else {
       const hsList = _el('div', 'wiz9-cmp-hs-list');
       hs.forEach(h => {
         const item = _el('div', 'wiz9-cmp-hs-item');
+
+        // HS ref + name + description
         const refRow = _el('div', 'wiz9-cmp-hs-ref-row');
         refRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: h.standard_ref }));
         const txt = _el('div', 'wiz9-cmp-hs-txt');
@@ -1070,40 +1088,78 @@
         txt.appendChild(_el('span', 'wiz9-cmp-hs-desc', { textContent: h.standard_text }));
         refRow.appendChild(txt);
         item.appendChild(refRow);
-        // Column 6 for HS: test controls referencing this standard_ref
-        const tests = ix.testCtrlByRef.get(h.standard_ref) || [];
+
+        // Controls that implement this HS requirement (matched on standard_ref)
+        const matchingCtrls = (ctrlsByRef.get(h.standard_ref) || [])
+          .filter((c, i, a) => a.findIndex(x => x.pk_Risk_Control_ID === c.pk_Risk_Control_ID) === i);
+
+        const ctrlsArea = _el('div', 'wiz9-cmp-hs-impl');
+        if (matchingCtrls.length > 0) {
+          ctrlsArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Controls (${matchingCtrls.length})` }));
+          matchingCtrls.forEach(ctrl => {
+            const cRow = _el('div', 'wiz9-cmp-ctrl-row');
+            const srcDot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${ctrl.control_source === 'OWASP' ? 'owasp' : 'hs'}`);
+            cRow.appendChild(srcDot);
+            cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id', { textContent: ctrl.pk_Risk_Control_ID }));
+            cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
+            const tasks = tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || [];
+            if (tasks.length > 0) {
+              const tw = _el('div', 'wiz9-cmp-task-chips');
+              tw.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '📋' }));
+              tasks.slice(0, 4).forEach(t => {
+                tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `T${t.task_number}`, title: t.task || '' }));
+              });
+              if (tasks.length > 4) tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `+${tasks.length - 4}` }));
+              cRow.appendChild(tw);
+            }
+            ctrlsArea.appendChild(cRow);
+          });
+        } else {
+          ctrlsArea.appendChild(_el('p', 'wiz9-cmp-empty', { textContent: 'No controls directly mapped to this requirement.' }));
+        }
+
+        // Tests that verify this HS requirement
+        const tests = testCtrlByRef.get(h.standard_ref) || [];
         if (tests.length > 0) {
+          ctrlsArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Tests (${tests.length})` }));
           const trow = _el('div', 'wiz9-cmp-test-row');
           trow.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '🧪' }));
           const tlist = _el('div', 'wiz9-cmp-test-chips');
           tests.forEach(tc => {
-            const chip = _el('span', 'wiz9-cmp-test-chip');
-            chip.textContent = tc.jkName || tc.control_ref;
+            const chip = _el('span', 'wiz9-cmp-test-chip', { textContent: tc.jkName || tc.control_ref });
             chip.title = tc.jkText || '';
             tlist.appendChild(chip);
           });
           trow.appendChild(tlist);
-          item.appendChild(trow);
+          ctrlsArea.appendChild(trow);
         }
+
+        item.appendChild(ctrlsArea);
         hsList.appendChild(item);
       });
-      hsSection.appendChild(hsList);
+      v1Wrap.appendChild(hsList);
     }
-    body.appendChild(hsSection);
+    body.appendChild(v1Wrap);
 
-    // ── Columns 4–6: Risks → Controls → Tests ─────────────────
-    const riskSection = _el('div', 'wiz9-cmp-section');
-    const riskHdr = _el('div', 'wiz9-cmp-section-hdr');
-    riskHdr.appendChild(_el('span', 'wiz9-cmp-section-lbl wiz9-cmp-section-lbl--risk', { textContent: `Risks (${risks.length})` }));
-    riskSection.appendChild(riskHdr);
+    // ══ VIEW 2: Risk Reduction — Risks → Controls & Tests ═════════════════════
+    const v2Wrap = _el('div', 'wiz9-cmp-view-wrap wiz9-cmp-view-wrap--risk');
+
+    const v2Header = _el('div', 'wiz9-cmp-view-hdr wiz9-cmp-view-hdr--risk');
+    const v2Icon = _el('span', 'wiz9-cmp-view-icon'); v2Icon.textContent = '🛡';
+    v2Header.appendChild(v2Icon);
+    const v2Title = _el('div', 'wiz9-cmp-view-title-wrap');
+    v2Title.appendChild(_el('span', 'wiz9-cmp-view-title', { textContent: 'Risk Reduction View' }));
+    v2Title.appendChild(_el('span', 'wiz9-cmp-view-sub', { textContent: 'Risk identified → controls that mitigate it → tests that verify those controls work' }));
+    v2Header.appendChild(v2Title);
+    v2Wrap.appendChild(v2Header);
 
     if (risks.length === 0) {
-      riskSection.appendChild(_el('p', 'wiz9-cmp-empty', { textContent: 'No risks mapped to this article.' }));
+      v2Wrap.appendChild(_el('p', 'wiz9-cmp-empty wiz9-cmp-empty--indent', { textContent: 'No risks mapped to this article.' }));
     } else {
       risks.forEach(risk => {
         const rItem = _el('div', 'wiz9-cmp-risk-item');
 
-        // Risk header row
+        // Risk header
         const rHdr = _el('div', 'wiz9-cmp-risk-hdr');
         rHdr.appendChild(_el('span', 'wiz9-cmp-risk-id', { textContent: risk.pk_Risk_ID }));
         if (risk.owasp_id) rHdr.appendChild(_el('span', 'wiz9-cmp-owasp-tag', { textContent: risk.owasp_id }));
@@ -1113,7 +1169,7 @@
         rHdr.appendChild(_el('span', 'wiz9-cmp-risk-name', { textContent: risk.risk_name }));
         rItem.appendChild(rHdr);
 
-        // Column 5: Controls
+        // Controls that mitigate this risk
         const controls = ctrlsByRisk.get(risk.pk_Risk_ID) || [];
         if (controls.length > 0) {
           const ctrlWrap = _el('div', 'wiz9-cmp-ctrl-wrap');
@@ -1122,16 +1178,14 @@
             const cRow = _el('div', 'wiz9-cmp-ctrl-row');
             const srcDot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${ctrl.control_source === 'OWASP' ? 'owasp' : 'hs'}`);
             cRow.appendChild(srcDot);
-            cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
+            cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id', { textContent: ctrl.pk_Risk_Control_ID }));
             cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-            // Column 6 for HS controls: implementation task codes
             const tasks = tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || [];
             if (tasks.length > 0) {
               const tw = _el('div', 'wiz9-cmp-task-chips');
               tw.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '📋' }));
               tasks.slice(0, 4).forEach(t => {
-                const chip = _el('span', 'wiz9-cmp-task-chip', { textContent: `T${t.task_number}`, title: t.task || '' });
-                tw.appendChild(chip);
+                tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `T${t.task_number}`, title: t.task || '' }));
               });
               if (tasks.length > 4) tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `+${tasks.length - 4}` }));
               cRow.appendChild(tw);
@@ -1141,7 +1195,7 @@
           rItem.appendChild(ctrlWrap);
         }
 
-        // Column 6 (formal tests): test plans → test controls
+        // Test plans → test controls
         const testPlans = testPlansByRisk.get(risk.pk_Risk_ID) || [];
         if (testPlans.length > 0) {
           const tWrap = _el('div', 'wiz9-cmp-tp-wrap');
@@ -1155,8 +1209,7 @@
               const tcChips = _el('div', 'wiz9-cmp-test-chips');
               tcChips.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '🧪' }));
               tcList.forEach(tc => {
-                const chip = _el('span', 'wiz9-cmp-test-chip', { textContent: tc.jkName || tc.control_ref, title: tc.jkText || '' });
-                tcChips.appendChild(chip);
+                tcChips.appendChild(_el('span', 'wiz9-cmp-test-chip', { textContent: tc.jkName || tc.control_ref, title: tc.jkText || '' }));
               });
               tpRow.appendChild(tcChips);
             }
@@ -1165,10 +1218,10 @@
           rItem.appendChild(tWrap);
         }
 
-        riskSection.appendChild(rItem);
+        v2Wrap.appendChild(rItem);
       });
     }
-    body.appendChild(riskSection);
+    body.appendChild(v2Wrap);
   }
 
   // ---- Style injection ----------------------------------------
@@ -1363,39 +1416,54 @@
 .wiz9-cmp-obl{font-size:10px;color:var(--color-text-tertiary);font-style:italic;white-space:nowrap}
 
 /* Article body */
-.wiz9-cmp-art-body{padding:0 24px 16px;background:var(--color-bg,#f8fafc)}
+.wiz9-cmp-art-body{padding:0 24px 20px;background:var(--color-bg,#f8fafc)}
 .wiz9-cmp-reason{font-size:12px;line-height:1.55;padding:8px 12px;border-radius:5px;margin:10px 0}
 .wiz9-cmp-reason--applicable{background:#f0fdf4;color:#15803d;border-left:3px solid #22c55e}
 .wiz9-cmp-reason--na{background:#f8fafc;color:#64748b;border-left:3px solid #cbd5e1}
 .wiz9-cmp-reason--pending{background:#fffbeb;color:#92400e;border-left:3px solid #f59e0b}
 .wiz9-cmp-reason--blocked{background:#fff1f2;color:#b91c1c;border-left:3px solid #f43f5e}
 
-/* Sections (HS / Risk) */
-.wiz9-cmp-section{margin-top:12px}
-.wiz9-cmp-section-hdr{margin-bottom:6px}
-.wiz9-cmp-section-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.wiz9-cmp-section-lbl--hs{color:#4338ca}
-.wiz9-cmp-section-lbl--risk{color:#b91c1c}
-.wiz9-cmp-empty{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:4px 0}
+/* View wrappers — the two views within each article body */
+.wiz9-cmp-view-wrap{margin-top:14px;border:1px solid var(--color-border);border-radius:8px;overflow:hidden}
+.wiz9-cmp-view-wrap--risk{margin-top:10px}
+.wiz9-cmp-view-hdr{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--color-border)}
+.wiz9-cmp-view-hdr--compliance{background:#eef2ff}
+.wiz9-cmp-view-hdr--risk{background:#fff1f2}
+.wiz9-cmp-view-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.wiz9-cmp-view-title-wrap{display:flex;flex-direction:column;gap:2px}
+.wiz9-cmp-view-title{font-size:12px;font-weight:700;color:var(--color-text-primary)}
+.wiz9-cmp-view-sub{font-size:11px;color:var(--color-text-secondary);line-height:1.4}
 
-/* HS items */
-.wiz9-cmp-hs-list{display:flex;flex-direction:column;gap:6px}
-.wiz9-cmp-hs-item{background:#fff;border:1px solid #e0e7ff;border-radius:6px;padding:8px 10px}
-.wiz9-cmp-hs-ref-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:4px}
+/* Empty state */
+.wiz9-cmp-empty{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:4px 0}
+.wiz9-cmp-empty--indent{padding:10px 14px}
+
+/* HS list inside compliance view */
+.wiz9-cmp-hs-list{display:flex;flex-direction:column;gap:0;padding:4px 0}
+.wiz9-cmp-hs-item{padding:10px 14px;border-bottom:1px solid #e0e7ff}
+.wiz9-cmp-hs-item:last-child{border-bottom:none}
+.wiz9-cmp-hs-ref-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
 .wiz9-cmp-ref-tag{font-size:10px;font-weight:600;font-family:monospace;padding:2px 6px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:3px;white-space:nowrap;flex-shrink:0}
 .wiz9-cmp-hs-txt{display:flex;flex-direction:column;gap:1px}
 .wiz9-cmp-hs-name{font-size:12px;font-weight:600;color:var(--color-text-primary)}
 .wiz9-cmp-hs-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.45}
 
+/* Controls + tests area inside each HS item */
+.wiz9-cmp-hs-impl{padding:6px 0 2px 12px;border-left:2px solid #c7d2fe;margin-left:4px;display:flex;flex-direction:column;gap:4px}
+
+/* Shared sub-label */
+.wiz9-cmp-sub-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:4px 0 3px}
+
 /* Test rows */
-.wiz9-cmp-test-row{display:flex;align-items:flex-start;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #e0e7ff}
+.wiz9-cmp-test-row{display:flex;align-items:flex-start;gap:6px;padding-top:2px}
 .wiz9-cmp-test-icon{font-size:11px;flex-shrink:0;margin-top:2px}
 .wiz9-cmp-test-chips{display:flex;flex-wrap:wrap;gap:4px}
 .wiz9-cmp-test-chip{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;cursor:default;white-space:nowrap}
 .wiz9-cmp-test-chip:hover{background:#dcfce7}
 
-/* Risk items */
-.wiz9-cmp-risk-item{background:#fff;border:1px solid #fecaca;border-radius:6px;padding:10px 12px;margin-bottom:8px}
+/* Risk items (inside risk view wrapper) */
+.wiz9-cmp-risk-item{padding:10px 14px;border-bottom:1px solid #fecaca}
+.wiz9-cmp-risk-item:last-child{border-bottom:none}
 .wiz9-cmp-risk-hdr{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .wiz9-cmp-risk-id{font-size:10px;font-weight:700;font-family:monospace;color:var(--color-text-tertiary)}
 .wiz9-cmp-owasp-tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:#fef3c7;color:#92400e}
@@ -1403,7 +1471,6 @@
 .wiz9-cmp-src-tag--legal{background:#ede9fe;color:#6d28d9}
 .wiz9-cmp-src-tag--owasp{background:#fef3c7;color:#92400e}
 .wiz9-cmp-risk-name{font-size:12px;font-weight:600;color:var(--color-text-primary)}
-.wiz9-cmp-sub-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 5px}
 
 /* Controls */
 .wiz9-cmp-ctrl-wrap{margin-bottom:8px}
