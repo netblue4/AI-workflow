@@ -1039,11 +1039,18 @@
     const found = applicable.find(a => a.article_number === num);
 
     if (found) {
+      const isSubMod    = step3.axis_b?.substantial_modification_applies;
+      const isOverride  = step3.axis_b?.art25_override;
+      let trigger = found.trigger_reason || '';
+      if (isSubMod && isOverride && ['Article 9','Article 10','Article 11','Article 12','Article 13','Article 14','Article 15','Article 17','Article 43','Article 72'].includes(num))
+        trigger = (trigger ? trigger + ' ' : '') + '(Substantial modification detected — legal counsel override applied; proceeding as Deployer but provider obligations apply.)';
+      else if (isSubMod && !isOverride && ['Article 9','Article 10','Article 11','Article 12','Article 13','Article 14','Article 15','Article 17','Article 43','Article 72'].includes(num))
+        trigger = (trigger ? trigger + ' ' : '') + '(Added because a substantial modification was identified in Step 3 — your organisation is acting as Provider for this system.)';
       return {
         status:           'applicable',
         label:            'Applicable',
         obligation_type:  (found.obligation_type || '').replace(/_/g, ' '),
-        trigger_reason:   found.trigger_reason || ''
+        trigger_reason:   trigger
       };
     }
 
