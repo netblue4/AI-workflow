@@ -1062,5 +1062,18 @@
     "jkImplementationEvidence": "A Provenance Metadata Verification Report confirming that synthetic media outputs carry embedded provenance metadata or watermarks and that these markers survive standard distribution formats.",
     "jkAttackVector": null,
     "jkMaturity": "Medium"
+  },
+  {
+    "pk_Risk_Control_ID": "[FS-18286.1]",
+    "fk_Risk_ID": "RISK-026",
+    "standard_ref": "[18286.1]",
+    "owasp_ref": null,
+    "control_source": "Framework_Statement",
+    "jkName": "AI Governance Workflow — Compliance Strategy",
+    "jkText": "Conformity with ISO 18286.1 is maintained through this AI governance workflow, which constitutes the organisation's formal compliance strategy:\n\n1. Classification (Step 3) — Each AI system is classified against the EU AI Act. Applicable articles, organisation role (provider/deployer), and any substantial modification obligations are identified and recorded.\n\n2. Risk Assessment (Step 8) — Technical risks (OWASP LLM Top 10) and legal/regulatory risks (EU AI Act, per applicable articles only) are assessed. Risks linked to non-applicable articles are pre-filtered and documented with the reason.\n\n3. Control Selection (Step 9, Risk View) — The risk team selects controls to treat each identified risk. Every risk must have at least one control before the assessment can be saved.\n\n4. Compliance Coverage (Step 9, AI Act Compliance View) — The compliance team verifies that every harmonised standard requirement has at least one selected control. Uncovered requirements are surfaced as gaps and addressed by adding compliance-specific controls in consultation with the risk team.\n\n5. Traceability — End-to-end traceability is maintained: AI Act article → harmonised standard requirement → selected control → implementation task → test. Gap detection runs automatically on every view render.\n\n6. Modifications — Where a substantial modification is identified in Step 3, Article 25 obligations are triggered, provider-level Articles 9–17 are added to the applicable articles, and Steps 8 and 9 are completed on the full provider obligations basis.\n\nCompletion of this workflow, with all applicable HS requirements covered and no unresolved gaps, constitutes the organisation's compliance record under this standard.",
+    "jkObjective": "This AI governance workflow (Steps 3–9 and the AI Act Compliance View) constitutes the organisation's formal compliance strategy under ISO 18286.1, providing a repeatable, auditable process for identifying applicable obligations, treating risks, selecting controls, and maintaining ongoing HS traceability.",
+    "jkImplementationEvidence": "Saved Step 3, Step 8, and Step 9 records for the system under assessment. The AI Act Compliance View showing full HS coverage with zero unresolved gaps serves as the compliance evidence for this control.",
+    "jkAttackVector": null,
+    "jkMaturity": null
   }
 ]

@@ -717,6 +717,12 @@
               result.art25_override = answers['G5_Q3_override'] === true;
               const outcome = gate.outcomes['G5_Q3_yes'];
               if (outcome && outcome.applicable_articles) _mergeArticles(result, outcome.applicable_articles);
+              // Cascade provider-level Articles 9-17: substantial modification makes the deployer
+              // a provider regardless of whether a legal-counsel override was applied.
+              // The art25_override flag is preserved so the compliance view can note the override.
+              const g3Gate = gates.find(g => g.gate_id === 'G3');
+              const providerArts = g3Gate?.outcomes?.any_yes?.applicable_articles || [];
+              _mergeArticles(result, providerArts);
             }
             return;
           }
