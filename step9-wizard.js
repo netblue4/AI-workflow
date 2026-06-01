@@ -377,12 +377,12 @@
     const deselAll = document.createElement('button'); deselAll.className = 'wiz9-sel-btn'; deselAll.textContent = 'Deselect all';
     selAll.addEventListener('click', e => {
       e.stopPropagation();
-      risk.controls.forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = true; });
+      risk.controls.filter(c => c.control_source !== 'Framework_Statement').forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = true; });
       _syncRisk(sec, risk);
     });
     deselAll.addEventListener('click', e => {
       e.stopPropagation();
-      risk.controls.forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = false; });
+      risk.controls.filter(c => c.control_source !== 'Framework_Statement').forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = false; });
       _syncRisk(sec, risk);
     });
     right.appendChild(selAll); right.appendChild(deselAll);
@@ -409,15 +409,40 @@
     }
 
     // Controls label + list
-    if (risk.controls.length > 0) {
+    const fsCtrls  = risk.controls.filter(c => c.control_source === 'Framework_Statement');
+    const selCtrls = risk.controls.filter(c => c.control_source !== 'Framework_Statement');
+
+    if (selCtrls.length > 0) {
       const ctrlLbl = _el('p', 'wiz9-ctrl-section-label');
-      ctrlLbl.textContent = `Controls (${risk.controls.length})`;
+      ctrlLbl.textContent = `Controls (${selCtrls.length})`;
       body.appendChild(ctrlLbl);
-      risk.controls.forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
-    } else {
+      selCtrls.forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
+    } else if (fsCtrls.length === 0) {
       const none = _el('p', 'wiz9-intro');
       none.textContent = 'No controls available for this risk.';
       body.appendChild(none);
+    }
+
+    if (fsCtrls.length > 0) {
+      const fsLbl = _el('p', 'wiz9-ctrl-section-label wiz9-ctrl-section-label--fs');
+      fsLbl.textContent = `Framework Self-Certifications (${fsCtrls.length})`;
+      body.appendChild(fsLbl);
+      fsCtrls.forEach(ctrl => {
+        const card = _el('div', 'wiz9-ctrl-card wiz9-fs-ctrl-card');
+        const hdr  = _el('div', 'wiz9-ctrl-hdr');
+        const icon = _el('span', 'wiz9-ctrl-icon');
+        icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+        hdr.appendChild(icon);
+        const badge = _el('span', 'wiz9-src-badge wiz9-fs-src-badge'); badge.textContent = 'Self-certified';
+        hdr.appendChild(badge);
+        hdr.appendChild(_el('span', 'wiz9-ctrl-name', { textContent: ctrl.jkName }));
+        if (ctrl.standard_ref) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.standard_ref }));
+        card.appendChild(hdr);
+        if (ctrl.jkObjective) {
+          const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective; card.appendChild(obj);
+        }
+        body.appendChild(card);
+      });
     }
 
     sec.appendChild(body);
@@ -442,8 +467,9 @@
   }
 
   function _updateRiskBadge(secEl, risk) {
-    const total = risk.controls.length;
-    const sel   = _selectedCountForRisk(risk);
+    const actionable = risk.controls.filter(c => c.control_source !== 'Framework_Statement');
+    const total = actionable.length;
+    const sel   = actionable.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]).length;
     const badge = secEl.querySelector(`#wiz9-rb-${_safeId(risk.risk_id)}`);
     if (!badge) return;
     badge.textContent = `${sel} / ${total}`;
@@ -1176,19 +1202,24 @@
         refRow.appendChild(txt);
         item.appendChild(refRow);
 
-        // Coverage detection
+        // Coverage detection — Framework_Statement controls are auto-satisfied
         const allCtrls = (ctrlsByRef.get(h.standard_ref) || [])
           .filter((c, i, a) => a.findIndex(x => x.pk_Risk_Control_ID === c.pk_Risk_Control_ID) === i);
 
-        const riskCtrls      = allCtrls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]);
-        const compCtrls      = allCtrls.filter(c => !!_state.complianceSelected[c.pk_Risk_Control_ID]);
-        const availableCtrls = allCtrls.filter(c => !_state.riskSelected[c.pk_Risk_Control_ID] && !_state.complianceSelected[c.pk_Risk_Control_ID]);
-        const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0;
+        const fsCtrls        = allCtrls.filter(c => c.control_source === 'Framework_Statement');
+        const actionCtrls    = allCtrls.filter(c => c.control_source !== 'Framework_Statement');
+        const riskCtrls      = actionCtrls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]);
+        const compCtrls      = actionCtrls.filter(c => !!_state.complianceSelected[c.pk_Risk_Control_ID]);
+        const availableCtrls = actionCtrls.filter(c => !_state.riskSelected[c.pk_Risk_Control_ID] && !_state.complianceSelected[c.pk_Risk_Control_ID]);
+        const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0 || fsCtrls.length > 0;
 
-        // Gap badge
+        // Gap badge — not shown when a Framework_Statement control satisfies the requirement
         if (!isCovered) {
           const gapBadge = _el('span', 'wiz9-cmp-gap-badge'); gapBadge.textContent = '⚠ Gap';
           refRow.appendChild(gapBadge);
+        } else if (fsCtrls.length > 0 && riskCtrls.length === 0 && compCtrls.length === 0) {
+          const certBadge = _el('span', 'wiz9-cmp-self-cert-badge'); certBadge.textContent = '✓ Self-certified';
+          refRow.appendChild(certBadge);
         }
 
         // Coverage area
@@ -1228,6 +1259,23 @@
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
             if (ctrl.standard_ref) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.standard_ref }));
             implArea.appendChild(aRow);
+          });
+        }
+
+        if (fsCtrls.length > 0) {
+          implArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl wiz9-cmp-sub-lbl--fs', { textContent: `Framework Self-Certifications (${fsCtrls.length})` }));
+          fsCtrls.forEach(ctrl => {
+            const fsRow = _el('div', 'wiz9-cmp-fs-row');
+            fsRow.appendChild(_el('span', 'wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--fs'));
+            fsRow.appendChild(_el('span', 'wiz9-cmp-self-cert-badge wiz9-cmp-self-cert-badge--sm', { textContent: 'Self-certified' }));
+            fsRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
+            fsRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
+            implArea.appendChild(fsRow);
+            if (ctrl.jkObjective) {
+              const stmt = _el('div', 'wiz9-cmp-fs-stmt');
+              stmt.textContent = ctrl.jkObjective;
+              implArea.appendChild(stmt);
+            }
           });
         }
 
@@ -1289,7 +1337,8 @@
           ctrlWrap.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Controls (${controls.length})` }));
           controls.forEach(ctrl => {
             const cRow = _el('div', 'wiz9-cmp-ctrl-row');
-            const srcDot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${ctrl.control_source === 'OWASP' ? 'owasp' : 'hs'}`);
+            const _srcKey = ctrl.control_source === 'OWASP' ? 'owasp' : ctrl.control_source === 'Framework_Statement' ? 'fs' : 'hs';
+            const srcDot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${_srcKey}`);
             cRow.appendChild(srcDot);
             cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id', { textContent: ctrl.pk_Risk_Control_ID }));
             cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
@@ -1340,7 +1389,7 @@
   // ---- Compliance ctrl row helper -----------------------------
   function _buildCmpCtrlRow(ctrl, tasksByCtrl, showRemove) {
     const cRow = _el('div', 'wiz9-cmp-ctrl-row');
-    const src = ctrl.control_source === 'OWASP' ? 'owasp' : 'hs';
+    const src = ctrl.control_source === 'OWASP' ? 'owasp' : ctrl.control_source === 'Framework_Statement' ? 'fs' : 'hs';
     cRow.appendChild(_el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`));
     cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
     cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
@@ -1623,6 +1672,7 @@
 .wiz9-cmp-ctrl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .wiz9-cmp-ctrl-dot--owasp{background:#f59e0b}
 .wiz9-cmp-ctrl-dot--hs{background:#6366f1}
+.wiz9-cmp-ctrl-dot--fs{background:#8b5cf6}
 .wiz9-cmp-ctrl-id{font-size:10px;font-weight:600;font-family:monospace;color:var(--color-text-tertiary);white-space:nowrap}
 .wiz9-cmp-ctrl-name{font-size:11px;color:var(--color-text-secondary);flex:1;min-width:0}
 .wiz9-cmp-task-chips{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
@@ -1658,6 +1708,14 @@
 /* Sub-label variants */
 .wiz9-cmp-sub-lbl--comp{color:#6d28d9}
 .wiz9-cmp-sub-lbl--avail{color:#c2410c}
+.wiz9-cmp-sub-lbl--fs{color:#7c3aed}
+.wiz9-cmp-self-cert-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;white-space:nowrap;flex-shrink:0}
+.wiz9-cmp-self-cert-badge--sm{font-size:10px;padding:1px 6px}
+.wiz9-cmp-fs-row{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:4px;background:#faf5ff;margin-bottom:3px;flex-wrap:wrap}
+.wiz9-cmp-fs-stmt{font-size:12px;color:#5b21b6;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:8px 12px;margin:2px 0 8px 16px;line-height:1.55}
+.wiz9-fs-ctrl-card{border-color:#e9d5ff!important;background:#faf5ff!important}
+.wiz9-fs-src-badge{background:#ede9fe!important;color:#7c3aed!important;border:1px solid #c4b5fd!important}
+.wiz9-ctrl-section-label--fs{color:#7c3aed}
 
 /* Available controls row (compliance team adds) */
 .wiz9-cmp-avail-row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;background:#fff7ed;border:1px solid #fed7aa;margin-bottom:3px;flex-wrap:wrap}
