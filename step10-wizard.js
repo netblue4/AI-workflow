@@ -1,5 +1,5 @@
 /* Step 10 — Content Verification Testing
-   Reads selected controls from record['step-9'].clusters[].controls[].
+   Reads selected controls from record['step-9'].risk_controls[] and compliance_additions[].
    FK chain: selected control → tbl_Risk_Controls.fk_Risk_ID → tbl_Test_Plans → tbl_Test_Controls + tbl_Test_Cases.
    All 17 test plans link to EU AI Act risks; OWASP controls (no test plan) appear in the uncovered section.
    Tester marks each test as: pending | completed | not_applicable.
@@ -12,7 +12,7 @@
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null;
   let _planData  = [];  // [{plan_id, plan_ref, plan_name, objective, role, risk_name, test_controls:[], test_cases:[]}]
-  let _uncovered = [];  // [{control_id, control_name, control_source, cluster_id}]
+  let _uncovered = [];  // [{control_id, control_name, control_source}]
 
   const _state = {
     testStatus: {} // key = pk_Test_Control_ID → "pending"|"completed"|"not_applicable"
@@ -94,24 +94,19 @@
   // ---- Build plan data from tbl_* filtered to step-9 selections ----
   function _buildPlanData() {
     const step9 = _record?.['step-9'];
-    if (!step9?.clusters) return { plans: [], uncovered: [] };
+    if (!step9) return { plans: [], uncovered: [] };
 
-    // Collect all selected controls from step-9
+    // Collect selected controls from flat risk_controls[] and compliance_additions[]
+    const seen = new Set();
     const selectedControls = [];
-    step9.clusters.forEach(cluster => {
-      (cluster.controls || []).forEach(c => {
-        if (c.selected) {
-          selectedControls.push({
-            control_id:       c.control_id,
-            control_name:     c.control_name,
-            control_source:   c.control_source,
-            cluster_id:       cluster.cluster_id,
-            owasp_risk_name:  cluster.owasp_risk_name || null,
-            legal_risk_names: cluster.legal_risk_names || []
-          });
-        }
-      });
-    });
+    const push = c => {
+      if (!seen.has(c.control_id)) {
+        seen.add(c.control_id);
+        selectedControls.push({ control_id: c.control_id, control_name: c.control_name, control_source: c.control_source || '' });
+      }
+    };
+    (step9.risk_controls || []).forEach(c => { if (c.selected) push(c); });
+    (step9.compliance_additions || []).forEach(c => push(c));  // always selected
 
     if (!selectedControls.length) return { plans: [], uncovered: [] };
 
@@ -270,7 +265,7 @@
       const vEl = _el('span', mod ? `wiz10-cell-value wiz10-cell-value--${mod}` : 'wiz10-cell-value');
       vEl.textContent = v || '—'; c.appendChild(vEl); grid.appendChild(c);
     };
-    cell('Risk clusters',        String(step9.total_clusters   || 0));
+    cell('Risks assessed',       String(step9.total_risks      || 0));
     cell('Controls selected',    String(step9.selected_controls || 0), 'num');
     cell('Test plans found',     String(_planData.length),             'num');
     cell('Controls without tests', String(_uncovered.length),
@@ -553,10 +548,6 @@
       const srcBadge = _el('span', rc.control_source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
       srcBadge.textContent = rc.control_source === 'OWASP' ? 'OWASP' : 'EU AI Act';
       item.appendChild(srcBadge);
-      // Cluster badge
-      if (rc.cluster_id) {
-        const clb = _el('span', 'wiz10-cn-badge'); clb.textContent = rc.cluster_id; item.appendChild(clb);
-      }
       const nm = _el('span', 'wiz10-unc-ctrl-name'); nm.textContent = rc.control_name; item.appendChild(nm);
       list.appendChild(item);
     });
@@ -625,8 +616,7 @@
       uncovered_controls: _uncovered.map(rc => ({
         control_id:     rc.control_id,
         control_name:   rc.control_name,
-        control_source: rc.control_source,
-        cluster_id:     rc.cluster_id
+        control_source: rc.control_source
       }))
     };
   }
@@ -759,9 +749,6 @@
         const srcBadge = _el('span', rc.control_source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
         srcBadge.textContent = rc.control_source === 'OWASP' ? 'OWASP' : 'EU AI Act';
         item.appendChild(srcBadge);
-        if (rc.cluster_id) {
-          const clb = _el('span', 'wiz10-cn-badge'); clb.textContent = rc.cluster_id; item.appendChild(clb);
-        }
         const nm = _el('span', 'wiz10-ref-tc-name'); nm.textContent = rc.control_name; item.appendChild(nm);
         uncSec.appendChild(item);
       });
