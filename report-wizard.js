@@ -21,18 +21,20 @@
   // ---- Data loading -------------------------------------------
   async function _loadData() {
     try {
-      const [rRes, rcRes, hsRes, artRes, tpRes] = await Promise.all([
+      const [rRes, rcRes, hsRes, artRes, tpRes, srRes, wfRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Harmonised_Standards.json'),
         fetch('tbl_AI_Articles.json'),
-        fetch('tbl_Test_Plans.json')
+        fetch('tbl_Test_Plans.json'),
+        fetch('tbl_AI_SR_Controls.json'),
+        fetch('workflow.json')
       ]);
-      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !artRes.ok || !tpRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, hs, articles, testPlans] = await Promise.all([
-        rRes.json(), rcRes.json(), hsRes.json(), artRes.json(), tpRes.json()
+      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !artRes.ok || !tpRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, hs, articles, testPlans, srControls, workflow] = await Promise.all([
+        rRes.json(), rcRes.json(), hsRes.json(), artRes.json(), tpRes.json(), srRes.json(), wfRes.json()
       ]);
-      _tbl = { risks, riskControls, hs, articles, testPlans };
+      _tbl = { risks, riskControls, hs, articles, testPlans, srControls, workflow };
     } catch (_) {
       _container.innerHTML = '<p style="padding:32px;color:#dc2626">Could not load reference data files.</p>';
       return;
@@ -118,6 +120,7 @@ ${_section(3, 'Control Schedule', _controlScheduleSection(s9))}
 ${_section(4, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
 ${_section(5, 'Verification Evidence', _verificationSection(s10))}
 ${_section(6, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
+${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
 </body>
 </html>`;
   }
@@ -652,6 +655,119 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
 </table>`;
   }
 
+  // ---- Section 7: Internal Standard Compliance ---------------
+  function _srControlsSection() {
+    const srControls = _tbl.srControls || [];
+    const workflow   = _tbl.workflow   || { steps: [] };
+
+    if (!srControls.length) return _notComplete('tbl_AI_SR_Controls.json could not be loaded.');
+
+    // Build SR ref → steps map by inverting workflow.json requirements
+    const srToSteps = new Map();
+    workflow.steps.forEach(step => {
+      (step.requirements || []).forEach(ref => {
+        if (!srToSteps.has(ref)) srToSteps.set(ref, []);
+        srToSteps.get(ref).push({ id: step.id, number: step.number, title: step.title });
+      });
+    });
+
+    // Steps that have digital session records (wizard UIs)
+    const TRACKED = new Set(['step-3', 'step-7', 'step-8', 'step-9', 'step-10']);
+    const STEP_COMPLETE = {
+      'step-3':  !!_record?.['step-3'],
+      'step-7':  !!_record?.['step-7'],
+      'step-8':  !!(_record?.['step-8']?.technical_assessment?.completed && _record?.['step-8']?.legal_assessment?.completed),
+      'step-9':  !!_record?.['step-9'],
+      'step-10': !!_record?.['step-10']
+    };
+
+    // Overall status counts for the summary banner
+    let evidenced = 0, partial = 0, pending = 0;
+
+    const rows = srControls.map(ctrl => {
+      const steps = srToSteps.get(ctrl.standard_ref) || [];
+      const tracked = steps.filter(s => TRACKED.has(s.id));
+      const completedTracked = tracked.filter(s => STEP_COMPLETE[s.id]);
+
+      let status, statusClass;
+      if (tracked.length === 0) {
+        status = '— Manual evidence'; statusClass = 'manual';
+      } else if (completedTracked.length === tracked.length) {
+        status = '✓ Evidenced'; statusClass = 'ok'; evidenced++;
+      } else if (completedTracked.length > 0) {
+        status = '◑ Partial'; statusClass = 'partial'; partial++;
+      } else {
+        status = '○ Pending'; statusClass = 'pend'; pending++;
+      }
+
+      const artChips = (ctrl.eu_ai_act_articles || [])
+        .map(a => `<span class="sr-art-chip">${_esc(a)}</span>`).join('');
+
+      const stepRows = steps.map(s => {
+        const isTracked  = TRACKED.has(s.id);
+        const isComplete = isTracked ? STEP_COMPLETE[s.id] : null;
+        const icon  = isTracked ? (isComplete ? '✓' : '○') : '—';
+        const cls   = isTracked ? (isComplete ? 'sr-step--done' : 'sr-step--pend') : 'sr-step--manual';
+        const note  = isTracked ? (isComplete ? 'digital record saved' : 'not yet completed') : 'physical artefact';
+        return `<div class="sr-step ${cls}">
+          <span class="sr-step-icon">${icon}</span>
+          <span class="sr-step-num">Step ${s.number}</span>
+          <span class="sr-step-name">${_esc(s.title)}</span>
+          <span class="sr-step-note">${note}</span>
+        </div>`;
+      }).join('');
+
+      return `
+<div class="sr-ctrl-block">
+  <div class="sr-ctrl-hdr">
+    <span class="sr-ctrl-ref">${_esc(ctrl.standard_ref)}</span>
+    <span class="sr-ctrl-name">${_esc(ctrl.control_name)}</span>
+    <span class="sr-status sr-status--${statusClass}">${status}</span>
+  </div>
+  <div class="sr-ctrl-body">
+    <table class="data-table sr-meta-table">
+      <tr>
+        <td class="dt-label">Control Objective</td>
+        <td>${_esc(ctrl.control_objective)}</td>
+      </tr>
+      <tr>
+        <td class="dt-label">EU AI Act Articles</td>
+        <td>${artChips} <span class="sr-art-xref">See Section 4 for HS traceability</span></td>
+      </tr>
+      <tr>
+        <td class="dt-label">Control Evidence</td>
+        <td>${_esc(ctrl.control_evidence)}</td>
+      </tr>
+      <tr>
+        <td class="dt-label sr-csa-label">CSA Checklist</td>
+        <td class="sr-csa-text">${_esc(ctrl.csa_checklist_item)}</td>
+      </tr>
+    </table>
+    <div class="sr-steps-label">Workflow Evidence Steps</div>
+    <div class="sr-steps-list">${stepRows || '<span class="sr-no-steps">No workflow steps tagged to this control.</span>'}</div>
+  </div>
+</div>`;
+    });
+
+    const totalTracked = srControls.filter(c => {
+      const steps = srToSteps.get(c.standard_ref) || [];
+      return steps.some(s => TRACKED.has(s.id));
+    }).length;
+
+    const summaryClass = partial + pending === 0 ? 'trace-summary--ok' : 'trace-summary--warn';
+    const summaryText = partial + pending === 0
+      ? `✓ All ${evidenced} trackable controls are fully evidenced by digital workflow records.`
+      : `${evidenced} of ${totalTracked} trackable controls evidenced · ${partial} partial · ${pending} pending. Controls without tracked steps require manual artefact submission.`;
+
+    return `
+<p class="section-meta">
+  Risk Title: Flawed Deployment and Governance of Artificial Intelligence Tools &nbsp;|&nbsp;
+  ${srControls.length} controls &nbsp;|&nbsp; evidenced from workflow.json requirements mapping
+</p>
+<div class="trace-summary ${summaryClass}">${summaryText}</div>
+${rows.join('')}`;
+  }
+
   // ---- Helpers ------------------------------------------------
   function _section(num, title, content) {
     return `<div class="section ${num === 1 ? '' : 'page-break'}">
@@ -837,6 +953,36 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .sig-cell{padding:8px 16px 0 0;vertical-align:bottom;width:33%}
 .sig-line{border-bottom:1px solid #333;height:40px;margin-bottom:4px}
 .sig-label{font-size:8.5pt;color:#555;font-weight:600}
+
+/* SR Controls — Section 7 */
+.sr-ctrl-block{border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:14px}
+.sr-ctrl-hdr{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#1e3a5f;color:#fff;flex-wrap:wrap}
+.sr-ctrl-ref{font-size:9.5pt;font-weight:700;white-space:nowrap;background:rgba(255,255,255,.15);padding:1px 7px;border-radius:3px;flex-shrink:0}
+.sr-ctrl-name{font-size:9.5pt;font-weight:600;flex:1}
+.sr-status{font-size:8.5pt;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.sr-status--ok{background:#d1fae5;color:#065f46}
+.sr-status--partial{background:#fef3c7;color:#92400e}
+.sr-status--pend{background:#fee2e2;color:#991b1b}
+.sr-status--manual{background:#f3f4f6;color:#6b7280}
+.sr-ctrl-body{padding:10px 14px}
+.sr-meta-table{margin-bottom:10px}
+.sr-csa-label{color:#7c3aed!important;font-weight:700}
+.sr-csa-text{color:#5b21b6;font-style:italic}
+.sr-art-chip{font-size:8pt;padding:1px 6px;border-radius:3px;background:#dbeafe;color:#1e40af;margin-right:4px;white-space:nowrap}
+.sr-art-xref{font-size:8pt;color:#9ca3af;font-style:italic}
+.sr-steps-label{font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#555;margin-bottom:5px}
+.sr-steps-list{display:flex;flex-direction:column;gap:3px}
+.sr-step{display:flex;align-items:center;gap:8px;font-size:9pt;padding:3px 0}
+.sr-step-icon{font-weight:700;width:14px;text-align:center;flex-shrink:0}
+.sr-step--done .sr-step-icon{color:#16a34a}
+.sr-step--pend .sr-step-icon{color:#9ca3af}
+.sr-step--manual .sr-step-icon{color:#d1d5db}
+.sr-step-num{font-size:8.5pt;font-weight:600;color:#555;flex-shrink:0;width:44px}
+.sr-step-name{flex:1}
+.sr-step-note{font-size:8pt;color:#9ca3af;font-style:italic}
+.sr-step--done .sr-step-note{color:#16a34a}
+.sr-step--pend .sr-step-note{color:#ef4444}
+.sr-no-steps{font-size:9pt;color:#9ca3af;font-style:italic}
 
 /* Utility */
 .mono{font-family:Courier New,monospace;font-size:9pt}
