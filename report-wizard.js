@@ -685,7 +685,7 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     let evidenced = 0, partial = 0, pending = 0;
 
     const rows = srControls.map(ctrl => {
-      const steps = srToSteps.get(ctrl.standard_ref) || [];
+      const steps = srToSteps.get(ctrl.groupstandard_ref) || [];
       const tracked = steps.filter(s => TRACKED.has(s.id));
       const completedTracked = tracked.filter(s => STEP_COMPLETE[s.id]);
 
@@ -699,9 +699,6 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
       } else {
         status = '○ Pending'; statusClass = 'pend'; pending++;
       }
-
-      const artChips = (ctrl.eu_ai_act_articles || [])
-        .map(a => `<span class="sr-art-chip">${_esc(a)}</span>`).join('');
 
       const stepRows = steps.map(s => {
         const isTracked  = TRACKED.has(s.id);
@@ -720,7 +717,7 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
       return `
 <div class="sr-ctrl-block">
   <div class="sr-ctrl-hdr">
-    <span class="sr-ctrl-ref">${_esc(ctrl.standard_ref)}</span>
+    <span class="sr-ctrl-ref">${_esc(ctrl.groupstandard_ref)}</span>
     <span class="sr-ctrl-name">${_esc(ctrl.control_name)}</span>
     <span class="sr-status sr-status--${statusClass}">${status}</span>
   </div>
@@ -729,10 +726,6 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
       <tr>
         <td class="dt-label">Control Objective</td>
         <td>${_esc(ctrl.control_objective)}</td>
-      </tr>
-      <tr>
-        <td class="dt-label">EU AI Act Articles</td>
-        <td>${artChips} <span class="sr-art-xref">See Section 4 for HS traceability</span></td>
       </tr>
       <tr>
         <td class="dt-label">Control Evidence</td>
@@ -750,7 +743,7 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     });
 
     const totalTracked = srControls.filter(c => {
-      const steps = srToSteps.get(c.standard_ref) || [];
+      const steps = srToSteps.get(c.groupstandard_ref) || [];
       return steps.some(s => TRACKED.has(s.id));
     }).length;
 
