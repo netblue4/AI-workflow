@@ -180,7 +180,7 @@
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     const strip = _el('div', 'wiz-tab-strip');
-    [['wizard', 'Step Wizard'], ['compliance', 'AI Act Compliance View'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
+    [['wizard', 'Step Wizard'], ['compliance', 'AI Act Compliance View'], ['reference', 'Reference'], ['framework', 'Framework Mapping']].forEach(([id, lbl], i) => {
       const btn = document.createElement('button');
       btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
       btn.dataset.tab = id; btn.textContent = lbl;
@@ -204,6 +204,13 @@
       const cmpPane = _container.querySelector('[data-pane="compliance"]');
       if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
     }
+    if (id === 'framework') {
+      const fwPane = _container.querySelector('[data-pane="framework"]');
+      if (fwPane && typeof createFrameworkMapping === 'function') {
+        fwPane.innerHTML = '';
+        fwPane.appendChild(createFrameworkMapping(null, null, null));
+      }
+    }
   }
 
   // ---- Panes --------------------------------------------------
@@ -212,10 +219,12 @@
     const wz  = _el('div', 'wiz-pane');                  wz.dataset.pane = 'wizard';
     const cmp = _el('div', 'wiz-pane wiz-pane--hidden'); cmp.dataset.pane = 'compliance';
     const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
+    const fw  = _el('div', 'wiz-pane wiz-pane--hidden'); fw.dataset.pane  = 'framework';
     wz.appendChild(_buildWizardPane());
     cmp.appendChild(_buildCompliancePane());
     ref.appendChild(_buildReferencePane());
-    pw.appendChild(wz); pw.appendChild(cmp); pw.appendChild(ref);
+    if (typeof createFrameworkMapping === 'function') fw.appendChild(createFrameworkMapping(null, null, null));
+    pw.appendChild(wz); pw.appendChild(cmp); pw.appendChild(ref); pw.appendChild(fw);
   }
 
   // ---- Wizard pane --------------------------------------------
