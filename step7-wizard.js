@@ -1,25 +1,34 @@
-/* Step 7 — DPIA Wizard (GDPR Article 35)
-   Reads step-7.json for section/field definitions.
-   Saves to system-record["step-7"]; identity from central _meta.
+/* Step 7 — Content Verification Testing
+   Reads selected controls from record['step-6'].risk_controls[] and compliance_additions[].
+   FK chain: selected control → tbl_Risk_Controls.fk_Risk_ID → tbl_Test_Plans → tbl_Test_Controls + tbl_Test_Cases.
+   All test plans link to EU AI Act risks; controls without test plans appear in the uncovered section.
+   Tester marks each test as: pending | completed | not_applicable.
+   Saves to record['step-7'].
 */
 (function () {
   'use strict';
 
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
-  let _container = null, _detail = null, _record = null;
-  const _answers = {}; // fieldId → string | string[]
+  let _container = null, _tblData = null, _record = null;
+  let _planData  = [];  // [{plan_id, plan_ref, plan_name, objective, role, risk_name, test_controls:[], test_cases:[]}]
+  let _uncovered = [];  // [{control_id, control_name, control_source}]
+
+  const _state = {
+    testStatus: {} // key = pk_Test_Control_ID → "pending"|"completed"|"not_applicable"
+  };
 
   // ---- Public API ---------------------------------------------
   window.mountStep7Wizard = function (container, step, detail, colorKey, phaseTitle) {
-    _container = container;
-    _step      = step;
-    _colorKey  = colorKey;
+    _container  = container;
+    _step       = step;
+    _colorKey   = colorKey;
     _phaseTitle = phaseTitle;
-    _detail    = detail;
-    _record    = null;
-    // Clear answers
-    Object.keys(_answers).forEach(k => delete _answers[k]);
+    _tblData    = null;
+    _record     = null;
+    _planData   = [];
+    _uncovered  = [];
+    _state.testStatus = {};
 
     _injectStyles();
 
@@ -29,96 +38,130 @@
     shell.appendChild(pw);
     container.innerHTML = '';
     container.appendChild(shell);
-    _init(pw);
+    _loadData(pw);
   };
 
-  // ---- Init ---------------------------------------------------
-  function _init(pw) {
+  // ---- Data loading -------------------------------------------
+  async function _loadData(pw) {
+    try {
+      const [rRes, rcRes, tpRes, tcRes, tcsRes] = await Promise.all([
+        fetch('tbl_Risks.json'),
+        fetch('tbl_Risk_Controls.json'),
+        fetch('tbl_Test_Plans.json'),
+        fetch('tbl_Test_Controls.json'),
+        fetch('tbl_Test_Cases.json')
+      ]);
+      if (!rRes.ok || !rcRes.ok || !tpRes.ok || !tcRes.ok || !tcsRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, testPlans, testControls, testCases] = await Promise.all([
+        rRes.json(), rcRes.json(), tpRes.json(), tcRes.json(), tcsRes.json()
+      ]);
+      _tblData = { risks, riskControls, testPlans, testControls, testCases };
+    } catch (_) {
+      pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files (tbl_Risks.json, tbl_Risk_Controls.json, tbl_Test_Plans.json, tbl_Test_Controls.json, tbl_Test_Cases.json)</p>`;
+      return;
+    }
+
     try {
       const s = sessionStorage.getItem('ai_workflow_system_record');
       if (s) _record = JSON.parse(s);
     } catch (_) {}
-    const s7 = _record?.['step-7'];
-    if (s7?.answers) Object.assign(_answers, s7.answers);
-    _renderPanes(pw);
-    _evalConditions();
-  }
 
-  // ---- Condition helpers --------------------------------------
-  const _NONE_PD = 'None — no personal data processed';
+    // Build plan data from tbl_* files, filtered to step-6 selections
+    const { plans, uncovered } = _buildPlanData();
+    _planData  = plans;
+    _uncovered = uncovered;
 
-  function _hasPersonalData() {
-    const subjects = _answers['s2_f1'];
-    const types    = _answers['s2_f2'];
-    const realSubjects = Array.isArray(subjects) ? subjects.filter(x => x !== _NONE_PD) : [];
-    const realTypes    = Array.isArray(types)    ? types.filter(x => x !== _NONE_PD)    : [];
-    return realSubjects.length > 0 || realTypes.length > 0;
-  }
-
-  function _hasNoneInS2() {
-    const s1 = _answers['s2_f1'];
-    const s2 = _answers['s2_f2'];
-    return (Array.isArray(s1) && s1.includes(_NONE_PD)) ||
-           (Array.isArray(s2) && s2.includes(_NONE_PD));
-  }
-
-  function _hasSpecialCategoryData() {
-    const v = _answers['s3_f1'];
-    if (!Array.isArray(v) || v.length === 0) return false;
-    return !v.every(x => x === 'None — no special category data');
-  }
-
-  function _isADMApplicable() {
-    const v = _answers['s5_f1'] || '';
-    return v.startsWith('Partially') || v.startsWith('Yes —');
-  }
-
-  // ---- Conditional logic --------------------------------------
-  function _evalConditions() {
-    const hasData    = _hasPersonalData();
-    const noneInS2   = _hasNoneInS2();
-    const hasSpecial = _hasSpecialCategoryData();
-    const hasADM     = _isADMApplicable();
-    const isLIA      = (_answers['s4_f1'] || '') === 'Art.6(1)(f) — Legitimate interests';
-
-    // Section gates: s4, s6, s9 require personal data to be identified
-    ['s4', 's6', 's9'].forEach(sid => {
-      const el = _container.querySelector(`[data-section-id="${sid}"]`);
-      if (el) el.classList.toggle('dpia-section--disabled', !hasData);
-    });
-
-    // Field-level gates
-    _toggleField('s2_f3', noneInS2);
-    _toggleField('s2_f4', noneInS2);
-    _toggleField('s3_f2', !hasSpecial);
-    _toggleField('s3_f3', !hasSpecial);
-    _toggleField('s4_f2', !isLIA);
-    _toggleField('s5_f2', !hasADM);
-    _toggleField('s5_f3', !hasADM);
-
-    // Refresh all badges
-    if (_detail?.sections) {
-      _detail.sections.forEach(s => _updateSectionBadge(s));
+    // Restore prior test statuses
+    const saved10 = _record?.['step-7'];
+    if (saved10?.plans) {
+      saved10.plans.forEach(p => {
+        (p.test_controls || []).forEach(tc => {
+          if (tc.status && tc.test_control_id) {
+            _state.testStatus[tc.test_control_id] = tc.status;
+          }
+        });
+      });
+    } else {
+      // Default: all pending
+      _planData.forEach(p => p.test_controls.forEach(tc => {
+        _state.testStatus[tc.pk_Test_Control_ID] = 'pending';
+      }));
     }
 
-    // Refresh progress label
-    const prog = _container.querySelector('#dpia-progress');
-    if (prog) prog.textContent = _computeProgress();
+    _renderPanes(pw);
   }
 
-  function _toggleField(fieldId, hide) {
-    const el = _container.querySelector(`[data-field-id="${fieldId}"]`);
-    if (el) el.classList.toggle('dpia-field--hidden', hide);
+  // ---- Build plan data from tbl_* filtered to step-6 selections ----
+  function _buildPlanData() {
+    const step9 = _record?.['step-6'];
+    if (!step9) return { plans: [], uncovered: [] };
+
+    // Collect selected controls from flat risk_controls[] and compliance_additions[]
+    const seen = new Set();
+    const selectedControls = [];
+    const push = c => {
+      if (!seen.has(c.control_id)) {
+        seen.add(c.control_id);
+        selectedControls.push({ control_id: c.control_id, control_name: c.control_name, control_source: c.control_source || '' });
+      }
+    };
+    (step9.risk_controls || []).forEach(c => { if (c.selected) push(c); });
+    (step9.compliance_additions || []).forEach(c => push(c));  // always selected
+
+    if (!selectedControls.length) return { plans: [], uncovered: [] };
+
+    // Build lookup maps
+    const rcById         = new Map(_tblData.riskControls.map(rc => [rc.pk_Risk_Control_ID, rc]));
+    const testPlanByRisk = new Map(_tblData.testPlans.map(p => [p.fk_Risk_ID, p]));
+    const riskById       = new Map(_tblData.risks.map(r => [r.pk_Risk_ID, r]));
+
+    const tcsByPlan = new Map();
+    _tblData.testControls.forEach(tc => {
+      if (!tcsByPlan.has(tc.fk_Test_Plan_ID)) tcsByPlan.set(tc.fk_Test_Plan_ID, []);
+      tcsByPlan.get(tc.fk_Test_Plan_ID).push(tc);
+    });
+
+    const casesByPlan = new Map();
+    _tblData.testCases.forEach(tc => {
+      if (!casesByPlan.has(tc.fk_Test_Plan_ID)) casesByPlan.set(tc.fk_Test_Plan_ID, []);
+      casesByPlan.get(tc.fk_Test_Plan_ID).push(tc);
+    });
+
+    const planMap  = new Map(); // pk_Test_Plan_ID → plan data
+    const uncovered = [];
+
+    selectedControls.forEach(sc => {
+      const rc = rcById.get(sc.control_id);
+      if (!rc) { uncovered.push(sc); return; }
+
+      const plan = testPlanByRisk.get(rc.fk_Risk_ID);
+      if (!plan) { uncovered.push(sc); return; }
+
+      if (!planMap.has(plan.pk_Test_Plan_ID)) {
+        const risk = riskById.get(plan.fk_Risk_ID);
+        planMap.set(plan.pk_Test_Plan_ID, {
+          plan_id:       plan.pk_Test_Plan_ID,
+          plan_ref:      plan.test_plan_ref,
+          plan_name:     plan.test_plan_name,
+          objective:     plan.test_plan_objective,
+          role:          plan.test_role,
+          risk_name:     risk?.risk_name || '',
+          test_controls: tcsByPlan.get(plan.pk_Test_Plan_ID)  || [],
+          test_cases:    casesByPlan.get(plan.pk_Test_Plan_ID) || []
+        });
+      }
+    });
+
+    return { plans: Array.from(planMap.values()), uncovered };
   }
 
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     const strip = _el('div', 'wiz-tab-strip');
-    [['wizard', 'Step Wizard'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
+    [['wizard', 'Test Plan'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
       const btn = document.createElement('button');
       btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
-      btn.dataset.tab = id;
-      btn.textContent = lbl;
+      btn.dataset.tab = id; btn.textContent = lbl;
       btn.addEventListener('click', () => _switchTab(id));
       strip.appendChild(btn);
     });
@@ -130,13 +173,17 @@
       t.classList.toggle('wiz-tab--active', t.dataset.tab === id));
     _container.querySelectorAll('.wiz-pane').forEach(p =>
       p.classList.toggle('wiz-pane--hidden', p.dataset.pane !== id));
+    if (id === 'reference') {
+      const refPane = _container.querySelector('[data-pane="reference"]');
+      if (refPane) { refPane.innerHTML = ''; refPane.appendChild(_buildReferencePane()); }
+    }
   }
 
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const wz  = _el('div', 'wiz-pane');  wz.dataset.pane  = 'wizard';
-    const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
+    const wz  = _el('div', 'wiz-pane');                    wz.dataset.pane  = 'wizard';
+    const ref = _el('div', 'wiz-pane wiz-pane--hidden');   ref.dataset.pane = 'reference';
     wz.appendChild(_buildWizardPane());
     ref.appendChild(_buildReferencePane());
     pw.appendChild(wz);
@@ -147,14 +194,11 @@
   function _buildWizardPane() {
     const card = _el('div', 'step-detail-card');
 
-    // Header
     const ey = _el('p', `step-detail-eyebrow color-${_colorKey}`);
-    ey.textContent = _phaseTitle;
-    card.appendChild(ey);
+    ey.textContent = _phaseTitle; card.appendChild(ey);
 
     const title = _el('h2', 'step-detail-title');
-    title.textContent = `Step ${_step.number} — ${_step.title}`;
-    card.appendChild(title);
+    title.textContent = `Step ${_step.number} — ${_step.title}`; card.appendChild(title);
 
     const meta = _el('div', 'step-detail-meta');
     (_step.owners || []).forEach(o => {
@@ -162,339 +206,442 @@
     });
     card.appendChild(meta);
 
-    if (_detail?.description) {
-      const d = _el('p', 'step-detail-summary');
-      d.textContent = _detail.description;
-      card.appendChild(d);
-    }
+    const summ = _el('p', 'step-detail-summary');
+    summ.textContent = _step.summary || ''; card.appendChild(summ);
 
-    // Deliverables
-    if (_step.deliverables?.length) {
-      card.appendChild(_sectionLabel('Deliverables'));
-      const dl = _el('ul', 'deliverables-list');
-      _step.deliverables.forEach(d => {
-        const li = _el('li', 'deliverable-item'); li.textContent = d; dl.appendChild(li);
-      });
-      card.appendChild(dl);
-    }
+    // Source card — step 9 summary
+    card.appendChild(_sectionLabel('Input Source'));
+    card.appendChild(_buildSourceCard());
 
-    // Scope note
-    const note = _el('div', 'dpia-info-note');
-    note.innerHTML = '<strong>GDPR Art.35 scope:</strong> A DPIA is required where AI processing is likely to result in a high risk to individuals — including systematic profiling, processing of special-category data at scale, or automated decision-making with legal effects (Art.22). The data types inventory produced here feeds directly into the Risk Assessment in Step 8.';
-    card.appendChild(note);
-
-    // Sections
-    card.appendChild(_sectionLabel('DPIA Sections'));
-    if (_detail?.sections) {
-      _detail.sections.forEach((section, idx) => {
-        card.appendChild(_buildSectionAccordion(section, idx));
-      });
-    } else {
-      const warn = _el('p', 'dpia-warn');
-      warn.textContent = 'No DPIA sections found — check that step-7.json loaded correctly.';
+    if (_planData.length === 0 && _uncovered.length === 0) {
+      const warn = _el('div', 'wiz10-warn');
+      warn.innerHTML = '<strong>No controls selected in Step 6.</strong> Complete the Control Identification (Step 6) and confirm at least one control before returning to this step.';
       card.appendChild(warn);
+      return card;
+    }
+
+    card.appendChild(_sectionLabel('Test Plan'));
+
+    const intro = _el('p', 'wiz10-intro');
+    const totalTests = _planData.reduce((n, p) => n + p.test_controls.length, 0);
+    intro.innerHTML = `Mark each test control as <strong>Completed</strong>, <strong>Not Applicable</strong>, or leave as <strong>Pending</strong>. ${totalTests} test control${totalTests !== 1 ? 's' : ''} identified across ${_planData.length} test plan${_planData.length !== 1 ? 's' : ''}.`;
+    card.appendChild(intro);
+
+    // Validation banner
+    card.appendChild(_buildValidationBanner());
+
+    // Test plans
+    if (_planData.length > 0) {
+      const planList = _el('div', 'wiz10-plan-list');
+      _planData.forEach((plan, idx) => planList.appendChild(_buildPlanCard(plan, idx)));
+      card.appendChild(planList);
+    }
+
+    // Uncovered controls section
+    if (_uncovered.length > 0) {
+      card.appendChild(_buildUncoveredSection());
     }
 
     card.appendChild(_buildActionRow());
-    card.appendChild(_el('div', 'dpia-results'));
+    card.appendChild(_el('div', 'wiz10-results'));
     return card;
   }
 
-  // ---- Section accordion --------------------------------------
-  function _buildSectionAccordion(section, idx) {
-    const wrap = _el('div', 'dpia-section');
-    wrap.dataset.sectionId = section.id;
-
-    // Header
-    const header = _el('div', 'dpia-section-header');
-
-    const left = _el('div', 'dpia-section-header-left');
-    const num  = _el('span', 'dpia-section-num');
-    num.textContent = String(idx + 1);
-    left.appendChild(num);
-    const sTitle = _el('span', 'dpia-section-title');
-    sTitle.textContent = section.title;
-    left.appendChild(sTitle);
-    if (section.gdpr_ref) {
-      const ref = _el('span', 'dpia-gdpr-ref');
-      ref.textContent = section.gdpr_ref;
-      left.appendChild(ref);
+  // ---- Source card --------------------------------------------
+  function _buildSourceCard() {
+    const card = _el('div', 'wiz10-source-card');
+    const step9 = _record?.['step-6'];
+    if (!step9) {
+      const w = _el('div', 'wiz10-info');
+      w.innerHTML = '<strong>Step 6 (Control Identification) not yet completed.</strong> Complete and save Step 9 first.';
+      card.appendChild(w); return card;
     }
-    header.appendChild(left);
+    const lbl = _el('p', 'wiz10-source-label');
+    lbl.textContent = 'Step 6 — Control Identification'; card.appendChild(lbl);
+    const grid = _el('div', 'wiz10-source-grid');
+    const cell = (l, v, mod) => {
+      const c = _el('div', 'wiz10-source-cell');
+      const lEl = _el('span', 'wiz10-cell-label'); lEl.textContent = l; c.appendChild(lEl);
+      const vEl = _el('span', mod ? `wiz10-cell-value wiz10-cell-value--${mod}` : 'wiz10-cell-value');
+      vEl.textContent = v || '—'; c.appendChild(vEl); grid.appendChild(c);
+    };
+    cell('Risks assessed',       String(step9.total_risks      || 0));
+    cell('Controls selected',    String(step9.selected_controls || 0), 'num');
+    cell('Test plans found',     String(_planData.length),             'num');
+    cell('Controls without tests', String(_uncovered.length),
+         _uncovered.length > 0 ? 'warn' : 'ok');
+    card.appendChild(grid); return card;
+  }
 
-    const right = _el('div', 'dpia-section-header-right');
-    const badge = _el('span', 'dpia-section-badge');
-    badge.id = `dpia-badge-${section.id}`;
-    right.appendChild(badge);
-    const chevron = _el('span', 'dpia-chevron');
-    chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    if (idx !== 0) chevron.style.transform = 'rotate(-90deg)';
-    right.appendChild(chevron);
-    header.appendChild(right);
-    wrap.appendChild(header);
-
-    // Body
-    const body = _el('div', `dpia-section-body${idx !== 0 ? ' dpia-collapsed' : ''}`);
-
-    // N/A notice — visible only when section is disabled
-    const naNotice = _el('div', 'dpia-na-notice');
-    naNotice.innerHTML = '<strong>Not applicable</strong> — Identify personal data in Section 2 (Data inventory) to activate this section.';
-    body.appendChild(naNotice);
-
-    if (section.description) {
-      const desc = _el('p', 'dpia-section-desc');
-      desc.textContent = section.description;
-      body.appendChild(desc);
-    }
-    (section.fields || []).forEach(f => body.appendChild(_buildField(f, section)));
-    wrap.appendChild(body);
-
-    _updateSectionBadge(section);
-
-    header.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('dpia-collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
-    });
+  // ---- Validation banner --------------------------------------
+  function _buildValidationBanner() {
+    const wrap = _el('div', 'wiz10-val-wrap');
+    wrap.id = 'wiz10-val-banner';
+    _updateValidationBanner(wrap);
     return wrap;
   }
 
-  // ---- Field rendering ----------------------------------------
-  function _buildField(field, section) {
-    // Dividers render as visual separators — no data-field-id wrapper
-    if (field.type === 'divider') {
-      const div = _el('div', 'dpia-divider');
-      const lbl = _el('span', 'dpia-divider-label');
-      lbl.textContent = field.label;
-      div.appendChild(lbl);
-      return div;
+  function _updateValidationBanner(wrap) {
+    const el = wrap || _container.querySelector('#wiz10-val-banner');
+    if (!el) return;
+    const allTests   = _planData.reduce((a, p) => a.concat(p.test_controls), []);
+    const completed  = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'completed').length;
+    const notAppl    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable').length;
+    const pending    = allTests.length - completed - notAppl;
+    el.innerHTML = '';
+    if (pending === 0 && allTests.length > 0) {
+      const ok = _el('div', 'wiz10-val-ok');
+      ok.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All ${allTests.length} test controls reviewed — ${completed} completed, ${notAppl} not applicable.`;
+      el.appendChild(ok);
+    } else {
+      const info = _el('div', 'wiz10-val-info');
+      const pct = allTests.length ? Math.round(((completed + notAppl) / allTests.length) * 100) : 0;
+      info.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>${pending} test${pending !== 1 ? 's' : ''} pending</strong> — ${completed} completed, ${notAppl} not applicable (${pct}% reviewed).`;
+      el.appendChild(info);
+    }
+  }
+
+  // ---- Plan card ----------------------------------------------
+  function _buildPlanCard(plan, idx) {
+    const sec = _el('div', 'wiz10-plan-sec');
+    sec.dataset.planId = plan.plan_id;
+
+    // Plan header
+    const hdr = _el('div', 'wiz10-plan-hdr');
+    const hdrLeft = _el('div', 'wiz10-plan-hdr-left');
+
+    const planIcon = _el('span', 'wiz10-plan-icon');
+    planIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`;
+    hdrLeft.appendChild(planIcon);
+
+    const planRef = _el('span', 'wiz10-cn-badge');
+    planRef.textContent = plan.plan_ref; hdrLeft.appendChild(planRef);
+
+    const planName = _el('span', 'wiz10-plan-name');
+    // Strip the leading ref from the name to avoid duplication
+    planName.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
+    hdrLeft.appendChild(planName);
+
+    if (plan.role) {
+      const roleBadge = _el('span', 'wiz10-role-badge');
+      roleBadge.textContent = plan.role; hdrLeft.appendChild(roleBadge);
     }
 
-    const wrap = _el('div', 'dpia-field-wrap');
-    wrap.dataset.fieldId = field.id;
+    hdr.appendChild(hdrLeft);
 
-    // Label row
-    const lbl = _el('label', 'dpia-label');
-    lbl.textContent = field.label;
-    if (field.required) {
-      const req = _el('span', 'dpia-required'); req.textContent = ' *'; lbl.appendChild(req);
-    }
-    wrap.appendChild(lbl);
+    // Count badge
+    const countBadge = _el('span', 'wiz10-plan-count');
+    countBadge.id = `wiz10-plan-count-${idx}`;
+    _updatePlanCount(plan, countBadge);
+    hdr.appendChild(countBadge);
 
-    // Hint
-    if (field.hint) {
-      const hint = _el('p', 'dpia-hint'); hint.textContent = field.hint; wrap.appendChild(hint);
-    }
+    sec.appendChild(hdr);
 
-    const cur = _answers[field.id];
-    // Every field change re-evaluates all conditions (badges, progress, visibility)
-    const onChange = () => _evalConditions();
-
-    if (field.type === 'text') {
-      const inp = document.createElement('input');
-      inp.type = 'text'; inp.className = 'dpia-text-input';
-      inp.placeholder = field.placeholder || ''; inp.value = cur || '';
-      inp.addEventListener('input', e => { _answers[field.id] = e.target.value; onChange(); });
-      wrap.appendChild(inp);
-
-    } else if (field.type === 'textarea') {
-      const ta = document.createElement('textarea');
-      ta.className = 'dpia-textarea'; ta.rows = 4;
-      ta.placeholder = field.placeholder || ''; ta.value = cur || '';
-      ta.addEventListener('input', e => { _answers[field.id] = e.target.value; onChange(); });
-      wrap.appendChild(ta);
-
-    } else if (field.type === 'select') {
-      const sel = document.createElement('select');
-      sel.className = 'dpia-select';
-      const blank = document.createElement('option');
-      blank.value = ''; blank.textContent = '— Select —'; sel.appendChild(blank);
-      (field.options || []).forEach(opt => {
-        const o = document.createElement('option');
-        o.value = opt; o.textContent = opt;
-        if (cur === opt) o.selected = true;
-        sel.appendChild(o);
-      });
-      sel.addEventListener('change', e => { _answers[field.id] = e.target.value; onChange(); });
-      wrap.appendChild(sel);
-
-    } else if (field.type === 'checkbox_group') {
-      const curArr = Array.isArray(cur) ? cur : [];
-      const grid = _el('div', 'dpia-cb-grid');
-      (field.options || []).forEach(opt => {
-        const cbWrap = _el('label', 'dpia-cb-wrap');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.className = 'dpia-cb';
-        cb.value = opt; cb.checked = curArr.includes(opt);
-        cb.addEventListener('change', () => {
-          const all = grid.querySelectorAll('.dpia-cb');
-          const selected = [];
-          all.forEach(c => { if (c.checked) selected.push(c.value); });
-          _answers[field.id] = selected;
-          onChange();
-        });
-        cbWrap.appendChild(cb);
-        cbWrap.appendChild(document.createTextNode(' ' + opt));
-        grid.appendChild(cbWrap);
-      });
-      wrap.appendChild(grid);
+    // Risk context subtitle
+    if (plan.risk_name) {
+      const riskSub = _el('p', 'wiz10-plan-risk-sub');
+      riskSub.innerHTML = `<span class="wiz10-risk-label">EU AI Act risk:</span> ${plan.risk_name}`;
+      sec.appendChild(riskSub);
     }
 
+    // Plan objective
+    if (plan.objective) {
+      const obj = _el('p', 'wiz10-plan-obj');
+      obj.textContent = plan.objective; sec.appendChild(obj);
+    }
+
+    // Test controls
+    const ctrlList = _el('div', 'wiz10-ctrl-list');
+    plan.test_controls.forEach(tc => ctrlList.appendChild(_buildTestControlCard(tc, plan, idx)));
+    sec.appendChild(ctrlList);
+
+    // Test cases (collapsible)
+    if (plan.test_cases && plan.test_cases.length > 0) {
+      sec.appendChild(_buildTestCasesSection(plan));
+    }
+
+    return sec;
+  }
+
+  function _updatePlanCount(plan, el) {
+    const total = plan.test_controls.length;
+    const done  = plan.test_controls.filter(t =>
+      _state.testStatus[t.pk_Test_Control_ID] === 'completed' ||
+      _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable'
+    ).length;
+    el.textContent = `${done} / ${total} reviewed`;
+    el.className   = done === total
+      ? 'wiz10-plan-count wiz10-plan-count--ok'
+      : 'wiz10-plan-count wiz10-plan-count--pending';
+  }
+
+  // ---- Test control card --------------------------------------
+  function _buildTestControlCard(tc, plan, planIdx) {
+    const status = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
+    const card = _el('div', `wiz10-tc-card wiz10-tc-card--${status}`);
+    card.dataset.tcId = tc.pk_Test_Control_ID;
+
+    // Card header
+    const hdr = _el('div', 'wiz10-tc-hdr');
+
+    // Status pip
+    const pip = _el('span', `wiz10-tc-pip wiz10-tc-pip--${status}`);
+    hdr.appendChild(pip);
+
+    // Test icon
+    const icon = _el('span', 'wiz10-tc-icon');
+    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+    hdr.appendChild(icon);
+
+    const name = _el('span', 'wiz10-tc-name');
+    name.textContent = tc.jkName; hdr.appendChild(name);
+
+    // Control reference badge
+    if (tc.control_ref) {
+      const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.control_ref; hdr.appendChild(cnb);
+    }
+    // Standard reference badge
+    if (tc.fk_Harmonised_Standard_IDs) {
+      const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.fk_Harmonised_Standard_IDs; hdr.appendChild(sref);
+    }
+
+    card.appendChild(hdr);
+
+    // Objective (collapsed by default)
+    if (tc.jkObjective) {
+      card.appendChild(_buildCollapsible('Objective', tc.jkObjective, 'wiz10-tc-obj'));
+    }
+
+    // Test instructions (collapsed)
+    if (tc.jkText) {
+      card.appendChild(_buildCollapsible('Test Instructions', tc.jkText, 'wiz10-tc-text'));
+    }
+
+    // Evidence sample (collapsed)
+    if (tc.jkImplementationEvidence) {
+      card.appendChild(_buildCollapsible('Required Evidence Sample', tc.jkImplementationEvidence, 'wiz10-tc-evidence'));
+    }
+
+    // Status selector
+    card.appendChild(_buildStatusSelector(tc, plan, planIdx));
+
+    return card;
+  }
+
+  // ---- Collapsible section ------------------------------------
+  function _buildCollapsible(label, content, cls) {
+    const wrap = _el('div', 'wiz10-collapsible');
+    const btn = document.createElement('button');
+    btn.className = 'wiz10-coll-btn';
+    btn.innerHTML = `<svg class="wiz10-coll-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>${label}`;
+    const body = _el('div', `wiz10-coll-body ${cls}`);
+    body.hidden = true;
+    const text = _el('p', 'wiz10-coll-text'); text.textContent = content; body.appendChild(text);
+    btn.addEventListener('click', () => {
+      body.hidden = !body.hidden;
+      btn.querySelector('.wiz10-coll-chevron').style.transform =
+        body.hidden ? '' : 'rotate(180deg)';
+    });
+    wrap.appendChild(btn); wrap.appendChild(body);
     return wrap;
   }
 
-  // ---- Section completion badge -------------------------------
-  function _updateSectionBadge(section) {
-    const badge = document.getElementById(`dpia-badge-${section.id}`);
-    if (!badge) return;
+  // ---- Test cases section ------------------------------------
+  function _buildTestCasesSection(plan) {
+    const wrap = _el('div', 'wiz10-collapsible wiz10-dataset-wrap');
+    const btn  = document.createElement('button');
+    btn.className = 'wiz10-coll-btn wiz10-dataset-btn';
+    btn.innerHTML = `<svg class="wiz10-coll-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>Test Cases (${plan.test_cases.length})`;
+    const body = _el('div', 'wiz10-coll-body');
+    body.hidden = true;
 
-    // Show N/A badge when section is disabled
-    const sectionEl = _container.querySelector(`[data-section-id="${section.id}"]`);
-    if (sectionEl?.classList.contains('dpia-section--disabled')) {
-      badge.textContent = 'N/A';
-      badge.className = 'dpia-section-badge dpia-section-badge--na';
-      return;
-    }
-
-    // Required fields — exclude dividers and hidden fields
-    const required = (section.fields || []).filter(f => f.required && f.type !== 'divider');
-    if (!required.length) { badge.textContent = ''; badge.className = 'dpia-section-badge'; return; }
-
-    const visibleRequired = required.filter(f => {
-      const el = _container.querySelector(`[data-field-id="${f.id}"]`);
-      return !el?.classList.contains('dpia-field--hidden');
+    const table = _el('div', 'wiz10-dataset-table');
+    plan.test_cases.forEach(tc => {
+      const row = _el('div', 'wiz10-dataset-row');
+      const idCell = _el('span', 'wiz10-dataset-id'); idCell.textContent = tc.test_case_id || ''; row.appendChild(idCell);
+      const main = _el('div', 'wiz10-dataset-main');
+      const q = _el('p', 'wiz10-dataset-query'); q.textContent = tc.query || ''; main.appendChild(q);
+      const eo = _el('p', 'wiz10-dataset-outcome');
+      eo.innerHTML = `<strong>Expected:</strong> ${tc.expected_outcome || ''}`;
+      main.appendChild(eo);
+      if (tc.rationale_summary) {
+        const rs = _el('p', 'wiz10-dataset-rationale'); rs.textContent = tc.rationale_summary; main.appendChild(rs);
+      }
+      row.appendChild(main);
+      table.appendChild(row);
     });
 
-    if (!visibleRequired.length) { badge.textContent = ''; badge.className = 'dpia-section-badge'; return; }
-
-    const filled = visibleRequired.filter(f => {
-      const v = _answers[f.id];
-      if (!v) return false;
-      return Array.isArray(v) ? v.length > 0 : v.trim() !== '';
+    body.appendChild(table);
+    btn.addEventListener('click', () => {
+      body.hidden = !body.hidden;
+      btn.querySelector('.wiz10-coll-chevron').style.transform =
+        body.hidden ? '' : 'rotate(180deg)';
     });
-
-    badge.textContent = `${filled.length} / ${visibleRequired.length}`;
-    badge.className = filled.length === 0
-      ? 'dpia-section-badge dpia-section-badge--none'
-      : filled.length === visibleRequired.length
-        ? 'dpia-section-badge dpia-section-badge--all'
-        : 'dpia-section-badge dpia-section-badge--partial';
+    wrap.appendChild(btn); wrap.appendChild(body);
+    return wrap;
   }
 
-  // ---- Progress counter ---------------------------------------
-  function _computeProgress() {
-    if (!_detail?.sections) return '';
-    let totalRequired = 0, filled = 0;
+  // ---- Status selector ----------------------------------------
+  function _buildStatusSelector(tc, plan, planIdx) {
+    const row = _el('div', 'wiz10-status-row');
+    const lbl = _el('span', 'wiz10-status-label'); lbl.textContent = 'Status:'; row.appendChild(lbl);
 
-    _detail.sections.forEach(s => {
-      // Skip disabled sections entirely
-      const sectionEl = _container.querySelector(`[data-section-id="${s.id}"]`);
-      if (sectionEl?.classList.contains('dpia-section--disabled')) return;
+    const options = [
+      { value: 'pending',        label: 'Pending',        cls: 'wiz10-status-btn--pending' },
+      { value: 'completed',      label: 'Completed',      cls: 'wiz10-status-btn--completed' },
+      { value: 'not_applicable', label: 'Not Applicable', cls: 'wiz10-status-btn--na' }
+    ];
 
-      (s.fields || []).filter(f => f.required && f.type !== 'divider').forEach(f => {
-        // Skip hidden fields
-        const el = _container.querySelector(`[data-field-id="${f.id}"]`);
-        if (el?.classList.contains('dpia-field--hidden')) return;
-        totalRequired++;
-        const v = _answers[f.id];
-        if (v && (Array.isArray(v) ? v.length > 0 : v.trim() !== '')) filled++;
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      const current = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
+      btn.className = `wiz10-status-btn ${opt.cls}${current === opt.value ? ' wiz10-status-btn--active' : ''}`;
+      btn.textContent = opt.label;
+      btn.dataset.statusValue = opt.value;
+      btn.addEventListener('click', () => {
+        _state.testStatus[tc.pk_Test_Control_ID] = opt.value;
+
+        // Update all status buttons in this card
+        const card = btn.closest('.wiz10-tc-card');
+        if (card) {
+          card.className = `wiz10-tc-card wiz10-tc-card--${opt.value}`;
+          card.querySelectorAll('.wiz10-status-btn').forEach(b => {
+            b.classList.toggle('wiz10-status-btn--active', b.dataset.statusValue === opt.value);
+          });
+          const pip = card.querySelector('.wiz10-tc-pip');
+          if (pip) pip.className = `wiz10-tc-pip wiz10-tc-pip--${opt.value}`;
+        }
+
+        // Update plan count badge
+        const countEl = _container.querySelector(`#wiz10-plan-count-${planIdx}`);
+        if (countEl) _updatePlanCount(plan, countEl);
+
+        // Update validation banner
+        _updateValidationBanner();
       });
+      row.appendChild(btn);
     });
 
-    return `${filled} / ${totalRequired} required fields completed`;
+    return row;
+  }
+
+  // ---- Uncovered controls section -----------------------------
+  function _buildUncoveredSection() {
+    const sec = _el('div', 'wiz10-uncovered-sec');
+    const hdr = _el('div', 'wiz10-uncovered-hdr');
+    const icon = _el('span', 'wiz10-unc-icon');
+    icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+    hdr.appendChild(icon);
+    const hdrText = _el('span', 'wiz10-unc-title');
+    hdrText.textContent = `${_uncovered.length} selected control${_uncovered.length !== 1 ? 's' : ''} without automated test coverage`;
+    hdr.appendChild(hdrText);
+    sec.appendChild(hdr);
+
+    const note = _el('p', 'wiz10-unc-note');
+    note.textContent = 'The following controls do not have a corresponding test plan. Manual evidence review is required.';
+    sec.appendChild(note);
+
+    const list = _el('div', 'wiz10-unc-list');
+    _uncovered.forEach(rc => {
+      const item = _el('div', 'wiz10-unc-item');
+      // Source badge
+      const srcBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
+      srcBadge.textContent = 'EU AI Act';
+      item.appendChild(srcBadge);
+      const nm = _el('span', 'wiz10-unc-ctrl-name'); nm.textContent = rc.control_name; item.appendChild(nm);
+      list.appendChild(item);
+    });
+    sec.appendChild(list);
+    return sec;
   }
 
   // ---- Action row ---------------------------------------------
   function _buildActionRow() {
     const row = _el('div', 'wiz-action-row');
-    const left = _el('div');
-    const prog = _el('span', 'dpia-progress-label');
-    prog.id = 'dpia-progress'; prog.textContent = _computeProgress();
-    left.appendChild(prog);
-    row.appendChild(left);
-    const right = _el('div', 'dpia-action-right');
     const btn = document.createElement('button');
-    btn.className = 'wiz-btn-primary'; btn.textContent = 'Save DPIA';
+    btn.className = 'wiz-btn-primary';
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Test Status`;
     btn.addEventListener('click', _handleSave);
-    right.appendChild(btn);
-    row.appendChild(right);
+    row.appendChild(btn);
     return row;
   }
 
   // ---- Save ---------------------------------------------------
   function _handleSave() {
-    const rec7 = _buildOutputRecord();
+    const rec10 = _buildOutputRecord();
     if (!_record) {
-      _record = { _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
+      _record = { _meta: { schema_version: '1.0', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
     }
     _record._meta.last_modified = new Date().toISOString();
-    _record['step-7'] = rec7;
+    _record['step-7'] = rec10;
     try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
-    if (typeof _ucShowStatus === 'function') _ucShowStatus('DPIA saved ✓');
-    _renderResults(rec7);
-    const prog = _container.querySelector('#dpia-progress');
-    if (prog) prog.textContent = _computeProgress();
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 10 saved ✓');
+    _renderResults(rec10);
   }
 
   function _buildOutputRecord() {
     const today = new Date().toISOString().slice(0, 10);
     const meta  = _record?._meta || {};
-    const getArr = id => { const v = _answers[id]; return Array.isArray(v) ? v : []; };
-    const getStr = id => _answers[id] || '';
-    const s3f1 = getArr('s3_f1');
-    const specialCatData = s3f1.includes('None — no special category data')
-      ? [] : s3f1.filter(x => x !== 'None — no special category data');
+
+    const plans = _planData.map(p => ({
+      plan_id:   p.plan_id,
+      plan_ref:  p.plan_ref,
+      plan_name: p.plan_name,
+      risk_name: p.risk_name,
+      test_controls: p.test_controls.map(tc => ({
+        test_control_id: tc.pk_Test_Control_ID,
+        control_ref:     tc.control_ref  || '',
+        control_name:    tc.jkName       || '',
+        fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
+        status:          _state.testStatus[tc.pk_Test_Control_ID] || 'pending'
+      }))
+    }));
+
+    const allTests   = plans.reduce((a, p) => a.concat(p.test_controls), []);
+    const completed  = allTests.filter(t => t.status === 'completed').length;
+    const notAppl    = allTests.filter(t => t.status === 'not_applicable').length;
+    const pending    = allTests.length - completed - notAppl;
 
     return {
-      step_id:   'step-7',
-      step_title: 'DPIA',
-      completion_date: today,
-      assessed_by:    meta.assessed_by  || '',
-      use_case_id:    meta.use_case_id  || '',
-      data_types_identified: {
-        data_subjects:            getArr('s2_f1'),
-        standard_personal_data:   getArr('s2_f2'),
-        special_category_data:    specialCatData,
-        automated_decision_making: getStr('s5_f1'),
-        training_data_use:        getStr('s6_f3'),
-        security_measures:        getArr('s7_f1'),
-        erasure_capability:       getStr('s8_f2'),
-        privacy_risks:            getArr('s10_f1')
-      },
-      lawful_basis:             getStr('s4_f1'),
-      inherent_risk_rating:     getStr('s10_f2'),
-      residual_risk_rating:     getStr('s10_f3'),
-      dpo_consulted:            getStr('s11_f1'),
-      art36_consultation_required: getStr('s11_f3'),
-      answers: Object.assign({}, _answers)
+      step_id:     'step-7',
+      step_title:  'Content Verification Testing',
+      assessment_date:      today,
+      assessed_by:          meta.assessed_by || '',
+      use_case_id:          meta.use_case_id || '',
+      total_tests:          allTests.length,
+      completed_tests:      completed,
+      not_applicable_tests: notAppl,
+      pending_tests:        pending,
+      plans,
+      uncovered_controls: _uncovered.map(rc => ({
+        control_id:     rc.control_id,
+        control_name:   rc.control_name,
+        control_source: rc.control_source
+      }))
     };
   }
 
-  // ---- Results area -------------------------------------------
-  function _renderResults(rec7) {
-    const area = _container.querySelector('.dpia-results');
+  function _renderResults(rec10) {
+    const area = _container.querySelector('.wiz10-results');
     if (!area) return;
     area.innerHTML = '';
-    const card = _el('div', 'dpia-result-card');
-
-    const h = _el('h3', 'dpia-result-title'); h.textContent = 'DPIA Saved'; card.appendChild(h);
-
-    const di    = rec7.data_types_identified;
-    const stats = _el('div', 'dpia-result-stats');
+    const card = _el('div', 'wiz10-result-card');
+    const h = _el('h3', 'wiz10-result-title'); h.textContent = 'Test Status Saved'; card.appendChild(h);
+    const stats = _el('div', 'wiz10-result-stats');
     [
-      [(di.standard_personal_data.length + di.special_category_data.length), 'Data types'],
-      [di.special_category_data.length, 'Special categories'],
-      [di.privacy_risks.length,         'Privacy risks'],
-      [rec7.residual_risk_rating || '—', 'Residual risk']
+      [rec10.total_tests,          'Total tests'],
+      [rec10.completed_tests,      'Completed'],
+      [rec10.not_applicable_tests, 'Not applicable'],
+      [rec10.pending_tests,        'Pending']
     ].forEach(([num, lbl]) => {
-      const s = _el('div', 'dpia-stat');
-      const n = _el('span', 'dpia-stat-num'); n.textContent = String(num);
-      const l = _el('span', 'dpia-stat-lbl'); l.textContent = lbl;
-      s.appendChild(n); s.appendChild(l); stats.appendChild(s);
+      const s = _el('div', 'wiz8-stat');
+      const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num); s.appendChild(n);
+      const l = _el('span', 'wiz8-stat-lbl'); l.textContent = lbl; s.appendChild(l);
+      stats.appendChild(s);
     });
     card.appendChild(stats);
-
-    const note = _el('p', 'dpia-result-note');
-    note.innerHTML = `DPIA saved to record. <strong>${di.standard_personal_data.length + di.special_category_data.length} data type${(di.standard_personal_data.length + di.special_category_data.length) !== 1 ? 's' : ''}</strong> identified will be used to scope the Risk Assessment in Step 8. Use the <strong>Save Record</strong> button in the sidebar to download the full system record.`;
+    const note = _el('p', 'wiz10-result-note');
+    note.innerHTML = `Test status saved. <strong>${rec10.completed_tests} test${rec10.completed_tests !== 1 ? 's' : ''} completed</strong>, ${rec10.not_applicable_tests} not applicable, ${rec10.pending_tests} still pending.`;
     card.appendChild(note);
     area.appendChild(card);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -503,174 +650,274 @@
   // ---- Reference pane -----------------------------------------
   function _buildReferencePane() {
     const card = _el('div', 'step-detail-card');
-
     const title = _el('h2', 'step-detail-title');
-    title.textContent = 'DPIA Reference — GDPR Article 35';
-    card.appendChild(title);
+    title.textContent = 'Test Control Reference'; card.appendChild(title);
 
-    const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'A Data Protection Impact Assessment is mandatory where processing is likely to result in a high risk to individuals. The sections below summarise the key legal obligations.';
-    card.appendChild(sub);
+    if (_planData.length === 0 && _uncovered.length === 0) {
+      const p = _el('p', 'wiz10-intro'); p.textContent = 'No controls selected in Step 6.'; card.appendChild(p);
+      return card;
+    }
 
-    const sections = [
-      { heading: 'When is a DPIA mandatory? (Art.35(1)–(3))', items: [
-        'Systematic and extensive profiling with significant effects on individuals',
-        'Large-scale processing of special-category data (Art.9) or criminal conviction data (Art.10)',
-        'Systematic monitoring of publicly accessible areas at large scale',
-        'Processing types on the supervisory authority high-risk list',
-        'New technologies used in a way that creates high risk to data subjects'
-      ]},
-      { heading: 'Mandatory DPIA content (Art.35(7))', items: [
-        '(a) Description of processing: nature, scope, context, purpose, legitimate interests',
-        '(b) Assessment of necessity and proportionality',
-        '(c) Assessment of risks to rights and freedoms of data subjects',
-        '(d) Measures to address risks: safeguards, security measures, oversight mechanisms'
-      ]},
-      { heading: 'DPO consultation (Art.35(2))', items: [
-        'The controller shall seek the advice of the DPO when conducting a DPIA',
-        'DPO advice and the controller\'s decision must be documented',
-        'Failure to consult the DPO is an infringement of GDPR Art.35(2)'
-      ]},
-      { heading: 'Prior consultation of supervisory authority (Art.36)', items: [
-        'Required where the DPIA shows residual HIGH risk that cannot be mitigated',
-        'Controller must not begin processing until the supervisory authority provides written advice',
-        'Supervisory authority has 8 weeks to respond, extendable by 6 weeks',
-        'Art.36 consultation is a hard stop before deployment where residual risk is unacceptable'
-      ]},
-      { heading: 'Automated decision-making (Art.22)', items: [
-        'Applies where decisions based SOLELY on automated processing have legal or similarly significant effects',
-        'Data subject rights: human intervention, express point of view, contest the decision',
-        'Three lawful grounds: (a) contract performance, (b) legal authorisation, (c) explicit consent',
-        'Special category data subject to Art.22(4) additional restrictions',
-        'Explainability obligation: data subjects must receive "meaningful information about the logic involved"'
-      ]},
-      { heading: 'GDPR Art.9 special category safeguards', items: [
-        'Processing requires both an Art.6 lawful basis AND a specific Art.9(2) condition',
-        'Explicit consent (Art.9(2)(a)) requires a separate, specific consent act beyond standard consent',
-        'Employment/social security ground (Art.9(2)(b)) requires a basis in Union or Member State law',
-        'Additional safeguards must be implemented and documented alongside the Art.9(2) condition'
-      ]}
-    ];
+    // Summary
+    const allTests   = _planData.reduce((a, p) => a.concat(p.test_controls), []);
+    const completed  = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'completed').length;
+    const notAppl    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable').length;
+    const pending    = allTests.length - completed - notAppl;
 
-    sections.forEach(sec => {
-      const h = _el('p', 'section-label'); h.textContent = sec.heading; card.appendChild(h);
-      const ul = _el('ul', 'dpia-ref-list');
-      sec.items.forEach(item => {
-        const li = _el('li', 'dpia-ref-item'); li.textContent = item; ul.appendChild(li);
+    const summary = _el('div', 'wiz10-ref-summary');
+    const badge = _el('span', pending === 0
+      ? 'wiz9-ref-sum-badge wiz9-ref-sum-badge--ok'
+      : 'wiz9-ref-sum-badge wiz9-ref-sum-badge--warn');
+    badge.textContent = `${completed + notAppl} / ${allTests.length} tests reviewed`;
+    summary.appendChild(badge);
+    if (_uncovered.length > 0) {
+      const unc = _el('span', 'wiz9-ref-uncovered');
+      unc.textContent = `${_uncovered.length} control${_uncovered.length !== 1 ? 's' : ''} without automated test`;
+      summary.appendChild(unc);
+    }
+    card.appendChild(summary);
+
+    const hint = _el('p', 'wiz9-ref-hint');
+    hint.textContent = 'This view shows all test controls matched to your selected Step 9 controls, grouped by test plan. Status reflects your current selections.';
+    card.appendChild(hint);
+
+    // Plans
+    _planData.forEach(plan => {
+      const planSec = _el('div', 'wiz10-ref-plan-sec');
+
+      const ph = _el('div', 'wiz10-ref-plan-hdr');
+      const pref = _el('span', 'wiz10-cn-badge'); pref.textContent = plan.plan_ref; ph.appendChild(pref);
+      const pn  = _el('span', 'wiz10-ref-plan-name');
+      pn.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
+      ph.appendChild(pn);
+      const reviewed = plan.test_controls.filter(t =>
+        _state.testStatus[t.pk_Test_Control_ID] === 'completed' ||
+        _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable'
+      ).length;
+      const rb = _el('span', reviewed === plan.test_controls.length
+        ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--all'
+        : reviewed > 0
+          ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--partial'
+          : 'wiz9-risk-sel-badge wiz9-risk-sel-badge--none');
+      rb.textContent = `${reviewed} / ${plan.test_controls.length}`;
+      ph.appendChild(rb);
+      planSec.appendChild(ph);
+
+      if (plan.risk_name) {
+        const rs = _el('p', 'wiz10-ref-risk-sub');
+        rs.innerHTML = `<span class="wiz10-risk-label">EU AI Act risk:</span> ${plan.risk_name}`;
+        planSec.appendChild(rs);
+      }
+
+      plan.test_controls.forEach(tc => {
+        const status  = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
+        const tc_card = _el('div', `wiz10-ref-tc wiz10-ref-tc--${status}`);
+        const tch     = _el('div', 'wiz10-ref-tc-hdr');
+
+        const statusDot = _el('span', `wiz10-ref-status-dot wiz10-ref-status-dot--${status}`);
+        tch.appendChild(statusDot);
+
+        const tcName = _el('span', 'wiz10-ref-tc-name'); tcName.textContent = tc.jkName; tch.appendChild(tcName);
+        if (tc.control_ref) {
+          const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.control_ref; tch.appendChild(cnb);
+        }
+        if (tc.fk_Harmonised_Standard_IDs) {
+          const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.fk_Harmonised_Standard_IDs; tch.appendChild(sref);
+        }
+        tc_card.appendChild(tch);
+
+        if (tc.jkObjective) {
+          const obj = _el('p', 'wiz10-ref-tc-obj'); obj.textContent = tc.jkObjective; tc_card.appendChild(obj);
+        }
+
+        planSec.appendChild(tc_card);
       });
-      card.appendChild(ul);
+
+      card.appendChild(planSec);
     });
 
-    if (_detail?.requirement_labels) {
-      card.appendChild(_sectionLabel('Requirement mapping'));
-      const rw = _el('div', 'req-list');
-      _detail.requirement_labels.forEach(r => {
-        const pill = _el('span', 'req-pill'); pill.textContent = r; rw.appendChild(pill);
+    // Uncovered
+    if (_uncovered.length > 0) {
+      const uncSec = _el('div', 'wiz10-ref-plan-sec');
+      const uh = _el('div', 'wiz10-ref-plan-hdr');
+      const un = _el('span', 'wiz10-ref-plan-name'); un.textContent = 'Controls without automated test coverage'; uh.appendChild(un);
+      const rb = _el('span', 'wiz9-risk-sel-badge wiz9-risk-sel-badge--none');
+      rb.textContent = `${_uncovered.length} control${_uncovered.length !== 1 ? 's' : ''}`; uh.appendChild(rb);
+      uncSec.appendChild(uh);
+      _uncovered.forEach(rc => {
+        const item = _el('div', 'wiz10-ref-tc wiz10-ref-tc--pending');
+        const srcBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
+        srcBadge.textContent = 'EU AI Act';
+        item.appendChild(srcBadge);
+        const nm = _el('span', 'wiz10-ref-tc-name'); nm.textContent = rc.control_name; item.appendChild(nm);
+        uncSec.appendChild(item);
       });
-      card.appendChild(rw);
+      card.appendChild(uncSec);
     }
 
     return card;
   }
 
-  // ---- Style injection ----------------------------------------
-  function _injectStyles() {
-    if (document.getElementById('wiz7-styles')) return;
-    const s = document.createElement('style');
-    s.id = 'wiz7-styles';
-    s.textContent = `
-/* ---- Shared wizard base layout ---- */
-.wiz-shell{display:flex;flex-direction:column;height:100%}
-.wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
-.wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
-.wiz-tab--active{color:var(--teal-600,#0d9488);border-bottom-color:var(--teal-600,#0d9488)}
-.wiz-pane-wrap{flex:1;overflow-y:auto}
-.wiz-pane{min-height:100%}
-.wiz-pane--hidden{display:none}
-.wiz-action-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-top:1px solid var(--color-border);margin-top:24px;gap:12px;flex-wrap:wrap}
-.wiz-btn-primary{padding:9px 20px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
-.wiz-btn-secondary{padding:9px 20px;background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer}
-.wiz-btn-secondary:hover{background:var(--color-bg-hover,#f1f5f9)}
-
-/* ---- DPIA info note ---- */
-.dpia-info-note{background:var(--info-50,#f0f9ff);border:1px solid var(--info-200,#bae6fd);border-left:3px solid var(--info-400,#38bdf8);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--info-800,#075985);line-height:1.6;margin-bottom:20px}
-
-/* ---- Section accordion ---- */
-.dpia-section{border:1px solid var(--color-border);border-radius:8px;margin-bottom:10px;overflow:hidden}
-.dpia-section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none;gap:10px}
-.dpia-section-header:hover{background:var(--color-bg-hover,#f1f5f9)}
-.dpia-section-header-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.dpia-section-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--purple-100,#ede9fe);color:var(--purple-700,#6d28d9);padding:2px 7px;border-radius:4px;flex-shrink:0;font-family:var(--font-mono,monospace)}
-.dpia-section-title{font-size:13px;font-weight:700;color:var(--color-text-primary)}
-.dpia-gdpr-ref{font-size:11px;color:var(--color-text-tertiary);font-style:italic;white-space:nowrap;flex-shrink:0}
-.dpia-section-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.dpia-section-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;min-width:40px;text-align:center}
-.dpia-section-badge--all{background:var(--success-100,#dcfce7);color:var(--success-700,#15803d)}
-.dpia-section-badge--partial{background:var(--warning-100,#fef3c7);color:var(--warning-700,#b45309)}
-.dpia-section-badge--none{background:var(--danger-100,#fee2e2);color:var(--danger-700,#b91c1c)}
-.dpia-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
-.dpia-section-body{padding:16px;display:flex;flex-direction:column;gap:16px}
-.dpia-collapsed{display:none}
-.dpia-section-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0;padding:10px 12px;background:var(--color-bg);border-radius:6px;border:1px solid var(--color-border)}
-
-/* ---- Conditional sections ---- */
-.dpia-section--disabled .dpia-section-header{opacity:.5}
-.dpia-na-notice{display:none;font-size:12px;color:var(--color-text-tertiary);background:var(--color-bg-subtle,#f8fafc);border:1px dashed var(--color-border);border-radius:5px;padding:10px 12px;line-height:1.55}
-.dpia-section--disabled .dpia-na-notice{display:block}
-.dpia-section--disabled .dpia-section-body > :not(.dpia-na-notice){display:none!important}
-.dpia-section-badge--na{background:var(--color-bg-subtle,#f1f5f9);color:var(--color-text-tertiary);font-weight:600}
-.dpia-field--hidden{display:none!important}
-
-/* ---- Divider ---- */
-.dpia-divider{display:flex;align-items:center;gap:12px;padding:10px 0 4px;border-top:1px solid var(--color-border);margin-top:6px}
-.dpia-divider-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-tertiary);white-space:nowrap}
-
-/* ---- Fields ---- */
-.dpia-field-wrap{display:flex;flex-direction:column;gap:6px}
-.dpia-label{font-size:13px;font-weight:600;color:var(--color-text-primary);cursor:default}
-.dpia-required{color:var(--danger-500,#ef4444)}
-.dpia-hint{font-size:11px;color:var(--color-text-tertiary);margin:0;line-height:1.55;padding:6px 10px;background:var(--color-bg);border-radius:4px;border:1px solid var(--color-border)}
-.dpia-text-input,.dpia-textarea,.dpia-select{width:100%;padding:8px 11px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:#fff;outline:none;box-sizing:border-box}
-.dpia-textarea{resize:vertical;line-height:1.6}
-.dpia-text-input:focus,.dpia-textarea:focus,.dpia-select:focus{border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,#ccfbf1)}
-.dpia-select{cursor:pointer}
-.dpia-cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
-.dpia-cb-wrap{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border:1px solid var(--color-border);border-radius:5px;font-size:13px;color:var(--color-text-primary);background:#fff;cursor:pointer;line-height:1.45}
-.dpia-cb-wrap:hover{background:var(--color-bg-subtle,#f8fafc)}
-.dpia-cb{margin-top:2px;flex-shrink:0;accent-color:var(--teal-600,#0d9488);width:14px;height:14px;cursor:pointer}
-.dpia-warn{font-size:13px;color:var(--danger-600,#dc2626);padding:16px 0}
-
-/* ---- Action row ---- */
-.dpia-action-right{display:flex;gap:8px}
-.dpia-progress-label{font-size:13px;font-weight:600;color:var(--color-text-secondary)}
-
-/* ---- Results ---- */
-.dpia-results{margin-top:16px}
-.dpia-result-card{background:var(--success-50,#f0fdf4);border:1px solid var(--success-200,#bbf7d0);border-radius:8px;padding:20px}
-.dpia-result-title{font-size:14px;font-weight:700;color:var(--success-700,#15803d);margin:0 0 14px}
-.dpia-result-stats{display:flex;gap:28px;margin-bottom:14px;flex-wrap:wrap}
-.dpia-stat{display:flex;flex-direction:column;gap:2px}
-.dpia-stat-num{font-size:26px;font-weight:700;color:var(--success-700,#15803d);line-height:1}
-.dpia-stat-lbl{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
-.dpia-result-note{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0}
-
-/* ---- Reference pane ---- */
-.dpia-ref-list{padding-left:20px;margin:0 0 16px}
-.dpia-ref-item{font-size:13px;color:var(--color-text-secondary);line-height:1.65;padding:3px 0}
-`;
-    document.head.appendChild(s);
-  }
-
-  // ---- Utilities ----------------------------------------------
+  // ---- Helpers ------------------------------------------------
   function _el(tag, cls) {
-    const el = document.createElement(tag);
-    if (cls) el.className = cls;
-    return el;
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    return e;
   }
 
   function _sectionLabel(text) {
     const p = _el('p', 'section-label'); p.textContent = text; return p;
+  }
+
+  // ---- Style injection ----------------------------------------
+  function _injectStyles() {
+    // Inject shared wiz-* base classes if not already present
+    if (!document.getElementById('wiz-shared-styles')) {
+      const s = document.createElement('style');
+      s.id = 'wiz-shared-styles';
+      s.textContent = `
+.wiz-shell{display:flex;flex-direction:column;height:100%}
+.wiz-tab-strip{display:flex;gap:2px;padding:14px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-surface)}
+.wiz-tab{padding:8px 16px;font-size:12px;font-weight:500;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--color-text-secondary);font-family:inherit;transition:color .15s,border-color .15s;white-space:nowrap}
+.wiz-tab:hover{color:var(--color-text-primary)}
+.wiz-tab--active{color:var(--teal-600,#0d9488);border-bottom-color:var(--teal-600,#0d9488)}
+.wiz-pane-wrap{flex:1;overflow-y:auto}
+.wiz-pane{padding:24px;min-height:100%}
+.wiz-pane--hidden{display:none}
+.wiz-action-row{display:flex;gap:10px;margin-top:24px}
+.wiz-btn-primary{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s}
+.wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
+`;
+      document.head.appendChild(s);
+    }
+
+    if (document.getElementById('wiz10-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'wiz10-styles';
+    s.textContent = `
+/* ---- Step 10 styles ---------------------------------------- */
+.wiz10-intro{font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;line-height:1.6}
+.wiz10-warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 16px;font-size:13px;color:#9a3412;margin-bottom:16px}
+.wiz10-info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 14px;font-size:12px;color:#1e40af;margin-bottom:8px}
+
+/* Source card */
+.wiz10-source-card{background:var(--color-bg-subtle,#f8fafc);border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-bottom:20px}
+.wiz10-source-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-tertiary);margin:0 0 10px}
+.wiz10-source-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.wiz10-source-cell{display:flex;flex-direction:column;gap:3px}
+.wiz10-cell-label{font-size:10px;color:var(--color-text-tertiary);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.wiz10-cell-value{font-size:18px;font-weight:700;color:var(--color-text-primary)}
+.wiz10-cell-value--num{color:var(--teal-600,#0d9488)}
+.wiz10-cell-value--warn{color:#d97706}
+.wiz10-cell-value--ok{color:#16a34a}
+
+/* Validation banner */
+.wiz10-val-wrap{margin-bottom:16px}
+.wiz10-val-ok{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#dcfce7;border:1px solid #bbf7d0;border-radius:6px;font-size:12px;color:#166534;font-weight:500}
+.wiz10-val-info{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;color:#1e40af}
+
+/* Plan list */
+.wiz10-plan-list{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
+.wiz10-plan-sec{background:var(--color-bg,#fff);border:1px solid var(--color-border);border-radius:10px;overflow:hidden}
+.wiz10-plan-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border)}
+.wiz10-plan-hdr-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
+.wiz10-plan-icon{display:flex;align-items:center;color:var(--teal-600,#0d9488);flex-shrink:0}
+.wiz10-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wiz10-plan-risk-sub{font-size:11px;color:var(--color-text-tertiary);padding:6px 16px;margin:0;border-bottom:1px solid var(--color-border);background:var(--color-bg-subtle,#f8fafc)}
+.wiz10-risk-label{font-weight:600;color:var(--color-text-secondary)}
+.wiz10-role-badge{font-size:10px;font-weight:500;padding:2px 7px;background:#ccfbf1;color:#115e59;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.wiz10-plan-count{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;white-space:nowrap;flex-shrink:0}
+.wiz10-plan-count--pending{background:#dbeafe;color:#1e40af}
+.wiz10-plan-count--ok{background:#dcfce7;color:#166534}
+.wiz10-plan-obj{font-size:12px;color:var(--color-text-secondary);padding:10px 16px 8px;line-height:1.5;border-bottom:1px solid var(--color-border);margin:0}
+
+/* Test control card */
+.wiz10-ctrl-list{display:flex;flex-direction:column;gap:1px;padding:0}
+.wiz10-tc-card{padding:14px 16px;border-bottom:1px solid var(--color-border);transition:background .15s}
+.wiz10-tc-card:last-child{border-bottom:none}
+.wiz10-tc-card--pending{background:#fff}
+.wiz10-tc-card--completed{background:#f0fdf4}
+.wiz10-tc-card--not_applicable{background:#fffbeb}
+.wiz10-tc-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.wiz10-tc-pip{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.wiz10-tc-pip--pending{background:#94a3b8}
+.wiz10-tc-pip--completed{background:#22c55e}
+.wiz10-tc-pip--not_applicable{background:#f59e0b}
+.wiz10-tc-icon{display:flex;align-items:center;color:var(--color-text-tertiary);flex-shrink:0}
+.wiz10-tc-name{font-size:13px;font-weight:600;color:var(--color-text-primary)}
+.wiz10-cn-badge{font-size:10px;font-weight:600;padding:2px 6px;background:#e0e7ff;color:#4338ca;border-radius:4px;font-family:var(--font-mono,monospace);white-space:nowrap}
+.wiz10-std-badge{font-size:10px;font-weight:500;padding:2px 6px;background:#f1f5f9;color:#475569;border-radius:4px;white-space:nowrap;word-break:break-all}
+
+/* Collapsible */
+.wiz10-collapsible{margin-bottom:8px}
+.wiz10-coll-btn{display:inline-flex;align-items:center;gap:5px;background:transparent;border:none;padding:4px 0;font-size:11px;font-weight:600;color:var(--color-text-secondary);cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.04em}
+.wiz10-coll-btn:hover{color:var(--color-text-primary)}
+.wiz10-coll-chevron{transition:transform .2s;flex-shrink:0}
+.wiz10-coll-body{margin-top:4px}
+.wiz10-coll-text{font-size:12px;color:var(--color-text-secondary);line-height:1.6;padding:8px 12px;background:var(--color-bg-subtle,#f8fafc);border-radius:4px;border-left:2px solid var(--color-border);margin:0}
+.wiz10-tc-obj .wiz10-coll-text{border-left-color:#a7f3d0}
+.wiz10-tc-text .wiz10-coll-text{border-left-color:#93c5fd}
+.wiz10-tc-evidence .wiz10-coll-text{border-left-color:#fcd34d;font-family:var(--font-mono,monospace);font-size:11px;white-space:pre-wrap}
+
+/* Dataset / test cases */
+.wiz10-dataset-wrap{border-top:1px solid var(--color-border);padding:10px 16px}
+.wiz10-dataset-btn{font-size:11px}
+.wiz10-dataset-table{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.wiz10-dataset-row{display:flex;gap:12px;padding:10px;background:var(--color-bg,#fff);border:1px solid var(--color-border);border-radius:6px}
+.wiz10-dataset-id{font-family:var(--font-mono,monospace);font-size:10px;font-weight:700;color:#4338ca;min-width:60px;flex-shrink:0;padding-top:2px}
+.wiz10-dataset-main{flex:1;min-width:0}
+.wiz10-dataset-query{font-size:12px;color:var(--color-text-primary);margin:0 0 6px;line-height:1.4}
+.wiz10-dataset-outcome{font-size:11px;color:var(--color-text-secondary);margin:0 0 4px}
+.wiz10-dataset-rationale{font-size:11px;color:var(--color-text-tertiary);margin:0;font-style:italic}
+
+/* Status selector */
+.wiz10-status-row{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+.wiz10-status-label{font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.wiz10-status-btn{padding:5px 12px;font-size:11px;font-weight:600;border-radius:5px;cursor:pointer;font-family:inherit;transition:all .15s;border:1px solid transparent}
+.wiz10-status-btn--pending{background:var(--color-bg-subtle,#f8fafc);border-color:var(--color-border);color:var(--color-text-secondary)}
+.wiz10-status-btn--completed{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.wiz10-status-btn--na{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.wiz10-status-btn--active.wiz10-status-btn--pending{background:#e2e8f0;border-color:#94a3b8;color:#334155;font-weight:700}
+.wiz10-status-btn--active.wiz10-status-btn--completed{background:#22c55e;border-color:#16a34a;color:#fff;font-weight:700}
+.wiz10-status-btn--active.wiz10-status-btn--na{background:#f59e0b;border-color:#d97706;color:#fff;font-weight:700}
+
+/* Uncovered section */
+.wiz10-uncovered-sec{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;margin-bottom:20px}
+.wiz10-uncovered-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.wiz10-unc-icon{color:#d97706;display:flex;align-items:center}
+.wiz10-unc-title{font-size:13px;font-weight:600;color:#92400e}
+.wiz10-unc-note{font-size:12px;color:#b45309;margin:0 0 12px;line-height:1.5}
+.wiz10-unc-list{display:flex;flex-direction:column;gap:6px}
+.wiz10-unc-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid #fed7aa;border-radius:6px;flex-wrap:wrap}
+.wiz10-unc-ctrl-name{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.wiz10-unc-risk{font-size:11px;color:var(--color-text-tertiary)}
+
+/* Result card */
+.wiz10-results{margin-top:24px}
+.wiz10-result-card{background:var(--color-bg-subtle,#f8fafc);border:1px solid var(--color-border);border-radius:10px;padding:20px 24px}
+.wiz10-result-title{font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 16px}
+.wiz10-result-stats{display:flex;gap:20px;margin-bottom:16px;flex-wrap:wrap}
+.wiz10-result-note{font-size:12px;color:var(--color-text-secondary);margin:0;line-height:1.6}
+
+/* Reference pane */
+.wiz10-ref-plan-sec{margin-bottom:20px}
+.wiz10-ref-plan-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.wiz10-ref-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wiz10-ref-risk-sub{font-size:11px;color:var(--color-text-tertiary);margin:0 0 8px;font-style:italic}
+.wiz10-ref-tc{padding:10px 12px;border:1px solid var(--color-border);border-radius:6px;margin-bottom:6px}
+.wiz10-ref-tc--completed{border-left:3px solid #22c55e}
+.wiz10-ref-tc--not_applicable{border-left:3px solid #f59e0b}
+.wiz10-ref-tc--pending{border-left:3px solid #94a3b8}
+.wiz10-ref-tc-hdr{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.wiz10-ref-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.wiz10-ref-status-dot--pending{background:#94a3b8}
+.wiz10-ref-status-dot--completed{background:#22c55e}
+.wiz10-ref-status-dot--not_applicable{background:#f59e0b}
+.wiz10-ref-tc-name{font-size:12px;font-weight:600;color:var(--color-text-primary)}
+.wiz10-ref-tc-obj{font-size:11px;color:var(--color-text-tertiary);margin:4px 0 0;line-height:1.5}
+.wiz10-ref-summary{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+`;
+    document.head.appendChild(s);
   }
 
 })();

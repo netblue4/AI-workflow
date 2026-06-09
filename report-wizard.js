@@ -95,9 +95,9 @@
   // ============================================================
   function _buildReportHTML() {
     const s3  = _record?.['step-3']  || null;
-    const s8  = _record?.['step-8']  || null;
-    const s9  = _record?.['step-9']  || null;
-    const s10 = _record?.['step-10'] || null;
+    const s8  = _record?.['step-5']  || null;
+    const s9  = _record?.['step-6']  || null;
+    const s10 = _record?.['step-7']  || null;
     const meta = _record?._meta      || {};
 
     const today = new Date().toISOString().slice(0, 10);
@@ -262,7 +262,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
   // ---- Section 2: Risk Assessment ----------------------------
   function _riskAssessmentSection(s8) {
-    if (!s8) return _notComplete('Step 8 — Risk Assessment has not yet been completed.');
+    if (!s8) return _notComplete('Step 5 — Risk Assessment has not yet been completed.');
 
     let html = '';
 
@@ -295,7 +295,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
   // ---- Section 3: Control Schedule ---------------------------
   function _controlScheduleSection(s9) {
-    if (!s9) return _notComplete('Step 9 — Control Identification has not yet been completed.');
+    if (!s9) return _notComplete('Step 6 — Control Identification has not yet been completed.');
 
     const riskCtrls = s9.risk_controls || [];
     const compAdds  = s9.compliance_additions || [];
@@ -368,7 +368,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
   // ---- Section 4: Compliance Traceability --------------------
   function _complianceTraceabilitySection(s3, s9) {
-    if (!s3 || !s9) return _notComplete('Steps 3 and 9 must be completed before compliance traceability can be generated.');
+    if (!s3 || !s9) return _notComplete('Steps 3 and 6 must be completed before compliance traceability can be generated.');
 
     const applicableNums = new Set(
       (s3.axis_b?.applicable_articles || []).map(a => a.article_number)
@@ -471,7 +471,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
   // ---- Section 5: Verification Evidence ----------------------
   function _verificationSection(s10) {
-    if (!s10) return _notComplete('Step 10 — Content Verification Testing has not yet been completed.');
+    if (!s10) return _notComplete('Step 7 — Content Verification Testing has not yet been completed.');
 
     const plans    = s10.plans || [];
     const uncov    = s10.uncovered_controls || [];
@@ -492,7 +492,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     <p class="test-progress-lbl">${pct}% of tests resolved</p>`;
 
     if (plans.length === 0) {
-      html += _notComplete('No test plans generated. Ensure Step 9 control selection is complete.');
+      html += _notComplete('No test plans generated. Ensure Step 6 control selection is complete.');
     } else {
       plans.forEach(p => {
         html += `<div class="test-plan">
@@ -649,13 +649,13 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     });
 
     // Steps that have digital session records (wizard UIs)
-    const TRACKED = new Set(['step-3', 'step-7', 'step-8', 'step-9', 'step-10']);
+    const TRACKED = new Set(['step-3', 'step-4', 'step-5', 'step-6', 'step-7']);
     const STEP_COMPLETE = {
       'step-3':  !!_record?.['step-3'],
-      'step-7':  !!_record?.['step-7'],
-      'step-8':  !!_record?.['step-8']?.legal_assessment?.completed,
-      'step-9':  !!_record?.['step-9'],
-      'step-10': !!_record?.['step-10']
+      'step-4':  !!_record?.['step-4'],
+      'step-5':  !!_record?.['step-5']?.legal_assessment?.completed,
+      'step-6':  !!_record?.['step-6'],
+      'step-7':  !!_record?.['step-7']
     };
 
     // Overall status counts for the summary banner
