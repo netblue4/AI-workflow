@@ -1,5 +1,5 @@
 /* Step 9 — Control Identification
-   Reads selected risks from record['step-8'].technical_assessment and record['step-8'].legal_assessment.
+   Reads selected risks from record['step-8'].legal_assessment.
    Risk team uses Step Wizard tab to select controls per individual risk.
    Compliance team uses AI Act Compliance View tab to fill HS gaps.
 */
@@ -9,7 +9,7 @@
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null;
-  let _riskData = []; // [{ risk_id, display_name, risk_type, owasp_id, risk_source, risk_description, controls }]
+  let _riskData = []; // [{ risk_id, display_name, risk_type, risk_source, risk_description, controls }]
 
   const _state = {
     riskSelected: {},       // risk team picks (Step Wizard tab)
@@ -93,11 +93,9 @@
   function _buildRiskControlData() {
     if (!_tblData) return [];
     const saved8        = _record?.['step-8'];
-    const techSelected  = (saved8?.technical_assessment?.risks || []).filter(r => r.selected);
-    const legalSelected = (saved8?.legal_assessment?.risks     || []).filter(r => r.selected);
-    if (!techSelected.length && !legalSelected.length) return [];
+    const legalSelected = (saved8?.legal_assessment?.risks || []).filter(r => r.selected);
+    if (!legalSelected.length) return [];
 
-    const tblRiskById   = new Map(_tblData.risks.map(r => [r.pk_Risk_ID, r]));
     const tblRiskByName = new Map(_tblData.risks.map(r => [r.risk_name, r]));
 
     // Build controls-by-risk map
@@ -118,27 +116,6 @@
     const seenRiskIds = new Set();
     const result = [];
 
-    // Process technical (OWASP) risks
-    techSelected.forEach(r8 => {
-      const tblRisk = tblRiskById.get(r8.risk_id);
-      if (!tblRisk) return;
-      if (seenRiskIds.has(tblRisk.pk_Risk_ID)) return;
-      seenRiskIds.add(tblRisk.pk_Risk_ID);
-      const controls = (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || []).map(ctrl => ({
-        ...ctrl,
-        tasks: tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || []
-      }));
-      result.push({
-        risk_id:          tblRisk.pk_Risk_ID,
-        display_name:     tblRisk.risk_name,
-        risk_type:        'technical',
-        owasp_id:         tblRisk.owasp_id || null,
-        risk_source:      'OWASP',
-        risk_description: tblRisk.risk_description || '',
-        controls
-      });
-    });
-
     // Process legal (EU AI Act) risks
     legalSelected.forEach(r8 => {
       const tblRisk = tblRiskByName.get(r8.risk_name);
@@ -153,7 +130,6 @@
         risk_id:          tblRisk.pk_Risk_ID,
         display_name:     tblRisk.risk_name,
         risk_type:        'legal',
-        owasp_id:         tblRisk.owasp_id || null,
         risk_source:      'EU_AI_Act',
         risk_description: tblRisk.risk_description || '',
         controls
@@ -306,14 +282,11 @@
       const vEl = _el('span', mod ? `wiz9-cell-value wiz9-cell-value--${mod}` : 'wiz9-cell-value');
       vEl.textContent = v || '—'; c.appendChild(vEl); grid.appendChild(c);
     };
-    const tech  = step8.technical_assessment;
     const legal = step8.legal_assessment;
-    const techCount  = tech?.selected_count  ?? (tech?.risks  || []).filter(r => r.selected).length;
     const legalCount = legal?.selected_count ?? (legal?.risks || []).filter(r => r.selected).length;
-    cell('Technical risks confirmed', String(techCount),        'ok');
-    cell('Legal risks confirmed',     String(legalCount),       'ok');
+    cell('Risks confirmed',           String(legalCount),         'ok');
     cell('Individual risks identified', String(_riskData.length), 'num');
-    cell('Assessment date',           tech?.assessment_date || legal?.assessment_date || '—');
+    cell('Assessment date',           legal?.assessment_date || '—');
     card.appendChild(grid); return card;
   }
 
@@ -363,12 +336,7 @@
     rName.textContent = risk.display_name;
     left.appendChild(rName);
 
-    // OWASP ID badge (if present)
-    if (risk.owasp_id) {
-      const owBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--owasp');
-      owBadge.textContent = risk.owasp_id;
-      left.appendChild(owBadge);
-    }
+
 
     // EU AI Act badge (if legal risk)
     if (risk.risk_type === 'legal') {
@@ -514,8 +482,8 @@
 
     // Source badge
     const src = ctrl.control_source || ctrl._source || '';
-    const srcBadge = _el('span', src === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
-    srcBadge.textContent = src === 'OWASP' ? 'OWASP' : (src || 'EU AI Act');
+    const srcBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
+    srcBadge.textContent = src || 'EU AI Act';
     hdr.appendChild(srcBadge);
 
     const cName = _el('span', 'wiz9-ctrl-name'); cName.textContent = ctrl.jkName; hdr.appendChild(cName);
@@ -648,8 +616,7 @@
         const ctrl = (_tblData.controls || []).find(c => c.pk_Risk_Control_ID === ctrlId);
         if (!ctrl) return;
         const row = _el('div', 'wiz9-comp-add-item');
-        const src = ctrl.control_source === 'OWASP' ? 'owasp' : 'hs';
-        const dot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`); row.appendChild(dot);
+        const dot = _el('span', 'wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--hs'); row.appendChild(dot);
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
         if (ctrl.fk_Harmonised_Standard_IDs) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
@@ -830,12 +797,7 @@
       // Risk header with source badges + live count
       const hdr = _el('div', 'wiz9-ref-risk-hdr');
       const rn  = _el('span', 'wiz9-ref-risk-name'); rn.textContent = risk.display_name; hdr.appendChild(rn);
-      if (risk.owasp_id) {
-        const ob = _el('span', 'wiz9-src-badge wiz9-src-badge--owasp'); ob.textContent = risk.owasp_id; hdr.appendChild(ob);
-      }
-      if (risk.risk_type === 'legal') {
-        const eb = _el('span', 'wiz9-src-badge wiz9-src-badge--eu'); eb.textContent = 'EU AI Act'; hdr.appendChild(eb);
-      }
+      const eb  = _el('span', 'wiz9-src-badge wiz9-src-badge--eu'); eb.textContent = 'EU AI Act'; hdr.appendChild(eb);
       const rb = _el('span', selCount === 0
         ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--none'
         : selCount === risk.controls.length
@@ -862,8 +824,8 @@
 
         // Source badge
         const src = ctrl.control_source || ctrl._source || '';
-        const srcBadge = _el('span', src === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
-        srcBadge.textContent = src === 'OWASP' ? 'OWASP' : (src || 'EU AI Act');
+        const srcBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
+        srcBadge.textContent = src || 'EU AI Act';
         ch.appendChild(srcBadge);
 
         const cn = _el('span', 'wiz9-ref-ctrl-name'); cn.textContent = ctrl.jkName; ch.appendChild(cn);
@@ -1262,8 +1224,7 @@
               if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
             });
             aRow.appendChild(addBtn);
-            const src = ctrl.control_source === 'OWASP' ? 'owasp' : 'hs';
-            aRow.appendChild(_el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`));
+            aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--hs'));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
             if (ctrl.fk_Harmonised_Standard_IDs) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
@@ -1332,9 +1293,8 @@
         // Risk header
         const rHdr = _el('div', 'wiz9-cmp-risk-hdr');
         rHdr.appendChild(_el('span', 'wiz9-cmp-risk-id', { textContent: risk.pk_Risk_ID }));
-        if (risk.owasp_id) rHdr.appendChild(_el('span', 'wiz9-cmp-owasp-tag', { textContent: risk.owasp_id }));
-        const rsrc = _el('span', `wiz9-cmp-src-tag wiz9-cmp-src-tag--${risk.risk_source === 'EU_AI_Act' ? 'legal' : 'owasp'}`);
-        rsrc.textContent = risk.risk_source === 'EU_AI_Act' ? 'Legal' : 'OWASP';
+        const rsrc = _el('span', 'wiz9-cmp-src-tag wiz9-cmp-src-tag--legal');
+        rsrc.textContent = 'Legal';
         rHdr.appendChild(rsrc);
         rHdr.appendChild(_el('span', 'wiz9-cmp-risk-name', { textContent: risk.risk_name }));
         rItem.appendChild(rHdr);
@@ -1346,7 +1306,7 @@
           ctrlWrap.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Controls (${controls.length})` }));
           controls.forEach(ctrl => {
             const cRow = _el('div', 'wiz9-cmp-ctrl-row');
-            const _srcKey = ctrl.control_source === 'OWASP' ? 'owasp' : ctrl.control_source === 'Framework_Statement' ? 'fs' : 'hs';
+            const _srcKey = ctrl.control_source === 'Framework_Statement' ? 'fs' : 'hs';
             const srcDot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${_srcKey}`);
             cRow.appendChild(srcDot);
             cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id', { textContent: ctrl.pk_Risk_Control_ID }));
@@ -1398,7 +1358,7 @@
   // ---- Compliance ctrl row helper -----------------------------
   function _buildCmpCtrlRow(ctrl, tasksByCtrl, showRemove) {
     const cRow = _el('div', 'wiz9-cmp-ctrl-row');
-    const src = ctrl.control_source === 'OWASP' ? 'owasp' : ctrl.control_source === 'Framework_Statement' ? 'fs' : 'hs';
+    const src = ctrl.control_source === 'Framework_Statement' ? 'fs' : 'hs';
     cRow.appendChild(_el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`));
     cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
     cRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
@@ -1514,7 +1474,6 @@
 
 /* Source badges */
 .wiz9-src-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;letter-spacing:.03em}
-.wiz9-src-badge--owasp{background:#ffedd5;color:#9a3412}
 .wiz9-src-badge--eu{background:#dbeafe;color:#1e40af}
 
 /* Legal risk names in cluster header */
@@ -1669,17 +1628,14 @@
 .wiz9-cmp-risk-item:last-child{border-bottom:none}
 .wiz9-cmp-risk-hdr{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .wiz9-cmp-risk-id{font-size:10px;font-weight:700;font-family:monospace;color:var(--color-text-tertiary)}
-.wiz9-cmp-owasp-tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:#fef3c7;color:#92400e}
 .wiz9-cmp-src-tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px}
 .wiz9-cmp-src-tag--legal{background:#ede9fe;color:#6d28d9}
-.wiz9-cmp-src-tag--owasp{background:#fef3c7;color:#92400e}
 .wiz9-cmp-risk-name{font-size:12px;font-weight:600;color:var(--color-text-primary)}
 
 /* Controls */
 .wiz9-cmp-ctrl-wrap{margin-bottom:8px}
 .wiz9-cmp-ctrl-row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;background:#fafbff;margin-bottom:3px;flex-wrap:wrap}
 .wiz9-cmp-ctrl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.wiz9-cmp-ctrl-dot--owasp{background:#f59e0b}
 .wiz9-cmp-ctrl-dot--hs{background:#6366f1}
 .wiz9-cmp-ctrl-dot--fs{background:#8b5cf6}
 .wiz9-cmp-ctrl-id{font-size:10px;font-weight:600;font-family:monospace;color:var(--color-text-tertiary);white-space:nowrap}

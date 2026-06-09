@@ -132,10 +132,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const role     = s3?.axis_b?.organisation_role || '—';
     const artCount = s3?.axis_b?.applicable_articles?.length ?? 0;
 
-    const techSel   = s8?.technical_assessment?.selected_count ?? '—';
-    const techTotal = s8?.technical_assessment?.total_risks    ?? '—';
-    const legalSel  = s8?.legal_assessment?.selected_count     ?? '—';
-    const legalTotal = s8?.legal_assessment?.total_risks       ?? '—';
+    const legalSel   = s8?.legal_assessment?.selected_count ?? '—';
+    const legalTotal = s8?.legal_assessment?.total_risks    ?? '—';
 
     const riskCtrls = (s9?.risk_controls || []).filter(c => c.selected).length;
     const compAdds  = (s9?.compliance_additions || []).length;
@@ -147,10 +145,9 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     const steps = [
       ['System Classification', !!s3],
-      ['Technical Risk Assessment', !!s8?.technical_assessment?.completed],
-      ['Legal Risk Assessment',     !!s8?.legal_assessment?.completed],
-      ['Control Identification',    !!s9],
-      ['Verification Testing',      !!s10]
+      ['Risk Assessment',        !!s8?.legal_assessment?.completed],
+      ['Control Identification', !!s9],
+      ['Verification Testing',   !!s10]
     ];
 
     return `
@@ -172,8 +169,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     <div class="cover-stats">
       <div class="cs-box">
-        <div class="cs-num">${techSel}+${legalSel}</div>
-        <div class="cs-lbl">Risks accepted<br><span class="cs-sub">${techTotal} technical · ${legalTotal} legal assessed</span></div>
+        <div class="cs-num">${legalSel}</div>
+        <div class="cs-lbl">Risks accepted<br><span class="cs-sub">${legalTotal} legal/regulatory risks assessed</span></div>
       </div>
       <div class="cs-box">
         <div class="cs-num">${riskCtrls + compAdds}</div>
@@ -269,26 +266,6 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     let html = '';
 
-    // Technical
-    const ta = s8.technical_assessment;
-    html += `<h3 class="sub-heading">Technical Risk Assessment (OWASP LLM Top 10)</h3>`;
-    if (!ta?.completed) {
-      html += _notComplete('Technical assessment not yet saved.');
-    } else {
-      html += `<p class="section-meta">Completed: ${ta.assessment_date} &nbsp;|&nbsp; ${ta.selected_count} of ${ta.total_risks} risks accepted</p>
-<table class="data-table">
-  <thead><tr><th>OWASP ID</th><th>Risk Name</th><th>Answer</th><th>Status</th></tr></thead>
-  <tbody>
-  ${(ta.risks || []).map(r => `<tr class="${r.selected ? '' : 'row-dim'}">
-    <td class="mono">${_esc(r.owasp_id || '—')}</td>
-    <td>${_esc(r.risk_name)}</td>
-    <td>${_esc(r.wizard_answer || '—')}</td>
-    <td><span class="status-pill status-pill--${r.selected ? 'accept' : 'excl'}">${r.selected ? '✓ Accepted' : '✗ Excluded'}</span></td>
-  </tr>`).join('')}
-  </tbody>
-</table>`;
-    }
-
     // Legal
     const la = s8.legal_assessment;
     html += `<h3 class="sub-heading">Legal / Regulatory Risk Assessment (EU AI Act)</h3>`;
@@ -378,8 +355,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
   function _ctrlRow(c, selected) {
     const src = (c.control_source || '').toLowerCase();
-    const srcLabel = src === 'owasp' ? 'OWASP' : src.includes('framework') ? 'Framework' : 'EU AI Act';
-    const srcClass = src === 'owasp' ? 'src-owasp' : src.includes('framework') ? 'src-fs' : 'src-eu';
+    const srcLabel = src.includes('framework') ? 'Framework' : 'EU AI Act';
+    const srcClass = src.includes('framework') ? 'src-fs' : 'src-eu';
     return `<div class="ctrl-row ${selected ? '' : 'ctrl-row--dim'}">
       <span class="ctrl-status ctrl-status--${selected ? 'sel' : 'desel'}">${selected ? '✓' : '✗'}</span>
       <span class="ctrl-src ${srcClass}">${srcLabel}</span>
@@ -676,7 +653,7 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     const STEP_COMPLETE = {
       'step-3':  !!_record?.['step-3'],
       'step-7':  !!_record?.['step-7'],
-      'step-8':  !!(_record?.['step-8']?.technical_assessment?.completed && _record?.['step-8']?.legal_assessment?.completed),
+      'step-8':  !!_record?.['step-8']?.legal_assessment?.completed,
       'step-9':  !!_record?.['step-9'],
       'step-10': !!_record?.['step-10']
     };
@@ -898,7 +875,6 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .ctrl-status--desel{color:#9ca3af}
 .ctrl-status--fs{color:#7c3aed}
 .ctrl-src{font-size:8pt;font-weight:700;padding:1px 5px;border-radius:3px;flex-shrink:0}
-.src-owasp{background:#ffedd5;color:#9a3412}
 .src-eu{background:#dbeafe;color:#1e40af}
 .src-fs{background:#ede9fe;color:#7c3aed}
 .ctrl-id{font-size:9pt;flex-shrink:0;color:#555}
