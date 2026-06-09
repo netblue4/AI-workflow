@@ -207,7 +207,7 @@
       // Apply RCN applicability filter from Step 3 using tbl_Risk_Controls.standard_ref
       const matchedControls = applicable
         ? controls.filter(ctrl => {
-            const rcns = (ctrl.standard_ref || '')
+            const rcns = (ctrl.fk_Harmonised_Standard_IDs || '')
               .split(',').map(s => s.trim()).filter(Boolean);
             return rcns.some(r => applicable.has(r));
           })

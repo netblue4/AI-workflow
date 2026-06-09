@@ -401,8 +401,8 @@
       const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.control_ref; hdr.appendChild(cnb);
     }
     // Standard reference badge
-    if (tc.standard_ref) {
-      const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.standard_ref; hdr.appendChild(sref);
+    if (tc.fk_Harmonised_Standard_IDs) {
+      const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.fk_Harmonised_Standard_IDs; hdr.appendChild(sref);
     }
 
     card.appendChild(hdr);
@@ -592,7 +592,7 @@
         test_control_id: tc.pk_Test_Control_ID,
         control_ref:     tc.control_ref  || '',
         control_name:    tc.jkName       || '',
-        standard_ref:    tc.standard_ref || '',
+        fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
         status:          _state.testStatus[tc.pk_Test_Control_ID] || 'pending'
       }))
     }));
@@ -721,8 +721,8 @@
         if (tc.control_ref) {
           const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.control_ref; tch.appendChild(cnb);
         }
-        if (tc.standard_ref) {
-          const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.standard_ref; tch.appendChild(sref);
+        if (tc.fk_Harmonised_Standard_IDs) {
+          const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.fk_Harmonised_Standard_IDs; tch.appendChild(sref);
         }
         tc_card.appendChild(tch);
 

@@ -368,7 +368,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           <span class="ctrl-status ctrl-status--fs">✓ Self-certified</span>
           <span class="ctrl-id mono">${_esc(c.control_id)}</span>
           <span class="ctrl-name">${_esc(c.control_name)}</span>
-          ${c.standard_ref ? `<span class="ctrl-ref mono">${_esc(c.standard_ref)}</span>` : ''}
+          ${c.fk_Harmonised_Standard_IDs ? `<span class="ctrl-ref mono">${_esc(c.fk_Harmonised_Standard_IDs)}</span>` : ''}
         </div>`).join('')}
       </div>`;
     }
@@ -385,7 +385,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       <span class="ctrl-src ${srcClass}">${srcLabel}</span>
       <span class="ctrl-id mono">${_esc(c.control_id)}</span>
       <span class="ctrl-name">${_esc(c.control_name || '—')}</span>
-      ${c.standard_ref ? `<span class="ctrl-ref mono">${_esc(c.standard_ref)}</span>` : ''}
+      ${c.fk_Harmonised_Standard_IDs ? `<span class="ctrl-ref mono">${_esc(c.fk_Harmonised_Standard_IDs)}</span>` : ''}
     </div>`;
   }
 
@@ -413,8 +413,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     // Build standard_ref → controls lookup
     const ctrlsByRef = new Map();
     (_tbl.riskControls || []).forEach(rc => {
-      if (!rc.standard_ref) return;
-      rc.standard_ref.split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
+      if (!rc.fk_Harmonised_Standard_IDs) return;
+      rc.fk_Harmonised_Standard_IDs.split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
         if (!ctrlsByRef.has(ref)) ctrlsByRef.set(ref, []);
         ctrlsByRef.get(ref).push(rc);
       });
@@ -530,7 +530,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             ${(p.test_controls || []).map(tc => `<tr>
               <td class="mono">${_esc(tc.control_ref || tc.test_control_id)}</td>
               <td>${_esc(tc.control_name)}</td>
-              <td class="mono small">${_esc(tc.standard_ref || '—')}</td>
+              <td class="mono small">${_esc(tc.fk_Harmonised_Standard_IDs || '—')}</td>
               <td><span class="status-pill status-pill--${_testStatusKey(tc.status)}">${_testStatusLabel(tc.status)}</span></td>
             </tr>`).join('')}
             </tbody>
