@@ -63,5 +63,20 @@
     "pk_AI_Article_ID": "ART-013",
     "article_name": "Article 72: Post-Market Monitoring",
     "article_objective": ""
+  },
+  {
+    "pk_AI_Article_ID": "ART-014",
+    "article_name": "Article 5: Prohibited AI Practices",
+    "article_objective": "Defines AI practices that are prohibited under the EU AI Act, including systems that manipulate behaviour subliminally, exploit vulnerabilities of specific groups, enable social scoring by public authorities, or conduct real-time biometric categorisation in publicly accessible spaces."
+  },
+  {
+    "pk_AI_Article_ID": "ART-015",
+    "article_name": "Article 6: Classification of High-Risk AI Systems",
+    "article_objective": "Establishes the criteria for classifying AI systems as high-risk, either when used as safety components of products regulated by Union harmonisation legislation listed in Annex I, or when they fall within the categories listed in Annex III."
+  },
+  {
+    "pk_AI_Article_ID": "ART-016",
+    "article_name": "Article 16: Obligations for Providers of High-Risk AI Systems",
+    "article_objective": "Sets out the full range of obligations for providers of high-risk AI systems, including quality management, technical documentation, conformity assessment, and competence obligations under Article 16(g) covering the knowledge, skills and abilities of staff working with the AI system."
   }
 ]

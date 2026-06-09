@@ -90,7 +90,7 @@
       "ownerIcon": "user",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR2"],
+      "requirements": ["AI SR2", "AI SR6"],
       "summary": "Document the clear business necessity using the AI Tool Use Case request form. Specify access duration and whether use is single-instance or ongoing. Must be countersigned by a Department Head before submission to ISG.",
       "deliverables": [
         "Completed AI Tool Use Case request form, countersigned by Department Head"
@@ -109,7 +109,7 @@
       "ownerIcon": "user",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR2"],
+      "requirements": ["AI SR2", "AI SR9"],
       "summary": "Classify as Tier 1 (general productivity) or Tier 2 (business-impacting content — marketing, legal, financial, code, translations). The tier drives the depth of due diligence in subsequent steps.",
       "deliverables": [
         "Tier assignment documented in the request form"
@@ -133,7 +133,7 @@
       "ownerIcon": "user",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR3"],
+      "requirements": ["AI SR3", "AI SR9"],
       "summary": "Identify all data types to be processed. Determine whether personal data, confidential business information, or Group-identifying data (trade secrets, proprietary code) is involved. This drives tier classification and whether a DPIA is required.",
       "deliverables": [
         "Data inventory: types, sensitivity classification, personal/confidential data flag"
@@ -157,7 +157,7 @@
       "ownerIcon": "shield",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR2"],
+      "requirements": ["AI SR2", "AI SR1"],
       "summary": "ISG reviews the submission and routes it. Not all requests proceed to the AI Change Board — ISG may approve Tier 1 low-risk cases directly. Tier 2 or elevated-risk cases proceed to Phase 2.",
       "deliverables": [
         "Routing decision: ISG-level approval OR escalation to Phase 2 due diligence"
@@ -185,7 +185,7 @@
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR2", "AI SR4"],
+      "requirements": ["AI SR2", "AI SR4", "AI SR9"],
       "summary": "Before assessing the use case, evaluate whether the AI tool itself is fit for the intended domain. This is a prerequisite to the risk assessment. Covers factual reliability, known bias characteristics, training data provenance and IP exposure, and vendor contractual protections.",
       "deliverables": [
         "Tool evaluation report: domain reliability, known bias profile, training data provenance",
@@ -211,7 +211,7 @@
       "ownerIcon": "shield",
       "applicability": "Personal data use cases",
       "applicabilityKey": "personal-data",
-      "requirements": ["AI SR3", "AI SR9"],
+      "requirements": ["AI SR3", "AI SR9", "AI SR6"],
       "summary": "Where the use case involves personal data, complete a Data Protection Impact Assessment under GDPR Article 35. Establishes lawful basis, identifies data subjects and special-category data, assesses automated decision-making obligations under Art.22, and documents necessity & proportionality. The DPIA output — particularly the data types inventory — feeds directly into the Risk Assessment in Step 8.",
       "deliverables": [
         "Completed DPIA: lawful basis, data subjects, and data types inventory",
@@ -242,7 +242,7 @@
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR2", "AI SR9"],
+      "requirements": ["AI SR2", "AI SR9", "AI SR6"],
       "summary": "Conduct a formal risk assessment informed by the tool fitness evaluation (Step 6) and the data types identified in the DPIA (Step 7). Risks are grouped by the compliance control framework — covering technical risks (data breaches, cyberattacks, model vulnerabilities), legal risks (GDPR, IP, copyright), and regulatory risks (EU AI Act classification). Each risk is assessed against its attack vectors to determine relevance and priority.",
       "deliverables": [
         "Risk register: risks grouped by compliance control area with relevance assessment",
@@ -264,7 +264,7 @@
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR9", "AI SR8"],
+      "requirements": ["AI SR9", "AI SR8", "AI SR3"],
       "summary": "Define technical and operational controls to mitigate identified risks. Separately, design transparency and disclosure mechanisms — disclaimer templates, labelling standards, and version control — for Business-Impacting Content. Controls must be specific and verifiable, not delegated to user judgement.",
       "deliverables": [
         "Control schedule: encryption, access control, logging, human review checkpoints",
@@ -304,7 +304,7 @@
       "ownerIcon": "building",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR2", "AI SR6"],
+      "requirements": ["AI SR2", "AI SR6", "AI SR9"],
       "summary": "Submit the complete authorisation package. The Board reviews the business case, tool fitness evaluation, risk assessment, DPIA (if applicable), control schedule, and content verification evidence. High-risk or prohibited AI systems under the EU AI Act require prior assessment here before any implementation.",
       "deliverables": [
         "Submission pack: business case, tool evaluation, RA, DPIA, control schedule, verification report",
@@ -422,7 +422,7 @@
       "ownerIcon": "shield",
       "applicability": "All approved use cases",
       "applicabilityKey": "all",
-      "requirements": ["AI SR5", "AI SR7"],
+      "requirements": ["AI SR5", "AI SR7", "AI SR1"],
       "summary": "Periodic reviews confirm the business case remains valid, risk assessments are current, operational controls are still active, and the tool fitness evaluation reflects any vendor model updates. Triggered reviews are initiated immediately following security incidents or significant changes.",
       "deliverables": [
         "Review schedule at risk-proportionate frequency",
