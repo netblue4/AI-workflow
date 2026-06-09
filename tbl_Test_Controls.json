@@ -2,7 +2,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-001",
     "fk_Test_Plan_ID": "TEST-001",
-    "standard_ref": "[18229-1.6],[42001.6],[24368.5]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.6],[42001.6],[24368.5]",
     "control_ref": "[2.6.T1]",
     "jkName": "Confidence Gate Test Report",
     "jkText": "Generate an 'Output Confidence Test Report' after every test run covering HO-P-01 and HO-P-02. The report must list every query evaluated, the confidence score computed, whether the warning banner was injected, and a zero count of sub-threshold responses that reached the Response Interface without a banner.",
@@ -12,7 +12,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-002",
     "fk_Test_Plan_ID": "TEST-001",
-    "standard_ref": "[18229-1.7],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.7],[42001.6]",
     "control_ref": "[2.6.T2]",
     "jkName": "Kill Switch Audit Log Verification",
     "jkText": "Generate a 'Kill Switch Test Report' after every test run covering HO-P-03 and HO-P-04. The report must show the stop event timestamp, operator ID, elapsed_ms confirming activation within 500 milliseconds, HTTP 503 confirmation for the immediately following query, and the restart event with a distinct operator ID.",
@@ -22,7 +22,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-003",
     "fk_Test_Plan_ID": "TEST-001",
-    "standard_ref": "[18229-1.8],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.8],[42001.6]",
     "control_ref": "[2.6.T3]",
     "jkName": "Attribution Integrity Test Report",
     "jkText": "Generate a 'Response Attribution Test Report' after every test run covering HO-P-05 and HO-P-06. The report must show citation count per response, source document names and chunk IDs for all attributed responses, and confirmation that the zero-chunk suppression event was logged and no null response payload reached the Response Interface.",
@@ -32,7 +32,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-004",
     "fk_Test_Plan_ID": "TEST-002",
-    "standard_ref": "[18229-1.4]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.4]",
     "control_ref": "[3.1.T1]",
     "jkName": "Pipeline Log Completeness Report",
     "jkText": "Generate a 'Pipeline Log Completeness Test Report' after every test run covering AL-P-01. The report must show the count of pipeline executions tested, the simulated timeout duration, the advance_pipeline result, the HTTP response code returned to the Query Interface, and confirmation that the fallback buffer contains the unconfirmed entry.",
@@ -42,7 +42,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-005",
     "fk_Test_Plan_ID": "TEST-002",
-    "standard_ref": "[18229-1.5]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.5]",
     "control_ref": "[3.1.T2]",
     "jkName": "Log Schema Validation Test Report",
     "jkText": "Generate a 'Log Schema Validation Test Report' after every test run covering AL-P-02 and AL-P-03. The report must show the count of entries validated, the count that passed the full schema check, the count rejected with missing field names recorded, and a zero count of partial entries written to the validated log store.",
@@ -52,7 +52,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-006",
     "fk_Test_Plan_ID": "TEST-002",
-    "standard_ref": "[24970.3]",
+    "fk_Harmonised_Standard_IDs": "[24970.3]",
     "control_ref": "[3.1.T3]",
     "jkName": "Human Intervention Log Test Report",
     "jkText": "Generate a 'Human Intervention Log Test Report' after every test run covering AL-P-04 and AL-P-05. The report must show the intervention event type, operator ID, session cross-reference result, response hash, and the written/rejected outcome for each test \u2014 with a zero count of orphaned intervention entries written without a valid session cross-reference.",
@@ -62,7 +62,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-007",
     "fk_Test_Plan_ID": "TEST-002",
-    "standard_ref": "[24970.6]",
+    "fk_Harmonised_Standard_IDs": "[24970.6]",
     "control_ref": "[3.3.T1]",
     "jkName": "Tamper Detection Verification Report",
     "jkText": "Generate a 'Log Tamper Detection Test Report' after every test run covering AL-P-06. The report must show the original SHA-256 hash, the modified SHA-256 hash, the integrity_check result, and confirmation that a TAMPER_DETECTED event was written to the audit store containing the session_id and query_id of the modified entry.",
@@ -72,7 +72,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-008",
     "fk_Test_Plan_ID": "TEST-002",
-    "standard_ref": "[24970.8]",
+    "fk_Harmonised_Standard_IDs": "[24970.8]",
     "control_ref": "[3.3.T2]",
     "jkName": "PII Pseudonymisation Verification Report",
     "jkText": "Generate a 'PII Pseudonymisation Test Report' after every test run covering AL-P-07. The report must show the input field containing raw PII, the SHA-256 pseudonym written to the log store, confirmation the raw value does not appear in the written entry, and the result of the PII scan across the log store for this entry.",
@@ -82,7 +82,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-009",
     "fk_Test_Plan_ID": "TEST-003",
-    "standard_ref": "[18283.1]",
+    "fk_Harmonised_Standard_IDs": "[18283.1]",
     "control_ref": "[6.1.T1]",
     "jkName": "Subgroup Coverage Gate Test Report",
     "jkText": "Generate a 'Subgroup Coverage Test Report' after every test run covering BI-P-01, BI-P-02, and BI-P-03. The report must show the sample count per protected subgroup, the threshold result per subgroup, the override audit log entry where applicable, and a zero count of datasets ingested with any protected subgroup below the 500-record threshold without a logged override containing a justification referencing a specific fundamental right.",
@@ -92,7 +92,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-010",
     "fk_Test_Plan_ID": "TEST-003",
-    "standard_ref": "[18283.2]",
+    "fk_Harmonised_Standard_IDs": "[18283.2]",
     "control_ref": "[6.1.T2]",
     "jkName": "Bias Metric Gate Test Report",
     "jkText": "Generate a 'Bias Metric Evaluation Test Report' after every test run covering BI-P-04, BI-P-05, and BI-P-06. The report must show the metric name, score per subgroup pair, threshold applied, deployment gate result, and a zero count of deployments that proceeded with a Disparate Impact Ratio below 0.80 or an Equalized Odds difference above 0.05 without a logged engineering override.",
@@ -102,7 +102,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-011",
     "fk_Test_Plan_ID": "TEST-003",
-    "standard_ref": "[18283.3]",
+    "fk_Harmonised_Standard_IDs": "[18283.3]",
     "control_ref": "[6.1.T3]",
     "jkName": "Proxy Correlation Screening Test Report",
     "jkText": "Generate a 'Proxy Correlation Screening Test Report' after every test run covering BI-P-07, BI-P-08, and BI-P-09. The report must show every variable screened, the Pearson coefficient per protected characteristic pair, the flag and action status for every flagged variable, the audit log entry per run, and a zero count of datasets ingested containing a proxy variable flagged at \u2265 0.70 with no recorded action decision and engineer ID.",
@@ -112,7 +112,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-012",
     "fk_Test_Plan_ID": "TEST-004",
-    "standard_ref": "[18284.1]",
+    "fk_Harmonised_Standard_IDs": "[18284.1]",
     "control_ref": "[5.1.T1]",
     "jkName": "Data Governance Gate Test Report",
     "jkText": "Generate a 'Data Governance Gate Test Report' after every test run covering DG-P-01, DG-P-02, and DG-P-03. The report must show the dataset name, register lookup result, missing fields list, gate decision, and a zero count of datasets ingested without a complete governance register entry.",
@@ -122,7 +122,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-013",
     "fk_Test_Plan_ID": "TEST-004",
-    "standard_ref": "[18284.2]",
+    "fk_Harmonised_Standard_IDs": "[18284.2]",
     "control_ref": "[5.1.T2]",
     "jkName": "Provenance Chain Integrity Test Report",
     "jkText": "Generate a 'Provenance Chain Integrity Test Report' after every test run covering DG-P-04 and DG-P-05. The report must show the provenance hash at ingestion, the re-verified hash at read time, the comparison result, and a zero count of datasets ingested with a missing legal basis or tampered provenance record that were not detected.",
@@ -132,7 +132,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-014",
     "fk_Test_Plan_ID": "TEST-004",
-    "standard_ref": "[18284.3]",
+    "fk_Harmonised_Standard_IDs": "[18284.3]",
     "control_ref": "[5.1.T3]",
     "jkName": "Pipeline Audit Log Test Report",
     "jkText": "Generate a 'Data Preparation Audit Log Test Report' after every test run covering DG-P-06 and DG-P-07. The report must show the log entry count per pipeline run, all seven required fields per entry, the hash continuity check result, and a zero count of pipeline steps that advanced without a confirmed audit log entry.",
@@ -142,7 +142,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-015",
     "fk_Test_Plan_ID": "TEST-005",
-    "standard_ref": "[18284.4]",
+    "fk_Harmonised_Standard_IDs": "[18284.4]",
     "control_ref": "[5.2.T1]",
     "jkName": "Distribution Analysis Test Report",
     "jkText": "Generate a 'Distribution Analysis Test Report' after every test run covering DG-P-08 and DG-P-09. The report must show the segment field names evaluated, the count per segment, the gap ratio, the ingestion decision, and a zero count of datasets ingested where more than 10% of population segments fell below the 500-record threshold.",
@@ -152,7 +152,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-016",
     "fk_Test_Plan_ID": "TEST-005",
-    "standard_ref": "[18284.5]",
+    "fk_Harmonised_Standard_IDs": "[18284.5]",
     "control_ref": "[5.2.T2]",
     "jkName": "Completeness Threshold Test Report",
     "jkText": "Generate a 'Completeness Threshold Test Report' after every test run covering DG-P-10 and DG-P-11. The report must show the total record count, rejected record count and missing fields per rejected record, dataset pass rate, ingestion decision, and a zero count of datasets ingested with a dataset-level pass rate below 98%.",
@@ -162,7 +162,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-017",
     "fk_Test_Plan_ID": "TEST-005",
-    "standard_ref": "[18284.6]",
+    "fk_Harmonised_Standard_IDs": "[18284.6]",
     "control_ref": "[5.2.T3]",
     "jkName": "Label Quality Gate Test Report",
     "jkText": "Generate a 'Label Quality Test Report' after every test run covering DG-P-12 and DG-P-13. The report must show the annotator count, the agreement metric used, the score, the batch decision, and a zero count of annotation batches scoring below 0.80 that were released to the Embedding Model training pipeline.",
@@ -172,7 +172,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-018",
     "fk_Test_Plan_ID": "TEST-006",
-    "standard_ref": "[18284.7]",
+    "fk_Harmonised_Standard_IDs": "[18284.7]",
     "control_ref": "[5.3.T1]",
     "jkName": "Split Contamination Prevention Test Report",
     "jkText": "Generate a 'Split Integrity Test Report' after every test run covering DG-P-14 and DG-P-15. The report must show the SHA-256 hash comparison result, the ACL check result, the gate decision, and a zero count of evaluations run on a test partition with a hash mismatch or a blocked service account in the ACL. Note: cross-reference [4.2.T1] \u2014 both controls share the same gate implementation; test results should be compared across both reports to confirm implementation consistency.",
@@ -182,7 +182,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-019",
     "fk_Test_Plan_ID": "TEST-006",
-    "standard_ref": "[18284.8]",
+    "fk_Harmonised_Standard_IDs": "[18284.8]",
     "control_ref": "[5.3.T2]",
     "jkName": "Retention Compliance Test Report",
     "jkText": "Generate a 'Retention Compliance Test Report' after every test run covering DG-P-16 and DG-P-17. The report must show the scheduled deletion date per record, the expired records query result, the decommission log entry for executed deletions, and a zero count of records retained beyond their scheduled deletion date.",
@@ -192,7 +192,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-020",
     "fk_Test_Plan_ID": "TEST-006",
-    "standard_ref": "[18284.9]",
+    "fk_Harmonised_Standard_IDs": "[18284.9]",
     "control_ref": "[5.4.T1]",
     "jkName": "Assumption Validity Monitor Test Report",
     "jkText": "Generate an 'Assumption Validity Test Report' after every test run covering DG-P-18 and DG-P-19. The report must show every declared assumption, the proxy metric value, the threshold, the check result, the alert dispatch confirmation for breach events, and a zero count of assumption breaches that did not trigger an alert within one monitoring cycle.",
@@ -202,7 +202,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-021",
     "fk_Test_Plan_ID": "TEST-007",
-    "standard_ref": "[24970.1]",
+    "fk_Harmonised_Standard_IDs": "[24970.1]",
     "control_ref": "[3.1.T1]",
     "jkName": "Mandatory Event Write Test Report",
     "jkText": "Generate a 'Pipeline Log Completeness Test Report' after every test run covering AL-P-01, AL-P-02, and AL-P-03. The report must show the confirmed write count, the fallback buffer entry count, the HTTP response code on timeout, and a zero count of pipeline stages that advanced without a confirmed log entry or an unrecognised event type that was not rejected at validation.",
@@ -212,7 +212,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-022",
     "fk_Test_Plan_ID": "TEST-007",
-    "standard_ref": "[18229-1.5]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.5]",
     "control_ref": "[3.1.T12]",
     "jkName": "Reconstruction Payload Schema Test Report",
     "jkText": "Generate a 'Log Schema Validation Test Report' after every test run covering AL-P-04 and AL-P-05. The report must show the count of entries validated, the count that passed the full schema check, the missing fields per rejected entry, and a zero count of partial entries written to the validated log store.",
@@ -222,7 +222,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-023",
     "fk_Test_Plan_ID": "TEST-007",
-    "standard_ref": "[24970.2]",
+    "fk_Harmonised_Standard_IDs": "[24970.2]",
     "control_ref": "[3.1.T3]",
     "jkName": "Human Intervention Log Test Report",
     "jkText": "Generate a 'Human Intervention Log Test Report' after every test run covering AL-P-06, AL-P-07, and AL-P-08. The report must show the intervention entry count, the session cross-reference result per entry, the operator ID presence check per entry, and a zero count of intervention events written without a valid operator ID or without a matching session ID in the session log.",
@@ -232,7 +232,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-024",
     "fk_Test_Plan_ID": "TEST-008",
-    "standard_ref": "[24970.6]",
+    "fk_Harmonised_Standard_IDs": "[24970.6]",
     "control_ref": "[3.3.T11]",
     "jkName": "Log Integrity Verification Test Report",
     "jkText": "Generate a 'Log Integrity Verification Test Report' after every test run covering AL-P-09 and AL-P-10. The report must show the count of entries hash-verified, the count of mismatches detected, the tampered indices, and a zero count of post-write field modifications that were not detected and written to the isolated integrity log.",
@@ -242,7 +242,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-025",
     "fk_Test_Plan_ID": "TEST-008",
-    "standard_ref": "[24970.8]",
+    "fk_Harmonised_Standard_IDs": "[24970.8]",
     "control_ref": "[3.3.T22]",
     "jkName": "Log Privacy Compliance Test Report",
     "jkText": "Generate a 'Log Privacy Compliance Test Report' after every test run covering AL-P-11 and AL-P-12. The report must show the count of entries processed, the count of PII fields pseudonymised, the count of prompts hashed, and a zero count of log entries reaching the log store with any raw personal data value in a declared PII field.",
@@ -252,7 +252,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-026",
     "fk_Test_Plan_ID": "TEST-008",
-    "standard_ref": "[24970.7]",
+    "fk_Harmonised_Standard_IDs": "[24970.7]",
     "control_ref": "[3.4.T1]",
     "jkName": "Log Retention Schedule Test Report",
     "jkText": "Generate a 'Log Retention Compliance Test Report' after every test run covering AL-P-13, AL-P-14, AL-P-15, and AL-P-16. The report must show the floor_protected, ceiling_eligible, and retained entry counts from the daily evaluator, the decommission log entries per executed erasure, the floor violation blocked entries, and a zero count of log entries deleted before the 180-day floor or retained beyond their declared ceiling without a decommission log entry.",
@@ -262,7 +262,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-027",
     "fk_Test_Plan_ID": "TEST-009",
-    "standard_ref": "[18282.1]",
+    "fk_Harmonised_Standard_IDs": "[18282.1]",
     "control_ref": "[8.1.T1]",
     "jkName": "Adversarial Gate Test Report",
     "jkText": "Generate an 'Adversarial Pattern Detection Test Report' after every test run covering CS-P-01, CS-P-02, and CS-P-03. The report must show every prompt evaluated, the Layer 1 keyword result, the Layer 2 stripped character count and code points, the Layer 3 cosine similarity score, the gate decision, and a zero count of blocked prompts that reached the Embedding Model or Retriever.",
@@ -272,7 +272,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-028",
     "fk_Test_Plan_ID": "TEST-009",
-    "standard_ref": "[18282.2]",
+    "fk_Harmonised_Standard_IDs": "[18282.2]",
     "control_ref": "[8.1.T2]",
     "jkName": "Ingestion Integrity Test Report",
     "jkText": "Generate an 'Ingestion Integrity Test Report' after every test run covering CS-P-04 and CS-P-05. The report must show the four-step check result per document, the rejection step, the rejection reason, whether the document was routed to the human security review queue, and a zero count of flagged documents written to the Vector Store.",
@@ -282,7 +282,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-029",
     "fk_Test_Plan_ID": "TEST-010",
-    "standard_ref": "[18282.3]",
+    "fk_Harmonised_Standard_IDs": "[18282.3]",
     "control_ref": "[8.1.T3]",
     "jkName": "Query Pattern Anomaly Test Report",
     "jkText": "Generate a 'Query Pattern Anomaly Test Report' after every test run covering CS-P-06, CS-P-07, and CS-P-08. The report must show the API key identifier, query count at flag, semantic variance score at flag, the monitor that triggered, the security alert confirmation, and a zero count of sessions that exceeded the rate limit or fell below 0.15 variance without triggering a suspension or alert.",
@@ -292,7 +292,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-030",
     "fk_Test_Plan_ID": "TEST-011",
-    "standard_ref": "[18282.4]",
+    "fk_Harmonised_Standard_IDs": "[18282.4]",
     "control_ref": "[8.2.T1]",
     "jkName": "Build Integrity Gate Test Report",
     "jkText": "Generate a 'Build Integrity Test Report' after every test run covering CS-P-09 and CS-P-10. The report must show the artefact content address hash, the result of each of the three checks, the deployment decision, the security alert confirmation, and a zero count of unsigned, self-merged, or hardcoded-credential artefacts that reached the deployment pipeline.",
@@ -302,7 +302,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-031",
     "fk_Test_Plan_ID": "TEST-011",
-    "standard_ref": "[18282.5]",
+    "fk_Harmonised_Standard_IDs": "[18282.5]",
     "control_ref": "[8.2.T2]",
     "jkName": "Supply Chain Integrity Test Report",
     "jkText": "Generate a 'Supply Chain Integrity Test Report' after every test run covering CS-P-11 and CS-P-12. The report must show the three-path check result per asset, the failure reason, the supply chain approval decision, the security alert confirmation, and a zero count of hash-mismatched or stale-verified assets consumed by the build or ingestion pipeline.",
@@ -312,7 +312,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-032",
     "fk_Test_Plan_ID": "TEST-012",
-    "standard_ref": "[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6]",
     "control_ref": "[8.3.T1]",
     "jkName": "Access Control Gate Test Report",
     "jkText": "Generate an 'Access Control Test Report' after every test run covering CS-P-13 and CS-P-14. The report must show the user role, MFA status, requested endpoint, access decision, denial reason, and security alert confirmation for each test \u2014 with a zero count of under-privileged or MFA-incomplete requests that reached a protected endpoint.",
@@ -322,7 +322,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-033",
     "fk_Test_Plan_ID": "TEST-012",
-    "standard_ref": "[18282.7]",
+    "fk_Harmonised_Standard_IDs": "[18282.7]",
     "control_ref": "[8.3.T2]",
     "jkName": "Input Robustness Test Report",
     "jkText": "Generate an 'Unexpected Input Pattern Test Report' after every test run covering CS-P-15 and CS-P-16. The report must show the input type tested, the detection mechanism triggered, the action taken, and confirmation that no oversized or homoglyph-substituted prompt reached the Embedding Model or Retriever in its original form.",
@@ -332,7 +332,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-034",
     "fk_Test_Plan_ID": "TEST-012",
-    "standard_ref": "[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6]",
     "control_ref": "[8.3.T3]",
     "jkName": "MFA Lockout Test Report",
     "jkText": "Generate an 'MFA Failure Lockout Test Report' after every test run covering CS-P-17. The report must show the failed attempt count, the lockout trigger event, the locked_at timestamp, the security alert confirmation, and a zero count of post-lockout access requests that were approved before an administrator unlock event was recorded.",
@@ -342,7 +342,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-035",
     "fk_Test_Plan_ID": "TEST-013",
-    "standard_ref": "[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.8]",
     "control_ref": "[8.4.T1]",
     "jkName": "Anomaly Detection Threshold Test Report",
     "jkText": "Generate an 'Anomaly Detection Test Report' after every test run covering CS-P-18, CS-P-19, CS-P-20, and CS-P-21. The report must show the metric name, observed value, threshold, breach decision, runbook action executed, security alert confirmation, and a zero count of threshold breaches that did not trigger the correct runbook action.",
@@ -352,7 +352,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-036",
     "fk_Test_Plan_ID": "TEST-013",
-    "standard_ref": "[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.8]",
     "control_ref": "[8.4.T2]",
     "jkName": "Runbook Execution Audit Report",
     "jkText": "Generate a 'Runbook Execution Audit Report' after every test run covering CS-P-18, CS-P-19, and CS-P-20. The report must show the runbook action executed per breach event, the time elapsed between threshold breach detection and action execution, and confirmation that the executed action matches the RUNBOOK_ACTIONS entry declared in fieldGroup [8.4.1].",
@@ -362,7 +362,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-037",
     "fk_Test_Plan_ID": "TEST-014",
-    "standard_ref": "[18229-2.9]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.9]",
     "control_ref": "[4.1.T1]",
     "jkName": "Accuracy Evaluation Gate Test Report",
     "jkText": "Generate an 'Accuracy Evaluation Gate Test Report' after every test run covering AC-P-01 and AC-P-02. The report must show the RAGAS Faithfulness score, the 0.80 threshold, the delta against the last passing score, the gate decision, and a zero count of sub-threshold builds that reached the deployment pipeline.",
@@ -372,7 +372,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-038",
     "fk_Test_Plan_ID": "TEST-014",
-    "standard_ref": "[18229-2.10],[18286.13]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.10],[18286.13]",
     "control_ref": "[4.2.T1]",
     "jkName": "Test Set Isolation Gate Test Report",
     "jkText": "Generate a 'Test Set Isolation Test Report' after every test run covering AC-P-03 and AC-P-04. The report must show the SHA-256 hash comparison result, the ACL check result, the gate decision, and confirmation that no RAGAS scoring was executed when either check failed.",
@@ -382,7 +382,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-039",
     "fk_Test_Plan_ID": "TEST-014",
-    "standard_ref": "[18229-2.12],[18286.13],[18286.22]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.12],[18286.13],[18286.22]",
     "control_ref": "[4.3.T1]",
     "jkName": "Drift Monitor Suspension Test Report",
     "jkText": "Generate an 'Accuracy Drift Monitor Test Report' after every test run covering AC-P-05 and AC-P-06. The report must show the weekly Faithfulness score, delta against baseline, breach counter value, Query Interface status, alert dispatch confirmation, and a zero count of consecutive threshold breaches that did not result in Query Interface suspension.",
@@ -392,7 +392,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-040",
     "fk_Test_Plan_ID": "TEST-014",
-    "standard_ref": "[18229-2.13],[18286.13]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.13],[18286.13]",
     "control_ref": "[4.3.T2]",
     "jkName": "Benchmark Comparison Gate Test Report",
     "jkText": "Generate a 'Benchmark Comparison Test Report' after every test run covering AC-P-07 and AC-P-08. The report must show the system score, benchmark score, classification result, gate decision, and \u2014 for AC-P-08 \u2014 the engineer ID, justification text, and confirmation the override audit log entry was written with all four mandatory fields.",
@@ -402,7 +402,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-041",
     "fk_Test_Plan_ID": "TEST-015",
-    "standard_ref": "[18229-2.15],[18286.23]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.15],[18286.23]",
     "control_ref": "[7.1.T1]",
     "jkName": "Input Sanitisation Gate Test Report",
     "jkText": "Generate an 'Input Sanitisation Test Report' after every test run covering RB-P-01, RB-P-02, and RB-P-03. The report must show the stage reached, the unrecognised token ratio before and after correction, the gate decision, and a zero count of prompts with an unrecognised token ratio above 30% or a null payload that reached the Embedding Model.",
@@ -412,7 +412,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-042",
     "fk_Test_Plan_ID": "TEST-015",
-    "standard_ref": "[18229-2.16],[18286.23]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.16],[18286.23]",
     "control_ref": "[7.1.T2]",
     "jkName": "Environment Degradation Monitor Test Report",
     "jkText": "Generate an 'Environment Degradation Test Report' after every test run covering RB-P-04 and RB-P-05. The report must show the latency value and breach/recovery counter per call, the degraded mode activation event with elapsed timestamp, the engineering alert confirmation, the recovery event, and a zero count of three-consecutive-breach sequences that did not trigger degraded mode activation.",
@@ -422,7 +422,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-043",
     "fk_Test_Plan_ID": "TEST-015",
-    "standard_ref": "[18229-2.17]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.17]",
     "control_ref": "[7.1.T3]",
     "jkName": "Feedback Isolation Barrier Test Report",
     "jkText": "Generate a 'Feedback Isolation Test Report' after every test run covering RB-P-06 and RB-P-07. The report must show the provenance check result, the marker check result, the rejection reason, the human review queue entry confirmation, and a zero count of AI-generated or LLM-store-sourced documents written to the Vector Store.",
@@ -432,7 +432,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-044",
     "fk_Test_Plan_ID": "TEST-016",
-    "standard_ref": "[18229-2.18]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.18]",
     "control_ref": "[7.2.T1]",
     "jkName": "Safe State Activation Test Report",
     "jkText": "Generate a 'Safe State Activation Test Report' after every test run covering RB-P-08 and RB-P-09. The report must show the failed component, the safe state behaviour activated, the elapsed milliseconds from failure to activation, the engineering alert confirmation, and a zero count of component failures that resulted in silent bypass or unhandled crash.",
@@ -442,7 +442,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-045",
     "fk_Test_Plan_ID": "TEST-016",
-    "standard_ref": "[18229-2.19]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.19]",
     "control_ref": "[7.2.T2]",
     "jkName": "Redundancy Failover and Sanity Check Test Report",
     "jkText": "Generate a 'Redundancy Failover Test Report' after every test run covering RB-P-10 and RB-P-11. The report must show the failover elapsed time, the backup instance activated, the re-issued request confirmation, the plausibility rule triggered, the suppression result, and a zero count of plausibility-failed responses delivered to the Response Interface.",
@@ -452,7 +452,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-046",
     "fk_Test_Plan_ID": "TEST-016",
-    "standard_ref": "[18229-2.20]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.20]",
     "control_ref": "[7.3.T1]",
     "jkName": "Determinism Enforcement Test Report",
     "jkText": "Generate a 'Determinism Validation Test Report' after every test run covering RB-P-12 and RB-P-13. The report must show the probe response hash, the reference hash, the hash comparison result, the active LLM configuration values, the Query Interface gate status, and a zero count of startups where the Query Interface accepted user input with a failing determinism check on record.",
@@ -462,7 +462,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-047",
     "fk_Test_Plan_ID": "TEST-017",
-    "standard_ref": "[24368.1],[24368.2],[24368.5]",
+    "fk_Harmonised_Standard_IDs": "[24368.1],[24368.2],[24368.5]",
     "control_ref": "[9.5.T1]",
     "jkName": "AI Disclosure Gate Test Report",
     "jkText": "Generate an AI Disclosure Gate Test Report after every test run covering AD-P-01. The report must show every session tested, the timestamp of the disclosure event, confirmation it preceded the first AI response, and a zero count of sessions where AI output was delivered before the disclosure.",
@@ -472,7 +472,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-048",
     "fk_Test_Plan_ID": "TEST-017",
-    "standard_ref": "[24368.3]",
+    "fk_Harmonised_Standard_IDs": "[24368.3]",
     "control_ref": "[9.5.T2]",
     "jkName": "Content Labelling Test Report",
     "jkText": "Generate a Content Labelling Test Report after every test run covering AD-P-02. The report must show a sample of responses inspected, confirmation that ai_generated: true is present in all response metadata, and confirmation the label is visible in the UI.",

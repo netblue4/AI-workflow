@@ -436,7 +436,7 @@
         const badge = _el('span', 'wiz9-src-badge wiz9-fs-src-badge'); badge.textContent = 'Self-certified';
         hdr.appendChild(badge);
         hdr.appendChild(_el('span', 'wiz9-ctrl-name', { textContent: ctrl.jkName }));
-        if (ctrl.standard_ref) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.standard_ref }));
+        if (ctrl.fk_Harmonised_Standard_IDs) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
         card.appendChild(hdr);
         if (ctrl.jkObjective) {
           const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective; card.appendChild(obj);
@@ -511,9 +511,9 @@
 
     const cName = _el('span', 'wiz9-ctrl-name'); cName.textContent = ctrl.jkName; hdr.appendChild(cName);
 
-    if (ctrl.standard_ref) {
+    if (ctrl.fk_Harmonised_Standard_IDs) {
       const stdRef = _el('span', 'wiz9-standard-ref');
-      stdRef.textContent = ctrl.standard_ref;
+      stdRef.textContent = ctrl.fk_Harmonised_Standard_IDs;
       hdr.appendChild(stdRef);
     }
 
@@ -643,7 +643,7 @@
         const dot = _el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`); row.appendChild(dot);
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-        if (ctrl.standard_ref) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.standard_ref }));
+        if (ctrl.fk_Harmonised_Standard_IDs) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
         const compBadge = _el('span', 'wiz9-comp-adds-badge'); compBadge.textContent = 'Compliance'; row.appendChild(compBadge);
         body.appendChild(row);
       });
@@ -723,7 +723,7 @@
           control_id:     c.pk_Risk_Control_ID,
           control_name:   c.jkName,
           control_source: c.control_source || c._source || '',
-          standard_ref:   c.standard_ref || '',
+          fk_Harmonised_Standard_IDs: c.fk_Harmonised_Standard_IDs || '',
           risk_id:        r.risk_id,
           selected:       !!_state.riskSelected[c.pk_Risk_Control_ID]
         });
@@ -735,7 +735,7 @@
       .filter(id => _state.complianceSelected[id])
       .map(id => {
         const ctrl = (_tblData.controls || []).find(c => c.pk_Risk_Control_ID === id);
-        return { control_id: id, control_name: ctrl?.jkName || '', standard_ref: ctrl?.standard_ref || '', selected: true };
+        return { control_id: id, control_name: ctrl?.jkName || '', fk_Harmonised_Standard_IDs: ctrl?.fk_Harmonised_Standard_IDs || '', selected: true};
       });
 
     // counts
@@ -858,8 +858,8 @@
         ch.appendChild(srcBadge);
 
         const cn = _el('span', 'wiz9-ref-ctrl-name'); cn.textContent = ctrl.jkName; ch.appendChild(cn);
-        if (ctrl.standard_ref) {
-          const stdRef = _el('span', 'wiz9-standard-ref'); stdRef.textContent = ctrl.standard_ref; ch.appendChild(stdRef);
+        if (ctrl.fk_Harmonised_Standard_IDs) {
+          const stdRef = _el('span', 'wiz9-standard-ref'); stdRef.textContent = ctrl.fk_Harmonised_Standard_IDs; ch.appendChild(stdRef);
         }
         cc.appendChild(ch);
 
@@ -961,7 +961,7 @@
       .filter(id => _state.complianceSelected[id])
       .map(id => {
         const ctrl = (_tblData.controls || []).find(c => c.pk_Risk_Control_ID === id);
-        return { control_id: id, control_name: ctrl?.jkName || '', standard_ref: ctrl?.standard_ref || '', selected: true };
+        return { control_id: id, control_name: ctrl?.jkName || '', fk_Harmonised_Standard_IDs: ctrl?.fk_Harmonised_Standard_IDs || '', selected: true};
       });
 
     _record['step-9'] = {
@@ -1009,7 +1009,7 @@
     // implement a given HS requirement
     const ctrlsByRef = new Map();
     (d.controls || []).forEach(c => {
-      (c.standard_ref || '').split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
+      (c.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
         if (!ctrlsByRef.has(ref)) ctrlsByRef.set(ref, []);
         ctrlsByRef.get(ref).push(c);
       });
@@ -1025,7 +1025,7 @@
     // Index test controls by each individual standard_ref in their comma-separated list
     const testCtrlByRef = new Map();
     (d.testControls || []).forEach(tc => {
-      (tc.standard_ref || '').split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
+      (tc.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
         if (!testCtrlByRef.has(ref)) testCtrlByRef.set(ref, []);
         testCtrlByRef.get(ref).push(tc);
       });
@@ -1257,7 +1257,7 @@
             aRow.appendChild(_el('span', `wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--${src}`));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-            if (ctrl.standard_ref) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.standard_ref }));
+            if (ctrl.fk_Harmonised_Standard_IDs) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
             implArea.appendChild(aRow);
           });
         }

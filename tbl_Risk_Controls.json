@@ -2,7 +2,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": "[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6]",
     "owasp_ref": "LLM01:2025-Prevention-4",
     "control_source": "OWASP",
     "jkName": "Least-Privilege LLM Backend Access",
@@ -15,7 +15,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": "[18282.1],[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.1],[18282.8]",
     "owasp_ref": "LLM01:2025-Prevention-3",
     "control_source": "OWASP",
     "jkName": "Prompt Injection Detection and Input Filtering",
@@ -28,7 +28,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": "[18282.1],[18282.7]",
+    "fk_Harmonised_Standard_IDs": "[18282.1],[18282.7]",
     "owasp_ref": "LLM01:2025-Prevention-1,2",
     "control_source": "OWASP",
     "jkName": "Parameterised Prompts and Structured I/O",
@@ -41,7 +41,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": "[18284.2],[18284.3]",
+    "fk_Harmonised_Standard_IDs": "[18284.2],[18284.3]",
     "owasp_ref": "LLM02:2025-Sanitization-1,2",
     "control_source": "OWASP",
     "jkName": "Training Data Sanitisation and PII Removal",
@@ -54,7 +54,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": "[18282.3],[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.3],[18282.6]",
     "owasp_ref": "LLM02:2025-AccessControls-1,2",
     "control_source": "OWASP",
     "jkName": "Strict Access Controls on Data Sources",
@@ -67,7 +67,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": "[18282.3],[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.3],[18282.8]",
     "owasp_ref": "LLM02:2025-Sanitization-2,AdvancedTechniques-3",
     "control_source": "OWASP",
     "jkName": "Output Filtering and Data Leakage Detection",
@@ -80,7 +80,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": "[18282.4],[18282.5]",
+    "fk_Harmonised_Standard_IDs": "[18282.4],[18282.5]",
     "owasp_ref": "LLM03:2025-Prevention-6",
     "control_source": "OWASP",
     "jkName": "Trusted Source Verification and Component Signing",
@@ -93,7 +93,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": "[18282.5],[18286.10]",
+    "fk_Harmonised_Standard_IDs": "[18282.5],[18286.10]",
     "owasp_ref": "LLM03:2025-Prevention-4",
     "control_source": "OWASP",
     "jkName": "Software Bill of Materials (SBOM) for LLM Pipelines",
@@ -106,7 +106,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM04-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM04",
-    "standard_ref": "[18282.2],[18284.2],[18284.3]",
+    "fk_Harmonised_Standard_IDs": "[18282.2],[18284.2],[18284.3]",
     "owasp_ref": "LLM04:2025-Prevention-1,2,6",
     "control_source": "OWASP",
     "jkName": "Training Data Validation and Lineage Tracking",
@@ -119,7 +119,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM04-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM04",
-    "standard_ref": "[18282.2],[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.2],[18282.8]",
     "owasp_ref": "LLM04:2025-Prevention-3,9",
     "control_source": "OWASP",
     "jkName": "Poisoning Anomaly Detection",
@@ -132,7 +132,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM05-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM05",
-    "standard_ref": "[18282.1],[18282.7]",
+    "fk_Harmonised_Standard_IDs": "[18282.1],[18282.7]",
     "owasp_ref": "LLM05:2025-Prevention-1,2,3,4",
     "control_source": "OWASP",
     "jkName": "Treat LLM Output as Untrusted Input",
@@ -145,7 +145,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM05-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM05",
-    "standard_ref": "[18229-2.19],[18282.7],[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.19],[18282.7],[18282.8]",
     "owasp_ref": "LLM05:2025-Prevention-4,5",
     "control_source": "OWASP",
     "jkName": "Context-Aware Output Encoding",
@@ -158,7 +158,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": "[18282.6],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6],[42001.6]",
     "owasp_ref": "LLM06:2025-Prevention-1,2,3,4",
     "control_source": "OWASP",
     "jkName": "Minimum Necessary Agent Permissions",
@@ -171,7 +171,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": "[18229-1.6],[18229-1.7],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.6],[18229-1.7],[42001.6]",
     "owasp_ref": "LLM06:2025-Prevention-6",
     "control_source": "OWASP",
     "jkName": "Human-in-the-Loop for High-Impact Actions",
@@ -184,7 +184,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": "[18229-1.7],[18282.8],[24970.1]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.7],[18282.8],[24970.1]",
     "owasp_ref": "LLM06:2025-DamageLimiting-1,2",
     "control_source": "OWASP",
     "jkName": "Action Rate Limiting and Audit Logging",
@@ -197,7 +197,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM07-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM07",
-    "standard_ref": "[18282.4],[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.4],[18282.6]",
     "owasp_ref": "LLM07:2025-Prevention-1",
     "control_source": "OWASP",
     "jkName": "Externalise Credentials from System Prompts",
@@ -210,7 +210,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM07-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM07",
-    "standard_ref": "[18282.3],[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.3],[18282.8]",
     "owasp_ref": "LLM07:2025-Prevention-3",
     "control_source": "OWASP",
     "jkName": "System Prompt Exfiltration Detection",
@@ -223,7 +223,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM08-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM08",
-    "standard_ref": "[18282.6],[18284.2]",
+    "fk_Harmonised_Standard_IDs": "[18282.6],[18284.2]",
     "owasp_ref": "LLM08:2025-Prevention-1",
     "control_source": "OWASP",
     "jkName": "Vector Database Access Controls and Namespace Isolation",
@@ -236,7 +236,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM08-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM08",
-    "standard_ref": "[18282.2],[18283.1],[18284.3]",
+    "fk_Harmonised_Standard_IDs": "[18282.2],[18283.1],[18284.3]",
     "owasp_ref": "LLM08:2025-Prevention-2,3",
     "control_source": "OWASP",
     "jkName": "Pre-Embedding Data Validation and Sanitisation",
@@ -249,7 +249,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM09-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM09",
-    "standard_ref": "[18229-2.10],[18284.1]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.10],[18284.1]",
     "owasp_ref": "LLM09:2025-Prevention-1",
     "control_source": "OWASP",
     "jkName": "Verified-Source RAG Grounding",
@@ -262,7 +262,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM09-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM09",
-    "standard_ref": "[18229-2.10],[18229-2.12]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.10],[18229-2.12]",
     "owasp_ref": "LLM09:2025-Prevention-4",
     "control_source": "OWASP",
     "jkName": "Cross-Referencing and Factual Accuracy Checks",
@@ -275,7 +275,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM09-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM09",
-    "standard_ref": "[18229-1.6],[18229-1.8]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.6],[18229-1.8]",
     "owasp_ref": "LLM09:2025-Prevention-5,7",
     "control_source": "OWASP",
     "jkName": "Uncertainty Communication and Source Citation",
@@ -288,7 +288,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M1",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": "[18229-2.18],[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.18],[18282.8]",
     "owasp_ref": "LLM10:2025-Prevention-3,4,5",
     "control_source": "OWASP",
     "jkName": "Rate Limiting, Token Budgets, and Resource Quotas",
@@ -301,7 +301,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M2",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": "[18282.8],[24970.1]",
+    "fk_Harmonised_Standard_IDs": "[18282.8],[24970.1]",
     "owasp_ref": "LLM10:2025-Prevention-7",
     "control_source": "OWASP",
     "jkName": "Consumption Anomaly Monitoring and Alerting",
@@ -314,7 +314,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": "[18229-1.7],[18229-2.18],[18229-2.19]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.7],[18229-2.18],[18229-2.19]",
     "owasp_ref": "LLM10:2025-Prevention-9",
     "control_source": "OWASP",
     "jkName": "Circuit Breakers for Runaway Inference",
@@ -327,7 +327,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M4",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": "[18282.1],[18282.7]",
+    "fk_Harmonised_Standard_IDs": "[18282.1],[18282.7]",
     "owasp_ref": "LLM01:2025-Prevention-6",
     "control_source": "OWASP",
     "jkName": "External Content Segregation and Labelling",
@@ -340,7 +340,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM01-M5",
     "fk_Risk_ID": "RISK-OWASP-LLM01",
-    "standard_ref": "[18282.8],[18228.2]",
+    "fk_Harmonised_Standard_IDs": "[18282.8],[18228.2]",
     "owasp_ref": "LLM01:2025-Prevention-7",
     "control_source": "OWASP",
     "jkName": "Adversarial Testing and Red Team Exercises",
@@ -353,7 +353,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M4",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": "[18284.2],[18284.3]",
+    "fk_Harmonised_Standard_IDs": "[18284.2],[18284.3]",
     "owasp_ref": "LLM02:2025-FederatedLearning-1,2",
     "control_source": "OWASP",
     "jkName": "Privacy-Preserving Training Techniques",
@@ -366,7 +366,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM02-M5",
     "fk_Risk_ID": "RISK-OWASP-LLM02",
-    "standard_ref": "[18284.3],[12792.2]",
+    "fk_Harmonised_Standard_IDs": "[18284.3],[12792.2]",
     "owasp_ref": "LLM02:2025-AdvancedTechniques-3,UserEducation-2",
     "control_source": "OWASP",
     "jkName": "Tokenisation, Redaction and Data Usage Transparency",
@@ -379,7 +379,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": "[18282.5],[18286.10]",
+    "fk_Harmonised_Standard_IDs": "[18282.5],[18286.10]",
     "owasp_ref": "LLM03:2025-Prevention-1",
     "control_source": "OWASP",
     "jkName": "Supplier Vetting and Terms Review",
@@ -392,7 +392,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M4",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": "[18282.8],[18228.2]",
+    "fk_Harmonised_Standard_IDs": "[18282.8],[18228.2]",
     "owasp_ref": "LLM03:2025-Prevention-3",
     "control_source": "OWASP",
     "jkName": "Third-Party Model Red Teaming and Evaluation",
@@ -405,7 +405,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M5",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": "[18282.4],[18282.5]",
+    "fk_Harmonised_Standard_IDs": "[18282.4],[18282.5]",
     "owasp_ref": "LLM03:2025-Prevention-2,9",
     "control_source": "OWASP",
     "jkName": "Vulnerability Scanning and Patch Management",
@@ -418,7 +418,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM03-M6",
     "fk_Risk_ID": "RISK-OWASP-LLM03",
-    "standard_ref": "[18282.5],[18286.10]",
+    "fk_Harmonised_Standard_IDs": "[18282.5],[18286.10]",
     "owasp_ref": "LLM03:2025-Prevention-5",
     "control_source": "OWASP",
     "jkName": "Licence Compliance Inventory and Audit",
@@ -431,7 +431,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM04-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM04",
-    "standard_ref": "[18282.2],[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.2],[18282.6]",
     "owasp_ref": "LLM04:2025-Prevention-3,5",
     "control_source": "OWASP",
     "jkName": "Data Source Sandboxing and Infrastructure Controls",
@@ -444,7 +444,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM04-M4",
     "fk_Risk_ID": "RISK-OWASP-LLM04",
-    "standard_ref": "[18284.2],[18284.3]",
+    "fk_Harmonised_Standard_IDs": "[18284.2],[18284.3]",
     "owasp_ref": "LLM04:2025-Prevention-6",
     "control_source": "OWASP",
     "jkName": "Dataset Version Control",
@@ -457,7 +457,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM05-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM05",
-    "standard_ref": "[18282.7],[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.7],[18282.8]",
     "owasp_ref": "LLM05:2025-Prevention-6,7",
     "control_source": "OWASP",
     "jkName": "Content Security Policy and Output Anomaly Monitoring",
@@ -470,7 +470,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M4",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": "[18282.6],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6],[42001.6]",
     "owasp_ref": "LLM06:2025-Prevention-5",
     "control_source": "OWASP",
     "jkName": "User-Context Identity Propagation",
@@ -483,7 +483,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM06-M5",
     "fk_Risk_ID": "RISK-OWASP-LLM06",
-    "standard_ref": "[18282.6],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6],[42001.6]",
     "owasp_ref": "LLM06:2025-Prevention-7",
     "control_source": "OWASP",
     "jkName": "Downstream Authorisation Mediation",
@@ -496,7 +496,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM07-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM07",
-    "standard_ref": "[18282.4],[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.4],[18282.6]",
     "owasp_ref": "LLM07:2025-Prevention-2,4",
     "control_source": "OWASP",
     "jkName": "Security Controls Independent of System Prompt",
@@ -509,7 +509,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM08-M3",
     "fk_Risk_ID": "RISK-OWASP-LLM08",
-    "standard_ref": "[24970.1],[24970.6]",
+    "fk_Harmonised_Standard_IDs": "[24970.1],[24970.6]",
     "owasp_ref": "LLM08:2025-Prevention-4",
     "control_source": "OWASP",
     "jkName": "Immutable Retrieval Activity Logging",
@@ -522,7 +522,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM09-M4",
     "fk_Risk_ID": "RISK-OWASP-LLM09",
-    "standard_ref": "[18229-1.6],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.6],[42001.6]",
     "owasp_ref": "LLM09:2025-Prevention-3,8",
     "control_source": "OWASP",
     "jkName": "User Training on LLM Limitations and Verification Obligations",
@@ -535,7 +535,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M4",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": "[18229-2.15],[18282.7]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.15],[18282.7]",
     "owasp_ref": "LLM10:2025-Prevention-1,2",
     "control_source": "OWASP",
     "jkName": "Input Size Validation and Logit Exposure Restriction",
@@ -548,7 +548,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M5",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": "[18282.1],[18282.7]",
+    "fk_Harmonised_Standard_IDs": "[18282.1],[18282.7]",
     "owasp_ref": "LLM10:2025-Prevention-11,12",
     "control_source": "OWASP",
     "jkName": "Glitch Token Filtering and Adversarial Input Detection",
@@ -561,7 +561,7 @@
   {
     "pk_Risk_Control_ID": "OWASP-LLM10-M6",
     "fk_Risk_ID": "RISK-OWASP-LLM10",
-    "standard_ref": "[18286.10],[42001.7]",
+    "fk_Harmonised_Standard_IDs": "[18286.10],[42001.7]",
     "owasp_ref": "LLM10:2025-Prevention-14,15",
     "control_source": "OWASP",
     "jkName": "Centralised Model Inventory and MLOps Governance",
@@ -574,7 +574,7 @@
   {
     "pk_Risk_Control_ID": "[2.6.R1]",
     "fk_Risk_ID": "RISK-001",
-    "standard_ref": "[18229-1.6],[42001.6],[12792.5]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.6],[42001.6],[12792.5]",
     "control_source": "Harmonised_Standard",
     "jkName": "Confidence Warning Injection",
     "jkText": "The Output Guardrail must compute a confidence score for every LLM (Generator) response as the average of the Retriever's top-1 cosine similarity score and the LLM's token probability score, inject a fixed warning banner into the response payload when the score falls below 0.80, and write a structured log entry for every evaluation.",
@@ -586,7 +586,7 @@
   {
     "pk_Risk_Control_ID": "[2.6.R2]",
     "fk_Risk_ID": "RISK-001",
-    "standard_ref": "[18229-1.7],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.7],[42001.6]",
     "control_source": "Harmonised_Standard",
     "jkName": "Kill Switch Implementation",
     "jkText": "The Orchestrator must expose a stop endpoint that sets the system state to HALTED within 500 milliseconds, blocks the Query Interface from accepting new requests with an HTTP 503 response, writes a structured stop event to the immutable audit log, and requires an explicit operator restart signal before query processing resumes.",
@@ -598,7 +598,7 @@
   {
     "pk_Risk_Control_ID": "[2.6.R3]",
     "fk_Risk_ID": "RISK-001",
-    "standard_ref": "[18229-1.8],[42001.6]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.8],[42001.6]",
     "control_source": "Harmonised_Standard",
     "jkName": "Retrieval Source Attribution",
     "jkText": "The Context Assembler must attach source metadata to every chunk passed to the LLM (Generator), and the Response Interface must render a numbered citation list showing source document name, chunk ID, and relevance score beneath every response — suppressing and flagging any response where the Retriever returned zero attributable chunks.",
@@ -610,7 +610,7 @@
   {
     "pk_Risk_Control_ID": "[6.1.R1]",
     "fk_Risk_ID": "RISK-002",
-    "standard_ref": "[18283.1]",
+    "fk_Harmonised_Standard_IDs": "[18283.1]",
     "control_source": "Harmonised_Standard",
     "jkName": "Subgroup Representation Gate",
     "jkText": "The data ingestion pipeline must compute sample counts per protected subgroup before any dataset enters the Embedding Model training pipeline or Vector Store, and must reject any dataset where any declared subgroup falls below the 500-record minimum threshold.",
@@ -622,7 +622,7 @@
   {
     "pk_Risk_Control_ID": "[6.1.R2]",
     "fk_Risk_ID": "RISK-002",
-    "standard_ref": "[18283.2]",
+    "fk_Harmonised_Standard_IDs": "[18283.2]",
     "control_source": "Harmonised_Standard",
     "jkName": "Disparate Impact Detection Gate",
     "jkText": "The bias evaluation pipeline must compute the Disparate Impact Ratio and Equalized Odds difference for every declared protected subgroup pair before deployment, blocking any deployment where the Disparate Impact Ratio falls below 0.80 or the Equalized Odds difference exceeds 0.05.",
@@ -634,7 +634,7 @@
   {
     "pk_Risk_Control_ID": "[6.1.R3]",
     "fk_Risk_ID": "RISK-003",
-    "standard_ref": "[18283.3]",
+    "fk_Harmonised_Standard_IDs": "[18283.3]",
     "control_source": "Harmonised_Standard",
     "jkName": "Proxy Correlation Screening",
     "jkText": "The data preparation pipeline must compute the Pearson correlation coefficient between every non-protected variable and every declared protected characteristic before any dataset enters the Embedding Model training pipeline or is written to the Vector Store, and must block ingestion of any variable with an absolute coefficient of ≥ 0.70 until a documented action decision and engineer ID are recorded.",
@@ -646,7 +646,7 @@
   {
     "pk_Risk_Control_ID": "[5.3.R1]",
     "fk_Risk_ID": "RISK-004",
-    "standard_ref": "[18284.7]",
+    "fk_Harmonised_Standard_IDs": "[18284.7]",
     "control_source": "Harmonised_Standard",
     "jkName": "Split Contamination Prevention",
     "jkText": "Evaluation and training datasets must be logically separated with cryptographic hash verification and strict access controls to prevent data leakage and accuracy inflation.",
@@ -658,7 +658,7 @@
   {
     "pk_Risk_Control_ID": "[5.3.R2]",
     "fk_Risk_ID": "RISK-004",
-    "standard_ref": "[18284.8]",
+    "fk_Harmonised_Standard_IDs": "[18284.8]",
     "control_source": "Harmonised_Standard",
     "jkName": "Retention Schedule Enforcement",
     "jkText": "All datasets must be tagged with a retention schedule and legal basis at ingestion to enforce automated deletion and auditable decommissioning.",
@@ -670,7 +670,7 @@
   {
     "pk_Risk_Control_ID": "[5.4.R1]",
     "fk_Risk_ID": "RISK-004",
-    "standard_ref": "[18284.9]",
+    "fk_Harmonised_Standard_IDs": "[18284.9]",
     "control_source": "Harmonised_Standard",
     "jkName": "Assumption Validity Monitor",
     "jkText": "Core data assumptions must be declared in a registry and automatically validated on a weekly schedule using measurable proxy metrics and defined staleness thresholds.",
@@ -682,7 +682,7 @@
   {
     "pk_Risk_Control_ID": "[5.1.R1]",
     "fk_Risk_ID": "RISK-005",
-    "standard_ref": "[18284.1],[18286.11]",
+    "fk_Harmonised_Standard_IDs": "[18284.1],[18286.11]",
     "control_source": "Harmonised_Standard",
     "jkName": "Data Selection Rationale Gate",
     "jkText": "Datasets must be blocked from ingestion unless a verified selection rationale, suitability assessment, and completion date exist in the governance register.",
@@ -694,7 +694,7 @@
   {
     "pk_Risk_Control_ID": "[5.1.R2]",
     "fk_Risk_ID": "RISK-005",
-    "standard_ref": "[18284.2],[18286.11]",
+    "fk_Harmonised_Standard_IDs": "[18284.2],[18286.11]",
     "control_source": "Harmonised_Standard",
     "jkName": "Provenance Chain Validation",
     "jkText": "Every dataset's provenance record must be validated for five required fields, cryptographically hashed at ingestion, and re-verified on every read to detect post-ingestion tampering.",
@@ -706,7 +706,7 @@
   {
     "pk_Risk_Control_ID": "[5.1.R3]",
     "fk_Risk_ID": "RISK-005",
-    "standard_ref": "[18284.3],[18286.11]",
+    "fk_Harmonised_Standard_IDs": "[18284.3],[18286.11]",
     "control_source": "Harmonised_Standard",
     "jkName": "Pipeline Operation Audit Log",
     "jkText": "Every data transformation step must emit a structured log entry capturing tool versions, record counts, and input/output SHA-256 hashes to a tamper-evident audit store.",
@@ -718,7 +718,7 @@
   {
     "pk_Risk_Control_ID": "[5.2.R1]",
     "fk_Risk_ID": "RISK-006",
-    "standard_ref": "[18284.4]",
+    "fk_Harmonised_Standard_IDs": "[18284.4]",
     "control_source": "Harmonised_Standard",
     "jkName": "Representativeness Distribution Check",
     "jkText": "Every dataset must pass a representativeness distribution check before entering the Embedding Model training pipeline or Vector Store. All defined population segments — category, language, and geographic region — must meet a minimum of 500 records. Any dataset where more than 10% of defined segments fall below this threshold must be blocked at ingestion with all coverage gaps written to the data gap register.",
@@ -730,7 +730,7 @@
   {
     "pk_Risk_Control_ID": "[5.2.R2]",
     "fk_Risk_ID": "RISK-006",
-    "standard_ref": "[18284.5]",
+    "fk_Harmonised_Standard_IDs": "[18284.5]",
     "control_source": "Harmonised_Standard",
     "jkName": "Completeness Threshold Enforcement",
     "jkText": "Every record must be scored for completeness against a declared required-fields list before ingestion. Records where more than 5% of required fields are null or missing must be rejected and written to the data gap register. Any dataset where more than 2% of records fail the record-level check must be rejected in full, requiring a logged human engineering override with engineer ID to proceed.",
@@ -742,7 +742,7 @@
   {
     "pk_Risk_Control_ID": "[5.2.R3]",
     "fk_Risk_ID": "RISK-006",
-    "standard_ref": "[18284.6]",
+    "fk_Harmonised_Standard_IDs": "[18284.6]",
     "control_source": "Harmonised_Standard",
     "jkName": "Label Quality Gate",
     "jkText": "Every annotation batch must be scored for inter-annotator agreement before any labelled data is released to the Embedding Model training pipeline. Two-annotator batches must use Cohen's Kappa; batches with three or more annotators must use Krippendorff's Alpha. Any batch scoring below 0.80 must be hard-rejected with no override and routed to a re-annotation queue.",
@@ -754,7 +754,7 @@
   {
     "pk_Risk_Control_ID": "[3.1.R1]",
     "fk_Risk_ID": "RISK-007",
-    "standard_ref": "[18229-1.4],[24970.5],[24970.1],[42001.7]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.4],[24970.5],[24970.1],[42001.7]",
     "control_source": "Harmonised_Standard",
     "jkName": "Mandatory Event Write Enforcement",
     "jkText": "Every mandatory pipeline event must be written to the log store as a blocking operation with a 200-millisecond timeout — the pipeline must not advance to the next stage until the write is confirmed, and any timeout or error must halt the pipeline, return HTTP 500 to the Query Interface, and write a fallback entry to a local buffer store.",
@@ -766,7 +766,7 @@
   {
     "pk_Risk_Control_ID": "[3.1.R2]",
     "fk_Risk_ID": "RISK-007",
-    "standard_ref": "[18229-1.5],[24970.3],[24970.4],[42001.7]",
+    "fk_Harmonised_Standard_IDs": "[18229-1.5],[24970.3],[24970.4],[42001.7]",
     "control_source": "Harmonised_Standard",
     "jkName": "Reconstruction Payload Standard",
     "jkText": "Every Orchestrator log entry must include eleven mandatory reconstruction fields — session ID, query ID, user pseudonym, UTC timestamp to millisecond precision, RAG component, model version ID, configuration hash, retrieved chunk IDs with similarity scores, assembled context hash, LLM response hash, and confidence score — validated at write time with schema rejection of any partial entry.",
@@ -778,7 +778,7 @@
   {
     "pk_Risk_Control_ID": "[3.1.R3]",
     "fk_Risk_ID": "RISK-007",
-    "standard_ref": "[24970.2]",
+    "fk_Harmonised_Standard_IDs": "[24970.2]",
     "control_source": "Harmonised_Standard",
     "jkName": "Human Intervention Event Capture",
     "jkText": "The Orchestrator must write a dedicated human intervention log entry for every output override, kill switch activation, query cancellation, and human escalation routing event, capturing event type, operator ID, query ID, response hash, and UTC timestamp to millisecond precision, linked to the originating session ID.",
@@ -790,7 +790,7 @@
   {
     "pk_Risk_Control_ID": "[3.3.R1]",
     "fk_Risk_ID": "RISK-007",
-    "standard_ref": "[24970.6],[42001.7]",
+    "fk_Harmonised_Standard_IDs": "[24970.6],[42001.7]",
     "control_source": "Harmonised_Standard",
     "jkName": "Immutable Log Storage Enforcement",
     "jkText": "The log store must enforce an append-only write policy with SHA-256 hash verification on every entry at write time and re-verification on read, triggering an immediate tamper alert and writing a detection event to a separate integrity log on any hash mismatch.",
@@ -802,7 +802,7 @@
   {
     "pk_Risk_Control_ID": "[3.3.R2]",
     "fk_Risk_ID": "RISK-007",
-    "standard_ref": "[24970.8]",
+    "fk_Harmonised_Standard_IDs": "[24970.8]",
     "control_source": "Harmonised_Standard",
     "jkName": "Privacy-Safe Log Pseudonymisation",
     "jkText": "The Orchestrator must replace every raw user identifier — name, email address, IP address — with a deterministic HMAC pseudonymised token before writing any log entry, store the token-to-identifier mapping in a separate access-controlled key store, and apply SHA-256 hashing to prompt content in any entry where the Input Guardrail flagged personal data.",
@@ -814,7 +814,7 @@
   {
     "pk_Risk_Control_ID": "[3.4.R1]",
     "fk_Risk_ID": "RISK-008",
-    "standard_ref": "[24970.7],[42001.7]",
+    "fk_Harmonised_Standard_IDs": "[24970.7],[42001.7]",
     "control_source": "Harmonised_Standard",
     "jkName": "Log Retention Schedule Enforcement",
     "jkText": "Every log entry must be tagged with a minimum retention floor of 180 days and a declared maximum retention ceiling at write time. A daily scheduled job must enforce both bounds — blocking deletion of any entry before the floor expires, and executing cryptographic erasure of any entry that has exceeded the maximum ceiling — with every deletion event written to a separate decommission log including the authorising engineer ID and UTC timestamp.",
@@ -826,7 +826,7 @@
   {
     "pk_Risk_Control_ID": "[8.1.R1]",
     "fk_Risk_ID": "RISK-009",
-    "standard_ref": "[18282.1]",
+    "fk_Harmonised_Standard_IDs": "[18282.1]",
     "control_source": "Harmonised_Standard",
     "jkName": "Adversarial Pattern Detection Gate",
     "jkText": "The Input Guardrail must run three independent adversarial checks on every inbound prompt — keyword injection scanning, Unicode zero-width character stripping, and semantic divergence scoring — before any prompt is passed to the Embedding Model or Retriever, blocking and alerting the security team on any failure.",
@@ -838,7 +838,7 @@
   {
     "pk_Risk_Control_ID": "[8.1.R2]",
     "fk_Risk_ID": "RISK-009",
-    "standard_ref": "[18282.2]",
+    "fk_Harmonised_Standard_IDs": "[18282.2]",
     "control_source": "Harmonised_Standard",
     "jkName": "Poisoned Ingestion Blocking Gate",
     "jkText": "The data ingestion pipeline must run four sequential integrity checks on every document before it is written to the Vector Store — source allowlist verification, content hash verification, instruction pattern scanning, and semantic outlier detection — with Steps 1 and 2 as hard rejection gates and Steps 3 and 4 routing flagged documents to a human security review queue.",
@@ -850,7 +850,7 @@
   {
     "pk_Risk_Control_ID": "[8.3.R1]",
     "fk_Risk_ID": "RISK-012",
-    "standard_ref": "[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6]",
     "control_source": "Harmonised_Standard",
     "jkName": "RBAC and MFA Enforcement Gate",
     "jkText": "The identity management system must restrict write access to model weights, Vector Store content, and Orchestrator configuration to three named roles with MFA enforced on every write operation, and must run a 90-day access review job that automatically revokes any role assignment not re-approved within the cycle.",
@@ -862,7 +862,7 @@
   {
     "pk_Risk_Control_ID": "[8.3.R2]",
     "fk_Risk_ID": "RISK-012",
-    "standard_ref": "[18282.7]",
+    "fk_Harmonised_Standard_IDs": "[18282.7]",
     "control_source": "Harmonised_Standard",
     "jkName": "Unexpected Input Pattern Gate",
     "jkText": "The Input Guardrail must apply three independent adversarial noise checks on every prompt — Zero-Width character stripping, homoglyph normalisation, and Semantic Bomb token frequency detection — before any prompt is passed to the Embedding Model, logging all sanitisation and blocking decisions in a single structured entry per prompt.",
@@ -874,7 +874,7 @@
   {
     "pk_Risk_Control_ID": "[8.3.R3]",
     "fk_Risk_ID": "RISK-012",
-    "standard_ref": "[18282.6]",
+    "fk_Harmonised_Standard_IDs": "[18282.6]",
     "control_source": "Harmonised_Standard",
     "jkName": "MFA Failure Lockout and Alert",
     "jkText": "The identity management system must automatically suspend any account and terminate all active sessions after 3 consecutive failed MFA attempts within a rolling 10-minute window on any high-privilege access path, dispatch a Priority-1 security alert, and block reinstatement until a Security team member records a completed out-of-band identity verification.",
@@ -886,7 +886,7 @@
   {
     "pk_Risk_Control_ID": "[8.4.R1]",
     "fk_Risk_ID": "RISK-013",
-    "standard_ref": "[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.8]",
     "control_source": "Harmonised_Standard",
     "jkName": "Prompt Injection Detection Gate",
     "jkText": "A real-time binary injection classifier must run independently of the keyword blocklist in risk control [8.1.R1] on every prompt, blocking and alerting on any prompt scoring ≥ 0.85 injection probability, and must be retrained on a maximum 30-day cycle using patterns harvested from the blocked prompt log.",
@@ -898,7 +898,7 @@
   {
     "pk_Risk_Control_ID": "[8.4.R2]",
     "fk_Risk_ID": "RISK-013",
-    "standard_ref": "[18282.8]",
+    "fk_Harmonised_Standard_IDs": "[18282.8]",
     "control_source": "Harmonised_Standard",
     "jkName": "Behavioural Anomaly Monitor",
     "jkText": "The Orchestrator must maintain a rolling 7-day baseline for four behavioural metrics and fire a security alert with a documented runbook response action when any metric deviates more than 2 standard deviations above its baseline, producing a structured daily Behavioural Anomaly Report regardless of whether any alerts fired.",
@@ -910,7 +910,7 @@
   {
     "pk_Risk_Control_ID": "[4.1.R1]",
     "fk_Risk_ID": "RISK-014",
-    "standard_ref": "[18229-2.9],[18286.12]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.9],[18286.12]",
     "control_source": "Harmonised_Standard",
     "jkName": "RAG-Specific Metric Pipeline",
     "jkText": "An automated evaluation pipeline using a human-validated Golden Dataset must enforce a minimum RAGAS Faithfulness threshold of 0.80 before every deployment.",
@@ -922,7 +922,7 @@
   {
     "pk_Risk_Control_ID": "[4.2.R1]",
     "fk_Risk_ID": "RISK-014",
-    "standard_ref": "[18229-2.10],[18286.13]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.10],[18286.13]",
     "control_source": "Harmonised_Standard",
     "jkName": "Test Set Isolation Enforcement",
     "jkText": "The evaluation test set must be isolated in a dedicated repository with SHA-256 integrity verification and IAM policies that explicitly block all training pipeline access.",
@@ -934,7 +934,7 @@
   {
     "pk_Risk_Control_ID": "[4.3.R1]",
     "fk_Risk_ID": "RISK-014",
-    "standard_ref": "[18229-2.12],[18286.13],[18286.22]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.12],[18286.13],[18286.22]",
     "control_source": "Harmonised_Standard",
     "jkName": "Production Drift Monitor",
     "jkText": "A weekly production monitor must evaluate RAGAS Faithfulness against the Golden Dataset and automatically suspend the Query Interface after two consecutive threshold breaches.",
@@ -946,7 +946,7 @@
   {
     "pk_Risk_Control_ID": "[4.3.R2]",
     "fk_Risk_ID": "RISK-014",
-    "standard_ref": "[18229-2.13],[18286.13]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.13],[18286.13]",
     "control_source": "Harmonised_Standard",
     "jkName": "Human Benchmark Comparison Gate",
     "jkText": "A deployment gate must block release if the system's score falls more than 5% below the registered human expert benchmark, unless an engineer provides a documented justification override.",
@@ -958,7 +958,7 @@
   {
     "pk_Risk_Control_ID": "[7.1.R3]",
     "fk_Risk_ID": "RISK-015",
-    "standard_ref": "[18229-2.17]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.17]",
     "control_source": "Harmonised_Standard",
     "jkName": "Feedback Isolation Barrier",
     "jkText": "The data ingestion pipeline must run two independent checks on every inbound document — a provenance source path check and a cryptographic AI-generated marker check — before any document is written to the Vector Store or passed to the Embedding Model, and must route any rejected document to a human review queue with a structured rejection log entry.",
@@ -970,7 +970,7 @@
   {
     "pk_Risk_Control_ID": "[7.3.R1]",
     "fk_Risk_ID": "RISK-016",
-    "standard_ref": "[18229-2.20]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.20]",
     "control_source": "Harmonised_Standard",
     "jkName": "Determinism Enforcement Gate",
     "jkText": "The Orchestrator initialisation sequence must configure the LLM with temperature = 0.0, top_p = 1.0, and a fixed integer seed, then execute a fixed probe query and compare its response hash against a stored reference hash — blocking the Query Interface from accepting user input and alerting the engineering team if the hashes do not match.",
@@ -982,7 +982,7 @@
   {
     "pk_Risk_Control_ID": "[7.1.R1]",
     "fk_Risk_ID": "RISK-017",
-    "standard_ref": "[18229-2.15],[18286.23]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.15],[18286.23]",
     "control_source": "Harmonised_Standard",
     "jkName": "Corrupted Input Sanitisation Gate",
     "jkText": "The Input Guardrail must apply a two-stage validation on every prompt — a structural check for null, encoding, and length validity followed by a semantic integrity check against the Embedding Model's vocabulary — rejecting any prompt with an unrecognised token ratio above 30%, attempting domain spell-correction for prompts between 10% and 30%, and logging all check results before any call to the Embedding Model.",
@@ -994,7 +994,7 @@
   {
     "pk_Risk_Control_ID": "[7.1.R2]",
     "fk_Risk_ID": "RISK-017",
-    "standard_ref": "[18229-2.16],[18286.23]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.16],[18286.23]",
     "control_source": "Harmonised_Standard",
     "jkName": "Environment Degradation Response Gate",
     "jkText": "The Orchestrator must monitor the response latency of every external dependency on every pipeline execution, automatically switch to the declared degraded mode for any dependency that exceeds its configured threshold for 3 consecutive calls, send an immediate engineering alert, and automatically restore normal operation after 5 consecutive below-threshold calls.",
@@ -1006,7 +1006,7 @@
   {
     "pk_Risk_Control_ID": "[7.2.R1]",
     "fk_Risk_ID": "RISK-018",
-    "standard_ref": "[18229-2.18]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.18]",
     "control_source": "Harmonised_Standard",
     "jkName": "Safe State Trigger Gate",
     "jkText": "The Orchestrator must register a health check handler for every RAG component, execute the component's declared safe state behaviour within 500 milliseconds of any failure status, default to maintenance mode and Query Interface blocking when no safe state is declared, and log every activation event with an engineering alert — never default to silent bypass.",
@@ -1018,7 +1018,7 @@
   {
     "pk_Risk_Control_ID": "[7.2.R2]",
     "fk_Risk_ID": "RISK-018",
-    "standard_ref": "[18229-2.19]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.19]",
     "control_source": "Harmonised_Standard",
     "jkName": "Redundancy Failover Gate",
     "jkText": "The Orchestrator must automatically route the current and all subsequent requests to a declared redundant instance within 200 milliseconds when the primary Vector Store, Embedding Model, or LLM exceeds its latency threshold or returns an error, and must suppress any LLM response that fails a pre-Output-Guardrail plausibility sanity check — routing it to the human reviewer queue and writing a violation log entry.",
@@ -1030,7 +1030,7 @@
   {
     "pk_Risk_Control_ID": "[9.5.R1]",
     "fk_Risk_ID": "RISK-019",
-    "standard_ref": "[12792.1],[12792.2],[12792.5]",
+    "fk_Harmonised_Standard_IDs": "[12792.1],[12792.2],[12792.5]",
     "control_source": "Harmonised_Standard",
     "jkName": "AI Identity Disclosure Gate",
     "jkText": "The system must inject a clear AI identity disclosure at the start of every user session or interaction, confirming the user is interacting with an AI system. The disclosure must appear before any consequential output is delivered, be expressed in plain language, and be logged as a disclosure event in the audit log.",
@@ -1042,7 +1042,7 @@
   {
     "pk_Risk_Control_ID": "[9.5.R2]",
     "fk_Risk_ID": "RISK-019",
-    "standard_ref": "[12792.3]",
+    "fk_Harmonised_Standard_IDs": "[12792.3]",
     "control_source": "Harmonised_Standard",
     "jkName": "AI-Generated Content Labelling",
     "jkText": "Any content generated by the system that could be mistaken for authentic human-created content must be labelled as AI-generated. The label must be present in a machine-readable format and, where technically feasible, visible to the end user in the response payload.",
@@ -1054,7 +1054,7 @@
   {
     "pk_Risk_Control_ID": "[9.5.R3]",
     "fk_Risk_ID": "RISK-019",
-    "standard_ref": "[12792.4]",
+    "fk_Harmonised_Standard_IDs": "[12792.4]",
     "control_source": "Harmonised_Standard",
     "jkName": "Synthetic Content Provenance",
     "jkText": "Where the system generates synthetic audio, image, or video content depicting real persons or events, technical measures must be in place to embed provenance metadata or watermarking to support downstream detection of AI-generated content.",
@@ -1066,7 +1066,7 @@
   {
     "pk_Risk_Control_ID": "[FS-18286.1]",
     "fk_Risk_ID": "RISK-026",
-    "standard_ref": "[18286.1]",
+    "fk_Harmonised_Standard_IDs": "[18286.1]",
     "owasp_ref": null,
     "control_source": "Framework_Statement",
     "jkName": "AI Governance Workflow — Compliance Strategy",
