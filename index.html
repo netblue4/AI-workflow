@@ -371,15 +371,15 @@ async function selectStep(stepId) {
   // Render: step-specific wizards, rich renderer for other steps with detail files, base otherwise
   if (stepId === 'step-3' && detailData) {
     mountStep3Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-4') {
+    mountStep4Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-5') {
+    mountStep5Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-6') {
+    mountStep6Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-7') {
     mountStep7Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
-    mountStep8Wizard(panel, step, detailData, color, phaseTitle);
-  } else if (stepId === 'step-9') {
-    mountStep9Wizard(panel, step, detailData, color, phaseTitle);
-  } else if (stepId === 'step-10') {
-    mountStep10Wizard(panel, step, detailData, color, phaseTitle);
-  } else if (stepId === 'step-11') {
     mountReportWizard(panel);
   } else {
     panel.innerHTML = renderDetail(step, color, phaseTitle);
@@ -505,10 +505,10 @@ function _ucShowStatus(msg) {
 
 <script src="fieldHandler_frameworkMapping.js"></script>
 <script src="step3-wizard.js"></script>
+<script src="step4-wizard.js"></script>
+<script src="step5-wizard.js"></script>
+<script src="step6-wizard.js"></script>
 <script src="step7-wizard.js"></script>
-<script src="step8-wizard.js"></script>
-<script src="step9-wizard.js"></script>
-<script src="step10-wizard.js"></script>
 <script src="report-wizard.js"></script>
 </body>
 </html>
