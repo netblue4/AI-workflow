@@ -538,15 +538,15 @@
     sec.appendChild(hdr);
 
     const note = _el('p', 'wiz10-unc-note');
-    note.textContent = 'The following controls do not have a corresponding test plan (OWASP technical controls and EU AI Act controls not yet covered by a test plan). Manual evidence review is required.';
+    note.textContent = 'The following controls do not have a corresponding test plan. Manual evidence review is required.';
     sec.appendChild(note);
 
     const list = _el('div', 'wiz10-unc-list');
     _uncovered.forEach(rc => {
       const item = _el('div', 'wiz10-unc-item');
       // Source badge
-      const srcBadge = _el('span', rc.control_source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
-      srcBadge.textContent = rc.control_source === 'OWASP' ? 'OWASP' : 'EU AI Act';
+      const srcBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
+      srcBadge.textContent = 'EU AI Act';
       item.appendChild(srcBadge);
       const nm = _el('span', 'wiz10-unc-ctrl-name'); nm.textContent = rc.control_name; item.appendChild(nm);
       list.appendChild(item);
@@ -746,8 +746,8 @@
       uncSec.appendChild(uh);
       _uncovered.forEach(rc => {
         const item = _el('div', 'wiz10-ref-tc wiz10-ref-tc--pending');
-        const srcBadge = _el('span', rc.control_source === 'OWASP' ? 'wiz9-src-badge wiz9-src-badge--owasp' : 'wiz9-src-badge wiz9-src-badge--eu');
-        srcBadge.textContent = rc.control_source === 'OWASP' ? 'OWASP' : 'EU AI Act';
+        const srcBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
+        srcBadge.textContent = 'EU AI Act';
         item.appendChild(srcBadge);
         const nm = _el('span', 'wiz10-ref-tc-name'); nm.textContent = rc.control_name; item.appendChild(nm);
         uncSec.appendChild(item);

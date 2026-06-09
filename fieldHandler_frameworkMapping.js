@@ -4,7 +4,7 @@
  * Columns: AI Act Article | Standard | Requirement | Define | Build | Test
  *
  * Define  → Framework_Statement controls (FS-*)
- * Build   → OWASP and Harmonised_Standard risk controls
+ * Build   → Harmonised_Standard risk controls
  * Test    → tbl_Test_Controls entries
  *
  * Rows are clickable (toggle gold highlight). Article / standard groups are
@@ -313,7 +313,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     }
                     row.appendChild(defCell);
 
-                    // Build cell — OWASP + Harmonised_Standard risk controls
+                    // Build cell — Harmonised_Standard risk controls
                     const bldCell = document.createElement('td');
                     bldCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
                     if (buildControls.length === 0) {
@@ -321,13 +321,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                         bldCell.textContent = '—';
                     } else {
                         buildControls.forEach(rc => {
-                            const isOwasp = rc.control_source === 'OWASP';
-                            bldCell.appendChild(fwBadge(
-                                rc.pk_Risk_Control_ID, rc.jkName,
-                                isOwasp ? '#ff9066' : '#a78bfa',
-                                isOwasp ? '#1f1008' : '#1e1a35',
-                                isOwasp ? '#4a2810' : '#2e2850'
-                            ));
+                            bldCell.appendChild(fwBadge(rc.pk_Risk_Control_ID, rc.jkName, '#a78bfa', '#1e1a35', '#2e2850'));
                         });
                     }
                     row.appendChild(bldCell);
