@@ -252,9 +252,26 @@
   // ── Axis A interactive ────────────────────────────────────────────────────────
 
   function _buildAxisASection(axisA) {
-    const section = _el('div', '', { style: 'margin-bottom:20px' });
-    section.appendChild(_sectionLabel('Axis A — Select your governance tier'));
-    section.appendChild(_el('p', '', {
+    const section = _el('div', 'wiz-collapsible-section');
+
+    const header  = _el('div', 'wiz-collapsible-header');
+    const hLeft   = _el('div', 'wiz-collapsible-header-left');
+    hLeft.appendChild(_sectionLabel('Axis A — Select your governance tier'));
+    const hRight  = _el('div', 'wiz-collapsible-header-right');
+    const initTier = _state.axis_a_tier;
+    const aBadge  = _el('span', 'wiz-gate-status-badge ' + (initTier ? 'wiz-gate-status-badge--complete' : 'wiz-gate-status-badge--none'));
+    aBadge.id     = 'wiz-axis-a-status';
+    aBadge.textContent = initTier === 'tier_1' ? 'Tier 1 selected' : initTier === 'tier_2' ? 'Tier 2 selected' : 'Not selected';
+    const aChevron = _el('span', 'wiz-gate-chevron');
+    aChevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    hRight.append(aBadge, aChevron);
+    header.append(hLeft, hRight);
+    section.appendChild(header);
+
+    const body = _el('div', 'wiz-collapsible-body');
+    body.style.display = 'none';
+
+    body.appendChild(_el('p', '', {
       style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:12px',
       textContent: 'Select the tier that applies to this use case.'
     }));
@@ -264,7 +281,7 @@
       radio.type = 'radio'; radio.name = 'wiz-axis-a'; radio.value = tier.tier_id;
       radio.id = `wiz-a-${tier.tier_id}`; radio.style.display = 'none';
       if (_state.axis_a_tier === tier.tier_id) radio.checked = true;
-      section.appendChild(radio);
+      body.appendChild(radio);
 
       const card = document.createElement('label');
       card.htmlFor = radio.id;
@@ -285,14 +302,23 @@
 
       radio.addEventListener('change', () => {
         _state.axis_a_tier = tier.tier_id;
-        section.querySelectorAll('.wiz-tier-card').forEach(c => { c.className = 'wiz-tier-card'; });
+        body.querySelectorAll('.wiz-tier-card').forEach(c => { c.className = 'wiz-tier-card'; });
         card.className = `wiz-tier-card selected-${tier.tier_id}`;
+        _updateAxisAStatusBadge();
       });
 
-      section.appendChild(card);
+      body.appendChild(card);
     });
 
-    section.appendChild(_el('div', 'gate-note warning', { style: 'margin-top:4px', textContent: `Escalation rule: ${axisA.escalation_rule}` }));
+    body.appendChild(_el('div', 'gate-note warning', { style: 'margin-top:4px', textContent: `Escalation rule: ${axisA.escalation_rule}` }));
+    section.appendChild(body);
+
+    header.addEventListener('click', () => {
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? '' : 'none';
+      aChevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+    });
+
     return section;
   }
 
@@ -320,19 +346,33 @@
     const section = _el('div', 'wiz-gate-section');
     section.id = `wiz-gate-${gate.gate_id}`;
 
-    const header = _el('div', 'wiz-gate-header');
+    const header  = _el('div', 'wiz-gate-header wiz-gate-header--clickable');
+    const hLeft   = _el('div', 'wiz-gate-header-left');
     const titleRow = _el('div', '', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:4px' });
     titleRow.append(
       _el('span', 'badge pdata', { textContent: gate.gate_id }),
       _el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: gate.gate_name })
     );
-    header.appendChild(titleRow);
-    header.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-top:2px', textContent: gate.gate_purpose }));
-    if (gate.short_circuit) header.appendChild(_el('p', 'gate-note danger', { style: 'margin-top:8px;font-size:11px', textContent: gate.short_circuit }));
-    if (gate.note)          header.appendChild(_el('p', 'gate-note info',   { style: 'margin-top:6px;font-size:11px',  textContent: gate.note }));
+    hLeft.appendChild(titleRow);
+    hLeft.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-top:2px', textContent: gate.gate_purpose }));
+    if (gate.short_circuit) hLeft.appendChild(_el('p', 'gate-note danger', { style: 'margin-top:8px;font-size:11px', textContent: gate.short_circuit }));
+    if (gate.note)          hLeft.appendChild(_el('p', 'gate-note info',   { style: 'margin-top:6px;font-size:11px',  textContent: gate.note }));
+
+    const hRight  = _el('div', 'wiz-gate-header-right');
+    const { answered: initAns, total: initTot } = _gateAnsweredCount(gate);
+    const gBadge  = _el('span', 'wiz-gate-status-badge ' + (initAns === 0 ? 'wiz-gate-status-badge--none' : initAns === initTot ? 'wiz-gate-status-badge--complete' : 'wiz-gate-status-badge--partial'));
+    gBadge.id     = `wiz-gate-status-${gate.gate_id}`;
+    gBadge.textContent = `${initAns} / ${initTot}`;
+    const gChevron = _el('span', 'wiz-gate-chevron');
+    gChevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    hRight.append(gBadge, gChevron);
+
+    header.append(hLeft, hRight);
     section.appendChild(header);
 
     const body = _el('div', 'wiz-gate-body');
+    body.style.display = 'none';
+
     const collapsed = COLLAPSED_GATES[gate.gate_id];
     if (collapsed) {
       body.appendChild(_buildCollapsedQuestion(collapsed.key, collapsed.question, gate.questions));
@@ -344,7 +384,57 @@
       });
     }
     section.appendChild(body);
+
+    header.addEventListener('click', () => {
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? '' : 'none';
+      gChevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+    });
+
     return section;
+  }
+
+  function _gateAnsweredCount(gate) {
+    const collapsed = COLLAPSED_GATES[gate.gate_id];
+    if (collapsed) {
+      return { answered: _state.gate_answers[collapsed.key] ? 1 : 0, total: 1 };
+    }
+    let answered = 0, total = 0;
+    const isProvider = _state.gate_answers['G5_Q0'] === 'provider';
+    gate.questions.forEach(q => {
+      if (isProvider && ['G5_Q1', 'G5_Q2', 'G5_Q3'].includes(q.id)) return;
+      if (q.type === 'choice') {
+        total++; if (_state.gate_answers[q.id]) answered++;
+      } else if (q.type === 'sub_questions') {
+        (q.sub_questions || []).forEach(sq => { total++; if (_state.gate_answers[sq.id]) answered++; });
+      } else {
+        total++; if (_state.gate_answers[q.id]) answered++;
+      }
+    });
+    return { answered, total };
+  }
+
+  function _updateGateStatusBadges() {
+    if (!_detail) return;
+    _detail.axis_b_classification.gates.forEach(gate => {
+      const badge = document.getElementById(`wiz-gate-status-${gate.gate_id}`);
+      if (!badge) return;
+      const { answered, total } = _gateAnsweredCount(gate);
+      badge.textContent = `${answered} / ${total}`;
+      badge.className = answered === 0
+        ? 'wiz-gate-status-badge wiz-gate-status-badge--none'
+        : answered === total
+          ? 'wiz-gate-status-badge wiz-gate-status-badge--complete'
+          : 'wiz-gate-status-badge wiz-gate-status-badge--partial';
+    });
+  }
+
+  function _updateAxisAStatusBadge() {
+    const badge = document.getElementById('wiz-axis-a-status');
+    if (!badge) return;
+    const tier = _state.axis_a_tier;
+    badge.textContent = tier === 'tier_1' ? 'Tier 1 selected' : tier === 'tier_2' ? 'Tier 2 selected' : 'Not selected';
+    badge.className = 'wiz-gate-status-badge ' + (tier ? 'wiz-gate-status-badge--complete' : 'wiz-gate-status-badge--none');
   }
 
   function _buildCollapsedQuestion(answerKey, questionText, subItems) {
@@ -608,6 +698,9 @@
         el.style.display = '';
       }
     });
+
+    _updateGateStatusBadges();
+    _updateAxisAStatusBadge();
   }
 
   // ── Classify ──────────────────────────────────────────────────────────────────
@@ -975,9 +1068,27 @@
       .wiz-tier-card.selected-tier_1 { border-color:var(--teal-border);background:var(--teal-fill); }
       .wiz-tier-card.selected-tier_2 { border-color:var(--amber-border);background:var(--amber-fill); }
 
+      /* Collapsible Axis A section */
+      .wiz-collapsible-section { border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px; }
+      .wiz-collapsible-header { padding:12px 16px;background:var(--color-bg);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px; }
+      .wiz-collapsible-header:hover { background:var(--color-surface); }
+      .wiz-collapsible-header-left { flex:1; }
+      .wiz-collapsible-header-left .section-label { margin-bottom:0; }
+      .wiz-collapsible-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0; }
+      .wiz-collapsible-body { padding:14px 16px;border-top:1px solid var(--color-border); }
+
       /* Gates */
       .wiz-gate-section { border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;transition:opacity var(--transition); }
       .wiz-gate-header { padding:12px 16px;background:var(--color-bg);border-bottom:1px solid var(--color-border); }
+      .wiz-gate-header--clickable { cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:flex-start;gap:12px; }
+      .wiz-gate-header--clickable:hover { background:var(--color-surface); }
+      .wiz-gate-header-left { flex:1; }
+      .wiz-gate-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0;padding-top:2px; }
+      .wiz-gate-chevron { display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s; }
+      .wiz-gate-status-badge { font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap; }
+      .wiz-gate-status-badge--complete { background:#dcfce7;color:#15803d; }
+      .wiz-gate-status-badge--partial  { background:#fef3c7;color:#b45309; }
+      .wiz-gate-status-badge--none     { background:#fee2e2;color:#b91c1c; }
       .wiz-gate-body { padding:14px 16px;display:flex;flex-direction:column;gap:10px; }
 
       /* Questions */
