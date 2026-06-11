@@ -307,12 +307,256 @@
     }
   }
 
+  // ── Ask JAKE collapsible (Stage 2) ────────────────────────────────────────
+
+  function _buildAskJakeCollapsible() {
+    const section = _el('div', 's5-jake-section');
+
+    const header = _el('div', 's5-jake-header');
+    const hLeft  = _el('div', 's5-jake-header-left');
+    const title  = _sectionLabel('Ask JAKE to draft a risk assessment and control identification');
+    title.style.marginBottom = '2px';
+    const sub = _el('p', '');
+    sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
+    sub.textContent = 'Stage 2 prompt — covers Steps 5 (Risk Assessment) and 6 (Control Identification). Paste the Stage 1 report then this prompt into JAKE.';
+    hLeft.append(title, sub);
+    const hRight  = _el('div', 's5-jake-header-right');
+    const chevron = _el('span', 's5-jake-chevron');
+    chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    hRight.appendChild(chevron);
+    header.append(hLeft, hRight);
+    section.appendChild(header);
+
+    const body = _el('div', 's5-jake-body');
+    body.style.display = 'none';
+
+    const instruct = _el('div', 's5-jake-instructions');
+    instruct.innerHTML = `
+      <strong>How to use this prompt</strong>
+      <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
+        <li>Complete the Step 3 and Step 4 wizards first — confirm the classification and DPIA before proceeding.</li>
+        <li>Copy the prompt below.</li>
+        <li>In JAKE, paste the full Stage 1 narrative report from Step 2, then paste this prompt after it.</li>
+        <li>Save the JAKE risk assessment report as a PDF alongside this system record.</li>
+        <li>Use the report to answer the questions in the Step 5 and Step 6 wizards.</li>
+      </ol>`;
+    body.appendChild(instruct);
+
+    const promptWrap = _el('div', 's5-prompt-wrap');
+    const copyBtn = _el('button', 'wiz-btn-primary');
+    copyBtn.style.cssText = 'align-self:flex-start;font-size:12px;padding:7px 16px;margin-bottom:4px';
+    copyBtn.textContent = 'Copy prompt';
+    const promptArea = _el('textarea', 's5-prompt-area');
+    promptArea.readOnly = true;
+    promptArea.rows = 22;
+    promptArea.value = _buildStep5Prompt();
+
+    copyBtn.addEventListener('click', () => {
+      const text = promptArea.value;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = 'Copied ✓';
+          setTimeout(() => { copyBtn.textContent = 'Copy prompt'; }, 2000);
+        });
+      } else {
+        promptArea.select();
+        document.execCommand('copy');
+        copyBtn.textContent = 'Copied ✓';
+        setTimeout(() => { copyBtn.textContent = 'Copy prompt'; }, 2000);
+      }
+    });
+
+    promptWrap.append(copyBtn, promptArea);
+    body.appendChild(promptWrap);
+    section.appendChild(body);
+
+    header.addEventListener('click', () => {
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? '' : 'none';
+      chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+    });
+
+    return section;
+  }
+
+  function _buildStep5Prompt() {
+    return `You are an AI governance specialist completing a Risk Assessment (Step 5) and Control Identification (Step 6) for an AI use case that has already been classified and had a DPIA completed.
+
+CONTEXT:
+Paste the full Stage 1 narrative report and Classification Summary JSON block (from Steps 3 and 4) below this line, then run the prompt.
+
+[PASTE STAGE 1 NARRATIVE REPORT AND CLASSIFICATION SUMMARY JSON HERE]
+
+---
+
+Using the classification and DPIA above as your context, produce a structured risk assessment and control schedule. For every risk assessed as YES or PARTIALLY, explain the specific scenario in the context of this use case.
+
+===================================================================
+PART 1 — RISK ASSESSMENT (Step 5)
+===================================================================
+
+SECTION A — LEGAL RISKS
+
+For each legal risk below, assess relevance as YES, PARTIALLY, or NO. Explain your reasoning with specific reference to the business case.
+
+A1 — GDPR / Data Protection Risk
+Does this use case create material GDPR compliance risks beyond those addressed in the DPIA?
+Assessment (YES / PARTIALLY / NO):
+Specific risks in context of this use case:
+Attack vectors — how this risk could materialise:
+Severity (Low / Medium / High):
+
+A2 — Intellectual Property / Copyright Risk
+Does the AI system risk infringing third-party IP rights — through training data, generated content, or outputs reproducing protected material?
+Assessment (YES / PARTIALLY / NO):
+Specific risks in context of this use case:
+Attack vectors:
+Severity (Low / Medium / High):
+
+A3 — Contract / Liability Risk
+Does the use case create contractual exposure — e.g. AI output relied on as professional advice, creating implied warranties, or making binding representations?
+Assessment (YES / PARTIALLY / NO):
+Specific risks in context of this use case:
+Attack vectors:
+Severity (Low / Medium / High):
+
+A4 — Regulatory / Sector-specific Compliance Risk
+Does the use case operate in a regulated sector (financial services, insurance, legal) where AI output could breach sector-specific rules?
+Assessment (YES / PARTIALLY / NO):
+Specific risks and applicable regulations:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+SECTION B — EU AI ACT REGULATORY RISKS
+Base your assessment on the Axis B classification and organisation role in the Stage 1 report.
+
+B1 — Transparency and Disclosure Risk (Article 50)
+If Article 50 applies: what is the risk of failing to adequately disclose the AI nature of the system?
+Assessment (YES / PARTIALLY / NO):
+Specific risk:
+Attack vectors:
+Severity (Low / Medium / High):
+
+B2 — Human Oversight Adequacy Risk
+What is the risk that oversight mechanisms are inadequate — i.e. users rely on AI output without sufficient review or challenge?
+Assessment (YES / PARTIALLY / NO):
+Specific risk:
+Attack vectors:
+Severity (Low / Medium / High):
+
+B3 — Accuracy, Hallucination and Reliability Risk
+What is the risk that AI outputs are materially inaccurate, misleading, or hallucinated and not detected before use?
+Assessment (YES / PARTIALLY / NO):
+Specific risk:
+Attack vectors:
+Severity (Low / Medium / High):
+
+B4 — Data Governance Risk
+What is the risk that input or output data governance is inadequate — leading to biased, unrepresentative, or corrupted outputs?
+Assessment (YES / PARTIALLY / NO):
+Specific risk:
+Attack vectors:
+Severity (Low / Medium / High):
+
+B5 — Security and Adversarial Risk
+What is the risk of prompt injection, model inversion, data extraction, or adversarial attacks?
+Assessment (YES / PARTIALLY / NO):
+Specific risk:
+Attack vectors:
+Severity (Low / Medium / High):
+
+B6 — Vendor and Supply Chain Risk
+What is the risk from dependence on the AI model provider — including model changes, service discontinuation, or undisclosed training data changes?
+Assessment (YES / PARTIALLY / NO):
+Specific risk:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+OVERALL RISK LEVEL
+State the overall risk level: Low / Medium / High / Very High
+Overall risk level:
+Reasoning (reference the highest-severity risks driving this rating):
+
+===================================================================
+PART 2 — CONTROL IDENTIFICATION (Step 6)
+===================================================================
+
+For each risk rated YES or PARTIALLY, define the controls required. For each control provide:
+  • Control type: Technical | Operational | Contractual | Governance
+  • Control description: what specifically must be implemented
+  • Owner: who is responsible for implementing and maintaining this control
+  • Verification method: how compliance will be confirmed
+
+GDPR / Data Protection Controls:
+
+Intellectual Property / Copyright Controls:
+
+Contract / Liability Controls:
+
+Regulatory / Sector-specific Controls:
+
+Transparency / Disclosure Controls (Art.50):
+
+Human Oversight Controls:
+
+Accuracy / Hallucination Controls:
+
+Data Governance Controls:
+
+Security / Adversarial Controls:
+
+Vendor / Supply Chain Controls:
+
+---
+
+DISCLOSURE FRAMEWORK (if Article 50 applies)
+  • Disclaimer text to display to users at the point of AI interaction:
+  • Internal content labelling standard (how AI-generated content is marked in documents):
+  • Version control approach (how AI-assisted documents are tracked):
+
+===================================================================
+OUTPUT FORMAT INSTRUCTIONS
+===================================================================
+
+Produce the full narrative report with Answer: and Reasoning: clearly labelled throughout.
+
+At the very end, output this block exactly — do not omit it:
+
+--- RISK ASSESSMENT SUMMARY (JSON) ---
+{
+  "legal_risks": {
+    "gdpr_data_protection": "yes or partially or no",
+    "intellectual_property_copyright": "yes or partially or no",
+    "contract_liability": "yes or partially or no",
+    "regulatory_sector_specific": "yes or partially or no"
+  },
+  "eu_ai_act_risks": {
+    "transparency_disclosure": "yes or partially or no",
+    "human_oversight": "yes or partially or no",
+    "accuracy_hallucination": "yes or partially or no",
+    "data_governance": "yes or partially or no",
+    "security_adversarial": "yes or partially or no",
+    "vendor_supply_chain": "yes or partially or no"
+  },
+  "overall_risk_level": "Low or Medium or High or Very High",
+  "article_50_disclosure_required": true or false,
+  "human_review_checkpoint_required": true or false,
+  "controls_identified": ["list", "key", "control", "names"]
+}
+--- END RISK ASSESSMENT SUMMARY ---`;
+  }
+
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const legal  = _el('div', 'wiz-pane');                  legal.dataset.pane  = 'legal';
     const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
     const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
+    legal.appendChild(_buildAskJakeCollapsible());
     legal.appendChild(_buildLegalPane());
     review.appendChild(_buildCombinedReviewPane());
     ref.appendChild(_buildReferencePane());
@@ -1104,6 +1348,19 @@
 .wiz8-prefilter-item{display:flex;align-items:center;gap:8px;padding:5px 10px;background:#fff;border:1px solid #fed7aa;border-radius:5px;flex-wrap:wrap}
 .wiz8-prefilter-risk-name{font-size:12px;font-weight:600;color:var(--color-text-primary);flex:1;min-width:0}
 .wiz8-prefilter-art-tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:#ffedd5;color:#9a3412;white-space:nowrap}
+
+/* Ask JAKE collapsible */
+.s5-jake-section{margin:16px 24px;border:1px solid var(--color-border);border-radius:8px;overflow:hidden}
+.s5-jake-header{padding:12px 16px;background:var(--teal-50,#f0fdfa);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.s5-jake-header:hover{background:var(--teal-100,#ccfbf1)}
+.s5-jake-header-left{flex:1}
+.s5-jake-header-left .section-label{margin-bottom:0}
+.s5-jake-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.s5-jake-body{padding:14px 16px;border-top:1px solid var(--color-border)}
+.s5-jake-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
+.s5-jake-instructions{font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border);border-radius:4px;padding:12px 14px;margin-bottom:14px;line-height:1.6}
+.s5-prompt-wrap{display:flex;flex-direction:column;gap:8px}
+.s5-prompt-area{width:100%;padding:12px;border:1px solid var(--color-border-mid);border-radius:6px;font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6}
 `;
     document.head.appendChild(s);
   }
