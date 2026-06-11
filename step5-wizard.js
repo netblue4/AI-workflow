@@ -380,174 +380,310 @@
   }
 
   function _buildStep5Prompt() {
-    return `You are an AI governance specialist completing a Risk Assessment (Step 5) and Control Identification (Step 6) for an AI use case that has already been classified and had a DPIA completed.
+    return `You are an AI governance specialist. Output ONLY valid JSON — no text, explanation, or markdown before or after the JSON object. Do not wrap the output in a code block. Fill in every "answer", "reasoning", "severity", and "attack_vectors" field based on the Stage 1 JSON pasted below. For every risk answered "yes" or "partially", also complete the "controls" array. Write 2–4 sentences in every "reasoning" field. Do not leave any field empty.
 
-CONTEXT:
-Paste the full Stage 1 narrative report and Classification Summary JSON block (from Steps 3 and 4) below this line, then run the prompt.
+STAGE 1 CLASSIFICATION AND DPIA JSON (paste your Stage 1 output here, then run):
 
-[PASTE STAGE 1 NARRATIVE REPORT AND CLASSIFICATION SUMMARY JSON HERE]
+[PASTE STAGE 1 JSON HERE]
 
----
+OUTPUT THE FOLLOWING JSON OBJECT WITH ALL FIELDS COMPLETED:
 
-Using the classification and DPIA above as your context, produce a structured risk assessment and control schedule. For every risk assessed as YES or PARTIALLY, explain the specific scenario in the context of this use case.
-
-===================================================================
-PART 1 — RISK ASSESSMENT (Step 5)
-===================================================================
-
-SECTION A — LEGAL RISKS
-
-For each legal risk below, assess relevance as YES, PARTIALLY, or NO. Explain your reasoning with specific reference to the business case.
-
-A1 — GDPR / Data Protection Risk
-Does this use case create material GDPR compliance risks beyond those addressed in the DPIA?
-Assessment (YES / PARTIALLY / NO):
-Specific risks in context of this use case:
-Attack vectors — how this risk could materialise:
-Severity (Low / Medium / High):
-
-A2 — Intellectual Property / Copyright Risk
-Does the AI system risk infringing third-party IP rights — through training data, generated content, or outputs reproducing protected material?
-Assessment (YES / PARTIALLY / NO):
-Specific risks in context of this use case:
-Attack vectors:
-Severity (Low / Medium / High):
-
-A3 — Contract / Liability Risk
-Does the use case create contractual exposure — e.g. AI output relied on as professional advice, creating implied warranties, or making binding representations?
-Assessment (YES / PARTIALLY / NO):
-Specific risks in context of this use case:
-Attack vectors:
-Severity (Low / Medium / High):
-
-A4 — Regulatory / Sector-specific Compliance Risk
-Does the use case operate in a regulated sector (financial services, insurance, legal) where AI output could breach sector-specific rules?
-Assessment (YES / PARTIALLY / NO):
-Specific risks and applicable regulations:
-Attack vectors:
-Severity (Low / Medium / High):
-
----
-
-SECTION B — EU AI ACT REGULATORY RISKS
-Base your assessment on the Axis B classification and organisation role in the Stage 1 report.
-
-B1 — Transparency and Disclosure Risk (Article 50)
-If Article 50 applies: what is the risk of failing to adequately disclose the AI nature of the system?
-Assessment (YES / PARTIALLY / NO):
-Specific risk:
-Attack vectors:
-Severity (Low / Medium / High):
-
-B2 — Human Oversight Adequacy Risk
-What is the risk that oversight mechanisms are inadequate — i.e. users rely on AI output without sufficient review or challenge?
-Assessment (YES / PARTIALLY / NO):
-Specific risk:
-Attack vectors:
-Severity (Low / Medium / High):
-
-B3 — Accuracy, Hallucination and Reliability Risk
-What is the risk that AI outputs are materially inaccurate, misleading, or hallucinated and not detected before use?
-Assessment (YES / PARTIALLY / NO):
-Specific risk:
-Attack vectors:
-Severity (Low / Medium / High):
-
-B4 — Data Governance Risk
-What is the risk that input or output data governance is inadequate — leading to biased, unrepresentative, or corrupted outputs?
-Assessment (YES / PARTIALLY / NO):
-Specific risk:
-Attack vectors:
-Severity (Low / Medium / High):
-
-B5 — Security and Adversarial Risk
-What is the risk of prompt injection, model inversion, data extraction, or adversarial attacks?
-Assessment (YES / PARTIALLY / NO):
-Specific risk:
-Attack vectors:
-Severity (Low / Medium / High):
-
-B6 — Vendor and Supply Chain Risk
-What is the risk from dependence on the AI model provider — including model changes, service discontinuation, or undisclosed training data changes?
-Assessment (YES / PARTIALLY / NO):
-Specific risk:
-Attack vectors:
-Severity (Low / Medium / High):
-
----
-
-OVERALL RISK LEVEL
-State the overall risk level: Low / Medium / High / Very High
-Overall risk level:
-Reasoning (reference the highest-severity risks driving this rating):
-
-===================================================================
-PART 2 — CONTROL IDENTIFICATION (Step 6)
-===================================================================
-
-For each risk rated YES or PARTIALLY, define the controls required. For each control provide:
-  • Control type: Technical | Operational | Contractual | Governance
-  • Control description: what specifically must be implemented
-  • Owner: who is responsible for implementing and maintaining this control
-  • Verification method: how compliance will be confirmed
-
-GDPR / Data Protection Controls:
-
-Intellectual Property / Copyright Controls:
-
-Contract / Liability Controls:
-
-Regulatory / Sector-specific Controls:
-
-Transparency / Disclosure Controls (Art.50):
-
-Human Oversight Controls:
-
-Accuracy / Hallucination Controls:
-
-Data Governance Controls:
-
-Security / Adversarial Controls:
-
-Vendor / Supply Chain Controls:
-
----
-
-DISCLOSURE FRAMEWORK (if Article 50 applies)
-  • Disclaimer text to display to users at the point of AI interaction:
-  • Internal content labelling standard (how AI-generated content is marked in documents):
-  • Version control approach (how AI-assisted documents are tracked):
-
-===================================================================
-OUTPUT FORMAT INSTRUCTIONS
-===================================================================
-
-Produce the full narrative report with Answer: and Reasoning: clearly labelled throughout.
-
-At the very end, output this block exactly — do not omit it:
-
---- RISK ASSESSMENT SUMMARY (JSON) ---
 {
-  "legal_risks": {
-    "gdpr_data_protection": "yes or partially or no",
-    "intellectual_property_copyright": "yes or partially or no",
-    "contract_liability": "yes or partially or no",
-    "regulatory_sector_specific": "yes or partially or no"
+  "report_metadata": {
+    "report_type": "Risk_Assessment_and_Control_Schedule",
+    "steps_covered": ["step_5", "step_6"],
+    "regulation": "EU AI Act (Regulation EU 2024/1689) + ISO/IEC 42001",
+    "generated_by": "JAKE — on-premise AI assistant",
+    "generated_at": "[INSERT ISO 8601 TIMESTAMP]"
   },
-  "eu_ai_act_risks": {
-    "transparency_disclosure": "yes or partially or no",
-    "human_oversight": "yes or partially or no",
-    "accuracy_hallucination": "yes or partially or no",
-    "data_governance": "yes or partially or no",
-    "security_adversarial": "yes or partially or no",
-    "vendor_supply_chain": "yes or partially or no"
+  "part_1_risk_assessment": {
+    "R01_Human_Oversight_Bypass_Failure": {
+      "category": "Human Control",
+      "question": "Does the AI system make or significantly influence decisions without a mandatory human review or override step?",
+      "applies_if_any": [
+        "AI output is used to make or significantly influence decisions without a mandatory human review step",
+        "Users have no mechanism to override, halt, or contest AI-driven actions",
+        "The AI system provides no confidence indicator or explanation alongside its outputs"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R02_Subgroup_Coverage_Failure": {
+      "category": "Bias & Fairness",
+      "question": "Does the AI system process data about, or make decisions that affect, people from distinct demographic or protected groups (age, gender, ethnicity, disability, etc.)?",
+      "applies_if_any": [
+        "The AI system processes data about or makes decisions that affect distinct groups of people (by age, gender, ethnicity, disability, or other protected characteristic)",
+        "Training data was collected over a period or from a source where certain groups may have been underrepresented",
+        "The AI system's outputs affect employment, credit, benefits, healthcare access, or other individually significant decisions"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R03_Proxy_Discrimination_Propagation_Failure": {
+      "category": "Bias & Fairness",
+      "question": "Does the AI use input variables — such as location, purchasing history, or social network data — that could act as proxies for protected characteristics?",
+      "applies_if_any": [
+        "The AI uses data variables that may correlate with protected characteristics (e.g. location, purchasing patterns, social connections)",
+        "The AI ranks, scores, or filters individuals for employment, credit, insurance, benefits, or similar consequential decisions",
+        "Historical decisions are used as training labels and may embed past discriminatory patterns"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R04_Dataset_Lifecycle_Integrity_Failure": {
+      "category": "Data Integrity",
+      "question": "Are formal controls in place governing the collection, labelling, versioning, and retirement of all training datasets?",
+      "applies_if_any": [
+        "The AI model is periodically retrained or fine-tuned on updated data",
+        "The system's knowledge base (RAG pipeline) is refreshed with new documents or data feeds",
+        "Third-party or externally sourced datasets are ingested without formal versioning and validation"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R05_Data_Governance_Documentation_Failure": {
+      "category": "Data Integrity",
+      "question": "Is the data lineage, schema, and quality thresholds for all training data formally documented and maintained?",
+      "applies_if_any": [
+        "The AI system uses training or retrieval data whose selection rationale, legal permission, and preparation history are not formally documented",
+        "The organisation cannot trace which datasets were used, when they were collected, or why they were selected — meaning it cannot produce this evidence to a regulator examining Art.10(2) or Art.11/Annex IV compliance",
+        "Multiple data sources are combined without a documented provenance chain that records origin, transformation steps, and legal basis for each source"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R06_Data_Quality_Measurement_Failure": {
+      "category": "Data Integrity",
+      "question": "Is the quality, completeness, and representativeness of training data regularly measured and reported against defined thresholds?",
+      "applies_if_any": [
+        "The AI system's outputs depend directly on the quality and completeness of input data",
+        "No formal data quality metrics, thresholds, or validation rules are applied before data is used",
+        "Errors in input data would propagate into AI-driven decisions without triggering an alert or rejection"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R07_Audit_Log_Integrity_Failure": {
+      "category": "Monitoring & Audit",
+      "question": "Does the AI system generate comprehensive, tamper-evident audit logs of its decisions, inputs, and actions?",
+      "applies_if_any": [
+        "The AI system is subject to regulatory logging requirements (EU AI Act Art.12, GDPR Art.5(1)(f) accountability obligations, internal compliance policy)",
+        "Audit trails are required to reconstruct or justify AI decisions in the event of a complaint, legal challenge, or regulatory review",
+        "AI decision logs are stored in a system where they could be modified, deleted, or are not protected from tampering"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R08_Log_Retention_Violation": {
+      "category": "Monitoring & Audit",
+      "question": "Are AI system logs retained for the full period required by applicable regulations, internal policies, or contractual obligations?",
+      "applies_if_any": [
+        "The AI system's operational logs are subject to a defined minimum retention period (regulatory, contractual, or internal policy)",
+        "Logs are stored in systems with automatic deletion, rolling overwrite, or size-based truncation that could violate retention requirements",
+        "Historical AI decision logs may be required for regulatory audit, data subject requests, or post-incident investigation"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R09_Adversarial_Input_Evasion_Failure": {
+      "category": "Cybersecurity",
+      "question": "Does the AI system accept external or user-supplied inputs that directly influence its predictions or decisions?",
+      "applies_if_any": [
+        "The AI system accepts natural language or structured input directly from users (prompt injection risk)",
+        "The system is exposed to potentially adversarial, untrusted, or external users or data sources",
+        "Security controls rely on the AI model itself to detect and reject malicious inputs rather than a separate validation layer"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R10_Unauthorised_Access_and_Privilege_Escalation_Failure": {
+      "category": "Access Control",
+      "question": "Are role-based access controls in place limiting who can query, modify, retrain, or administer the AI system?",
+      "applies_if_any": [
+        "The AI system stores sensitive data (training data, personal data, model weights, inference logs) requiring formal access controls",
+        "Multiple users, teams, or automated systems have access to the AI infrastructure with different privilege levels",
+        "Access to the AI model, its data, or its configuration is not governed by a documented and enforced IAM policy"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R11_Cyber_Attack_Detection_Failure": {
+      "category": "Cybersecurity",
+      "question": "Does the AI system have monitoring controls to detect anomalous query patterns, unusual output behaviour, or attempted intrusions?",
+      "applies_if_any": [
+        "The AI system processes sensitive or personal data that could be targeted for exfiltration via query manipulation",
+        "Prompt injection or adversarial inputs could manipulate AI outputs to bypass controls or leak information",
+        "No automated monitoring exists to detect unusual query volumes, anomalous output patterns, or potential AI-layer attacks"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R12_Accuracy_Measurement_and_Drift_Failure": {
+      "category": "Performance Integrity",
+      "question": "Is the AI system's accuracy formally measured at deployment and monitored on an ongoing basis for model drift or degradation?",
+      "applies_if_any": [
+        "The AI system makes consequential decisions that depend on maintaining a defined level of accuracy or performance",
+        "The system is deployed in an environment where the characteristics of input data may evolve over time",
+        "No baseline accuracy metric, monitoring threshold, or automated drift detection alert has been defined"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R13_Feedback_Loop_Contamination_Failure": {
+      "category": "Performance Integrity",
+      "question": "Does the AI system use its own historical outputs — directly or indirectly — as future training or reinforcement data?",
+      "applies_if_any": [
+        "The AI system learns from, adapts to, or is retrained using user interactions, feedback, or behavioural signals",
+        "The system is periodically retrained on data that includes outputs previously generated by the AI itself",
+        "Errors or biases in current AI outputs could become embedded as ground truth in future training data"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R14_Output_Reproducibility_Failure": {
+      "category": "Performance Integrity",
+      "question": "Is reproducibility required for this system — must the same input reliably produce the same output across runs and environments?",
+      "applies_if_any": [
+        "AI-generated outputs must be reproducible for regulatory audit, legal proceedings, or compliance review",
+        "Identical or equivalent inputs should produce consistent results for legal, contractual, or risk management reasons",
+        "Post-incident investigation requires the ability to reconstruct and replay a specific AI decision or output"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R15_Input_Corruption_Propagation_Failure": {
+      "category": "Performance Integrity",
+      "question": "Could corrupted, spoofed, or low-quality data reach the model without detection by an upstream validation or anomaly-detection layer?",
+      "applies_if_any": [
+        "The AI system ingests real-time or externally sourced data feeds that could be corrupted, incomplete, or manipulated",
+        "No validation or sanity-check gate exists between data ingestion and AI processing",
+        "Corrupted or anomalous inputs would propagate directly into AI outputs without triggering an alert or rejection"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R16_Fail_Safe_Activation_Failure": {
+      "category": "Availability & Resilience",
+      "question": "Is a fail-safe or fallback mode defined and tested for when the AI system becomes unavailable or produces outputs below an acceptable confidence threshold?",
+      "applies_if_any": [
+        "The AI system is relied upon for time-sensitive or operationally critical functions where failure causes direct harm",
+        "A system fault would leave users, staff, or affected individuals without a safe fallback or manual alternative",
+        "No defined safe-state, limited-functionality mode, or emergency halt mechanism has been designed and tested"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R17_AI_Disclosure_Mechanism_Failure": {
+      "category": "Transparency",
+      "question": "Are users or individuals affected by the system's outputs notified that they are interacting with, or being assessed by, an AI system?",
+      "applies_if_any": [
+        "The AI system interacts directly with members of the public, customers, or employees in a way that could be mistaken for human interaction",
+        "AI-generated content is published, distributed, or used to inform decisions without labelling or attribution",
+        "The EU AI Act Art.50 transparency obligations apply to this system's output or interaction modality"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R18_Deployer_Instructions_and_Intended_Use_Failure": {
+      "category": "Documentation & Transparency",
+      "question": "Has the organisation produced formal instructions for deployers that document the system's intended purpose, known limitations, required oversight measures, and achieved performance levels?",
+      "applies_if_any": [
+        "The AI system has not produced formal instructions documenting its intended purpose and the specific tasks it is designed to perform",
+        "Known limitations, failure modes, or scenarios in which the AI should not be used are not documented and provided to deployers",
+        "Deployers cannot access documented information on what human oversight measures, technical configurations, or competence requirements are needed to operate the system safely",
+        "Performance data, accuracy levels, and the metrics used to measure them are not declared in the documentation provided to deployers"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    },
+    "R19_Quality_Management_System_Conformity_Failure": {
+      "category": "Governance & Compliance",
+      "question": "Does the organisation have a documented Quality Management System (QMS) covering AI design controls, change management, post-market monitoring, and incident reporting for this AI system?",
+      "applies_if_any": [
+        "The organisation does not have a documented QMS covering the AI system's full lifecycle from design through post-market monitoring",
+        "There are no documented roles and responsibilities for AI safety and compliance within the organisation",
+        "Design changes, model updates, or changes to retrieval data are not subject to a formal change control or impact assessment process",
+        "There is no formal incident reporting process, or reported incidents are not reviewed and acted upon within defined timeframes",
+        "Post-market monitoring data is not collected, reviewed, or used to trigger corrective actions"
+      ],
+      "answer": "yes | partially | no",
+      "reasoning": "",
+      "severity": "Low | Medium | High",
+      "attack_vectors": [],
+      "controls": []
+    }
   },
-  "overall_risk_level": "Low or Medium or High or Very High",
-  "article_50_disclosure_required": true or false,
-  "human_review_checkpoint_required": true or false,
-  "controls_identified": ["list", "key", "control", "names"]
-}
---- END RISK ASSESSMENT SUMMARY ---`;
+  "part_2_disclosure_framework": {
+    "note": "Complete this section only if article_50_applies is true in the Stage 1 JSON",
+    "disclaimer_text_for_users": "",
+    "internal_content_labelling_standard": "",
+    "version_control_approach": ""
+  },
+  "risk_assessment_summary": {
+    "overall_risk_level": "Low | Medium | High | Very High",
+    "overall_risk_reasoning": "",
+    "risks_confirmed_yes": [],
+    "risks_confirmed_partially": [],
+    "risks_confirmed_no": [],
+    "article_50_disclosure_required": true,
+    "human_review_checkpoint_required": true,
+    "total_controls_identified": 0
+  }
+}`;
   }
 
   // ---- Panes --------------------------------------------------
