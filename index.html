@@ -369,7 +369,9 @@ async function selectStep(stepId) {
   }
 
   // Render: step-specific wizards, rich renderer for other steps with detail files, base otherwise
-  if (stepId === 'step-3' && detailData) {
+  if (stepId === 'step-2') {
+    mountStep2Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-3' && detailData) {
     mountStep3Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-4') {
     mountStep4Wizard(panel, step, detailData, color, phaseTitle);
@@ -504,6 +506,7 @@ function _ucShowStatus(msg) {
 </script>
 
 <script src="fieldHandler_frameworkMapping.js"></script>
+<script src="step2-wizard.js"></script>
 <script src="step3-wizard.js"></script>
 <script src="step4-wizard.js"></script>
 <script src="step5-wizard.js"></script>
