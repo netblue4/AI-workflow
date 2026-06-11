@@ -211,336 +211,256 @@
 
   function _buildPrompt(businessCase) {
     const bc = (businessCase || '').trim() || '[PASTE YOUR BUSINESS CASE DESCRIPTION HERE]';
-    return `You are an AI governance specialist completing an EU AI Act system classification and a GDPR Data Protection Impact Assessment (DPIA) for a new AI use case. Your analysis will be saved as a supporting document alongside a formal governance record and must be detailed enough for a DPO and AI Change Board to review.
+    return `You are an AI governance specialist. Output ONLY valid JSON — no text, explanation, or markdown before or after the JSON object. Do not wrap the output in a code block. Fill in every "answer" and "reasoning" field in the template below based on the business case provided. Use the allowed values shown in each "answer" field (select the single most appropriate value and replace the placeholder). Write 2–4 sentences in every "reasoning" field. Do not leave any field empty.
 
 BUSINESS CASE:
 ${bc}
 
----
+OUTPUT THE FOLLOWING JSON OBJECT WITH ALL FIELDS COMPLETED:
 
-Analyse the business case above and produce a structured report. For every question provide your answer and a clear explanation of your reasoning (2–4 sentences). Do not skip any question.
-
-===================================================================
-PART 1 — SYSTEM CLASSIFICATION (Step 3)
-===================================================================
-
-AXIS A — INTERNAL GOVERNANCE TIER
-
-Our standard defines two tiers:
-• Tier 1 (General productivity): AI output does not directly and significantly influence business decisions, external communications, or regulated processes. Examples: rewriting internal documents, research, brainstorming, internal drafts not published externally.
-• Tier 2 (Business-impacting content): AI output significantly influences decisions or is used in regulated, external-facing, or high-stakes contexts. Examples: marketing documents, legal/compliance documents, financial reports, code development, translation of regulated content.
-Escalation rule: If data identification in Step 4 reveals personal, confidential, or Group-identifying data is involved, treat as Tier 2 regardless of content type.
-
-A1: Which governance tier applies to this use case?
-Select: Tier 1 — General productivity | Tier 2 — Business-impacting content
-Answer:
-Reasoning:
-
----
-
-AXIS B — EU AI ACT CLASSIFICATION (Gates G1–G5)
-
-GATE G1 — PROHIBITED PRACTICES SCREEN (Article 5)
-IMPORTANT: If the answer to G1 is YES, classification is PROHIBITED. Assessment ends — do not answer other gates.
-
-G1: Does this AI system involve ANY of the following prohibited practices?
-  • Subliminal, manipulative, or deceptive techniques to distort a person's behaviour causing harm (Art.5(1)(a))
-  • Exploitation of vulnerable groups (age, disability, socioeconomic situation) to distort behaviour harmfully (Art.5(1)(b))
-  • Social scoring of natural persons by public authorities leading to detrimental or disproportionate treatment (Art.5(1)(c))
-  • Predicting the risk of a person committing a crime based solely on profiling or personality traits (Art.5(1)(d))
-  • Compiling facial recognition databases by untargeted scraping of facial images from the internet or CCTV (Art.5(1)(e))
-  • Inferring emotions of natural persons in the workplace or in educational institutions, except for safety or medical reasons (Art.5(1)(f))
-  • Biometric categorisation to deduce or infer race, political opinions, trade union membership, religious beliefs, or sexual orientation (Art.5(1)(g))
-  • Real-time remote biometric identification in publicly accessible spaces for law enforcement purposes (Art.5(1)(h))
-
-G1 Answer (YES = PROHIBITED and assessment ends / NO = proceed to G2):
-Reasoning:
-
----
-
-GATE G2 — AI SYSTEM DEFINITION CHECK (Article 3(1))
-If ANY answer is NO, the system is OUT OF SCOPE of the EU AI Act. Internal governance tier (Axis A) still applies.
-
-G2_Q1: Is the system a machine-based system designed to operate with varying levels of autonomy that may exhibit adaptiveness after deployment? (Art.3(1))
-Answer (YES / NO):
-Reasoning:
-
-G2_Q2: Are the system's outputs (predictions, recommendations, decisions, or content) intended to influence real or virtual environments? (Art.3(1))
-Answer (YES / NO):
-Reasoning:
-
----
-
-GATE G3 — HIGH-RISK CLASSIFICATION — ANNEX III
-G3: Does this system fall within ANY of the following Annex III high-risk domains? Answer YES or NO. If YES, identify which domain(s) apply.
-  • Biometric identification or categorisation of natural persons (Annex III(1))
-  • Management or operation of critical infrastructure — roads, water, gas, heating, electricity (Annex III(2))
-  • Education or vocational training — determining access, evaluating students, monitoring during exams (Annex III(3))
-  • Employment, workers management, or self-employment — recruitment, promotion, task allocation, performance monitoring (Annex III(4))
-  • Eligibility for or assessment of essential private or public services — credit scoring, insurance risk, emergency dispatch, social benefits (Annex III(5))
-  • Law enforcement — individual risk assessment, polygraph, crime analytics, evidence reliability evaluation (Annex III(6))
-  • Migration, asylum, or border control management — risk assessment, application examination, document verification (Annex III(7))
-  • Administration of justice or democratic processes — assisting courts applying law, influencing elections (Annex III(8))
-
-G3 Answer (YES = HIGH RISK / NO = proceed to G4):
-If YES — which Annex III domain(s) apply:
-Reasoning:
-
----
-
-GATE G4 — ARTICLE 50 TRANSPARENCY OBLIGATIONS
-This gate applies to ALL use cases regardless of G3 outcome.
-
-G4_Q1: Does the system interact directly with natural persons in a conversational or text-based interface (e.g. a chatbot)? (Art.50(1))
-Answer (YES / NO):
-Reasoning:
-
-G4_Q2: Does the system generate synthetic audio, image, video, or text content that could deceive persons into thinking it is human-generated — e.g. deepfakes? (Art.50(2))
-Answer (YES / NO):
-Reasoning:
-
-G4_Q3: Does the system generate or manipulate text that is published and could constitute information of public interest — e.g. news articles or public affairs content? (Art.50(3))
-Answer (YES / NO):
-Reasoning:
-
----
-
-GATE G5 — ORGANISATION ROLE AND DEPLOYER OBLIGATIONS (Articles 3(4), 3(7), 25, 26)
-
-G5_Q0: How is the organisation using this AI system?
-  • Provider: Building or developing it using APIs, open-source models, fine-tuning, or RAG. The organisation is responsible for the AI system's design and behaviour.
-  • Deployer: Subscribing to a ready-made third-party AI service (e.g. Microsoft Copilot, Google Workspace AI) largely as provided by the supplier.
-Answer (Provider / Deployer):
-Reasoning:
-
-Answer G5_Q1 through G5_Q3 only if the system was classified HIGH RISK in G3 AND the organisation is a Deployer. Otherwise mark as Not applicable.
-
-G5_Q1: Is the AI system high-risk and developed by a third-party provider? (Art.26)
-Answer (YES / NO / Not applicable):
-
-G5_Q2: Do natural persons in your organisation use the system's outputs to make decisions that affect other natural persons? (Art.26(2))
-Answer (YES / NO / Not applicable):
-
-G5_Q3 — Substantial modification check (Art.25). Answer only if Deployer:
-Are you fine-tuning or retraining the model on your own data? (Art.25(1))
-Answer:
-Are you changing the system's intended purpose beyond what the provider designed it for? (Art.25(1))
-Answer:
-Are you adding retrieval-augmented generation (RAG) using your own proprietary datasets? (Art.25(1))
-Answer:
-Are you integrating the system as a safety-critical or regulated component in a product? (Art.25(1))
-Answer:
-
----
-
-COMBINED OUTCOME
-Based on Axis A and Axis B, select and explain the combined outcome:
-  • ISG fast-track (Tier 1 + MINIMAL_RISK)
-  • ISG fast-track with Article 50 disclosure (Tier 1 + LIMITED_RISK)
-  • Full due diligence — internal governance driver (Tier 2 + MINIMAL_RISK)
-  • Full due diligence with Article 50 disclosure (Tier 2 + LIMITED_RISK)
-  • Mandatory escalation to Tier 2 — AI Act override (Tier 1 + HIGH_RISK)
-  • Full due diligence plus conformity assessment (Tier 2 + HIGH_RISK)
-
-Combined outcome:
-AI Change Board approval required (YES / NO):
-DPIA required (YES / NO / data identification determines):
-Article 14 human oversight legally required (YES / NO):
-Article 50 transparency disclosure required (YES / NO):
-Reasoning:
-
-===================================================================
-PART 2 — DATA IDENTIFICATION AND DPIA (Step 4)
-===================================================================
-
-S1 — SYSTEM DESCRIPTION (Art.35(7)(a))
-
-S1_1: Describe what the AI system does with personal data — what it receives, processes, and outputs, including any downstream use of AI output:
-
-S1_2: State the specific purposes for which personal data is processed by or through the AI system (be specific — vague purposes do not satisfy Art.35(7)(a)):
-
-S1_3: Controller / processor relationship:
-Select: Organisation is data controller | Organisation is data processor | Joint controllership | Not yet determined
-Answer:
-
-S1_4: Vendor / AI provider data processing agreement status:
-Select: Yes — DPA signed | In progress | No — required before go-live | Not applicable (no third-party processing)
-Answer:
-
----
-
-S2 — DATA INVENTORY
-
-S2_1: Which categories of data subjects are involved? Select all that apply and explain.
-Options: Employees/staff | Customers/clients | Prospective customers | Job applicants | Children (under 18) | Vulnerable adults | Members of the public | Suppliers/contractors | Other | None — no personal data processed
-Answer:
-Explanation (describe who each selected category refers to in this use case):
-
-S2_2: Which personal data types are likely to be processed? Select all that apply and explain the specific data involved for each type.
-Options: Name and contact details | Identity documents | Financial data | Location data | Online identifiers | Behavioural/usage data | Professional/employment data | Communications content | Photographs/images | Voice recordings/transcripts | Inferred/derived data | Other | None
-Answer:
-Explanation (detail the specific data for each type selected):
-
-S2_3: Estimated volume of data subjects:
-Select: Fewer than 100 | 100–1,000 | 1,000–10,000 | 10,000–100,000 | Over 100,000 | Not yet known
-Answer:
-
-S2_4: Data retention period (e.g. 90 days / 7 years):
-Answer:
-
----
-
-S3 — SPECIAL CATEGORY DATA (Art.9)
-
-S3_1: Does the system process special category data? Select all that apply.
-Options: Racial or ethnic origin | Political opinions | Religious or philosophical beliefs | Trade union membership | Genetic data | Biometric data (for unique identification) | Health/medical data | Sex life or sexual orientation | None — no special category data
-Answer:
-
-If special category data is present:
-S3_2: Which Art.9(2) condition is relied upon?
-Answer:
-S3_3: What specific safeguards are in place?
-Answer:
-
-If no special category data: Describe any policy controls required to prevent special category data from entering the system:
-Answer:
-
----
-
-S4 — LAWFUL BASIS FOR PROCESSING (Art.6)
-
-S4_1: Primary lawful basis. Select and explain why it applies.
-Options: Art.6(1)(a) Consent | Art.6(1)(b) Performance of a contract | Art.6(1)(c) Legal obligation | Art.6(1)(d) Vital interests | Art.6(1)(e) Public task | Art.6(1)(f) Legitimate interests
-Answer:
-Explanation (justify why this basis applies to this specific use case):
-
-S4_2: If Art.6(1)(f) Legitimate interests is selected — has a Legitimate Interests Assessment (LIA) been completed?
-Select: Not required | Yes — LIA completed and documented | In progress | No — required before go-live
-Answer:
-Explanation (outline the three-part LIA test: purpose, necessity, balancing):
-
-S4_3: Data subject notification mechanism:
-Select: Privacy notice updated to include this processing | Specific notice at point of collection | Existing notice already covers this processing | Notice not yet updated — required before go-live | Not applicable
-Answer:
-Explanation:
-
----
-
-S5 — AUTOMATED DECISION-MAKING (Art.22)
-
-S5_1: Does the AI system make automated decisions with legal or similarly significant effects on individuals?
-Select: No — output is advisory only; human makes all decisions | Partially — AI influences but human reviews every case | Yes — AI directly determines outcomes | Not yet assessed
-Answer:
-Reasoning:
-
-S5_4: AI system explainability level:
-Select: Full explainability — decision factors disclosed | Partial — high-level rationale provided | Black-box — output only, no rationale | Not yet assessed
-Answer:
-
----
-
-S6 — DATA FLOWS AND THIRD PARTIES
-
-S6_1: Is personal data transferred outside the EEA?
-Select: No — all processing within EEA | Yes — adequacy decision applies | Yes — Standard Contractual Clauses in place | Yes — Binding Corporate Rules | Yes — transfer mechanism not yet confirmed | Unknown
-Answer:
-
-S6_2: List all third parties (including the AI vendor) that receive or process personal data as part of this system:
-Answer:
-
-S6_3: Is personal data used to train or fine-tune the AI model?
-Select: No — inference only; no training data retained by vendor | Yes — explicit basis obtained | Unknown — vendor contract does not address this | Not applicable
-Answer:
-
----
-
-S9 — NECESSITY AND PROPORTIONALITY (Art.35(7)(b))
-
-S9_1: Could the business purpose be achieved with less personal data or without AI?
-Select: No — AI and this level of data are necessary for the stated purpose | Partially — some data could be reduced; mitigation documented | Yes — redesign required before proceeding | Not yet assessed
-Answer:
-
-S9_2: Write a proportionality and necessity statement justifying why the scope of personal data processing by the AI system is proportionate to the business purpose:
-
----
-
-S10 — RISK IDENTIFICATION, CONTROLS AND RATING (Art.35(7)(c))
-
-S10_1: Identify all applicable privacy risks. For each risk selected, explain the specific scenario in the context of this use case.
-Options:
-  • Unauthorised access to personal data via AI interface
-  • Re-identification of pseudonymised data through AI inference
-  • AI-generated output revealing personal data inadvertently
-  • Bias / discriminatory outcomes affecting protected characteristics
-  • Unlawful profiling or scoring of individuals
-  • Personal data retained in AI model weights / caches
-  • Third-country transfer without adequate safeguards
-  • Data subject unaware of AI-driven processing
-  • Inaccurate AI output used to make decisions about individuals
-  • Vendor data breach or model exfiltration
-Answer (list all that apply):
-Explanation per risk:
-
-S10_2: Technical security measures in place or planned. Select all that apply.
-Options: Encryption at rest | Encryption in transit (TLS 1.2+) | Access controls / role-based access | Multi-factor authentication (MFA) | Audit logging of access and processing | Data masking / pseudonymisation before AI input | Automated anomaly detection | Penetration testing of AI interface | Data loss prevention (DLP) controls | None currently in place
-Answer:
-
-S10_3: Describe the data minimisation approach — how personal data is minimised before being input to the AI system:
-
-S10_4: Can personal data be erased from AI model outputs and logs?
-Select: Yes — erasure process confirmed with vendor | Partial — logs erased but model weights cannot be adjusted | No — technical limitation prevents erasure | Not assessed
-Answer:
-
-S10_5: Inherent privacy risk rating (before controls):
-Select: Low | Medium | High | Very High
-Answer:
-Reasoning (explain what drives this inherent rating):
-
-S10_6: Residual privacy risk rating (after controls):
-Select: Low | Medium | High | Very High
-Answer:
-Reasoning (explain how controls reduce the risk and what residual risk remains):
-
----
-
-S11 — DPO CONSULTATION (Art.35(2) and Art.36)
-
-S11_1: Has the DPO been consulted?
-Select: Yes — DPO reviewed and approved | Yes — DPO noted concerns (documented) | Consultation in progress | No — DPO not required (no DPO designated) | No — not yet consulted
-Answer:
-
-S11_3: Is Art.36 supervisory authority prior consultation required?
-Select: No — residual risk is acceptable | Yes — Art.36 prior consultation initiated | Under assessment
-Answer:
-Note: Art.36 consultation is required where residual risk remains High or Very High after mitigation.
-
-===================================================================
-OUTPUT FORMAT INSTRUCTIONS
-===================================================================
-
-Produce the full narrative report answering every question with Answer: and Reasoning: clearly labelled throughout.
-
-At the very end of your response, output the following block exactly — do not omit it:
-
---- CLASSIFICATION SUMMARY (JSON) ---
 {
-  "axis_a": "tier_1 or tier_2",
-  "axis_b_outcome": "PROHIBITED or OUT_OF_SCOPE or HIGH_RISK or LIMITED_RISK or MINIMAL_RISK",
-  "organisation_role": "provider or deployer",
-  "article_50_applies": true or false,
-  "combined_outcome": "label from the combined outcome matrix",
-  "change_board_required": true or false,
-  "data_subjects": ["list", "applicable", "categories"],
-  "personal_data_types": ["list", "applicable", "types"],
-  "special_category_data": "none or list types",
-  "lawful_basis": "Art.6(1)(?) — description",
-  "automated_decision_making": "no — advisory only or partial or yes — determinative",
-  "dpia_inherent_risk": "Low or Medium or High or Very High",
-  "dpia_residual_risk": "Low or Medium or High or Very High",
-  "dpo_consultation_required": true or false,
-  "art36_consultation_required": true or false
-}
---- END CLASSIFICATION SUMMARY ---`;
+  "report_metadata": {
+    "report_type": "AI_Classification_and_DPIA",
+    "steps_covered": ["step_3", "step_4"],
+    "regulation": "EU AI Act (Regulation EU 2024/1689) + GDPR Art.35",
+    "generated_by": "JAKE — on-premise AI assistant",
+    "generated_at": "[INSERT ISO 8601 TIMESTAMP]"
+  },
+  "part_1_system_classification": {
+    "axis_a_governance_tier": {
+      "answer": "tier_1 — General productivity | tier_2 — Business-impacting content",
+      "tier_label": "",
+      "reasoning": ""
+    },
+    "axis_b_eu_ai_act": {
+      "g1_prohibited_practices": {
+        "question": "Does this AI system involve any prohibited practice under Art.5 EU AI Act (subliminal manipulation, vulnerable-group exploitation, social scoring, crime prediction by profiling, facial recognition DB scraping, workplace emotion inference, biometric categorisation for protected characteristics, real-time remote biometric ID for law enforcement)?",
+        "answer": "yes | no",
+        "reasoning": "",
+        "note": "If answer is yes, set axis_b_outcome to PROHIBITED and leave g2 through g5 as not_applicable"
+      },
+      "g2_ai_system_definition": {
+        "q1_machine_based_autonomous": {
+          "question": "Is the system a machine-based system designed to operate with varying levels of autonomy that may exhibit adaptiveness after deployment? (Art.3(1))",
+          "answer": "yes | no",
+          "reasoning": ""
+        },
+        "q2_outputs_influence_environment": {
+          "question": "Are the system outputs (predictions, recommendations, decisions, or content) intended to influence real or virtual environments? (Art.3(1))",
+          "answer": "yes | no",
+          "reasoning": ""
+        },
+        "gate_outcome": "in_scope | out_of_scope",
+        "note": "If gate_outcome is out_of_scope, set g3 through g5 as not_applicable and axis_b_outcome to OUT_OF_SCOPE"
+      },
+      "g3_high_risk_annex_iii": {
+        "question": "Does this system fall within any Annex III high-risk domain? (biometric ID, critical infrastructure, education, employment, essential services, law enforcement, migration, administration of justice)",
+        "answer": "yes | no | not_applicable",
+        "domains_triggered": [],
+        "reasoning": ""
+      },
+      "g4_article_50_transparency": {
+        "q1_conversational_interface": {
+          "question": "Does the system interact directly with natural persons in a conversational or text-based interface? (Art.50(1))",
+          "answer": "yes | no",
+          "reasoning": ""
+        },
+        "q2_synthetic_deceptive_content": {
+          "question": "Does the system generate synthetic audio, image, video, or text that could deceive persons into thinking it is human-generated? (Art.50(2))",
+          "answer": "yes | no",
+          "reasoning": ""
+        },
+        "q3_public_interest_text": {
+          "question": "Does the system generate or manipulate text published as information of public interest (e.g. news, public affairs)? (Art.50(3))",
+          "answer": "yes | no",
+          "reasoning": ""
+        },
+        "article_50_applies": true
+      },
+      "g5_organisation_role": {
+        "q0_role": {
+          "question": "Is the organisation a Provider (building/developing using APIs, open-source, fine-tuning, RAG) or a Deployer (subscribing to a ready-made third-party AI service)?",
+          "answer": "provider | deployer",
+          "reasoning": ""
+        },
+        "q1_high_risk_deployer": {
+          "question": "Is the AI system high-risk and developed by a third-party provider? (Art.26) — answer only if HIGH RISK and Deployer",
+          "answer": "yes | no | not_applicable",
+          "reasoning": ""
+        },
+        "q2_decisions_affecting_persons": {
+          "question": "Do natural persons in the organisation use AI outputs to make decisions affecting other natural persons? (Art.26(2)) — answer only if HIGH RISK and Deployer",
+          "answer": "yes | no | not_applicable",
+          "reasoning": ""
+        },
+        "q3_substantial_modification": {
+          "sq1_fine_tuning": {
+            "question": "Are you fine-tuning or retraining the model on your own data? (Art.25(1))",
+            "answer": "yes | no | not_applicable",
+            "reasoning": ""
+          },
+          "sq2_purpose_change": {
+            "question": "Are you changing the system intended purpose beyond what the provider designed it for? (Art.25(1))",
+            "answer": "yes | no | not_applicable",
+            "reasoning": ""
+          },
+          "sq3_rag_proprietary": {
+            "question": "Are you adding retrieval-augmented generation (RAG) using your own proprietary datasets? (Art.25(1))",
+            "answer": "yes | no | not_applicable",
+            "reasoning": ""
+          },
+          "sq4_safety_critical": {
+            "question": "Are you integrating the system as a safety-critical or regulated component in a product? (Art.25(1))",
+            "answer": "yes | no | not_applicable",
+            "reasoning": ""
+          }
+        }
+      }
+    },
+    "combined_outcome": {
+      "label": "ISG fast-track | ISG fast-track with Article 50 disclosure | Full due diligence — internal governance driver | Full due diligence with Article 50 disclosure | Mandatory escalation to Tier 2 — AI Act override | Full due diligence plus conformity assessment",
+      "axis_a": "tier_1 | tier_2",
+      "axis_b_outcome": "PROHIBITED | OUT_OF_SCOPE | HIGH_RISK | LIMITED_RISK | MINIMAL_RISK",
+      "organisation_role": "provider | deployer",
+      "article_50_applies": true,
+      "change_board_required": true,
+      "dpia_required": "yes | no | data_identification_determines",
+      "article_14_human_oversight_legally_required": false,
+      "article_50_disclosure_required": true,
+      "reasoning": ""
+    }
+  },
+  "part_2_dpia": {
+    "s1_system_description": {
+      "processing_description": "",
+      "processing_purposes": "",
+      "controller_processor_relationship": {
+        "answer": "Organisation is data controller | Organisation is data processor | Joint controllership | Not yet determined",
+        "reasoning": ""
+      },
+      "vendor_dpa_status": {
+        "answer": "Yes — DPA signed | In progress | No — required before go-live | Not applicable — no third-party processing",
+        "reasoning": ""
+      }
+    },
+    "s2_data_inventory": {
+      "data_subjects": {
+        "selected": [],
+        "allowed_values": ["Employees/staff", "Customers/clients", "Prospective customers", "Job applicants", "Children under 18", "Vulnerable adults", "Members of the public", "Suppliers/contractors", "Other", "None — no personal data processed"],
+        "explanation": ""
+      },
+      "personal_data_types": {
+        "selected": [],
+        "allowed_values": ["Name and contact details", "Identity documents", "Financial data", "Location data", "Online identifiers", "Behavioural/usage data", "Professional/employment data", "Communications content", "Photographs/images", "Voice recordings/transcripts", "Inferred/derived data", "Other", "None"],
+        "explanation": ""
+      },
+      "estimated_volume_of_data_subjects": "Fewer than 100 | 100–1,000 | 1,000–10,000 | 10,000–100,000 | Over 100,000 | Not yet known",
+      "data_retention_period": ""
+    },
+    "s3_special_category_data": {
+      "selected": [],
+      "allowed_values": ["Racial or ethnic origin", "Political opinions", "Religious or philosophical beliefs", "Trade union membership", "Genetic data", "Biometric data for unique identification", "Health/medical data", "Sex life or sexual orientation", "None — no special category data"],
+      "art9_2_condition": "",
+      "safeguards": "",
+      "policy_controls_if_none": ""
+    },
+    "s4_lawful_basis": {
+      "primary_basis": {
+        "answer": "Art.6(1)(a) Consent | Art.6(1)(b) Performance of a contract | Art.6(1)(c) Legal obligation | Art.6(1)(d) Vital interests | Art.6(1)(e) Public task | Art.6(1)(f) Legitimate interests",
+        "reasoning": ""
+      },
+      "legitimate_interests_assessment": {
+        "answer": "Not required | Yes — LIA completed and documented | In progress | No — required before go-live",
+        "lia_three_part_test": ""
+      },
+      "data_subject_notification": {
+        "answer": "Privacy notice updated to include this processing | Specific notice at point of collection | Existing notice already covers this processing | Notice not yet updated — required before go-live | Not applicable",
+        "reasoning": ""
+      }
+    },
+    "s5_automated_decision_making": {
+      "art22_applies": {
+        "answer": "No — output is advisory only; human makes all decisions | Partially — AI influences but human reviews every case | Yes — AI directly determines outcomes | Not yet assessed",
+        "reasoning": ""
+      },
+      "explainability_level": {
+        "answer": "Full explainability — decision factors disclosed | Partial — high-level rationale provided | Black-box — output only, no rationale | Not yet assessed",
+        "reasoning": ""
+      }
+    },
+    "s6_data_flows_and_third_parties": {
+      "eea_transfer": {
+        "answer": "No — all processing within EEA | Yes — adequacy decision applies | Yes — Standard Contractual Clauses in place | Yes — Binding Corporate Rules | Yes — transfer mechanism not yet confirmed | Unknown",
+        "reasoning": ""
+      },
+      "third_party_recipients": "",
+      "training_data_use": {
+        "answer": "No — inference only; no training data retained by vendor | Yes — explicit basis obtained | Unknown — vendor contract does not address this | Not applicable",
+        "reasoning": ""
+      }
+    },
+    "s9_necessity_and_proportionality": {
+      "less_data_possible": {
+        "answer": "No — AI and this level of data are necessary for the stated purpose | Partially — some data could be reduced; mitigation documented | Yes — redesign required before proceeding | Not yet assessed",
+        "reasoning": ""
+      },
+      "proportionality_statement": ""
+    },
+    "s10_risk_identification_controls_rating": {
+      "privacy_risks_identified": {
+        "selected": [],
+        "allowed_values": ["Unauthorised access to personal data via AI interface", "Re-identification of pseudonymised data through AI inference", "AI-generated output revealing personal data inadvertently", "Bias/discriminatory outcomes affecting protected characteristics", "Unlawful profiling or scoring of individuals", "Personal data retained in AI model weights/caches", "Third-country transfer without adequate safeguards", "Data subject unaware of AI-driven processing", "Inaccurate AI output used to make decisions about individuals", "Vendor data breach or model exfiltration"],
+        "explanation_per_risk": ""
+      },
+      "technical_security_measures": {
+        "selected": [],
+        "allowed_values": ["Encryption at rest", "Encryption in transit (TLS 1.2+)", "Access controls/role-based access", "Multi-factor authentication (MFA)", "Audit logging of access and processing", "Data masking/pseudonymisation before AI input", "Automated anomaly detection", "Penetration testing of AI interface", "Data loss prevention (DLP) controls", "None currently in place"],
+        "reasoning": ""
+      },
+      "data_minimisation_approach": "",
+      "erasure_capability": {
+        "answer": "Yes — erasure process confirmed with vendor | Partial — logs erased but model weights cannot be adjusted | No — technical limitation prevents erasure | Not assessed",
+        "reasoning": ""
+      },
+      "inherent_risk_rating": {
+        "answer": "Low | Medium | High | Very High",
+        "reasoning": ""
+      },
+      "residual_risk_rating": {
+        "answer": "Low | Medium | High | Very High",
+        "reasoning": ""
+      }
+    },
+    "s11_dpo_consultation": {
+      "dpo_consulted": {
+        "answer": "Yes — DPO reviewed and approved | Yes — DPO noted concerns (documented) | Consultation in progress | No — DPO not required (no DPO designated) | No — not yet consulted",
+        "reasoning": ""
+      },
+      "art36_consultation_required": {
+        "answer": "No — residual risk is acceptable | Yes — Art.36 prior consultation initiated | Under assessment",
+        "reasoning": "",
+        "note": "Art.36 consultation is required where residual risk remains High or Very High after mitigation"
+      }
+    }
+  },
+  "classification_summary": {
+    "axis_a": "tier_1 | tier_2",
+    "axis_b_outcome": "PROHIBITED | OUT_OF_SCOPE | HIGH_RISK | LIMITED_RISK | MINIMAL_RISK",
+    "organisation_role": "provider | deployer",
+    "article_50_applies": true,
+    "combined_outcome": "",
+    "change_board_required": true,
+    "data_subjects": [],
+    "personal_data_types": [],
+    "special_category_data": "none",
+    "lawful_basis": "",
+    "automated_decision_making": "",
+    "dpia_inherent_risk": "Low | Medium | High | Very High",
+    "dpia_residual_risk": "Low | Medium | High | Very High",
+    "dpo_consultation_required": true,
+    "art36_consultation_required": false
+  }
+}`;
   }
 
   // ── State persistence ─────────────────────────────────────────────────────
