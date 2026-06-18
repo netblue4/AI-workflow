@@ -258,6 +258,7 @@
       legalRisks.forEach((r, i) => ll.appendChild(_buildRiskAccordion(r, i)));
       card.appendChild(ll);
     }
+    card.appendChild(_buildDpiaAdditionsSection());
     card.appendChild(_buildComplianceAdditionsSection());
 
     card.appendChild(_buildActionRow());
@@ -628,6 +629,46 @@
     return wrap;
   }
 
+  // ---- DPIA Additions section (wizard tab) --------------------
+  function _buildDpiaAdditionsSection() {
+    const wrap = _el('div', 'wiz9-dpia-adds-wrap');
+
+    const hdr = _el('div', 'wiz9-dpia-adds-hdr');
+    const icon = _el('span', 'wiz9-dpia-adds-icon');
+    icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>`;
+    hdr.appendChild(icon);
+    const titleWrap = _el('div', 'wiz9-dpia-adds-title-wrap');
+    titleWrap.appendChild(_el('span', 'wiz9-dpia-adds-title', { textContent: 'DPIA Controls' }));
+    titleWrap.appendChild(_el('span', 'wiz9-dpia-adds-sub', { textContent: 'Technical security measures committed in the DPIA (Step 4). These are carried forward automatically into the control register.' }));
+    hdr.appendChild(titleWrap);
+    wrap.appendChild(hdr);
+
+    const body = _el('div', 'wiz9-dpia-adds-body');
+    const step4 = _record?.['step-4'];
+    const measures = step4?.data_types_identified?.security_measures || [];
+
+    if (!step4) {
+      const emp = _el('p', 'wiz9-dpia-adds-empty');
+      emp.textContent = 'Step 4 (DPIA) not yet completed. Complete and save the DPIA first.';
+      body.appendChild(emp);
+    } else if (measures.length === 0) {
+      const emp = _el('p', 'wiz9-dpia-adds-empty');
+      emp.textContent = 'No technical security measures were recorded in the DPIA.';
+      body.appendChild(emp);
+    } else {
+      measures.forEach(m => {
+        const row = _el('div', 'wiz9-dpia-add-item');
+        const dot = _el('span', 'wiz9-dpia-dot'); row.appendChild(dot);
+        const name = _el('span', 'wiz9-dpia-add-name'); name.textContent = m; row.appendChild(name);
+        const badge = _el('span', 'wiz9-dpia-badge'); badge.textContent = 'DPIA'; row.appendChild(badge);
+        body.appendChild(row);
+      });
+    }
+
+    wrap.appendChild(body);
+    return wrap;
+  }
+
   // ---- Action row + save --------------------------------------
   function _buildActionRow() {
     const row   = _el('div', 'wiz-action-row');
@@ -714,9 +755,14 @@
         return { control_id: id, control_name: ctrl?.jkName || '', fk_Harmonised_Standard_IDs: ctrl?.fk_Harmonised_Standard_IDs || '', selected: true};
       });
 
+    // DPIA controls from Step 4
+    const dpiaControls = (_record?.['step-4']?.data_types_identified?.security_measures || [])
+      .map(m => ({ control_name: m, source: 'DPIA_Step4' }));
+
     // counts
     const selectedCount   = risk_controls.filter(c => c.selected).length;
     const complianceCount = complianceAdditions.length;
+    const dpiaCount       = dpiaControls.length;
 
     return {
       step_id: 'step-6', step_title: 'Control identification',
@@ -728,8 +774,10 @@
       total_controls_available: risk_controls.length,
       selected_controls:        selectedCount,
       compliance_additions_count: complianceCount,
+      dpia_controls_count:      dpiaCount,
       risk_controls,
-      compliance_additions: complianceAdditions
+      compliance_additions: complianceAdditions,
+      dpia_controls:        dpiaControls
     };
   }
 
@@ -744,6 +792,7 @@
       [rec9.total_risks,                  'Total risks'],
       [rec9.risks_controlled,             'Risks controlled'],
       [rec9.selected_controls,            'Controls selected'],
+      [rec9.dpia_controls_count,          'DPIA controls'],
       [rec9.compliance_additions_count,   'Compliance additions']
     ].forEach(([num, lbl]) => {
       const s = _el('div', 'wiz8-stat');
@@ -1662,6 +1711,20 @@
 .wiz9-comp-adds-empty{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:0}
 .wiz9-comp-add-item{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f5f3ff;border-radius:5px;flex-wrap:wrap}
 .wiz9-comp-adds-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#ede9fe;color:#6d28d9;white-space:nowrap}
+
+/* DPIA additions section in wizard tab */
+.wiz9-dpia-adds-wrap{margin-top:24px;border:1px solid #99f6e4;border-radius:8px;overflow:hidden}
+.wiz9-dpia-adds-hdr{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#f0fdfa;border-bottom:1px solid #99f6e4}
+.wiz9-dpia-adds-icon{flex-shrink:0;color:#0f766e;margin-top:1px}
+.wiz9-dpia-adds-title-wrap{display:flex;flex-direction:column;gap:2px}
+.wiz9-dpia-adds-title{font-size:12px;font-weight:700;color:#0f766e}
+.wiz9-dpia-adds-sub{font-size:11px;color:var(--color-text-secondary);line-height:1.4}
+.wiz9-dpia-adds-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.wiz9-dpia-adds-empty{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:0}
+.wiz9-dpia-add-item{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f0fdfa;border-radius:5px;flex-wrap:wrap}
+.wiz9-dpia-dot{width:7px;height:7px;border-radius:50%;background:#14b8a6;flex-shrink:0}
+.wiz9-dpia-add-name{font-size:12px;color:var(--color-text-primary);flex:1}
+.wiz9-dpia-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#ccfbf1;color:#0f766e;white-space:nowrap}
 
 /* New counts in article header */
 .wiz9-cmp-count--ctrl{background:#d1fae5;color:#065f46}
