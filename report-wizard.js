@@ -137,6 +137,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     const riskCtrls = (s9?.risk_controls || []).filter(c => c.selected).length;
     const compAdds  = (s9?.compliance_additions || []).length;
+    const dpiaAdds  = (s9?.dpia_controls || []).length;
 
     const totalTests = s10?.total_tests ?? '—';
     const doneTests  = s10?.completed_tests ?? 0;
@@ -173,8 +174,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         <div class="cs-lbl">Risks accepted<br><span class="cs-sub">${legalTotal} legal/regulatory risks assessed</span></div>
       </div>
       <div class="cs-box">
-        <div class="cs-num">${riskCtrls + compAdds}</div>
-        <div class="cs-lbl">Controls selected<br><span class="cs-sub">${riskCtrls} risk team · ${compAdds} compliance additions</span></div>
+        <div class="cs-num">${riskCtrls + compAdds + dpiaAdds}</div>
+        <div class="cs-lbl">Controls selected<br><span class="cs-sub">${riskCtrls} risk team · ${compAdds} compliance · ${dpiaAdds} DPIA</span></div>
       </div>
       <div class="cs-box">
         <div class="cs-num">${doneTests + naTests}${typeof totalTests === 'number' ? `/${totalTests}` : ''}</div>
@@ -299,6 +300,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     const riskCtrls = s9.risk_controls || [];
     const compAdds  = s9.compliance_additions || [];
+    const dpiaAdds  = s9.dpia_controls || [];
 
     // Group risk controls by risk_id
     const byRisk = new Map();
@@ -313,7 +315,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const regularAdds = compAdds.filter(c => !(c.control_source || '').includes('Framework'));
 
     let html = `<p class="section-meta">Assessment date: ${s9.assessment_date || '—'} &nbsp;|&nbsp;
-      ${riskCtrls.filter(c=>c.selected).length} risk controls · ${compAdds.length} compliance additions</p>`;
+      ${riskCtrls.filter(c=>c.selected).length} risk controls · ${compAdds.length} compliance additions · ${dpiaAdds.length} DPIA controls</p>`;
 
     html += `<h3 class="sub-heading">Risk Team Controls</h3>`;
     if (byRisk.size === 0) {
@@ -346,6 +348,19 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           <span class="ctrl-id mono">${_esc(c.control_id)}</span>
           <span class="ctrl-name">${_esc(c.control_name)}</span>
           ${c.fk_Harmonised_Standard_IDs ? `<span class="ctrl-ref mono">${_esc(c.fk_Harmonised_Standard_IDs)}</span>` : ''}
+        </div>`).join('')}
+      </div>`;
+    }
+
+    if (dpiaAdds.length > 0) {
+      html += `<h3 class="sub-heading">DPIA Controls</h3>
+      <p class="section-meta">Technical security measures committed in the DPIA (Step 4) and carried forward into the control register.</p>
+      <div class="ctrl-group ctrl-group--dpia">
+        ${dpiaAdds.map(c => `
+        <div class="ctrl-row ctrl-row--dpia">
+          <span class="ctrl-status ctrl-status--dpia">✓ DPIA</span>
+          <span class="ctrl-src src-dpia">DPIA</span>
+          <span class="ctrl-name">${_esc(c.control_name)}</span>
         </div>`).join('')}
       </div>`;
     }
@@ -539,6 +554,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const artCount   = s3?.axis_b?.applicable_articles?.length ?? 0;
     const riskCtrlSel = (s9?.risk_controls || []).filter(c => c.selected).length;
     const compAdds    = (s9?.compliance_additions || []).length;
+    const dpiaAdds    = (s9?.dpia_controls || []).length;
     const doneTests   = s10?.completed_tests ?? '—';
     const naTests     = s10?.not_applicable_tests ?? '—';
     const pendTests   = s10?.pending_tests ?? '—';
@@ -590,6 +606,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   <tr><td class="dt-label">Applicable EU AI Act Articles</td><td>${artCount}</td></tr>
   <tr><td class="dt-label">Controls Selected (Risk Team)</td><td>${riskCtrlSel}</td></tr>
   <tr><td class="dt-label">Controls Added (Compliance Team)</td><td>${compAdds}</td></tr>
+  <tr><td class="dt-label">Controls Committed (DPIA)</td><td>${dpiaAdds}</td></tr>
+  <tr><td class="dt-label">Total Controls</td><td>${riskCtrlSel + compAdds + dpiaAdds}</td></tr>
   <tr><td class="dt-label">Tests Completed</td><td>${doneTests}</td></tr>
   <tr><td class="dt-label">Tests Not Applicable</td><td>${naTests}</td></tr>
   <tr><td class="dt-label">Tests Pending</td><td>${pendTests}</td></tr>
@@ -877,6 +895,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .ctrl-src{font-size:8pt;font-weight:700;padding:1px 5px;border-radius:3px;flex-shrink:0}
 .src-eu{background:#dbeafe;color:#1e40af}
 .src-fs{background:#ede9fe;color:#7c3aed}
+.ctrl-group--dpia{border-color:#99f6e4}
+.ctrl-row--dpia{background:#f0fdfa}
+.ctrl-status--dpia{color:#0f766e}
+.src-dpia{background:#ccfbf1;color:#0f766e}
 .ctrl-id{font-size:9pt;flex-shrink:0;color:#555}
 .ctrl-name{flex:1}
 .ctrl-ref{font-size:8.5pt;color:#888}
