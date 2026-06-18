@@ -380,13 +380,353 @@
   }
 
   function _buildStep5Prompt() {
-    return `You are an AI governance specialist. Output ONLY valid JSON — no text, explanation, or markdown before or after the JSON object. Do not wrap the output in a code block. Fill in every "answer", "reasoning", "severity", and "attack_vectors" field based on the Stage 1 JSON pasted below. For every risk answered "yes" or "partially", also complete the "controls" array. Write 2–4 sentences in every "reasoning" field. Do not leave any field empty.
+    return `You are an AI governance specialist completing a Risk Assessment (Step 5) and Control Identification (Step 6) for an AI use case that has already been classified and had a DPIA completed.
 
-STAGE 1 CLASSIFICATION AND DPIA JSON (paste your Stage 1 output here, then run):
+CONTEXT — paste the full Stage 1 report (classification and DPIA) below this line, then run the prompt:
 
-[PASTE STAGE 1 JSON HERE]
+[PASTE STAGE 1 REPORT HERE]
 
-OUTPUT THE FOLLOWING JSON OBJECT WITH ALL FIELDS COMPLETED:
+---
+
+Using the classification and DPIA above as your context, produce a structured risk assessment and control schedule. For every risk answer YES or PARTIALLY and explain the specific scenario. For every risk answered NO briefly state why it does not apply. Use the "This risk applies if any of the following are true" criteria to guide your assessment.
+
+OUTPUT FORMAT: Use the section headers exactly as shown. Label every answer "Answer:" and every explanation "Reasoning:". At the very end, output the JSON summary block exactly as specified.
+
+===================================================================
+PART 1 — RISK ASSESSMENT (Step 5)
+===================================================================
+
+For each risk below: Answer YES, PARTIALLY, or NO. Then provide Reasoning (2–4 sentences), list the specific Attack vectors relevant to this use case, and rate the Severity as Low, Medium, or High.
+
+---
+
+R01 — Human Oversight Bypass Failure  [Human Control]
+This risk applies if any of the following are true:
+  • AI output is used to make or significantly influence decisions without a mandatory human review step
+  • Users have no mechanism to override, halt, or contest AI-driven actions
+  • The AI system provides no confidence indicator or explanation alongside its outputs
+
+Question: Does the AI system make or significantly influence decisions without a mandatory human review or override step?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R02 — Subgroup Coverage Failure  [Bias & Fairness]
+This risk applies if any of the following are true:
+  • The AI system processes data about or makes decisions that affect distinct groups of people (by age, gender, ethnicity, disability, or other protected characteristic)
+  • Training data was collected over a period or from a source where certain groups may have been underrepresented
+  • The AI system's outputs affect employment, credit, benefits, healthcare access, or other individually significant decisions
+
+Question: Does the AI system process data about, or make decisions that affect, people from distinct demographic or protected groups?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R03 — Proxy Discrimination Propagation Failure  [Bias & Fairness]
+This risk applies if any of the following are true:
+  • The AI uses data variables that may correlate with protected characteristics (e.g. location, purchasing patterns, social connections)
+  • The AI ranks, scores, or filters individuals for employment, credit, insurance, benefits, or similar consequential decisions
+  • Historical decisions are used as training labels and may embed past discriminatory patterns
+
+Question: Does the AI use input variables — such as location, purchasing history, or social network data — that could act as proxies for protected characteristics?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R04 — Dataset Lifecycle Integrity Failure  [Data Integrity]
+This risk applies if any of the following are true:
+  • The AI model is periodically retrained or fine-tuned on updated data
+  • The system's knowledge base (RAG pipeline) is refreshed with new documents or data feeds
+  • Third-party or externally sourced datasets are ingested without formal versioning and validation
+
+Question: Are formal controls in place governing the collection, labelling, versioning, and retirement of all training datasets?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R05 — Data Governance Documentation Failure  [Data Integrity]
+This risk applies if any of the following are true:
+  • The AI system uses training or retrieval data whose selection rationale, legal permission, and preparation history are not formally documented
+  • The organisation cannot trace which datasets were used, when they were collected, or why they were selected — meaning it cannot produce this evidence to a regulator examining Art.10(2) or Art.11/Annex IV compliance
+  • Multiple data sources are combined without a documented provenance chain that records origin, transformation steps, and legal basis for each source
+
+Question: Is the data lineage, schema, and quality thresholds for all training data formally documented and maintained?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R06 — Data Quality Measurement Failure  [Data Integrity]
+This risk applies if any of the following are true:
+  • The AI system's outputs depend directly on the quality and completeness of input data
+  • No formal data quality metrics, thresholds, or validation rules are applied before data is used
+  • Errors in input data would propagate into AI-driven decisions without triggering an alert or rejection
+
+Question: Is the quality, completeness, and representativeness of training data regularly measured and reported against defined thresholds?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R07 — Audit Log Integrity Failure  [Monitoring & Audit]
+This risk applies if any of the following are true:
+  • The AI system is subject to regulatory logging requirements (EU AI Act Art.12, GDPR Art.5(1)(f), internal compliance policy)
+  • Audit trails are required to reconstruct or justify AI decisions in the event of a complaint, legal challenge, or regulatory review
+  • AI decision logs are stored in a system where they could be modified, deleted, or are not protected from tampering
+
+Question: Does the AI system generate comprehensive, tamper-evident audit logs of its decisions, inputs, and actions?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R08 — Log Retention Violation  [Monitoring & Audit]
+This risk applies if any of the following are true:
+  • The AI system's operational logs are subject to a defined minimum retention period (regulatory, contractual, or internal policy)
+  • Logs are stored in systems with automatic deletion, rolling overwrite, or size-based truncation that could violate retention requirements
+  • Historical AI decision logs may be required for regulatory audit, data subject requests, or post-incident investigation
+
+Question: Are AI system logs retained for the full period required by applicable regulations, internal policies, or contractual obligations?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R09 — Adversarial Input Evasion Failure  [Cybersecurity]
+This risk applies if any of the following are true:
+  • The AI system accepts natural language or structured input directly from users (prompt injection risk)
+  • The system is exposed to potentially adversarial, untrusted, or external users or data sources
+  • Security controls rely on the AI model itself to detect and reject malicious inputs rather than a separate validation layer
+
+Question: Does the AI system accept external or user-supplied inputs that directly influence its predictions or decisions?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R10 — Unauthorised Access and Privilege Escalation Failure  [Access Control]
+This risk applies if any of the following are true:
+  • The AI system stores sensitive data (training data, personal data, model weights, inference logs) requiring formal access controls
+  • Multiple users, teams, or automated systems have access to the AI infrastructure with different privilege levels
+  • Access to the AI model, its data, or its configuration is not governed by a documented and enforced IAM policy
+
+Question: Are role-based access controls in place limiting who can query, modify, retrain, or administer the AI system?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R11 — Cyber Attack Detection Failure  [Cybersecurity]
+This risk applies if any of the following are true:
+  • The AI system processes sensitive or personal data that could be targeted for exfiltration via query manipulation
+  • Prompt injection or adversarial inputs could manipulate AI outputs to bypass controls or leak information
+  • No automated monitoring exists to detect unusual query volumes, anomalous output patterns, or potential AI-layer attacks
+
+Question: Does the AI system have monitoring controls to detect anomalous query patterns, unusual output behaviour, or attempted intrusions?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R12 — Accuracy Measurement and Drift Failure  [Performance Integrity]
+This risk applies if any of the following are true:
+  • The AI system makes consequential decisions that depend on maintaining a defined level of accuracy or performance
+  • The system is deployed in an environment where the characteristics of input data may evolve over time
+  • No baseline accuracy metric, monitoring threshold, or automated drift detection alert has been defined
+
+Question: Is the AI system's accuracy formally measured at deployment and monitored on an ongoing basis for model drift or degradation?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R13 — Feedback Loop Contamination Failure  [Performance Integrity]
+This risk applies if any of the following are true:
+  • The AI system learns from, adapts to, or is retrained using user interactions, feedback, or behavioural signals
+  • The system is periodically retrained on data that includes outputs previously generated by the AI itself
+  • Errors or biases in current AI outputs could become embedded as ground truth in future training data
+
+Question: Does the AI system use its own historical outputs — directly or indirectly — as future training or reinforcement data?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R14 — Output Reproducibility Failure  [Performance Integrity]
+This risk applies if any of the following are true:
+  • AI-generated outputs must be reproducible for regulatory audit, legal proceedings, or compliance review
+  • Identical or equivalent inputs should produce consistent results for legal, contractual, or risk management reasons
+  • Post-incident investigation requires the ability to reconstruct and replay a specific AI decision or output
+
+Question: Is reproducibility required for this system — must the same input reliably produce the same output across runs and environments?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R15 — Input Corruption Propagation Failure  [Performance Integrity]
+This risk applies if any of the following are true:
+  • The AI system ingests real-time or externally sourced data feeds that could be corrupted, incomplete, or manipulated
+  • No validation or sanity-check gate exists between data ingestion and AI processing
+  • Corrupted or anomalous inputs would propagate directly into AI outputs without triggering an alert or rejection
+
+Question: Could corrupted, spoofed, or low-quality data reach the model without detection by an upstream validation or anomaly-detection layer?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R16 — Fail-Safe Activation Failure  [Availability & Resilience]
+This risk applies if any of the following are true:
+  • The AI system is relied upon for time-sensitive or operationally critical functions where failure causes direct harm
+  • A system fault would leave users, staff, or affected individuals without a safe fallback or manual alternative
+  • No defined safe-state, limited-functionality mode, or emergency halt mechanism has been designed and tested
+
+Question: Is a fail-safe or fallback mode defined and tested for when the AI system becomes unavailable or produces outputs below an acceptable confidence threshold?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R17 — AI Disclosure Mechanism Failure  [Transparency]
+This risk applies if any of the following are true:
+  • The AI system interacts directly with members of the public, customers, or employees in a way that could be mistaken for human interaction
+  • AI-generated content is published, distributed, or used to inform decisions without labelling or attribution
+  • The EU AI Act Art.50 transparency obligations apply to this system's output or interaction modality
+
+Question: Are users or individuals affected by the system's outputs notified that they are interacting with, or being assessed by, an AI system?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R18 — Deployer Instructions and Intended Use Failure  [Documentation & Transparency]
+This risk applies if any of the following are true:
+  • The AI system has not produced formal instructions documenting its intended purpose and the specific tasks it is designed to perform
+  • Known limitations, failure modes, or scenarios in which the AI should not be used are not documented and provided to deployers
+  • Deployers cannot access documented information on what human oversight measures, technical configurations, or competence requirements are needed to operate the system safely
+  • Performance data, accuracy levels, and the metrics used to measure them are not declared in the documentation provided to deployers
+
+Question: Has the organisation produced formal instructions for deployers that document the system's intended purpose, known limitations, required oversight measures, and achieved performance levels?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+R19 — Quality Management System Conformity Failure  [Governance & Compliance]
+This risk applies if any of the following are true:
+  • The organisation does not have a documented QMS covering the AI system's full lifecycle from design through post-market monitoring
+  • There are no documented roles and responsibilities for AI safety and compliance within the organisation
+  • Design changes, model updates, or changes to retrieval data are not subject to a formal change control or impact assessment process
+  • There is no formal incident reporting process, or reported incidents are not reviewed and acted upon within defined timeframes
+  • Post-market monitoring data is not collected, reviewed, or used to trigger corrective actions
+
+Question: Does the organisation have a documented Quality Management System (QMS) covering AI design controls, change management, post-market monitoring, and incident reporting for this AI system?
+Answer (YES / PARTIALLY / NO):
+Reasoning:
+Attack vectors:
+Severity (Low / Medium / High):
+
+---
+
+OVERALL RISK LEVEL
+State the overall risk level: Low / Medium / High / Very High
+Overall risk level:
+Reasoning (reference the highest-severity risks driving this rating):
+
+===================================================================
+PART 2 — CONTROL IDENTIFICATION (Step 6)
+===================================================================
+
+For each risk rated YES or PARTIALLY, define the controls required. For each control provide:
+  • Control type: Technical | Operational | Contractual | Governance
+  • Control description: what specifically must be implemented
+  • Owner: who is responsible for implementing and maintaining this control
+  • Verification method: how compliance will be confirmed
+
+List controls grouped by risk, using the risk reference number (R01, R02, etc.):
+
+===================================================================
+PART 3 — DISCLOSURE FRAMEWORK (complete only if Article 50 applies)
+===================================================================
+
+  • Disclaimer text to display to users at the point of AI interaction:
+  • Internal content labelling standard (how AI-generated content is marked in documents):
+  • Version control approach (how AI-assisted documents are tracked):
+
+===================================================================
+RISK ASSESSMENT SUMMARY (JSON) — output this block exactly at the end
+===================================================================
+
+--- RISK ASSESSMENT SUMMARY (JSON) ---
+{
+  "risks": {
+    "R01_Human_Oversight_Bypass_Failure": "yes or partially or no",
+    "R02_Subgroup_Coverage_Failure": "yes or partially or no",
+    "R03_Proxy_Discrimination_Propagation_Failure": "yes or partially or no",
+    "R04_Dataset_Lifecycle_Integrity_Failure": "yes or partially or no",
+    "R05_Data_Governance_Documentation_Failure": "yes or partially or no",
+    "R06_Data_Quality_Measurement_Failure": "yes or partially or no",
+    "R07_Audit_Log_Integrity_Failure": "yes or partially or no",
+    "R08_Log_Retention_Violation": "yes or partially or no",
+    "R09_Adversarial_Input_Evasion_Failure": "yes or partially or no",
+    "R10_Unauthorised_Access_and_Privilege_Escalation_Failure": "yes or partially or no",
+    "R11_Cyber_Attack_Detection_Failure": "yes or partially or no",
+    "R12_Accuracy_Measurement_and_Drift_Failure": "yes or partially or no",
+    "R13_Feedback_Loop_Contamination_Failure": "yes or partially or no",
+    "R14_Output_Reproducibility_Failure": "yes or partially or no",
+    "R15_Input_Corruption_Propagation_Failure": "yes or partially or no",
+    "R16_Fail_Safe_Activation_Failure": "yes or partially or no",
+    "R17_AI_Disclosure_Mechanism_Failure": "yes or partially or no",
+    "R18_Deployer_Instructions_and_Intended_Use_Failure": "yes or partially or no",
+    "R19_Quality_Management_System_Conformity_Failure": "yes or partially or no"
+  },
+  "overall_risk_level": "Low or Medium or High or Very High",
+  "article_50_disclosure_required": true or false,
+  "human_review_checkpoint_required": true or false,
+  "controls_identified": ["list", "key", "control", "names"]
+}
+--- END RISK ASSESSMENT SUMMARY ---`;
 
 {
   "report_metadata": {
