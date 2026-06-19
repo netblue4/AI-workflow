@@ -14,8 +14,17 @@
   let _planData  = [];  // [{plan_id, plan_ref, plan_name, objective, role, risk_name, test_controls:[], test_cases:[]}]
   let _uncovered = [];  // [{control_id, control_name, control_source}]
 
+  const STATUS_OPTIONS = [
+    { value: 'not_started',       label: 'Not started' },
+    { value: 'in_progress',       label: 'In progress' },
+    { value: 'evidence_provided', label: 'Evidence provided' },
+    { value: 'waived',            label: 'Waived' }
+  ];
+  const STATUS_LEGACY_MAP = { pending: 'not_started', completed: 'evidence_provided', not_applicable: 'waived' };
+
   const _state = {
-    testStatus: {} // key = pk_Test_Control_ID → "pending"|"completed"|"not_applicable"
+    testStatus: {}, // key = pk_Test_Control_ID → STATUS_OPTIONS values
+    testNotes:  {}  // key = pk_Test_Control_ID → string
   };
 
   // ---- Public API ---------------------------------------------
@@ -71,20 +80,21 @@
     _planData  = plans;
     _uncovered = uncovered;
 
-    // Restore prior test statuses
+    // Restore prior test statuses and notes
     const saved10 = _record?.['step-7'];
     if (saved10?.plans) {
       saved10.plans.forEach(p => {
         (p.test_controls || []).forEach(tc => {
-          if (tc.status && tc.test_control_id) {
-            _state.testStatus[tc.test_control_id] = tc.status;
+          if (tc.test_control_id) {
+            const raw = tc.status || 'not_started';
+            _state.testStatus[tc.test_control_id] = STATUS_LEGACY_MAP[raw] || raw;
+            if (tc.notes) _state.testNotes[tc.test_control_id] = tc.notes;
           }
         });
       });
     } else {
-      // Default: all pending
       _planData.forEach(p => p.test_controls.forEach(tc => {
-        _state.testStatus[tc.pk_Test_Control_ID] = 'pending';
+        _state.testStatus[tc.pk_Test_Control_ID] = 'not_started';
       }));
     }
 
@@ -284,19 +294,19 @@
   function _updateValidationBanner(wrap) {
     const el = wrap || _container.querySelector('#wiz10-val-banner');
     if (!el) return;
-    const allTests   = _planData.reduce((a, p) => a.concat(p.test_controls), []);
-    const completed  = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'completed').length;
-    const notAppl    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable').length;
-    const pending    = allTests.length - completed - notAppl;
+    const allTests = _planData.reduce((a, p) => a.concat(p.test_controls), []);
+    const evidenced = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'evidence_provided').length;
+    const waived    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'waived').length;
+    const pending   = allTests.length - evidenced - waived;
     el.innerHTML = '';
     if (pending === 0 && allTests.length > 0) {
       const ok = _el('div', 'wiz10-val-ok');
-      ok.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All ${allTests.length} test controls reviewed — ${completed} completed, ${notAppl} not applicable.`;
+      ok.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All ${allTests.length} test controls reviewed — ${evidenced} evidence provided, ${waived} waived.`;
       el.appendChild(ok);
     } else {
       const info = _el('div', 'wiz10-val-info');
-      const pct = allTests.length ? Math.round(((completed + notAppl) / allTests.length) * 100) : 0;
-      info.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>${pending} test${pending !== 1 ? 's' : ''} pending</strong> — ${completed} completed, ${notAppl} not applicable (${pct}% reviewed).`;
+      const pct = allTests.length ? Math.round(((evidenced + waived) / allTests.length) * 100) : 0;
+      info.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>${pending} test${pending !== 1 ? 's' : ''} not yet evidenced</strong> — ${evidenced} evidence provided, ${waived} waived (${pct}% reviewed).`;
       el.appendChild(info);
     }
   }
@@ -306,30 +316,12 @@
     const sec = _el('div', 'wiz10-plan-sec');
     sec.dataset.planId = plan.plan_id;
 
-    // Plan header
     const hdr = _el('div', 'wiz10-plan-hdr');
-    const hdrLeft = _el('div', 'wiz10-plan-hdr-left');
-
-    const planIcon = _el('span', 'wiz10-plan-icon');
-    planIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`;
-    hdrLeft.appendChild(planIcon);
-
-    const planRef = _el('span', 'wiz10-cn-badge');
-    planRef.textContent = plan.plan_ref; hdrLeft.appendChild(planRef);
 
     const planName = _el('span', 'wiz10-plan-name');
-    // Strip the leading ref from the name to avoid duplication
     planName.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
-    hdrLeft.appendChild(planName);
+    hdr.appendChild(planName);
 
-    if (plan.role) {
-      const roleBadge = _el('span', 'wiz10-role-badge');
-      roleBadge.textContent = plan.role; hdrLeft.appendChild(roleBadge);
-    }
-
-    hdr.appendChild(hdrLeft);
-
-    // Count badge
     const countBadge = _el('span', 'wiz10-plan-count');
     countBadge.id = `wiz10-plan-count-${idx}`;
     _updatePlanCount(plan, countBadge);
@@ -337,28 +329,15 @@
 
     sec.appendChild(hdr);
 
-    // Risk context subtitle
     if (plan.risk_name) {
       const riskSub = _el('p', 'wiz10-plan-risk-sub');
       riskSub.innerHTML = `<span class="wiz10-risk-label">EU AI Act risk:</span> ${plan.risk_name}`;
       sec.appendChild(riskSub);
     }
 
-    // Plan objective
-    if (plan.objective) {
-      const obj = _el('p', 'wiz10-plan-obj');
-      obj.textContent = plan.objective; sec.appendChild(obj);
-    }
-
-    // Test controls
     const ctrlList = _el('div', 'wiz10-ctrl-list');
     plan.test_controls.forEach(tc => ctrlList.appendChild(_buildTestControlCard(tc, plan, idx)));
     sec.appendChild(ctrlList);
-
-    // Test cases (collapsible)
-    if (plan.test_cases && plan.test_cases.length > 0) {
-      sec.appendChild(_buildTestCasesSection(plan));
-    }
 
     return sec;
   }
@@ -366,8 +345,8 @@
   function _updatePlanCount(plan, el) {
     const total = plan.test_controls.length;
     const done  = plan.test_controls.filter(t =>
-      _state.testStatus[t.pk_Test_Control_ID] === 'completed' ||
-      _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable'
+      _state.testStatus[t.pk_Test_Control_ID] === 'evidence_provided' ||
+      _state.testStatus[t.pk_Test_Control_ID] === 'waived'
     ).length;
     el.textContent = `${done} / ${total} reviewed`;
     el.className   = done === total
@@ -375,57 +354,92 @@
       : 'wiz10-plan-count wiz10-plan-count--pending';
   }
 
-  // ---- Test control card --------------------------------------
+  // ---- Test control card (minimal) ----------------------------
   function _buildTestControlCard(tc, plan, planIdx) {
-    const status = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
-    const card = _el('div', `wiz10-tc-card wiz10-tc-card--${status}`);
+    const status = _state.testStatus[tc.pk_Test_Control_ID] || 'not_started';
+    const card = _el('div', 's7-ctrl-card');
     card.dataset.tcId = tc.pk_Test_Control_ID;
 
-    // Card header
-    const hdr = _el('div', 'wiz10-tc-hdr');
-
-    // Status pip
-    const pip = _el('span', `wiz10-tc-pip wiz10-tc-pip--${status}`);
-    hdr.appendChild(pip);
-
-    // Test icon
-    const icon = _el('span', 'wiz10-tc-icon');
-    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
-    hdr.appendChild(icon);
-
-    const name = _el('span', 'wiz10-tc-name');
-    name.textContent = tc.jkName; hdr.appendChild(name);
-
-    // Control reference badge
-    if (tc.control_ref) {
-      const cnb = _el('span', 'wiz10-cn-badge'); cnb.textContent = tc.control_ref; hdr.appendChild(cnb);
-    }
-    // Standard reference badge
-    if (tc.fk_Harmonised_Standard_IDs) {
-      const sref = _el('span', 'wiz10-std-badge'); sref.textContent = tc.fk_Harmonised_Standard_IDs; hdr.appendChild(sref);
-    }
-
+    // Header: source badge + name
+    const hdr = _el('div', 's7-ctrl-hdr');
+    const srcBadge = _el('span', 's7-src-badge');
+    srcBadge.textContent = 'EU AI Act';
+    hdr.appendChild(srcBadge);
+    const name = _el('span', 's7-ctrl-name');
+    name.textContent = tc.jkName;
+    hdr.appendChild(name);
     card.appendChild(hdr);
 
-    // Objective (collapsed by default)
+    // Objective (plain text)
     if (tc.jkObjective) {
-      card.appendChild(_buildCollapsible('Objective', tc.jkObjective, 'wiz10-tc-obj'));
+      const obj = _el('p', 's7-ctrl-obj');
+      obj.textContent = tc.jkObjective;
+      card.appendChild(obj);
     }
 
-    // Test instructions (collapsed)
-    if (tc.jkText) {
-      card.appendChild(_buildCollapsible('Test Instructions', tc.jkText, 'wiz10-tc-text'));
-    }
+    // Evidence / notes textarea
+    const notesWrap = _el('div', 's7-ctrl-notes-wrap');
+    const notesLbl = _el('label', 's7-ctrl-notes-lbl');
+    notesLbl.textContent = 'Evidence / Notes';
+    notesWrap.appendChild(notesLbl);
+    const textarea = document.createElement('textarea');
+    textarea.className = 's7-ctrl-notes';
+    textarea.placeholder = 'Add evidence link or notes…';
+    textarea.rows = 2;
+    textarea.value = _state.testNotes[tc.pk_Test_Control_ID] || '';
+    textarea.addEventListener('input', () => {
+      _state.testNotes[tc.pk_Test_Control_ID] = textarea.value;
+      if (textarea.value && _state.testStatus[tc.pk_Test_Control_ID] === 'not_started') {
+        _state.testStatus[tc.pk_Test_Control_ID] = 'in_progress';
+        _syncCardStatus(card, 'in_progress', plan, planIdx);
+      }
+    });
+    notesWrap.appendChild(textarea);
+    card.appendChild(notesWrap);
 
-    // Evidence sample (collapsed)
-    if (tc.jkImplementationEvidence) {
-      card.appendChild(_buildCollapsible('Required Evidence Sample', tc.jkImplementationEvidence, 'wiz10-tc-evidence'));
-    }
+    // Status row: label + dropdown + pill
+    const statusRow = _el('div', 's7-ctrl-status-row');
+    const statusLbl = _el('span', 's7-ctrl-status-lbl');
+    statusLbl.textContent = 'Status';
+    statusRow.appendChild(statusLbl);
 
-    // Status selector
-    card.appendChild(_buildStatusSelector(tc, plan, planIdx));
+    const sel = document.createElement('select');
+    sel.className = 's7-ctrl-status-sel';
+    STATUS_OPTIONS.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      if (opt.value === status) o.selected = true;
+      sel.appendChild(o);
+    });
+
+    const pill = _el('span', `s7-ctrl-pill s7-ctrl-pill--${status}`);
+    pill.textContent = STATUS_OPTIONS.find(o => o.value === status)?.label || status;
+
+    sel.addEventListener('change', () => {
+      const newStatus = sel.value;
+      _state.testStatus[tc.pk_Test_Control_ID] = newStatus;
+      _syncCardStatus(card, newStatus, plan, planIdx);
+    });
+
+    statusRow.appendChild(sel);
+    statusRow.appendChild(pill);
+    card.appendChild(statusRow);
 
     return card;
+  }
+
+  function _syncCardStatus(card, status, plan, planIdx) {
+    const pill = card.querySelector('.s7-ctrl-pill');
+    if (pill) {
+      pill.className = `s7-ctrl-pill s7-ctrl-pill--${status}`;
+      pill.textContent = STATUS_OPTIONS.find(o => o.value === status)?.label || status;
+    }
+    const sel = card.querySelector('.s7-ctrl-status-sel');
+    if (sel) sel.value = status;
+    const countEl = _container.querySelector(`#wiz10-plan-count-${planIdx}`);
+    if (countEl) _updatePlanCount(plan, countEl);
+    _updateValidationBanner();
   }
 
   // ---- Collapsible section ------------------------------------
@@ -590,28 +604,28 @@
       risk_name: p.risk_name,
       test_controls: p.test_controls.map(tc => ({
         test_control_id: tc.pk_Test_Control_ID,
-        control_ref:     tc.control_ref  || '',
-        control_name:    tc.jkName       || '',
-        fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
-        status:          _state.testStatus[tc.pk_Test_Control_ID] || 'pending'
+        control_ref:     tc.control_ref || '',
+        control_name:    tc.jkName      || '',
+        notes:           _state.testNotes[tc.pk_Test_Control_ID]  || '',
+        status:          _state.testStatus[tc.pk_Test_Control_ID] || 'not_started'
       }))
     }));
 
-    const allTests   = plans.reduce((a, p) => a.concat(p.test_controls), []);
-    const completed  = allTests.filter(t => t.status === 'completed').length;
-    const notAppl    = allTests.filter(t => t.status === 'not_applicable').length;
-    const pending    = allTests.length - completed - notAppl;
+    const allTests  = plans.reduce((a, p) => a.concat(p.test_controls), []);
+    const evidenced = allTests.filter(t => t.status === 'evidence_provided').length;
+    const waived    = allTests.filter(t => t.status === 'waived').length;
+    const pending   = allTests.length - evidenced - waived;
 
     return {
-      step_id:     'step-7',
-      step_title:  'Content Verification Testing',
-      assessment_date:      today,
-      assessed_by:          meta.assessed_by || '',
-      use_case_id:          meta.use_case_id || '',
-      total_tests:          allTests.length,
-      completed_tests:      completed,
-      not_applicable_tests: notAppl,
-      pending_tests:        pending,
+      step_id:                'step-7',
+      step_title:             'Content Verification Testing',
+      assessment_date:        today,
+      assessed_by:            meta.assessed_by || '',
+      use_case_id:            meta.use_case_id || '',
+      total_tests:            allTests.length,
+      evidence_provided_tests: evidenced,
+      waived_tests:           waived,
+      pending_tests:          pending,
       plans,
       uncovered_controls: _uncovered.map(rc => ({
         control_id:     rc.control_id,
@@ -629,10 +643,10 @@
     const h = _el('h3', 'wiz10-result-title'); h.textContent = 'Test Status Saved'; card.appendChild(h);
     const stats = _el('div', 'wiz10-result-stats');
     [
-      [rec10.total_tests,          'Total tests'],
-      [rec10.completed_tests,      'Completed'],
-      [rec10.not_applicable_tests, 'Not applicable'],
-      [rec10.pending_tests,        'Pending']
+      [rec10.total_tests,             'Total tests'],
+      [rec10.evidence_provided_tests, 'Evidence provided'],
+      [rec10.waived_tests,            'Waived'],
+      [rec10.pending_tests,           'Pending']
     ].forEach(([num, lbl]) => {
       const s = _el('div', 'wiz8-stat');
       const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num); s.appendChild(n);
@@ -641,7 +655,7 @@
     });
     card.appendChild(stats);
     const note = _el('p', 'wiz10-result-note');
-    note.innerHTML = `Test status saved. <strong>${rec10.completed_tests} test${rec10.completed_tests !== 1 ? 's' : ''} completed</strong>, ${rec10.not_applicable_tests} not applicable, ${rec10.pending_tests} still pending.`;
+    note.innerHTML = `Test status saved. <strong>${rec10.evidence_provided_tests} test${rec10.evidence_provided_tests !== 1 ? 's' : ''} with evidence provided</strong>, ${rec10.waived_tests} waived, ${rec10.pending_tests} still pending.`;
     card.appendChild(note);
     area.appendChild(card);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -659,16 +673,16 @@
     }
 
     // Summary
-    const allTests   = _planData.reduce((a, p) => a.concat(p.test_controls), []);
-    const completed  = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'completed').length;
-    const notAppl    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable').length;
-    const pending    = allTests.length - completed - notAppl;
+    const allTests  = _planData.reduce((a, p) => a.concat(p.test_controls), []);
+    const evidenced = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'evidence_provided').length;
+    const waived    = allTests.filter(t => _state.testStatus[t.pk_Test_Control_ID] === 'waived').length;
+    const pending   = allTests.length - evidenced - waived;
 
     const summary = _el('div', 'wiz10-ref-summary');
     const badge = _el('span', pending === 0
       ? 'wiz9-ref-sum-badge wiz9-ref-sum-badge--ok'
       : 'wiz9-ref-sum-badge wiz9-ref-sum-badge--warn');
-    badge.textContent = `${completed + notAppl} / ${allTests.length} tests reviewed`;
+    badge.textContent = `${evidenced + waived} / ${allTests.length} tests reviewed`;
     summary.appendChild(badge);
     if (_uncovered.length > 0) {
       const unc = _el('span', 'wiz9-ref-uncovered');
@@ -691,8 +705,8 @@
       pn.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
       ph.appendChild(pn);
       const reviewed = plan.test_controls.filter(t =>
-        _state.testStatus[t.pk_Test_Control_ID] === 'completed' ||
-        _state.testStatus[t.pk_Test_Control_ID] === 'not_applicable'
+        _state.testStatus[t.pk_Test_Control_ID] === 'evidence_provided' ||
+        _state.testStatus[t.pk_Test_Control_ID] === 'waived'
       ).length;
       const rb = _el('span', reviewed === plan.test_controls.length
         ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--all'
@@ -710,7 +724,7 @@
       }
 
       plan.test_controls.forEach(tc => {
-        const status  = _state.testStatus[tc.pk_Test_Control_ID] || 'pending';
+        const status  = _state.testStatus[tc.pk_Test_Control_ID] || 'not_started';
         const tc_card = _el('div', `wiz10-ref-tc wiz10-ref-tc--${status}`);
         const tch     = _el('div', 'wiz10-ref-tc-hdr');
 
@@ -795,6 +809,27 @@
     const s = document.createElement('style');
     s.id = 'wiz10-styles';
     s.textContent = `
+/* ---- Step 7 minimal control card styles -------------------- */
+.s7-src-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af;white-space:nowrap;flex-shrink:0}
+.s7-ctrl-card{padding:14px 16px;border-bottom:1px solid var(--color-border)}
+.s7-ctrl-card:last-child{border-bottom:none}
+.s7-ctrl-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.s7-ctrl-name{font-size:13px;font-weight:600;color:var(--color-text-primary)}
+.s7-ctrl-obj{font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin:0 0 10px}
+.s7-ctrl-notes-wrap{margin-bottom:10px}
+.s7-ctrl-notes-lbl{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin-bottom:4px}
+.s7-ctrl-notes{width:100%;box-sizing:border-box;padding:8px 10px;font-size:12px;font-family:inherit;border:1px solid var(--color-border);border-radius:6px;resize:vertical;color:var(--color-text-primary);background:var(--color-bg,#fff);line-height:1.5}
+.s7-ctrl-notes:focus{outline:none;border-color:var(--teal-500,#14b8a6);box-shadow:0 0 0 2px rgba(20,184,166,.15)}
+.s7-ctrl-status-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.s7-ctrl-status-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary)}
+.s7-ctrl-status-sel{padding:4px 8px;font-size:12px;font-family:inherit;border:1px solid var(--color-border);border-radius:5px;background:var(--color-bg,#fff);color:var(--color-text-primary);cursor:pointer}
+.s7-ctrl-status-sel:focus{outline:none;border-color:var(--teal-500,#14b8a6)}
+.s7-ctrl-pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.s7-ctrl-pill--not_started{background:#f1f5f9;color:#475569}
+.s7-ctrl-pill--in_progress{background:#fef3c7;color:#92400e}
+.s7-ctrl-pill--evidence_provided{background:#dcfce7;color:#166534}
+.s7-ctrl-pill--waived{background:#ede9fe;color:#6d28d9}
+
 /* ---- Step 10 styles ---------------------------------------- */
 .wiz10-intro{font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;line-height:1.6}
 .wiz10-warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 16px;font-size:13px;color:#9a3412;margin-bottom:16px}
@@ -905,14 +940,16 @@
 .wiz10-ref-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wiz10-ref-risk-sub{font-size:11px;color:var(--color-text-tertiary);margin:0 0 8px;font-style:italic}
 .wiz10-ref-tc{padding:10px 12px;border:1px solid var(--color-border);border-radius:6px;margin-bottom:6px}
-.wiz10-ref-tc--completed{border-left:3px solid #22c55e}
-.wiz10-ref-tc--not_applicable{border-left:3px solid #f59e0b}
-.wiz10-ref-tc--pending{border-left:3px solid #94a3b8}
+.wiz10-ref-tc--completed,.wiz10-ref-tc--evidence_provided{border-left:3px solid #22c55e}
+.wiz10-ref-tc--not_applicable,.wiz10-ref-tc--waived{border-left:3px solid #a78bfa}
+.wiz10-ref-tc--pending,.wiz10-ref-tc--not_started{border-left:3px solid #94a3b8}
+.wiz10-ref-tc--in_progress{border-left:3px solid #f59e0b}
 .wiz10-ref-tc-hdr{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
 .wiz10-ref-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.wiz10-ref-status-dot--pending{background:#94a3b8}
-.wiz10-ref-status-dot--completed{background:#22c55e}
-.wiz10-ref-status-dot--not_applicable{background:#f59e0b}
+.wiz10-ref-status-dot--not_started,.wiz10-ref-status-dot--pending{background:#94a3b8}
+.wiz10-ref-status-dot--in_progress{background:#f59e0b}
+.wiz10-ref-status-dot--evidence_provided,.wiz10-ref-status-dot--completed{background:#22c55e}
+.wiz10-ref-status-dot--waived,.wiz10-ref-status-dot--not_applicable{background:#a78bfa}
 .wiz10-ref-tc-name{font-size:12px;font-weight:600;color:var(--color-text-primary)}
 .wiz10-ref-tc-obj{font-size:11px;color:var(--color-text-tertiary);margin:4px 0 0;line-height:1.5}
 .wiz10-ref-summary{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
