@@ -383,6 +383,8 @@ async function selectStep(stepId) {
     mountStep7Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
     mountReportWizard(panel);
+  } else if (stepId === 'step-9') {
+    mountStep9Wizard(panel, step, detailData, color, phaseTitle);
   } else {
     panel.innerHTML = renderDetail(step, color, phaseTitle);
   }
@@ -512,6 +514,7 @@ function _ucShowStatus(msg) {
 <script src="step5-wizard.js"></script>
 <script src="step6-wizard.js"></script>
 <script src="step7-wizard.js"></script>
+<script src="step9-wizard.js"></script>
 <script src="report-wizard.js"></script>
 </body>
 </html>
