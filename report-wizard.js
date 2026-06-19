@@ -282,7 +282,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       html += _notComplete('Legal assessment not yet saved.');
     } else {
       html += `<p class="section-meta">Completed: ${la.assessment_date} &nbsp;|&nbsp; ${la.selected_count} of ${la.total_risks} risks accepted</p>
-<table class="data-table">
+<table class="data-table data-table--risk">
   <thead><tr><th>Risk Name</th><th>Answer</th><th>Status</th><th>Applies If</th></tr></thead>
   <tbody>
   ${(la.risks || []).map(r => {
@@ -881,7 +881,12 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .data-table td{padding:5px 10px;border:1px solid #e5e7eb;vertical-align:top}
 .data-table .row-dim td{color:#9ca3af}
 .dt-label{font-weight:600;color:#555;white-space:nowrap;width:220px}
-.reason-cell{font-size:9pt;color:#555;max-width:320px}
+.reason-cell{font-size:9pt;color:#555}
+.data-table--risk{table-layout:fixed}
+.data-table--risk th:nth-child(1),.data-table--risk td:nth-child(1){width:20%}
+.data-table--risk th:nth-child(2),.data-table--risk td:nth-child(2){width:10%;white-space:nowrap}
+.data-table--risk th:nth-child(3),.data-table--risk td:nth-child(3){width:13%;white-space:nowrap}
+.data-table--risk th:nth-child(4),.data-table--risk td:nth-child(4){width:57%}
 .applies-if-list{margin:2px 0 0 14px;padding:0;font-size:8.5pt;color:#444;line-height:1.5}
 .applies-if-list li{margin-bottom:2px}
 .applies-if-filter{display:block;font-size:8pt;font-weight:600;color:#b45309;background:#fef3c7;border-radius:3px;padding:1px 5px;margin-bottom:4px;width:fit-content}
