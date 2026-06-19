@@ -21,20 +21,22 @@
   // ---- Data loading -------------------------------------------
   async function _loadData() {
     try {
-      const [rRes, rcRes, hsRes, artRes, tpRes, srRes, wfRes] = await Promise.all([
+      const [rRes, rcRes, hsRes, artRes, tpRes, srRes, wfRes, lgRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Harmonised_Standards.json'),
         fetch('tbl_AI_Articles.json'),
         fetch('tbl_Test_Plans.json'),
         fetch('tbl_AI_SR_Controls.json'),
-        fetch('workflow.json')
+        fetch('workflow.json'),
+        fetch('step8-legal-risk-guidance.json')
       ]);
       if (!rRes.ok || !rcRes.ok || !hsRes.ok || !artRes.ok || !tpRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
       const [risks, riskControls, hs, articles, testPlans, srControls, workflow] = await Promise.all([
         rRes.json(), rcRes.json(), hsRes.json(), artRes.json(), tpRes.json(), srRes.json(), wfRes.json()
       ]);
-      _tbl = { risks, riskControls, hs, articles, testPlans, srControls, workflow };
+      const legalGuidance = lgRes.ok ? await lgRes.json() : {};
+      _tbl = { risks, riskControls, hs, articles, testPlans, srControls, workflow, legalGuidance };
     } catch (_) {
       _container.innerHTML = '<p style="padding:32px;color:#dc2626">Could not load reference data files.</p>';
       return;
@@ -265,6 +267,12 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   function _riskAssessmentSection(s8) {
     if (!s8) return _notComplete('Step 5 — Risk Assessment has not yet been completed.');
 
+    // Build applies_if lookup from guidance JSON
+    const guidanceRisks = _tbl.legalGuidance?.risks || {};
+    const appliesIfByName = new Map(
+      Object.entries(guidanceRisks).map(([name, def]) => [name, def.applies_if || []])
+    );
+
     let html = '';
 
     // Legal
@@ -275,16 +283,21 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     } else {
       html += `<p class="section-meta">Completed: ${la.assessment_date} &nbsp;|&nbsp; ${la.selected_count} of ${la.total_risks} risks accepted</p>
 <table class="data-table">
-  <thead><tr><th>Risk Name</th><th>Answer</th><th>Status</th><th>Filter Reason</th></tr></thead>
+  <thead><tr><th>Risk Name</th><th>Answer</th><th>Status</th><th>Applies If</th></tr></thead>
   <tbody>
   ${(la.risks || []).map(r => {
     const rel = r.relevance || {};
     const prefiltered = rel.status === 'not_applicable';
+    const appliesIf = appliesIfByName.get(r.risk_name) || [];
+    const filterNote = prefiltered ? `<span class="applies-if-filter">${_esc(rel.trigger_reason || 'Article not applicable — pre-filtered')}</span>` : '';
+    const appliesIfHtml = appliesIf.length
+      ? `<ul class="applies-if-list">${appliesIf.map(a => `<li>${_esc(a)}</li>`).join('')}</ul>`
+      : '';
     return `<tr class="${r.selected ? '' : 'row-dim'}">
       <td>${_esc(r.risk_name)}</td>
       <td>${_esc(r.wizard_answer || '—')}</td>
       <td><span class="status-pill status-pill--${r.selected ? 'accept' : (prefiltered ? 'filter' : 'excl')}">${r.selected ? '✓ Accepted' : (prefiltered ? '⊘ Pre-filtered' : '✗ Excluded')}</span></td>
-      <td class="reason-cell">${prefiltered ? _esc(rel.trigger_reason || 'Article not applicable') : ''}</td>
+      <td class="reason-cell">${filterNote}${appliesIfHtml}</td>
     </tr>`;
   }).join('')}
   </tbody>
@@ -301,6 +314,9 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const riskCtrls = s9.risk_controls || [];
     const compAdds  = s9.compliance_additions || [];
     const dpiaAdds  = s9.dpia_controls || [];
+
+    // Build risk name lookup from tbl_Risks
+    const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
 
     // Group risk controls by risk_id
     const byRisk = new Map();
@@ -324,8 +340,10 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       byRisk.forEach((ctrls, riskId) => {
         const selected = ctrls.filter(c => c.selected);
         const deselected = ctrls.filter(c => !c.selected);
+        const riskName = riskNameById.get(riskId);
+        const riskLabel = riskName ? `${_esc(riskId)} — ${_esc(riskName)}` : _esc(riskId);
         html += `<div class="ctrl-group">
-          <div class="ctrl-group-hdr">${_esc(riskId)}</div>
+          <div class="ctrl-group-hdr">${riskLabel}</div>
           ${selected.map(c => _ctrlRow(c, true)).join('')}
           ${deselected.map(c => _ctrlRow(c, false)).join('')}
         </div>`;
@@ -863,7 +881,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .data-table td{padding:5px 10px;border:1px solid #e5e7eb;vertical-align:top}
 .data-table .row-dim td{color:#9ca3af}
 .dt-label{font-weight:600;color:#555;white-space:nowrap;width:220px}
-.reason-cell{font-size:9pt;color:#555;max-width:280px}
+.reason-cell{font-size:9pt;color:#555;max-width:320px}
+.applies-if-list{margin:2px 0 0 14px;padding:0;font-size:8.5pt;color:#444;line-height:1.5}
+.applies-if-list li{margin-bottom:2px}
+.applies-if-filter{display:block;font-size:8pt;font-weight:600;color:#b45309;background:#fef3c7;border-radius:3px;padding:1px 5px;margin-bottom:4px;width:fit-content}
 
 /* Badges */
 .cat-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9pt;font-weight:700}
