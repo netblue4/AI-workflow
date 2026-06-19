@@ -100,6 +100,7 @@
     const s8  = _record?.['step-5']  || null;
     const s9  = _record?.['step-6']  || null;
     const s10 = _record?.['step-7']  || null;
+    const s11 = _record?.['step-9']  || null;
     const meta = _record?._meta      || {};
 
     const today = new Date().toISOString().slice(0, 10);
@@ -118,7 +119,7 @@
 ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_section(1, 'System Classification', _classificationSection(s3))}
 ${_section(2, 'Risk Assessment', _riskAssessmentSection(s8))}
-${_section(3, 'Control Schedule', _controlScheduleSection(s9))}
+${_section(3, 'Control Schedule', _controlScheduleSection(s9, s11))}
 ${_section(4, 'Verification Evidence', _verificationSection(s10))}
 ${_section(5, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
 ${_section(6, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
@@ -308,7 +309,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- Section 3: Control Schedule ---------------------------
-  function _controlScheduleSection(s9) {
+  function _controlScheduleSection(s9, s11) {
     if (!s9) return _notComplete('Step 6 — Control Identification has not yet been completed.');
 
     const riskCtrls = s9.risk_controls || [];
@@ -316,6 +317,10 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const dpiaAdds  = s9.dpia_controls || [];
 
     const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
+
+    // Build lookup: control key → operational status from Step 9
+    const ctrlStatus = new Map();
+    (s11?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
 
     const byRisk = new Map();
     riskCtrls.forEach(c => {
@@ -327,8 +332,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const fsCtrls     = compAdds.filter(c => (c.control_source || '').includes('Framework'));
     const regularAdds = compAdds.filter(c => !(c.control_source || '').includes('Framework'));
 
-    let html = `<p class="section-meta">Assessment date: ${s9.assessment_date || '—'} &nbsp;|&nbsp;
-      ${riskCtrls.filter(c => c.selected).length} risk controls · ${compAdds.length} compliance additions · ${dpiaAdds.length} DPIA controls</p>`;
+    const s11date = s11?.activation_date ? ` &nbsp;|&nbsp; Step 9 recorded: ${s11.activation_date}` : ' &nbsp;|&nbsp; <em>Step 9 — Operational Controls Activation not yet completed</em>';
+    let html = `<p class="section-meta">Step 6 date: ${s9.assessment_date || '—'}${s11date}</p>`;
 
     // ---- Risk Team Controls -----------------------------------------
     html += `<h3 class="sub-heading">Risk Team Controls</h3>`;
@@ -343,13 +348,13 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         html += `<div class="ctrl-group">
           <div class="ctrl-group-hdr">${riskLabel}</div>
           <table class="data-table">
-            <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Status</th></tr></thead>
+            <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
             <tbody>
             ${selected.map(c => `<tr>
               <td class="mono">${_esc(c.control_id)}</td>
               <td>${_esc(c.control_name || '—')}</td>
               <td><span class="ctrl-src src-eu">EU AI Act</span></td>
-              <td><span class="status-pill status-pill--accept">✓ Selected</span></td>
+              <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
             </tr>`).join('')}
             ${deselected.map(c => `<tr class="ctrl-row--dim">
               <td class="mono">${_esc(c.control_id)}</td>
@@ -367,13 +372,13 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     if (regularAdds.length > 0) {
       html += `<h3 class="sub-heading">Compliance Team Additions</h3>
       <table class="data-table">
-        <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Status</th></tr></thead>
+        <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
         <tbody>
         ${regularAdds.map(c => `<tr>
           <td class="mono">${_esc(c.control_id)}</td>
           <td>${_esc(c.control_name || '—')}</td>
           <td><span class="ctrl-src src-eu">EU AI Act</span></td>
-          <td><span class="status-pill status-pill--accept">✓ Added</span></td>
+          <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
         </tr>`).join('')}
         </tbody>
       </table>`;
@@ -383,13 +388,13 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     if (fsCtrls.length > 0) {
       html += `<h3 class="sub-heading">Framework Self-Certifications</h3>
       <table class="data-table">
-        <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Status</th></tr></thead>
+        <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
         <tbody>
         ${fsCtrls.map(c => `<tr>
           <td class="mono">${_esc(c.control_id)}</td>
           <td>${_esc(c.control_name || '—')}</td>
           <td class="mono small">${_esc(c.fk_Harmonised_Standard_IDs || '—')}</td>
-          <td><span class="status-pill status-pill--accept">✓ Self-certified</span></td>
+          <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
         </tr>`).join('')}
         </tbody>
       </table>`;
@@ -400,12 +405,12 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       html += `<h3 class="sub-heading">DPIA Controls</h3>
       <p class="section-meta">Technical security measures committed in the DPIA (Step 4) and carried forward into the control register.</p>
       <table class="data-table">
-        <thead><tr><th>Name</th><th>Source</th><th>Status</th></tr></thead>
+        <thead><tr><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
         <tbody>
         ${dpiaAdds.map(c => `<tr>
           <td>${_esc(c.control_name)}</td>
           <td><span class="ctrl-src src-dpia">DPIA</span></td>
-          <td><span class="status-pill status-pill--accept">✓ Committed</span></td>
+          <td>${_ctrlStatusPill(ctrlStatus.get('DPIA__' + c.control_name))}</td>
         </tr>`).join('')}
         </tbody>
       </table>`;
@@ -811,6 +816,14 @@ ${rows.join('')}`;
     if (c.includes('limited'))    return 'limited';
     if (c.includes('minimal'))    return 'minimal';
     return 'unknown';
+  }
+
+  function _ctrlStatusPill(status) {
+    if (status === 'evidence_provided') return '<span class="status-pill status-pill--accept">✓ Evidence provided</span>';
+    if (status === 'waived')            return '<span class="status-pill status-pill--na">— Waived</span>';
+    if (status === 'in_progress')       return '<span class="status-pill status-pill--pend">◑ In progress</span>';
+    if (status === 'not_started')       return '<span class="status-pill status-pill--excl">○ Not started</span>';
+    return '<span class="status-pill status-pill--excl">— Not recorded</span>';
   }
 
   function _testStatusKey(status) {
