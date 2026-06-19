@@ -119,8 +119,8 @@ ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_section(1, 'System Classification', _classificationSection(s3))}
 ${_section(2, 'Risk Assessment', _riskAssessmentSection(s8))}
 ${_section(3, 'Control Schedule', _controlScheduleSection(s9))}
-${_section(4, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
-${_section(5, 'Verification Evidence', _verificationSection(s10))}
+${_section(4, 'Verification Evidence', _verificationSection(s10))}
+${_section(5, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
 ${_section(6, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
 ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
 </body>
@@ -315,10 +315,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const compAdds  = s9.compliance_additions || [];
     const dpiaAdds  = s9.dpia_controls || [];
 
-    // Build risk name lookup from tbl_Risks
     const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
 
-    // Group risk controls by risk_id
     const byRisk = new Map();
     riskCtrls.forEach(c => {
       const key = c.risk_id || 'unknown';
@@ -326,77 +324,94 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       byRisk.get(key).push(c);
     });
 
-    // Separate FS controls
-    const fsCtrls = compAdds.filter(c => (c.control_source || '').includes('Framework'));
+    const fsCtrls     = compAdds.filter(c => (c.control_source || '').includes('Framework'));
     const regularAdds = compAdds.filter(c => !(c.control_source || '').includes('Framework'));
 
     let html = `<p class="section-meta">Assessment date: ${s9.assessment_date || '—'} &nbsp;|&nbsp;
-      ${riskCtrls.filter(c=>c.selected).length} risk controls · ${compAdds.length} compliance additions · ${dpiaAdds.length} DPIA controls</p>`;
+      ${riskCtrls.filter(c => c.selected).length} risk controls · ${compAdds.length} compliance additions · ${dpiaAdds.length} DPIA controls</p>`;
 
+    // ---- Risk Team Controls -----------------------------------------
     html += `<h3 class="sub-heading">Risk Team Controls</h3>`;
     if (byRisk.size === 0) {
       html += _notComplete('No risk controls recorded.');
     } else {
       byRisk.forEach((ctrls, riskId) => {
-        const selected = ctrls.filter(c => c.selected);
+        const selected   = ctrls.filter(c => c.selected);
         const deselected = ctrls.filter(c => !c.selected);
-        const riskName = riskNameById.get(riskId);
-        const riskLabel = riskName ? `${_esc(riskId)} — ${_esc(riskName)}` : _esc(riskId);
+        const riskName   = riskNameById.get(riskId);
+        const riskLabel  = riskName ? `${_esc(riskId)} — ${_esc(riskName)}` : _esc(riskId);
         html += `<div class="ctrl-group">
           <div class="ctrl-group-hdr">${riskLabel}</div>
-          ${selected.map(c => _ctrlRow(c, true)).join('')}
-          ${deselected.map(c => _ctrlRow(c, false)).join('')}
+          <table class="data-table">
+            <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Status</th></tr></thead>
+            <tbody>
+            ${selected.map(c => `<tr>
+              <td class="mono">${_esc(c.control_id)}</td>
+              <td>${_esc(c.control_name || '—')}</td>
+              <td><span class="ctrl-src src-eu">EU AI Act</span></td>
+              <td><span class="status-pill status-pill--accept">✓ Selected</span></td>
+            </tr>`).join('')}
+            ${deselected.map(c => `<tr class="ctrl-row--dim">
+              <td class="mono">${_esc(c.control_id)}</td>
+              <td>${_esc(c.control_name || '—')}</td>
+              <td><span class="ctrl-src src-eu">EU AI Act</span></td>
+              <td><span class="status-pill status-pill--excl">✗ Not selected</span></td>
+            </tr>`).join('')}
+            </tbody>
+          </table>
         </div>`;
       });
     }
 
+    // ---- Compliance Team Additions ----------------------------------
     if (regularAdds.length > 0) {
       html += `<h3 class="sub-heading">Compliance Team Additions</h3>
-      <div class="ctrl-group">
-        ${regularAdds.map(c => _ctrlRow(c, true)).join('')}
-      </div>`;
+      <table class="data-table">
+        <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Status</th></tr></thead>
+        <tbody>
+        ${regularAdds.map(c => `<tr>
+          <td class="mono">${_esc(c.control_id)}</td>
+          <td>${_esc(c.control_name || '—')}</td>
+          <td><span class="ctrl-src src-eu">EU AI Act</span></td>
+          <td><span class="status-pill status-pill--accept">✓ Added</span></td>
+        </tr>`).join('')}
+        </tbody>
+      </table>`;
     }
 
+    // ---- Framework Self-Certifications ------------------------------
     if (fsCtrls.length > 0) {
       html += `<h3 class="sub-heading">Framework Self-Certifications</h3>
-      <div class="ctrl-group ctrl-group--fs">
-        ${fsCtrls.map(c => `
-        <div class="ctrl-row ctrl-row--fs">
-          <span class="ctrl-status ctrl-status--fs">✓ Self-certified</span>
-          <span class="ctrl-id mono">${_esc(c.control_id)}</span>
-          <span class="ctrl-name">${_esc(c.control_name)}</span>
-          ${c.fk_Harmonised_Standard_IDs ? `<span class="ctrl-ref mono">${_esc(c.fk_Harmonised_Standard_IDs)}</span>` : ''}
-        </div>`).join('')}
-      </div>`;
+      <table class="data-table">
+        <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Status</th></tr></thead>
+        <tbody>
+        ${fsCtrls.map(c => `<tr>
+          <td class="mono">${_esc(c.control_id)}</td>
+          <td>${_esc(c.control_name || '—')}</td>
+          <td class="mono small">${_esc(c.fk_Harmonised_Standard_IDs || '—')}</td>
+          <td><span class="status-pill status-pill--accept">✓ Self-certified</span></td>
+        </tr>`).join('')}
+        </tbody>
+      </table>`;
     }
 
+    // ---- DPIA Controls ----------------------------------------------
     if (dpiaAdds.length > 0) {
       html += `<h3 class="sub-heading">DPIA Controls</h3>
       <p class="section-meta">Technical security measures committed in the DPIA (Step 4) and carried forward into the control register.</p>
-      <div class="ctrl-group ctrl-group--dpia">
-        ${dpiaAdds.map(c => `
-        <div class="ctrl-row ctrl-row--dpia">
-          <span class="ctrl-status ctrl-status--dpia">✓ DPIA</span>
-          <span class="ctrl-src src-dpia">DPIA</span>
-          <span class="ctrl-name">${_esc(c.control_name)}</span>
-        </div>`).join('')}
-      </div>`;
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Source</th><th>Status</th></tr></thead>
+        <tbody>
+        ${dpiaAdds.map(c => `<tr>
+          <td>${_esc(c.control_name)}</td>
+          <td><span class="ctrl-src src-dpia">DPIA</span></td>
+          <td><span class="status-pill status-pill--accept">✓ Committed</span></td>
+        </tr>`).join('')}
+        </tbody>
+      </table>`;
     }
 
     return html;
-  }
-
-  function _ctrlRow(c, selected) {
-    const src = (c.control_source || '').toLowerCase();
-    const srcLabel = src.includes('framework') ? 'Framework' : 'EU AI Act';
-    const srcClass = src.includes('framework') ? 'src-fs' : 'src-eu';
-    return `<div class="ctrl-row ${selected ? '' : 'ctrl-row--dim'}">
-      <span class="ctrl-status ctrl-status--${selected ? 'sel' : 'desel'}">${selected ? '✓' : '✗'}</span>
-      <span class="ctrl-src ${srcClass}">${srcLabel}</span>
-      <span class="ctrl-id mono">${_esc(c.control_id)}</span>
-      <span class="ctrl-name">${_esc(c.control_name || '—')}</span>
-      ${c.fk_Harmonised_Standard_IDs ? `<span class="ctrl-ref mono">${_esc(c.fk_Harmonised_Standard_IDs)}</span>` : ''}
-    </div>`;
   }
 
   // ---- Section 4: Compliance Traceability --------------------
@@ -509,13 +524,13 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const plans    = s10.plans || [];
     const uncov    = s10.uncovered_controls || [];
     const total    = s10.total_tests ?? 0;
-    const done     = s10.completed_tests ?? 0;
-    const na       = s10.not_applicable_tests ?? 0;
+    const done     = s10.evidence_provided_tests ?? s10.completed_tests ?? 0;
+    const na       = s10.waived_tests ?? s10.not_applicable_tests ?? 0;
     const pending  = s10.pending_tests ?? 0;
 
     let html = `<p class="section-meta">
       Assessment date: ${s10.assessment_date || '—'} &nbsp;|&nbsp;
-      ${done} completed · ${na} not applicable · ${pending} pending (${total} total)
+      ${done} evidence provided · ${na} waived · ${pending} pending (${total} total)
     </p>`;
 
     const pct = total > 0 ? Math.round((done + na) / total * 100) : 0;
@@ -573,8 +588,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const riskCtrlSel = (s9?.risk_controls || []).filter(c => c.selected).length;
     const compAdds    = (s9?.compliance_additions || []).length;
     const dpiaAdds    = (s9?.dpia_controls || []).length;
-    const doneTests   = s10?.completed_tests ?? '—';
-    const naTests     = s10?.not_applicable_tests ?? '—';
+    const doneTests   = s10?.evidence_provided_tests ?? s10?.completed_tests ?? '—';
+    const naTests     = s10?.waived_tests ?? s10?.not_applicable_tests ?? '—';
     const pendTests   = s10?.pending_tests ?? '—';
 
     const allDone = !!s3 && !!s9 && !!s10;
@@ -601,7 +616,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       <td class="mono">[18286.18]</td>
       <td>No Critical Gaps Declaration</td>
       <td>Compliance Traceability section — all applicable HS requirements must show ✓ Covered</td>
-      <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 4' : '○ Pending'}</span></td>
+      <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 5' : '○ Pending'}</span></td>
     </tr>
     <tr>
       <td class="mono">[18286.19]</td>
@@ -626,8 +641,8 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   <tr><td class="dt-label">Controls Added (Compliance Team)</td><td>${compAdds}</td></tr>
   <tr><td class="dt-label">Controls Committed (DPIA)</td><td>${dpiaAdds}</td></tr>
   <tr><td class="dt-label">Total Controls</td><td>${riskCtrlSel + compAdds + dpiaAdds}</td></tr>
-  <tr><td class="dt-label">Tests Completed</td><td>${doneTests}</td></tr>
-  <tr><td class="dt-label">Tests Not Applicable</td><td>${naTests}</td></tr>
+  <tr><td class="dt-label">Tests — Evidence Provided</td><td>${doneTests}</td></tr>
+  <tr><td class="dt-label">Tests — Waived</td><td>${naTests}</td></tr>
   <tr><td class="dt-label">Tests Pending</td><td>${pendTests}</td></tr>
   <tr><td class="dt-label">Report Generated</td><td>${today}</td></tr>
 </table>
@@ -799,15 +814,19 @@ ${rows.join('')}`;
   }
 
   function _testStatusKey(status) {
-    if (status === 'completed')      return 'accept';
-    if (status === 'not_applicable') return 'na';
+    if (status === 'evidence_provided' || status === 'completed')      return 'accept';
+    if (status === 'waived'            || status === 'not_applicable') return 'na';
+    if (status === 'in_progress')                                      return 'pend';
     return 'pend';
   }
 
   function _testStatusLabel(status) {
-    if (status === 'completed')      return '✓ Completed';
-    if (status === 'not_applicable') return '— N/A';
-    return '○ Pending';
+    if (status === 'evidence_provided') return '✓ Evidence provided';
+    if (status === 'completed')         return '✓ Completed';
+    if (status === 'waived')            return '— Waived';
+    if (status === 'not_applicable')    return '— N/A';
+    if (status === 'in_progress')       return '◑ In progress';
+    return '○ Not started';
   }
 
   function _cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'; }
