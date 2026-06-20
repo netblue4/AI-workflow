@@ -118,10 +118,10 @@
 <body>
 ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_section(1, 'System Classification', _classificationSection(s3))}
-${_section(2, 'Risk Assessment', _riskAssessmentSection(s8))}
-${_section(3, 'Control Schedule', _controlScheduleSection(s9, s11))}
-${_section(4, 'Verification Evidence', _verificationSection(s10))}
-${_section(5, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
+${_section(2, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
+${_section(3, 'Risk Assessment', _riskAssessmentSection(s8))}
+${_section(4, 'Control Schedule', _controlScheduleSection(s9, s11))}
+${_section(5, 'Verification Evidence', _verificationSection(s10))}
 ${_section(6, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
 ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
 </body>
@@ -282,6 +282,9 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     if (!la?.completed) {
       html += _notComplete('Legal assessment not yet saved.');
     } else {
+      // Build risk_id lookup so we can show RISK-001 next to each risk name
+      const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
+
       html += `<p class="section-meta">Completed: ${la.assessment_date} &nbsp;|&nbsp; ${la.selected_count} of ${la.total_risks} risks accepted</p>
 <table class="data-table data-table--risk">
   <thead><tr><th>Risk Name</th><th>Answer</th><th>Status</th><th>Applies If</th></tr></thead>
@@ -294,8 +297,10 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const appliesIfHtml = appliesIf.length
       ? `<ul class="applies-if-list">${appliesIf.map(a => `<li>${_esc(a)}</li>`).join('')}</ul>`
       : '';
+    const riskId = riskIdByName.get(r.risk_name);
+    const riskIdBadge = riskId ? `<span class="risk-id-badge">${_esc(riskId)}</span> ` : '';
     return `<tr class="${r.selected ? '' : 'row-dim'}">
-      <td>${_esc(r.risk_name)}</td>
+      <td>${riskIdBadge}${_esc(r.risk_name)}</td>
       <td>${_esc(r.wizard_answer || '—')}</td>
       <td><span class="status-pill status-pill--${r.selected ? 'accept' : (prefiltered ? 'filter' : 'excl')}">${r.selected ? '✓ Accepted' : (prefiltered ? '⊘ Pre-filtered' : '✗ Excluded')}</span></td>
       <td class="reason-cell">${filterNote}${appliesIfHtml}</td>
@@ -482,9 +487,10 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
           // Find test plan for any selected control under this HS
           let testRef = null;
+          let testRiskId = null;
           for (const c of selCtrls) {
             const tp = tpByRisk.get(c.fk_Risk_ID);
-            if (tp) { testRef = tp.test_plan_ref; break; }
+            if (tp) { testRef = tp.test_plan_ref; testRiskId = c.fk_Risk_ID; break; }
           }
 
           html += `<div class="trace-hs ${covered ? '' : 'trace-hs--gap'}">
@@ -498,13 +504,13 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
           if (selCtrls.length > 0) {
             html += `<div class="trace-ctrl-list">
-              ${selCtrls.map(c => `<span class="trace-ctrl-chip">${_esc(c.pk_Risk_Control_ID)}</span>`).join('')}
-              ${testRef ? `<span class="trace-test-chip">🧪 ${_esc(testRef)}</span>` : ''}
+              ${selCtrls.map(c => `<span class="trace-ctrl-chip"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`).join('')}
+              ${testRef ? `<span class="trace-test-chip"><span class="trace-risk-tag">${_esc(testRiskId)}</span> 🧪 ${_esc(testRef)}</span>` : ''}
             </div>`;
           }
           if (fsCtrls.length > 0 && selCtrls.length === 0) {
             html += `<div class="trace-ctrl-list">
-              ${fsCtrls.map(c => `<span class="trace-ctrl-chip trace-ctrl-chip--fs">${_esc(c.pk_Risk_Control_ID)}</span>`).join('')}
+              ${fsCtrls.map(c => `<span class="trace-ctrl-chip trace-ctrl-chip--fs"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`).join('')}
             </div>`;
           }
 
@@ -621,7 +627,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       <td class="mono">[18286.18]</td>
       <td>No Critical Gaps Declaration</td>
       <td>Compliance Traceability section — all applicable HS requirements must show ✓ Covered</td>
-      <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 5' : '○ Pending'}</span></td>
+      <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 2' : '○ Pending'}</span></td>
     </tr>
     <tr>
       <td class="mono">[18286.19]</td>
@@ -988,6 +994,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-ctrl-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#e0e7ff;color:#3730a3;font-family:monospace}
 .trace-ctrl-chip--fs{background:#ede9fe;color:#7c3aed}
 .trace-test-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#f0fdf4;color:#166534}
+.trace-risk-tag{display:inline-block;font-size:7.5pt;font-weight:700;padding:0 4px;border-radius:3px;background:#fef3c7;color:#92400e;font-family:monospace;margin-right:2px}
+.risk-id-badge{display:inline-block;font-size:8pt;font-weight:700;padding:1px 5px;border-radius:3px;background:#fef3c7;color:#92400e;font-family:monospace;margin-right:4px}
 
 /* Test plans */
 .test-progress-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:4px}
