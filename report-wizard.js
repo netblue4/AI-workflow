@@ -117,15 +117,230 @@
 </head>
 <body>
 ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
+${_ragSummaryPage(s9, s10, s11)}
 ${_section(1, 'System Classification', _classificationSection(s3))}
 ${_section(2, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
-${_section(3, 'Risk Assessment', _riskAssessmentSection(s8))}
+${_section(3, 'Risk Assessment', _riskAssessmentSection(s8, s11))}
 ${_section(4, 'Control Schedule', _controlScheduleSection(s9, s11))}
 ${_section(5, 'Verification Evidence', _verificationSection(s10))}
-${_section(6, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
-${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
+${_section(6, 'Outstanding Items', _outstandingItemsSection(s9, s10, s11))}
+${_section(7, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
+${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
 </body>
 </html>`;
+  }
+
+  // ---- RAG Summary Page (CAB Sign-off) ----------------------
+  function _ragSummaryPage(s9, s10, s11) {
+    if (!s9) return '';
+
+    // Build lookup maps
+    const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
+    const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
+
+    // Control statuses from s11
+    const ctrlStatus = new Map();
+    (s11?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
+
+    // Test plans by risk
+    const testByRisk = new Map();
+    (s10?.plans || []).forEach(plan => {
+      const riskId = riskIdByName.get(plan.risk_name);
+      if (riskId) testByRisk.set(riskId, plan.test_controls || []);
+    });
+
+    // Group selected risk controls by risk_id
+    const byRisk = new Map();
+    (s9.risk_controls || []).filter(c => c.selected).forEach(c => {
+      const key = c.risk_id || 'unknown';
+      if (!byRisk.has(key)) byRisk.set(key, []);
+      byRisk.get(key).push(c);
+    });
+
+    const DONE_STATUSES = new Set(['evidence_provided', 'completed', 'waived', 'not_applicable']);
+
+    // Stats for top boxes
+    let totalCtrls = 0, doneCtrls = 0;
+    let totalTests = 0, doneTests = 0;
+    const compAdds  = s9.compliance_additions || [];
+    const dpiaAdds  = s9.dpia_controls || [];
+    const addlCount = compAdds.length + dpiaAdds.length;
+
+    // Count all s11 controls
+    (s11?.controls || []).forEach(c => {
+      totalCtrls++;
+      if (c.status === 'evidence_provided' || c.status === 'waived') doneCtrls++;
+    });
+
+    // Count all tests
+    (s10?.plans || []).forEach(plan => {
+      (plan.test_controls || []).forEach(tc => {
+        totalTests++;
+        if (DONE_STATUSES.has(tc.status)) doneTests++;
+      });
+    });
+
+    const ctrlStatClass = totalCtrls === 0 ? 'warn' : (doneCtrls === totalCtrls ? 'ok' : (doneCtrls > 0 ? 'warn' : 'bad'));
+    const testStatClass = totalTests === 0 ? 'warn' : (doneTests === totalTests ? 'ok' : (doneTests > 0 ? 'warn' : 'bad'));
+    const addlStatClass = addlCount > 0 ? 'warn' : 'ok';
+
+    // Per-risk RAG rows
+    let overallGreen = 0, overallAmber = 0, overallRed = 0;
+    const riskRows = [];
+
+    byRisk.forEach((ctrls, riskId) => {
+      const riskName = riskNameById.get(riskId) || riskId;
+
+      const ctrlTotal = ctrls.length;
+      const ctrlDone  = ctrls.filter(c => {
+        const st = ctrlStatus.get(c.control_id);
+        return st === 'evidence_provided' || st === 'waived';
+      }).length;
+
+      const tests     = testByRisk.get(riskId) || [];
+      const testTotal = tests.length;
+      const testDone  = tests.filter(tc => DONE_STATUSES.has(tc.status)).length;
+
+      const ctrlAllDone  = ctrlTotal > 0 && ctrlDone === ctrlTotal;
+      const testAllDone  = testTotal === 0 || testDone === testTotal;
+      const anyProgress  = ctrlDone > 0 || testDone > 0;
+
+      let rag;
+      if (ctrlAllDone && testAllDone) { rag = 'green'; overallGreen++; }
+      else if (anyProgress)            { rag = 'amber'; overallAmber++; }
+      else                             { rag = 'red';   overallRed++;   }
+
+      const ctrlCls  = ctrlTotal === 0 ? 'na' : (ctrlDone === ctrlTotal ? 'ok' : (ctrlDone > 0 ? 'warn' : 'na'));
+      const testCls  = testTotal === 0 ? 'na' : (testDone === testTotal ? 'ok' : (testDone > 0 ? 'warn' : 'na'));
+
+      const residualLevel = s11?.residual_risks?.[riskId]?.level;
+      const residualHtml  = residualLevel
+        ? `<span class="rag-residual rag-residual--${_esc(residualLevel)}">${_esc(residualLevel.charAt(0).toUpperCase() + residualLevel.slice(1))}</span>`
+        : `<span class="rag-residual rag-residual--na">—</span>`;
+
+      riskRows.push(`<tr>
+        <td><span class="risk-id-badge">${_esc(riskId)}</span></td>
+        <td>${_esc(riskName)}</td>
+        <td class="center"><span class="rag-count rag-count--${ctrlCls}">${ctrlDone}/${ctrlTotal}</span></td>
+        <td class="center"><span class="rag-count rag-count--${testCls}">${testDone}/${testTotal}</span></td>
+        <td class="center">${residualHtml}</td>
+        <td class="center"><span class="rag-pill rag-pill--${rag}">${rag.charAt(0).toUpperCase() + rag.slice(1)}</span></td>
+      </tr>`);
+    });
+
+    const overall = overallRed > 0 ? 'red' : (overallAmber > 0 ? 'amber' : 'green');
+    const overallLabel = overall === 'green' ? 'All Green' : (overall === 'amber' ? 'Amber' : 'Red');
+
+    return `
+<div class="rag-page page-break">
+  <div class="rag-page-hdr">
+    <div class="rag-page-title">CAB Sign-off Summary</div>
+    <span class="rag-pill rag-pill--${overall} rag-pill--lg">${overallLabel}</span>
+  </div>
+  <div class="rag-stat-row">
+    <div class="rag-stat rag-stat--${ctrlStatClass}">
+      <div class="rag-stat-num">${doneCtrls}/${totalCtrls}</div>
+      <div class="rag-stat-lbl">Controls evidenced</div>
+    </div>
+    <div class="rag-stat rag-stat--${testStatClass}">
+      <div class="rag-stat-num">${doneTests}/${totalTests}</div>
+      <div class="rag-stat-lbl">Tests resolved</div>
+    </div>
+    <div class="rag-stat rag-stat--${addlStatClass}">
+      <div class="rag-stat-num">${addlCount}</div>
+      <div class="rag-stat-lbl">Additional controls</div>
+    </div>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>Risk ID</th><th>Risk Name</th><th class="center">Controls</th><th class="center">Tests</th><th class="center">Residual Risk</th><th class="center">Status</th></tr></thead>
+    <tbody>${riskRows.join('')}</tbody>
+  </table>
+  <p class="section-meta">Compliance additions and DPIA controls are not shown in the per-risk table above. See §4 Control Schedule for their operational status.</p>
+</div>`;
+  }
+
+  // ---- Outstanding Items Section -----------------------------
+  function _outstandingItemsSection(s9, s10, s11) {
+    let html = '';
+
+    // Outstanding controls
+    const outstandingCtrls = [];
+    if (!s9) {
+      html += `<div class="outstanding-warn">Step 6 (Control Identification) not yet completed.</div>`;
+    } else if (!s11) {
+      html += `<div class="outstanding-warn">Step 9 (Operational Controls Activation) not yet completed.</div>`;
+    } else {
+      const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
+      const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
+
+      const selectedKeys = new Set([
+        ...(s9.risk_controls || []).filter(c => c.selected).map(c => c.control_id),
+        ...(s9.compliance_additions || []).map(c => c.control_id),
+        ...(s9.dpia_controls || []).map(c => 'DPIA__' + c.control_name)
+      ]);
+
+      (s11.controls || []).forEach(c => {
+        if (!selectedKeys.has(c.key)) return;
+        if (c.status === 'evidence_provided' || c.status === 'waived') return;
+        outstandingCtrls.push(c);
+      });
+    }
+
+    // Outstanding tests
+    const outstandingTests = [];
+    if (!s10) {
+      html += `<div class="outstanding-warn">Step 7 (Verification Testing) not yet completed.</div>`;
+    } else {
+      const DONE_STATUSES = new Set(['evidence_provided', 'completed', 'waived', 'not_applicable']);
+      (s10.plans || []).forEach(plan => {
+        (plan.test_controls || []).forEach((tc, idx) => {
+          if (DONE_STATUSES.has(tc.status)) return;
+          outstandingTests.push({
+            planRef:  plan.plan_ref || `Plan ${idx + 1}`,
+            testName: tc.control_name || tc.test_control_id || '—',
+            riskName: plan.risk_name || '—',
+            status:   tc.status || 'not_started'
+          });
+        });
+      });
+    }
+
+    if (s9 && s11 && s10 && outstandingCtrls.length === 0 && outstandingTests.length === 0) {
+      return `<div class="outstanding-clear">✓ All controls evidenced and all tests resolved. Ready for CAB sign-off.</div>`;
+    }
+
+    if (outstandingCtrls.length > 0) {
+      const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
+      html += `<h3 class="sub-heading">Outstanding Controls (${outstandingCtrls.length})</h3>
+<table class="data-table">
+  <thead><tr><th>Control ID</th><th>Name</th><th>Risk</th><th>Current Status</th></tr></thead>
+  <tbody>
+  ${outstandingCtrls.map(c => `<tr>
+    <td class="mono">${_esc(c.key)}</td>
+    <td>${_esc(c.name || '—')}</td>
+    <td>${_esc(c.risk_name || (riskNameById.get(c.risk_id) || '—'))}</td>
+    <td>${_ctrlStatusPill(c.status)}</td>
+  </tr>`).join('')}
+  </tbody>
+</table>`;
+    }
+
+    if (outstandingTests.length > 0) {
+      html += `<h3 class="sub-heading">Outstanding Tests (${outstandingTests.length})</h3>
+<table class="data-table">
+  <thead><tr><th>Plan Ref</th><th>Test Name</th><th>Risk</th><th>Current Status</th></tr></thead>
+  <tbody>
+  ${outstandingTests.map(t => `<tr>
+    <td class="mono">${_esc(t.planRef)}</td>
+    <td>${_esc(t.testName)}</td>
+    <td>${_esc(t.riskName)}</td>
+    <td><span class="status-pill status-pill--${_testStatusKey(t.status)}">${_testStatusLabel(t.status)}</span></td>
+  </tr>`).join('')}
+  </tbody>
+</table>`;
+    }
+
+    return html || `<div class="outstanding-warn">Insufficient data to determine outstanding items.</div>`;
   }
 
   // ---- Cover page --------------------------------------------
@@ -265,7 +480,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- Section 2: Risk Assessment ----------------------------
-  function _riskAssessmentSection(s8) {
+  function _riskAssessmentSection(s8, s11) {
     if (!s8) return _notComplete('Step 5 — Risk Assessment has not yet been completed.');
 
     // Build applies_if lookup from guidance JSON
@@ -287,7 +502,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
       html += `<p class="section-meta">Completed: ${la.assessment_date} &nbsp;|&nbsp; ${la.selected_count} of ${la.total_risks} risks accepted</p>
 <table class="data-table data-table--risk">
-  <thead><tr><th>Risk Name</th><th>Answer</th><th>Status</th><th>Applies If</th></tr></thead>
+  <thead><tr><th>Risk Name</th><th>Answer</th><th>Status</th><th>Residual Risk</th><th>Applies If</th></tr></thead>
   <tbody>
   ${(la.risks || []).map(r => {
     const rel = r.relevance || {};
@@ -299,10 +514,15 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       : '';
     const riskId = riskIdByName.get(r.risk_name);
     const riskIdBadge = riskId ? `<span class="risk-id-badge">${_esc(riskId)}</span> ` : '';
+    const residual = s11?.residual_risks?.[riskId];
+    const residualHtml = residual?.level
+      ? `<span class="rag-residual rag-residual--${_esc(residual.level)}">${_esc(residual.level.charAt(0).toUpperCase() + residual.level.slice(1))}</span>`
+      : `<span class="rag-residual rag-residual--na">—</span>`;
     return `<tr class="${r.selected ? '' : 'row-dim'}">
       <td>${riskIdBadge}${_esc(r.risk_name)}</td>
       <td>${_esc(r.wizard_answer || '—')}</td>
       <td><span class="status-pill status-pill--${r.selected ? 'accept' : (prefiltered ? 'filter' : 'excl')}">${r.selected ? '✓ Accepted' : (prefiltered ? '⊘ Pre-filtered' : '✗ Excluded')}</span></td>
+      <td class="center">${residualHtml}</td>
       <td class="reason-cell">${filterNote}${appliesIfHtml}</td>
     </tr>`;
   }).join('')}
@@ -921,10 +1141,11 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .dt-label{font-weight:600;color:#555;white-space:nowrap;width:220px}
 .reason-cell{font-size:9pt;color:#555}
 .data-table--risk{table-layout:fixed}
-.data-table--risk th:nth-child(1),.data-table--risk td:nth-child(1){width:20%}
-.data-table--risk th:nth-child(2),.data-table--risk td:nth-child(2){width:10%;white-space:nowrap}
-.data-table--risk th:nth-child(3),.data-table--risk td:nth-child(3){width:13%;white-space:nowrap}
-.data-table--risk th:nth-child(4),.data-table--risk td:nth-child(4){width:57%}
+.data-table--risk th:nth-child(1),.data-table--risk td:nth-child(1){width:18%}
+.data-table--risk th:nth-child(2),.data-table--risk td:nth-child(2){width:9%;white-space:nowrap}
+.data-table--risk th:nth-child(3),.data-table--risk td:nth-child(3){width:11%;white-space:nowrap}
+.data-table--risk th:nth-child(4),.data-table--risk td:nth-child(4){width:11%}
+.data-table--risk th:nth-child(5),.data-table--risk td:nth-child(5){width:51%}
 .data-table--sched{table-layout:fixed}
 .data-table--sched th:nth-child(1),.data-table--sched td:nth-child(1){width:13%}
 .data-table--sched th:nth-child(2),.data-table--sched td:nth-child(2){width:47%}
@@ -1049,6 +1270,38 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 /* Utility */
 .mono{font-family:Courier New,monospace;font-size:9pt}
 .small{font-size:8.5pt}
+
+/* RAG summary page */
+.rag-page{padding:32px 40px;background:#fff}
+.rag-page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #0d9488}
+.rag-page-title{font-size:16pt;font-weight:700;color:#111}
+.rag-pill{display:inline-block;padding:4px 12px;border-radius:5px;font-size:9pt;font-weight:700}
+.rag-pill--lg{font-size:11pt;padding:6px 16px}
+.rag-pill--green{background:#dcfce7;color:#166534}
+.rag-pill--amber{background:#fef3c7;color:#92400e}
+.rag-pill--red{background:#fee2e2;color:#991b1b}
+.rag-stat-row{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.rag-stat{flex:1;min-width:140px;padding:14px 18px;border-radius:8px;border:1px solid #e5e7eb}
+.rag-stat--ok{background:#f0fdf4;border-color:#bbf7d0}
+.rag-stat--warn{background:#fffbeb;border-color:#fde68a}
+.rag-stat--bad{background:#fef2f2;border-color:#fecaca}
+.rag-stat-num{font-size:20pt;font-weight:800;color:#0d9488;line-height:1}
+.rag-stat-lbl{font-size:9pt;color:#555;margin-top:4px}
+.rag-count{display:inline-block;padding:2px 8px;border-radius:4px;font-size:8.5pt;font-weight:700}
+.rag-count--ok{background:#dcfce7;color:#166534}
+.rag-count--warn{background:#fef3c7;color:#92400e}
+.rag-count--na{background:#f3f4f6;color:#9ca3af}
+.rag-residual{display:inline-block;padding:2px 8px;border-radius:4px;font-size:8.5pt;font-weight:700}
+.rag-residual--low{background:#dcfce7;color:#166534}
+.rag-residual--medium{background:#fef3c7;color:#92400e}
+.rag-residual--high{background:#fed7aa;color:#9a3412}
+.rag-residual--critical{background:#fee2e2;color:#991b1b}
+.rag-residual--na{background:#f3f4f6;color:#9ca3af}
+.data-table td.center,.data-table th.center{text-align:center}
+
+/* Outstanding items */
+.outstanding-clear{padding:14px 18px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:10.5pt;color:#166534;font-weight:600}
+.outstanding-warn{padding:12px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:10pt;color:#9a3412;margin-bottom:16px}
 `;
   }
 
