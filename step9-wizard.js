@@ -28,6 +28,22 @@
     waived:            { bg: '#ede9fe', text: '#6d28d9' }
   };
 
+  const _residualState = {}; // risk_id → { likelihood, impact, justification }
+
+  const RISK_MATRIX = {
+    low:      { low: 'low',    medium: 'low',    high: 'medium',   critical: 'medium'   },
+    medium:   { low: 'low',    medium: 'medium', high: 'high',     critical: 'high'     },
+    high:     { low: 'medium', medium: 'high',   high: 'high',     critical: 'critical' },
+    critical: { low: 'medium', medium: 'high',   high: 'critical', critical: 'critical' }
+  };
+
+  const RESIDUAL_COLORS = {
+    low:      { bg: '#dcfce7', text: '#166534' },
+    medium:   { bg: '#fef3c7', text: '#92400e' },
+    high:     { bg: '#fed7aa', text: '#9a3412' },
+    critical: { bg: '#fee2e2', text: '#991b1b' }
+  };
+
   // ---- Public API ---------------------------------------------
   window.mountStep9Wizard = function (container, step, detail, colorKey, phaseTitle) {
     _container  = container;
@@ -127,6 +143,17 @@
         _state[s.key] = { notes: s.notes || '', status: s.status || 'not_started' };
       }
     });
+
+    // Initialise residual state for every risk group
+    Object.keys(_residualState).forEach(k => delete _residualState[k]);
+    const allRiskIds = new Set(_controls.filter(c => c.risk_id).map(c => c.risk_id));
+    allRiskIds.forEach(riskId => { _residualState[riskId] = { likelihood: '', impact: '', justification: '' }; });
+    const savedResidual = _record?.['step-9']?.residual_risks || {};
+    Object.entries(savedResidual).forEach(([riskId, rr]) => {
+      if (_residualState[riskId]) {
+        _residualState[riskId] = { likelihood: rr.likelihood || '', impact: rr.impact || '', justification: rr.justification || '' };
+      }
+    });
   }
 
   // ---- Render -------------------------------------------------
@@ -201,6 +228,7 @@
           const ctrl = _controls.find(x => x.key === c.control_id);
           if (ctrl) grp.appendChild(_buildControlCard(ctrl, 'eu'));
         });
+        grp.appendChild(_buildResidualRiskPanel(riskId));
         card.appendChild(grp);
       });
     }
@@ -341,6 +369,7 @@
       _state[ctrl.key].status = select.value;
       _syncCard(card, select.value);
       _updateProgress();
+      if (ctrl.risk_id) _syncResidualPanel(ctrl.risk_id);
     });
 
     const pill = _el('span', 's9-status-pill');
@@ -367,6 +396,106 @@
     el.textContent      = opt?.label || status;
     el.style.background = col.bg;
     el.style.color      = col.text;
+  }
+
+  // ---- Residual risk panel ------------------------------------
+  function _isRiskGroupComplete(riskId) {
+    return _controls
+      .filter(c => c.risk_id === riskId)
+      .every(c => _state[c.key]?.status === 'evidence_provided' || _state[c.key]?.status === 'waived');
+  }
+
+  function _syncResidualPanel(riskId) {
+    const panel = _container.querySelector(`[data-residual-risk="${riskId}"]`);
+    if (!panel) return;
+    const complete = _isRiskGroupComplete(riskId);
+    panel.classList.toggle('s9-residual--locked', !complete);
+    panel.querySelectorAll('select, textarea').forEach(el => { el.disabled = !complete; });
+    const note = panel.querySelector('.s9-residual-lock-note');
+    if (note) note.style.display = complete ? 'none' : '';
+  }
+
+  function _applyResidualLevel(el, likelihood, impact) {
+    if (!likelihood || !impact) {
+      el.textContent = '—'; el.style.background = '#f1f5f9'; el.style.color = '#94a3b8'; return;
+    }
+    const level = RISK_MATRIX[likelihood]?.[impact] || '';
+    const col   = RESIDUAL_COLORS[level] || { bg: '#f1f5f9', text: '#94a3b8' };
+    el.textContent      = level ? level.charAt(0).toUpperCase() + level.slice(1) : '—';
+    el.style.background = col.bg;
+    el.style.color      = col.text;
+  }
+
+  function _buildResidualRiskPanel(riskId) {
+    const complete = _isRiskGroupComplete(riskId);
+    const saved    = _residualState[riskId] || { likelihood: '', impact: '', justification: '' };
+
+    const panel = _el('div', `s9-residual${complete ? '' : ' s9-residual--locked'}`);
+    panel.dataset.residualRisk = riskId;
+
+    // Header
+    const hdr  = _el('div', 's9-residual-hdr');
+    const ttl  = _el('span', 's9-residual-title'); ttl.textContent = 'Residual Risk Assessment';
+    const note = _el('span', 's9-residual-lock-note');
+    note.textContent = 'Unlocks when all controls are evidenced or waived';
+    note.style.display = complete ? 'none' : '';
+    hdr.appendChild(ttl); hdr.appendChild(note);
+    panel.appendChild(hdr);
+
+    // Likelihood / Impact / Level row
+    const row = _el('div', 's9-residual-row');
+    const LEVELS = ['', 'low', 'medium', 'high', 'critical'];
+
+    const levelPill = _el('span', 's9-residual-level-pill');
+    _applyResidualLevel(levelPill, saved.likelihood, saved.impact);
+
+    const mkSel = (lbl, currentVal, onChange) => {
+      const wrap = _el('div', 's9-residual-field');
+      const l    = _el('label', 's9-field-label'); l.textContent = lbl;
+      const sel  = document.createElement('select');
+      sel.className = 's9-residual-select';
+      sel.disabled  = !complete;
+      LEVELS.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v ? v.charAt(0).toUpperCase() + v.slice(1) : '— Select —';
+        if (v === currentVal) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', () => onChange(sel.value));
+      wrap.appendChild(l); wrap.appendChild(sel);
+      return wrap;
+    };
+
+    const lWrap = mkSel('Likelihood', saved.likelihood, v => {
+      _residualState[riskId].likelihood = v;
+      _applyResidualLevel(levelPill, _residualState[riskId].likelihood, _residualState[riskId].impact);
+    });
+    const iWrap = mkSel('Impact', saved.impact, v => {
+      _residualState[riskId].impact = v;
+      _applyResidualLevel(levelPill, _residualState[riskId].likelihood, _residualState[riskId].impact);
+    });
+
+    const lvlWrap = _el('div', 's9-residual-field');
+    const lvlLbl  = _el('label', 's9-field-label'); lvlLbl.textContent = 'Risk Level';
+    lvlWrap.appendChild(lvlLbl); lvlWrap.appendChild(levelPill);
+
+    row.appendChild(lWrap); row.appendChild(iWrap); row.appendChild(lvlWrap);
+    panel.appendChild(row);
+
+    // Justification
+    const jWrap = _el('div', 's9-residual-just');
+    const jLbl  = _el('label', 's9-field-label'); jLbl.textContent = 'Justification';
+    const jArea = document.createElement('textarea');
+    jArea.className   = 's9-ctrl-notes';
+    jArea.placeholder = 'Explain why residual risk is acceptable given the controls in place…';
+    jArea.rows        = 2;
+    jArea.value       = saved.justification;
+    jArea.disabled    = !complete;
+    jArea.addEventListener('input', () => { _residualState[riskId].justification = jArea.value; });
+    jWrap.appendChild(jLbl); jWrap.appendChild(jArea);
+    panel.appendChild(jWrap);
+
+    return panel;
   }
 
   // ---- Action row ---------------------------------------------
@@ -415,6 +544,19 @@
 
     const { evidenced, total } = _progressCounts();
 
+    // Build residual risk record (only include entries with both likelihood and impact set)
+    const residual_risks = {};
+    Object.entries(_residualState).forEach(([riskId, rr]) => {
+      if (rr.likelihood && rr.impact) {
+        residual_risks[riskId] = {
+          likelihood:    rr.likelihood,
+          impact:        rr.impact,
+          level:         RISK_MATRIX[rr.likelihood]?.[rr.impact] || '',
+          justification: rr.justification || ''
+        };
+      }
+    });
+
     const rec9 = {
       step_id:         'step-9',
       step_title:      'Operational controls activation',
@@ -423,7 +565,8 @@
       use_case_id:     meta.use_case_id || '',
       total_controls:  total,
       evidenced_count: evidenced,
-      controls
+      controls,
+      residual_risks
     };
 
     if (!_record) _record = { _meta: { schema_version: '1.0', created: new Date().toISOString() } };
@@ -514,6 +657,19 @@
 .s9-stat-num{font-size:22px;font-weight:800;color:#0d9488}
 .s9-stat-lbl{font-size:11px;color:var(--color-text-secondary);text-align:center}
 .s9-result-note{font-size:13px;color:var(--color-text-secondary);margin:0}
+
+.s9-residual{margin:12px 0 0;padding:12px 14px;border:1px solid #99f6e4;border-radius:8px;background:#f0fdfa}
+.s9-residual--locked{background:#f8fafc;border-color:#e2e8f0;opacity:.75;pointer-events:none}
+.s9-residual--locked .s9-residual-title{color:var(--color-text-tertiary)}
+.s9-residual-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.s9-residual-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0f766e}
+.s9-residual-lock-note{font-size:10px;color:var(--color-text-tertiary);font-style:italic}
+.s9-residual-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.s9-residual-field{display:flex;flex-direction:column;gap:4px}
+.s9-residual-select{padding:5px 8px;border:1px solid var(--color-border-mid,#d1d5db);border-radius:5px;font-size:12px;font-family:inherit;background:var(--color-bg,#fff);color:var(--color-text-primary);cursor:pointer;min-width:120px}
+.s9-residual-select:disabled{background:var(--color-bg-subtle,#f8fafc);cursor:default}
+.s9-residual-level-pill{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;text-align:center;min-width:70px}
+.s9-residual-just{margin-top:0}
     `;
     document.head.appendChild(s);
   }
