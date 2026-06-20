@@ -347,7 +347,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         const riskLabel  = riskName ? `${_esc(riskId)} — ${_esc(riskName)}` : _esc(riskId);
         html += `<div class="ctrl-group">
           <div class="ctrl-group-hdr">${riskLabel}</div>
-          <table class="data-table">
+          <table class="data-table data-table--sched">
             <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
             <tbody>
             ${selected.map(c => `<tr>
@@ -371,7 +371,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     // ---- Compliance Team Additions ----------------------------------
     if (regularAdds.length > 0) {
       html += `<h3 class="sub-heading">Compliance Team Additions</h3>
-      <table class="data-table">
+      <table class="data-table data-table--sched">
         <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
         <tbody>
         ${regularAdds.map(c => `<tr>
@@ -387,7 +387,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     // ---- Framework Self-Certifications ------------------------------
     if (fsCtrls.length > 0) {
       html += `<h3 class="sub-heading">Framework Self-Certifications</h3>
-      <table class="data-table">
+      <table class="data-table data-table--sched">
         <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
         <tbody>
         ${fsCtrls.map(c => `<tr>
@@ -554,7 +554,7 @@ ${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             <span class="test-plan-name">${_esc(p.plan_name)}</span>
           </div>
           <p class="test-plan-risk">Risk: ${_esc(p.risk_name)}</p>
-          <table class="data-table">
+          <table class="data-table data-table--sched">
             <thead><tr><th>Test Control</th><th>Name</th><th>Standards</th><th>Status</th></tr></thead>
             <tbody>
             ${(p.test_controls || []).map(tc => `<tr>
@@ -919,6 +919,11 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .data-table--risk th:nth-child(2),.data-table--risk td:nth-child(2){width:10%;white-space:nowrap}
 .data-table--risk th:nth-child(3),.data-table--risk td:nth-child(3){width:13%;white-space:nowrap}
 .data-table--risk th:nth-child(4),.data-table--risk td:nth-child(4){width:57%}
+.data-table--sched{table-layout:fixed}
+.data-table--sched th:nth-child(1),.data-table--sched td:nth-child(1){width:13%}
+.data-table--sched th:nth-child(2),.data-table--sched td:nth-child(2){width:47%}
+.data-table--sched th:nth-child(3),.data-table--sched td:nth-child(3){width:18%}
+.data-table--sched th:nth-child(4),.data-table--sched td:nth-child(4){width:22%}
 .applies-if-list{margin:2px 0 0 14px;padding:0;font-size:8.5pt;color:#444;line-height:1.5}
 .applies-if-list li{margin-bottom:2px}
 .applies-if-filter{display:block;font-size:8pt;font-weight:600;color:#b45309;background:#fef3c7;border-radius:3px;padding:1px 5px;margin-bottom:4px;width:fit-content}
