@@ -10,6 +10,7 @@
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null;
   let _riskData = []; // [{ risk_id, display_name, risk_type, risk_source, risk_description, controls }]
+  let _tcByRC   = null; // fk_Risk_Control_ID → test control (R→T pairing)
 
   const _state = {
     riskSelected: {},       // risk team picks (Step Wizard tab)
@@ -25,6 +26,7 @@
     _tblData    = null;
     _record     = null;
     _riskData   = [];
+    _tcByRC     = null;
     _state.riskSelected = {};
     _state.complianceSelected = {};
 
@@ -55,6 +57,7 @@
       const [risks, controls, tasks, articles, hs, testControls] =
         await Promise.all([rRes.json(), cRes.json(), tRes.json(), aRes.json(), hRes.json(), tcRes.json()]);
       _tblData = { risks, controls, tasks, articles, hs, testControls };
+      _tcByRC  = new Map(testControls.filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
     } catch (_) {
       pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load risk data files.</p>`;
       return;
@@ -498,6 +501,15 @@
       const mat = _el('span', 'wiz9-maturity-badge');
       mat.textContent = ctrl.jkMaturity;
       hdr.appendChild(mat);
+    }
+
+    // R→T pairing chip
+    const tc = _tcByRC?.get(ctrl.pk_Risk_Control_ID);
+    if (tc) {
+      const tcBadge = _el('span', 'wiz9-test-pair-badge');
+      tcBadge.textContent = `🧪 ${tc.control_ref}`;
+      tcBadge.title = tc.jkName || '';
+      hdr.appendChild(tcBadge);
     }
 
     card.appendChild(hdr);
@@ -1515,6 +1527,7 @@
 .wiz9-ctrl-name{font-size:13px;font-weight:700;color:var(--color-text-primary);flex:1;min-width:120px}
 .wiz9-rcn-badge{font-size:10px;font-weight:600;background:#e0e7ff;color:#4338ca;padding:2px 7px;border-radius:4px;white-space:nowrap;word-break:break-all}
 .wiz9-maturity-badge{font-size:10px;font-weight:600;background:#dcfce7;color:#15803d;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.wiz9-test-pair-badge{font-size:10px;font-weight:600;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:4px;white-space:nowrap;cursor:default}
 .wiz9-ctrl-obj{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 10px}
 .wiz9-evidence-wrap{font-size:11px;color:var(--color-text-tertiary);margin-bottom:10px}
 .wiz9-evidence-label{font-weight:600}
