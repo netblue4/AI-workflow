@@ -1,7 +1,8 @@
 /* Step 7 — Content Verification Testing
    Reads selected controls from record['step-6'].risk_controls[] and compliance_additions[].
-   FK chain: selected control → tbl_Risk_Controls.fk_Risk_ID → tbl_Test_Plans → tbl_Test_Controls.
-   All test plans link to EU AI Act risks; controls without test plans appear in the uncovered section.
+   FK chain: selected risk control → tbl_Risk_Controls (fk_Risk_ID) + tbl_Test_Controls (fk_Risk_Control_ID).
+   R→T naming convention: [X.Y.R1] control is evidenced by [X.Y.T1] test control.
+   All test plans link to EU AI Act risks; controls without test controls appear in the uncovered section.
    Tester marks each test as: pending | completed | not_applicable.
    Saves to record['step-7'].
 */
@@ -53,19 +54,18 @@
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
     try {
-      const [rRes, rcRes, tpRes, tcRes] = await Promise.all([
+      const [rRes, rcRes, tcRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
-        fetch('tbl_Test_Plans.json'),
         fetch('tbl_Test_Controls.json')
       ]);
-      if (!rRes.ok || !rcRes.ok || !tpRes.ok || !tcRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, testPlans, testControls] = await Promise.all([
-        rRes.json(), rcRes.json(), tpRes.json(), tcRes.json()
+      if (!rRes.ok || !rcRes.ok || !tcRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, testControls] = await Promise.all([
+        rRes.json(), rcRes.json(), tcRes.json()
       ]);
-      _tblData = { risks, riskControls, testPlans, testControls };
+      _tblData = { risks, riskControls, testControls };
     } catch (_) {
-      pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files (tbl_Risks.json, tbl_Risk_Controls.json, tbl_Test_Plans.json, tbl_Test_Controls.json)</p>`;
+      pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files (tbl_Risks.json, tbl_Risk_Controls.json, tbl_Test_Controls.json)</p>`;
       return;
     }
 
@@ -102,8 +102,8 @@
 
   // ---- Build plan data from tbl_* filtered to step-6 selections ----
   function _buildPlanData() {
-    const step9 = _record?.['step-6'];
-    if (!step9) return { plans: [], uncovered: [] };
+    const step6 = _record?.['step-6'];
+    if (!step6) return { plans: [], uncovered: [] };
 
     // Collect selected controls from flat risk_controls[] and compliance_additions[]
     const seen = new Set();
@@ -114,47 +114,44 @@
         selectedControls.push({ control_id: c.control_id, control_name: c.control_name, control_source: c.control_source || '' });
       }
     };
-    (step9.risk_controls || []).forEach(c => { if (c.selected) push(c); });
-    (step9.compliance_additions || []).forEach(c => push(c));  // always selected
+    (step6.risk_controls || []).forEach(c => { if (c.selected) push(c); });
+    (step6.compliance_additions || []).forEach(c => push(c));
 
     if (!selectedControls.length) return { plans: [], uncovered: [] };
 
     // Build lookup maps
-    const rcById         = new Map(_tblData.riskControls.map(rc => [rc.pk_Risk_Control_ID, rc]));
-    const testPlanByRisk = new Map(_tblData.testPlans.map(p => [p.fk_Risk_ID, p]));
-    const riskById       = new Map(_tblData.risks.map(r => [r.pk_Risk_ID, r]));
+    const rcById   = new Map(_tblData.riskControls.map(rc => [rc.pk_Risk_Control_ID, rc]));
+    const riskById = new Map(_tblData.risks.map(r => [r.pk_Risk_ID, r]));
 
-    const tcsByPlan = new Map();
+    // Direct FK: fk_Risk_Control_ID → test control (R→T 1:1 convention)
+    const tcByRC = new Map();
     _tblData.testControls.forEach(tc => {
-      if (!tcsByPlan.has(tc.fk_Test_Plan_ID)) tcsByPlan.set(tc.fk_Test_Plan_ID, []);
-      tcsByPlan.get(tc.fk_Test_Plan_ID).push(tc);
+      if (tc.fk_Risk_Control_ID) tcByRC.set(tc.fk_Risk_Control_ID, tc);
     });
 
-    const planMap  = new Map(); // pk_Test_Plan_ID → plan data
+    const riskMap   = new Map(); // risk_id → {risk_id, risk_name, test_controls:[]}
     const uncovered = [];
 
     selectedControls.forEach(sc => {
       const rc = rcById.get(sc.control_id);
       if (!rc) { uncovered.push(sc); return; }
 
-      const plan = testPlanByRisk.get(rc.fk_Risk_ID);
-      if (!plan) { uncovered.push(sc); return; }
+      const tc = tcByRC.get(sc.control_id);
+      if (!tc) { uncovered.push(sc); return; }
 
-      if (!planMap.has(plan.pk_Test_Plan_ID)) {
-        const risk = riskById.get(plan.fk_Risk_ID);
-        planMap.set(plan.pk_Test_Plan_ID, {
-          plan_id:       plan.pk_Test_Plan_ID,
-          plan_ref:      plan.test_plan_ref,
-          plan_name:     plan.test_plan_name,
-          objective:     plan.test_plan_objective,
-          role:          plan.test_role,
-          risk_name:     risk?.risk_name || '',
-          test_controls: tcsByPlan.get(plan.pk_Test_Plan_ID) || []
+      const riskId = rc.fk_Risk_ID;
+      if (!riskMap.has(riskId)) {
+        const risk = riskById.get(riskId);
+        riskMap.set(riskId, {
+          risk_id:       riskId,
+          risk_name:     risk?.risk_name || riskId,
+          test_controls: []
         });
       }
+      riskMap.get(riskId).test_controls.push(tc);
     });
 
-    return { plans: Array.from(planMap.values()), uncovered };
+    return { plans: Array.from(riskMap.values()), uncovered };
   }
 
   // ---- Tabs ---------------------------------------------------
@@ -226,7 +223,7 @@
 
     const intro = _el('p', 'wiz10-intro');
     const totalTests = _planData.reduce((n, p) => n + p.test_controls.length, 0);
-    intro.innerHTML = `Mark each test control as <strong>Completed</strong>, <strong>Not Applicable</strong>, or leave as <strong>Pending</strong>. ${totalTests} test control${totalTests !== 1 ? 's' : ''} identified across ${_planData.length} test plan${_planData.length !== 1 ? 's' : ''}.`;
+    intro.innerHTML = `Mark each test control as <strong>Evidence provided</strong>, <strong>Waived</strong>, or leave as <strong>Not started</strong>. ${totalTests} test control${totalTests !== 1 ? 's' : ''} identified across ${_planData.length} risk${_planData.length !== 1 ? 's' : ''}.`;
     card.appendChild(intro);
 
     // Validation banner
@@ -269,7 +266,7 @@
     };
     cell('Risks assessed',       String(step9.total_risks      || 0));
     cell('Controls selected',    String(step9.selected_controls || 0), 'num');
-    cell('Test plans found',     String(_planData.length),             'num');
+    cell('Risks covered',         String(_planData.length),             'num');
     cell('Controls without tests', String(_uncovered.length),
          _uncovered.length > 0 ? 'warn' : 'ok');
     card.appendChild(grid); return card;
@@ -310,9 +307,9 @@
 
     const hdr = _el('div', 'wiz10-plan-hdr');
 
-    const planName = _el('span', 'wiz10-plan-name');
-    planName.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
-    hdr.appendChild(planName);
+    const riskName = _el('span', 'wiz10-plan-name');
+    riskName.textContent = plan.risk_name;
+    hdr.appendChild(riskName);
 
     const countBadge = _el('span', 'wiz10-plan-count');
     countBadge.id = `wiz10-plan-count-${idx}`;
@@ -320,12 +317,6 @@
     hdr.appendChild(countBadge);
 
     sec.appendChild(hdr);
-
-    if (plan.risk_name) {
-      const riskSub = _el('p', 'wiz10-plan-risk-sub');
-      riskSub.innerHTML = `<span class="wiz10-risk-label">EU AI Act risk:</span> ${plan.risk_name}`;
-      sec.appendChild(riskSub);
-    }
 
     const ctrlList = _el('div', 'wiz10-ctrl-list');
     plan.test_controls.forEach(tc => ctrlList.appendChild(_buildTestControlCard(tc, plan, idx)));
@@ -590,16 +581,16 @@
     const meta  = _record?._meta || {};
 
     const plans = _planData.map(p => ({
-      plan_id:   p.plan_id,
-      plan_ref:  p.plan_ref,
-      plan_name: p.plan_name,
+      plan_ref:  p.risk_id,
+      plan_name: p.risk_name,
       risk_name: p.risk_name,
       test_controls: p.test_controls.map(tc => ({
-        test_control_id: tc.pk_Test_Control_ID,
-        control_ref:     tc.control_ref || '',
-        control_name:    tc.jkName      || '',
-        notes:           _state.testNotes[tc.pk_Test_Control_ID]  || '',
-        status:          _state.testStatus[tc.pk_Test_Control_ID] || 'not_started'
+        test_control_id:            tc.pk_Test_Control_ID,
+        control_ref:                tc.control_ref || '',
+        control_name:               tc.jkName      || '',
+        fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
+        notes:                      _state.testNotes[tc.pk_Test_Control_ID]  || '',
+        status:                     _state.testStatus[tc.pk_Test_Control_ID] || 'not_started'
       }))
     }));
 
