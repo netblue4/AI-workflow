@@ -230,26 +230,6 @@
     "jkImplementationEvidence": "'Human Intervention Log Test Report' showing AL-P-06: written = true, session cross-reference confirmed, operator_id present, response_hash 64-char SHA-256; AL-P-07: written = false, unrecognised session ID error, intervention_log empty; AL-P-08: written = false, missing_fields = ['operator_id'], intervention_log empty."
   },
   {
-    "pk_Test_Control_ID": "TCTRL-024",
-    "fk_Risk_Control_ID": null,
-    "fk_Harmonised_Standard_IDs": "[24970.6]",
-    "control_ref": "[3.4.T2]",
-    "jkName": "Log Integrity Verification Test Report",
-    "jkText": "Generate a 'Log Integrity Verification Test Report' after every test run covering AL-P-09 and AL-P-10. The report must show the count of entries hash-verified, the count of mismatches detected, the tampered indices, and a zero count of post-write field modifications that were not detected and written to the isolated integrity log.",
-    "jkObjective": "To provide a per-run evidence record proving the hash verifier detects every post-write modification and writes a tamper event to the isolated integrity log, while producing zero false positive alerts for unmodified entries.",
-    "jkImplementationEvidence": "'Log Integrity Verification Test Report' showing AL-P-09: mismatches_detected = 1, tampered_indices = [0], integrity_log count = 1 with TAMPER_DETECTED event; AL-P-10: entries_verified = 3, mismatches_detected = 0, integrity_log empty."
-  },
-  {
-    "pk_Test_Control_ID": "TCTRL-025",
-    "fk_Risk_Control_ID": null,
-    "fk_Harmonised_Standard_IDs": "[24970.8]",
-    "control_ref": "[3.4.T3]",
-    "jkName": "Log Privacy Compliance Test Report",
-    "jkText": "Generate a 'Log Privacy Compliance Test Report' after every test run covering AL-P-11 and AL-P-12. The report must show the count of entries processed, the count of PII fields pseudonymised, the count of prompts hashed, and a zero count of log entries reaching the log store with any raw personal data value in a declared PII field.",
-    "jkObjective": "To provide a per-run evidence record proving the pseudonymisation processor replaces all declared PII fields with HMAC tokens and hashes PII-flagged prompts before log store write, while passing entries with no PII fields through unmodified.",
-    "jkImplementationEvidence": "'Log Privacy Compliance Test Report' showing AL-P-11: three PII fields pseudonymised, prompt hashed, prompt_pii_hashed = True, pseudo_key_store count = 3, zero raw PII in sanitised entry; AL-P-12: entry unchanged, pseudo_key_store count unchanged, no prompt_pii_hashed flag."
-  },
-  {
     "pk_Test_Control_ID": "TCTRL-026",
     "fk_Risk_Control_ID": "[3.4.R1]",
     "fk_Harmonised_Standard_IDs": "[24970.7]",
