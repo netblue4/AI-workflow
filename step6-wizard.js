@@ -42,20 +42,19 @@
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
     try {
-      const [rRes, cRes, tRes, aRes, hRes, tcRes, tpRes] = await Promise.all([
+      const [rRes, cRes, tRes, aRes, hRes, tcRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Control_Task_Code.json'),
         fetch('tbl_AI_Articles.json'),
         fetch('tbl_Harmonised_Standards.json'),
-        fetch('tbl_Test_Controls.json'),
-        fetch('tbl_Test_Plans.json')
+        fetch('tbl_Test_Controls.json')
       ]);
-      if (!rRes.ok || !cRes.ok || !tRes.ok || !aRes.ok || !hRes.ok || !tcRes.ok || !tpRes.ok)
+      if (!rRes.ok || !cRes.ok || !tRes.ok || !aRes.ok || !hRes.ok || !tcRes.ok)
         throw new Error('fetch failed');
-      const [risks, controls, tasks, articles, hs, testControls, testPlans] =
-        await Promise.all([rRes.json(), cRes.json(), tRes.json(), aRes.json(), hRes.json(), tcRes.json(), tpRes.json()]);
-      _tblData = { risks, controls, tasks, articles, hs, testControls, testPlans };
+      const [risks, controls, tasks, articles, hs, testControls] =
+        await Promise.all([rRes.json(), cRes.json(), tRes.json(), aRes.json(), hRes.json(), tcRes.json()]);
+      _tblData = { risks, controls, tasks, articles, hs, testControls };
     } catch (_) {
       pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load risk data files.</p>`;
       return;
@@ -1051,21 +1050,13 @@
       });
     });
 
-    // Test plans by risk
-    const testPlansByRisk = new Map();
-    (d.testPlans || []).forEach(tp => {
-      if (!testPlansByRisk.has(tp.fk_Risk_ID)) testPlansByRisk.set(tp.fk_Risk_ID, []);
-      testPlansByRisk.get(tp.fk_Risk_ID).push(tp);
-    });
-
-    // Test controls by test plan
-    const testCtrlsByPlan = new Map();
+    // Test control by risk control — direct R→T FK
+    const testCtrlByRC = new Map();
     (d.testControls || []).forEach(tc => {
-      if (!testCtrlsByPlan.has(tc.fk_Test_Plan_ID)) testCtrlsByPlan.set(tc.fk_Test_Plan_ID, []);
-      testCtrlsByPlan.get(tc.fk_Test_Plan_ID).push(tc);
+      if (tc.fk_Risk_Control_ID) testCtrlByRC.set(tc.fk_Risk_Control_ID, tc);
     });
 
-    return { hsByArticle, risksByArticle, ctrlsByRisk, ctrlsByRef, tasksByCtrl, testCtrlByRef, testPlansByRisk, testCtrlsByPlan };
+    return { hsByArticle, risksByArticle, ctrlsByRisk, ctrlsByRef, tasksByCtrl, testCtrlByRef, testCtrlByRC };
   }
 
   // Derive relevance of an article from the step-3 record
@@ -1184,7 +1175,7 @@
   }
 
   function _populateCmpBody(body, article, rel, hs, risks, ix) {
-    const { ctrlsByRisk, ctrlsByRef, tasksByCtrl, testPlansByRisk, testCtrlsByPlan, testCtrlByRef } = ix;
+    const { ctrlsByRisk, ctrlsByRef, tasksByCtrl, testCtrlByRef, testCtrlByRC } = ix;
 
     // Relevance reason
     const reasonText = rel.trigger_reason || rel.reason;
@@ -1370,32 +1361,17 @@
               if (tasks.length > 4) tw.appendChild(_el('span', 'wiz9-cmp-task-chip', { textContent: `+${tasks.length - 4}` }));
               cRow.appendChild(tw);
             }
+            // R→T pairing: show linked test control inline
+            const tc = testCtrlByRC.get(ctrl.pk_Risk_Control_ID);
+            if (tc) {
+              const tcChip = _el('div', 'wiz9-cmp-task-chips');
+              tcChip.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '🧪' }));
+              tcChip.appendChild(_el('span', 'wiz9-cmp-test-chip', { textContent: tc.control_ref, title: tc.jkName || '' }));
+              cRow.appendChild(tcChip);
+            }
             ctrlWrap.appendChild(cRow);
           });
           rItem.appendChild(ctrlWrap);
-        }
-
-        // Test plans → test controls
-        const testPlans = testPlansByRisk.get(risk.pk_Risk_ID) || [];
-        if (testPlans.length > 0) {
-          const tWrap = _el('div', 'wiz9-cmp-tp-wrap');
-          tWrap.appendChild(_el('p', 'wiz9-cmp-sub-lbl', { textContent: `Test Plans (${testPlans.length})` }));
-          testPlans.forEach(tp => {
-            const tpRow = _el('div', 'wiz9-cmp-tp-row');
-            tpRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: tp.test_plan_ref }));
-            tpRow.appendChild(_el('span', 'wiz9-cmp-tp-name', { textContent: tp.test_plan_name }));
-            const tcList = testCtrlsByPlan.get(tp.pk_Test_Plan_ID) || [];
-            if (tcList.length > 0) {
-              const tcChips = _el('div', 'wiz9-cmp-test-chips');
-              tcChips.appendChild(_el('span', 'wiz9-cmp-test-icon', { textContent: '🧪' }));
-              tcList.forEach(tc => {
-                tcChips.appendChild(_el('span', 'wiz9-cmp-test-chip', { textContent: tc.jkName || tc.control_ref, title: tc.jkText || '' }));
-              });
-              tpRow.appendChild(tcChips);
-            }
-            tWrap.appendChild(tpRow);
-          });
-          rItem.appendChild(tWrap);
         }
 
         v2Wrap.appendChild(rItem);
