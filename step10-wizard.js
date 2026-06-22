@@ -1,6 +1,6 @@
 /* Step 10 — Content Verification Testing
    Reads selected controls from record['step-9'].risk_controls[] and compliance_additions[].
-   FK chain: selected control → tbl_Risk_Controls.fk_Risk_ID → tbl_Test_Plans → tbl_Test_Controls + tbl_Test_Cases.
+   FK chain: selected control → tbl_Risk_Controls.fk_Risk_ID → tbl_Test_Plans → tbl_Test_Controls.
    All 17 test plans link to EU AI Act risks; OWASP controls (no test plan) appear in the uncovered section.
    Tester marks each test as: pending | completed | not_applicable.
    Saves to record['step-10'].
@@ -44,20 +44,19 @@
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
     try {
-      const [rRes, rcRes, tpRes, tcRes, tcsRes] = await Promise.all([
+      const [rRes, rcRes, tpRes, tcRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Test_Plans.json'),
-        fetch('tbl_Test_Controls.json'),
-        fetch('tbl_Test_Cases.json')
+        fetch('tbl_Test_Controls.json')
       ]);
-      if (!rRes.ok || !rcRes.ok || !tpRes.ok || !tcRes.ok || !tcsRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, testPlans, testControls, testCases] = await Promise.all([
-        rRes.json(), rcRes.json(), tpRes.json(), tcRes.json(), tcsRes.json()
+      if (!rRes.ok || !rcRes.ok || !tpRes.ok || !tcRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, testPlans, testControls] = await Promise.all([
+        rRes.json(), rcRes.json(), tpRes.json(), tcRes.json()
       ]);
-      _tblData = { risks, riskControls, testPlans, testControls, testCases };
+      _tblData = { risks, riskControls, testPlans, testControls };
     } catch (_) {
-      pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files (tbl_Risks.json, tbl_Risk_Controls.json, tbl_Test_Plans.json, tbl_Test_Controls.json, tbl_Test_Cases.json)</p>`;
+      pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files (tbl_Risks.json, tbl_Risk_Controls.json, tbl_Test_Plans.json, tbl_Test_Controls.json)</p>`;
       return;
     }
 
@@ -121,12 +120,6 @@
       tcsByPlan.get(tc.fk_Test_Plan_ID).push(tc);
     });
 
-    const casesByPlan = new Map();
-    _tblData.testCases.forEach(tc => {
-      if (!casesByPlan.has(tc.fk_Test_Plan_ID)) casesByPlan.set(tc.fk_Test_Plan_ID, []);
-      casesByPlan.get(tc.fk_Test_Plan_ID).push(tc);
-    });
-
     const planMap  = new Map(); // pk_Test_Plan_ID → plan data
     const uncovered = [];
 
@@ -146,8 +139,7 @@
           objective:     plan.test_plan_objective,
           role:          plan.test_role,
           risk_name:     risk?.risk_name || '',
-          test_controls: tcsByPlan.get(plan.pk_Test_Plan_ID)  || [],
-          test_cases:    casesByPlan.get(plan.pk_Test_Plan_ID) || []
+          test_controls: tcsByPlan.get(plan.pk_Test_Plan_ID) || []
         });
       }
     });
