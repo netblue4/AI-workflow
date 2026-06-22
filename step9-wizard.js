@@ -218,18 +218,60 @@
         if (!byRisk.has(k)) byRisk.set(k, []);
         byRisk.get(k).push(c);
       });
+      let riskAccIdx = 0;
       byRisk.forEach((ctrls, riskId) => {
         const rName = riskNameById.get(riskId);
-        const grp    = _el('div', 's9-risk-group');
-        const grpHdr = _el('div', 's9-risk-group-hdr');
-        grpHdr.textContent = rName ? `${riskId} — ${rName}` : riskId;
-        grp.appendChild(grpHdr);
+
+        const sec = _el('div', 's9-risk-acc');
+
+        // Header button
+        const hdr = _el('div', 's9-risk-acc-hdr');
+
+        const left = _el('div', 's9-risk-acc-left');
+
+        const idBadge = _el('span', 's9-risk-acc-id');
+        idBadge.textContent = riskId;
+        left.appendChild(idBadge);
+
+        const nameSpan = _el('span', 's9-risk-acc-name');
+        nameSpan.textContent = rName || riskId;
+        left.appendChild(nameSpan);
+
+        const countBadge = _el('span', 's9-risk-acc-count');
+        countBadge.textContent = `${ctrls.length} control${ctrls.length !== 1 ? 's' : ''}`;
+        left.appendChild(countBadge);
+
+        hdr.appendChild(left);
+
+        const chevron = _el('span', 's9-risk-acc-chevron');
+        chevron.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+        hdr.appendChild(chevron);
+
+        sec.appendChild(hdr);
+
+        // Body
+        const body = _el('div', 's9-risk-acc-body');
+        if (riskAccIdx > 0) body.hidden = true;
+
         ctrls.forEach(c => {
           const ctrl = _controls.find(x => x.key === c.control_id);
-          if (ctrl) grp.appendChild(_buildControlCard(ctrl, 'eu'));
+          if (ctrl) body.appendChild(_buildControlCard(ctrl, 'eu'));
         });
-        grp.appendChild(_buildResidualRiskPanel(riskId));
-        card.appendChild(grp);
+        body.appendChild(_buildResidualRiskPanel(riskId));
+
+        sec.appendChild(body);
+
+        hdr.addEventListener('click', () => {
+          const collapsed = body.hidden;
+          body.hidden = !collapsed;
+          chevron.style.transform = collapsed ? '' : 'rotate(-90deg)';
+        });
+
+        // Start first open, rest collapsed
+        if (riskAccIdx > 0) chevron.style.transform = 'rotate(-90deg)';
+
+        card.appendChild(sec);
+        riskAccIdx++;
       });
     }
 
@@ -622,8 +664,15 @@
 .s9-progress-track{height:8px;background:var(--color-border);border-radius:4px;overflow:hidden}
 .s9-progress-fill{height:100%;background:#0d9488;border-radius:4px;transition:width .3s ease}
 
-.s9-risk-group{margin-bottom:20px}
-.s9-risk-group-hdr{font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;padding:6px 0 8px;border-bottom:1px solid var(--color-border);margin-bottom:10px}
+.s9-risk-acc{border:1px solid var(--color-border);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.s9-risk-acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none;gap:8px}
+.s9-risk-acc-hdr:hover{background:var(--color-bg-hover,#f1f5f9)}
+.s9-risk-acc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
+.s9-risk-acc-id{font-size:10px;font-weight:700;background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.s9-risk-acc-name{font-size:13px;font-weight:600;color:var(--color-text-primary)}
+.s9-risk-acc-count{font-size:11px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap}
+.s9-risk-acc-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
+.s9-risk-acc-body{padding:14px;display:flex;flex-direction:column;gap:0}
 
 .s9-ctrl-card{border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-bottom:10px;background:var(--color-bg)}
 .s9-ctrl-hdr{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;flex-wrap:wrap}

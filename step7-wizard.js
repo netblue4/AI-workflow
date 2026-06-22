@@ -683,9 +683,9 @@
       const planSec = _el('div', 'wiz10-ref-plan-sec');
 
       const ph = _el('div', 'wiz10-ref-plan-hdr');
-      const pref = _el('span', 'wiz10-cn-badge'); pref.textContent = plan.plan_ref; ph.appendChild(pref);
+      const pref = _el('span', 'wiz10-cn-badge'); pref.textContent = plan.risk_id; ph.appendChild(pref);
       const pn  = _el('span', 'wiz10-ref-plan-name');
-      pn.textContent = plan.plan_name.replace(/^\[[^\]]+\]\s*-?\s*/, '').trim() || plan.plan_name;
+      pn.textContent = plan.risk_name;
       ph.appendChild(pn);
       const reviewed = plan.test_controls.filter(t =>
         _state.testStatus[t.pk_Test_Control_ID] === 'evidence_provided' ||
