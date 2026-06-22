@@ -249,9 +249,10 @@
 
         sec.appendChild(hdr);
 
-        // Body
+        // Body — all collapsed by default
         const body = _el('div', 's9-risk-acc-body');
-        if (riskAccIdx > 0) body.hidden = true;
+        body.classList.add('s9-collapsed');
+        chevron.style.transform = 'rotate(-90deg)';
 
         ctrls.forEach(c => {
           const ctrl = _controls.find(x => x.key === c.control_id);
@@ -262,13 +263,9 @@
         sec.appendChild(body);
 
         hdr.addEventListener('click', () => {
-          const collapsed = body.hidden;
-          body.hidden = !collapsed;
-          chevron.style.transform = collapsed ? '' : 'rotate(-90deg)';
+          const isCollapsed = body.classList.toggle('s9-collapsed');
+          chevron.style.transform = isCollapsed ? 'rotate(-90deg)' : '';
         });
-
-        // Start first open, rest collapsed
-        if (riskAccIdx > 0) chevron.style.transform = 'rotate(-90deg)';
 
         card.appendChild(sec);
         riskAccIdx++;
@@ -673,6 +670,7 @@
 .s9-risk-acc-count{font-size:11px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap}
 .s9-risk-acc-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
 .s9-risk-acc-body{padding:14px;display:flex;flex-direction:column;gap:0}
+.s9-collapsed{display:none!important}
 
 .s9-ctrl-card{border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-bottom:10px;background:var(--color-bg)}
 .s9-ctrl-hdr{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;flex-wrap:wrap}

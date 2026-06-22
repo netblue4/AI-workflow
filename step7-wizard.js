@@ -307,20 +307,39 @@
 
     const hdr = _el('div', 'wiz10-plan-hdr');
 
+    const left = _el('div', 'wiz10-plan-hdr-left');
+
+    const idBadge = _el('span', 'wiz10-plan-id-badge');
+    idBadge.textContent = plan.risk_id;
+    left.appendChild(idBadge);
+
     const riskName = _el('span', 'wiz10-plan-name');
     riskName.textContent = plan.risk_name;
-    hdr.appendChild(riskName);
+    left.appendChild(riskName);
 
     const countBadge = _el('span', 'wiz10-plan-count');
     countBadge.id = `wiz10-plan-count-${idx}`;
     _updatePlanCount(plan, countBadge);
-    hdr.appendChild(countBadge);
+    left.appendChild(countBadge);
+
+    hdr.appendChild(left);
+
+    const chevron = _el('span', 'wiz10-plan-chevron');
+    chevron.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    chevron.style.transform = 'rotate(-90deg)';
+    hdr.appendChild(chevron);
 
     sec.appendChild(hdr);
 
     const ctrlList = _el('div', 'wiz10-ctrl-list');
+    ctrlList.classList.add('wiz10-collapsed');
     plan.test_controls.forEach(tc => ctrlList.appendChild(_buildTestControlCard(tc, plan, idx)));
     sec.appendChild(ctrlList);
+
+    hdr.addEventListener('click', () => {
+      const isCollapsed = ctrlList.classList.toggle('wiz10-collapsed');
+      chevron.style.transform = isCollapsed ? 'rotate(-90deg)' : '';
+    });
 
     return sec;
   }
@@ -837,8 +856,12 @@
 /* Plan list */
 .wiz10-plan-list{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
 .wiz10-plan-sec{background:var(--color-bg,#fff);border:1px solid var(--color-border);border-radius:10px;overflow:hidden}
-.wiz10-plan-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border)}
+.wiz10-plan-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border);cursor:pointer;user-select:none}
+.wiz10-plan-hdr:hover{background:var(--color-bg-hover,#f1f5f9)}
 .wiz10-plan-hdr-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
+.wiz10-plan-id-badge{font-size:10px;font-weight:700;background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.wiz10-plan-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
+.wiz10-collapsed{display:none!important}
 .wiz10-plan-icon{display:flex;align-items:center;color:var(--teal-600,#0d9488);flex-shrink:0}
 .wiz10-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wiz10-plan-risk-sub{font-size:11px;color:var(--color-text-tertiary);padding:6px 16px;margin:0;border-bottom:1px solid var(--color-border);background:var(--color-bg-subtle,#f8fafc)}
