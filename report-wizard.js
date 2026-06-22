@@ -21,22 +21,22 @@
   // ---- Data loading -------------------------------------------
   async function _loadData() {
     try {
-      const [rRes, rcRes, hsRes, artRes, tpRes, srRes, wfRes, lgRes] = await Promise.all([
+      const [rRes, rcRes, hsRes, artRes, tcRes, srRes, wfRes, lgRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Harmonised_Standards.json'),
         fetch('tbl_AI_Articles.json'),
-        fetch('tbl_Test_Plans.json'),
+        fetch('tbl_Test_Controls.json'),
         fetch('tbl_AI_SR_Controls.json'),
         fetch('workflow.json'),
         fetch('step8-legal-risk-guidance.json')
       ]);
-      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !artRes.ok || !tpRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, hs, articles, testPlans, srControls, workflow] = await Promise.all([
-        rRes.json(), rcRes.json(), hsRes.json(), artRes.json(), tpRes.json(), srRes.json(), wfRes.json()
+      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !artRes.ok || !tcRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, hs, articles, testControls, srControls, workflow] = await Promise.all([
+        rRes.json(), rcRes.json(), hsRes.json(), artRes.json(), tcRes.json(), srRes.json(), wfRes.json()
       ]);
       const legalGuidance = lgRes.ok ? await lgRes.json() : {};
-      _tbl = { risks, riskControls, hs, articles, testPlans, srControls, workflow, legalGuidance };
+      _tbl = { risks, riskControls, hs, articles, testControls, srControls, workflow, legalGuidance };
     } catch (_) {
       _container.innerHTML = '<p style="padding:32px;color:#dc2626">Could not load reference data files.</p>';
       return;
@@ -675,8 +675,8 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       });
     });
 
-    // Build risk → test plan lookup
-    const tpByRisk = new Map((_tbl.testPlans || []).map(tp => [tp.fk_Risk_ID, tp]));
+    // Build risk control → test control lookup (direct FK)
+    const tcByRC = new Map((_tbl.testControls || []).filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
 
     let html = '';
     let gapCount = 0;
@@ -705,12 +705,12 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
           if (covered) coveredCount++; else gapCount++;
 
-          // Find test plan for any selected control under this HS
+          // Find test control for any selected risk control under this HS
           let testRef = null;
           let testRiskId = null;
           for (const c of selCtrls) {
-            const tp = tpByRisk.get(c.fk_Risk_ID);
-            if (tp) { testRef = tp.test_plan_ref; testRiskId = c.fk_Risk_ID; break; }
+            const tc = tcByRC.get(c.pk_Risk_Control_ID);
+            if (tc) { testRef = tc.control_ref; testRiskId = c.fk_Risk_ID; break; }
           }
 
           html += `<div class="trace-hs ${covered ? '' : 'trace-hs--gap'}">
