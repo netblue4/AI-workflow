@@ -943,6 +943,9 @@
     const sub = _el('p', 'wiz9-cmp-subtitle');
     sub.textContent = 'Full traceability: EU AI Act article → harmonised standard requirements → risks → controls → tests.';
     hdr.appendChild(sub);
+    const desc = _el('p', 'wiz9-cmp-desc');
+    desc.textContent = 'This view shows how the risks and controls identified for your AI system map to each EU AI Act harmonised standard (HS) requirement. A ✓ Covered status means at least one selected control satisfies the requirement. A ⚠ Gap means the requirement is unmet — you can add a control from the list below it, or mark it Not Applicable with a justification if the requirement does not apply to your system.';
+    hdr.appendChild(desc);
 
     const step3 = _record?.['step-3'];
     if (!step3) {
@@ -1233,7 +1236,8 @@
     right.appendChild(_mkCount(risks.length,     'wiz9-cmp-count--risk', 'Risk', 'Risks'));
     right.appendChild(_mkCount(selCtrlIds.size,  'wiz9-cmp-count--ctrl', 'Ctrl', 'Ctrls'));
     right.appendChild(_mkCount(testIds.size,     'wiz9-cmp-count--test', 'Test', 'Tests'));
-    right.appendChild(_el('span', 'wiz9-cmp-chevron', { textContent: '▸' }));
+    const chev = _el('span', 'wiz9-cmp-chevron', { textContent: '▸' });
+    right.appendChild(chev);
 
     hdr.append(left, right);
     row.appendChild(hdr);
@@ -1676,7 +1680,8 @@
 .wiz9-cmp-wrap{padding:0 0 40px}
 .wiz9-cmp-header{padding:20px 24px 16px;border-bottom:1px solid var(--color-border)}
 .wiz9-cmp-title{font-size:16px;font-weight:600;color:var(--color-text-primary);margin:0 0 6px}
-.wiz9-cmp-subtitle{font-size:12px;color:var(--color-text-secondary);margin:0 0 10px;line-height:1.5}
+.wiz9-cmp-subtitle{font-size:12px;color:var(--color-text-secondary);margin:0 0 6px;line-height:1.5}
+.wiz9-cmp-desc{font-size:12px;color:var(--color-text-secondary);margin:0 0 10px;line-height:1.6;padding:10px 14px;background:var(--color-bg-subtle,#f8fafc);border:1px solid var(--color-border);border-radius:6px}
 .wiz9-cmp-status-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .wiz9-cmp-pending-note{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400e;margin-top:8px}
 
