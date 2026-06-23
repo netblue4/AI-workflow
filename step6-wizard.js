@@ -1216,17 +1216,24 @@
     left.appendChild(_el('span', 'wiz9-cmp-art-id',   { textContent: article.pk_AI_Article_ID }));
     left.appendChild(_el('span', 'wiz9-cmp-art-name', { textContent: article.article_name }));
 
+    // Move obligation type to left so right side can be a strict grid
+    if (rel.obligation_type) left.appendChild(_el('span', 'wiz9-cmp-obl', { textContent: rel.obligation_type }));
+
     const right = _el('div', 'wiz9-cmp-art-right');
     right.appendChild(_el('span', `wiz9-cmp-badge wiz9-cmp-badge--${rel.status}`, { textContent: rel.label }));
-    if (rel.obligation_type) right.appendChild(_el('span', 'wiz9-cmp-obl', { textContent: rel.obligation_type }));
-    const counts = _el('div', 'wiz9-cmp-counts');
-    if (hs.length)          counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--hs',   { textContent: `${hs.length} HS` }));
-    if (risks.length)       counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--risk', { textContent: `${risks.length} Risk${risks.length > 1 ? 's' : ''}` }));
-    if (selCtrlIds.size)    counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--ctrl', { textContent: `${selCtrlIds.size} Ctrl${selCtrlIds.size !== 1 ? 's' : ''}` }));
-    if (testIds.size)       counts.appendChild(_el('span', 'wiz9-cmp-count wiz9-cmp-count--test', { textContent: `${testIds.size} Test${testIds.size !== 1 ? 's' : ''}` }));
-    right.appendChild(counts);
-    const chev = _el('span', 'wiz9-cmp-chevron', { textContent: '▸' });
-    right.appendChild(chev);
+
+    // Always render all 4 count badges — invisible when zero so columns stay aligned
+    const _mkCount = (n, cls, singular, plural) => {
+      const s = _el('span', `wiz9-cmp-count ${cls}`);
+      s.textContent = `${n} ${n === 1 ? singular : plural}`;
+      if (n === 0) s.style.visibility = 'hidden';
+      return s;
+    };
+    right.appendChild(_mkCount(hs.length,       'wiz9-cmp-count--hs',   'HS',   'HS'));
+    right.appendChild(_mkCount(risks.length,     'wiz9-cmp-count--risk', 'Risk', 'Risks'));
+    right.appendChild(_mkCount(selCtrlIds.size,  'wiz9-cmp-count--ctrl', 'Ctrl', 'Ctrls'));
+    right.appendChild(_mkCount(testIds.size,     'wiz9-cmp-count--test', 'Test', 'Tests'));
+    right.appendChild(_el('span', 'wiz9-cmp-chevron', { textContent: '▸' }));
 
     hdr.append(left, right);
     row.appendChild(hdr);
@@ -1681,10 +1688,9 @@
 .wiz9-cmp-art-left{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}
 .wiz9-cmp-art-id{font-size:10px;font-weight:700;font-family:monospace;color:var(--color-text-tertiary);white-space:nowrap}
 .wiz9-cmp-art-name{font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wiz9-cmp-art-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.wiz9-cmp-chevron{font-size:12px;color:var(--color-text-tertiary)}
-.wiz9-cmp-counts{display:flex;gap:4px}
-.wiz9-cmp-count{font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px}
+.wiz9-cmp-art-right{display:grid;grid-template-columns:116px 44px 58px 52px 60px 18px;align-items:center;gap:6px;flex-shrink:0}
+.wiz9-cmp-chevron{font-size:12px;color:var(--color-text-tertiary);text-align:center}
+.wiz9-cmp-count{font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;white-space:nowrap;text-align:center}
 .wiz9-cmp-count--hs{background:#e0e7ff;color:#4338ca}
 .wiz9-cmp-count--risk{background:#fee2e2;color:#b91c1c}
 
@@ -1796,7 +1802,6 @@
 .wiz9-dpia-add-name{font-size:12px;color:var(--color-text-primary);flex:1}
 .wiz9-dpia-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:#ccfbf1;color:#0f766e;white-space:nowrap}
 
-/* New counts in article header */
 .wiz9-cmp-count--ctrl{background:#d1fae5;color:#065f46}
 .wiz9-cmp-count--test{background:#fef3c7;color:#92400e}
 
