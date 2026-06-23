@@ -14,7 +14,8 @@
 
   const _state = {
     riskSelected: {},       // risk team picks (Step Wizard tab)
-    complianceSelected: {}  // compliance team additions (Compliance View tab)
+    complianceSelected: {}, // compliance team additions (Compliance View tab)
+    hsNotApplicable: {}     // standard_ref → { reason, date } — N/A decisions
   };
 
   // ---- Public API ---------------------------------------------
@@ -29,6 +30,7 @@
     _tcByRC     = null;
     _state.riskSelected = {};
     _state.complianceSelected = {};
+    _state.hsNotApplicable = {};
 
     _injectStyles();
 
@@ -86,6 +88,9 @@
       saved9.compliance_additions.forEach(c => {
         if (c.selected) _state.complianceSelected[c.control_id] = true;
       });
+    }
+    if (saved9?.hs_not_applicable) {
+      Object.assign(_state.hsNotApplicable, saved9.hs_not_applicable);
     }
 
     _renderPanes(pw);
@@ -958,10 +963,13 @@
     // Save bar
     const saveBar = _el('div', 'wiz9-cmp-save-bar');
     const compCount = Object.values(_state.complianceSelected).filter(Boolean).length;
+    const naCount   = Object.keys(_state.hsNotApplicable).length;
     const saveSummary = _el('span', 'wiz9-cmp-save-summary');
-    saveSummary.textContent = compCount > 0
-      ? `${compCount} compliance addition${compCount !== 1 ? 's' : ''} pending save`
-      : 'No compliance additions to save';
+    saveSummary.textContent = (compCount > 0 || naCount > 0)
+      ? [compCount > 0 ? `${compCount} addition${compCount !== 1 ? 's' : ''}` : '',
+         naCount   > 0 ? `${naCount} N/A decision${naCount !== 1 ? 's' : ''}` : '']
+        .filter(Boolean).join(', ') + ' pending save'
+      : 'No changes to save';
     saveBar.appendChild(saveSummary);
     const saveBtn = _el('button', 'wiz9-cmp-save-btn'); saveBtn.textContent = 'Save Compliance Additions';
     saveBtn.addEventListener('click', _handleComplianceSave);
@@ -999,7 +1007,8 @@
       ...existing,
       assessment_date: existing.assessment_date || today,
       compliance_additions_count: complianceAdditions.length,
-      compliance_additions: complianceAdditions
+      compliance_additions: complianceAdditions,
+      hs_not_applicable: { ..._state.hsNotApplicable }
     };
 
     try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
@@ -1010,6 +1019,64 @@
     if (addsEl) { const fresh = _buildComplianceAdditionsSection(); addsEl.replaceWith(fresh); }
 
     // Rebuild compliance pane to update save bar
+    const cmpPane = _container.querySelector('[data-pane="compliance"]');
+    if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
+  }
+
+  // ---- N/A inline form ----------------------------------------
+  function _showNaForm(item, ref, existingReason) {
+    const existing = item.querySelector('.wiz9-cmp-na-form');
+    if (existing) existing.remove();
+
+    const form = _el('div', 'wiz9-cmp-na-form');
+
+    const lbl = _el('label', 'wiz9-cmp-na-form-lbl');
+    lbl.textContent = 'Justification for Not Applicable:';
+    form.appendChild(lbl);
+
+    const ta = document.createElement('textarea');
+    ta.className = 'wiz9-cmp-na-textarea';
+    ta.placeholder = 'e.g. This system does not generate synthetic media — Art.50(4) does not apply.';
+    ta.value = existingReason;
+    ta.rows = 2;
+    form.appendChild(ta);
+
+    const btnRow = _el('div', 'wiz9-cmp-na-form-btns');
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'wiz9-cmp-na-confirm-btn';
+    confirmBtn.textContent = existingReason ? 'Update' : 'Confirm N/A';
+    confirmBtn.addEventListener('click', () => {
+      const reason = ta.value.trim();
+      if (!reason) { ta.style.borderColor = '#dc2626'; ta.focus(); return; }
+      _state.hsNotApplicable[ref] = { reason, date: new Date().toISOString().slice(0, 10) };
+      _rebuildCmpPane();
+    });
+    btnRow.appendChild(confirmBtn);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'wiz9-cmp-na-cancel-btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => form.remove());
+    btnRow.appendChild(cancelBtn);
+
+    if (existingReason) {
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'wiz9-cmp-na-clear-btn';
+      clearBtn.textContent = 'Remove N/A';
+      clearBtn.addEventListener('click', () => {
+        delete _state.hsNotApplicable[ref];
+        _rebuildCmpPane();
+      });
+      btnRow.appendChild(clearBtn);
+    }
+
+    form.appendChild(btnRow);
+    item.appendChild(form);
+    ta.focus();
+  }
+
+  function _rebuildCmpPane() {
     const cmpPane = _container.querySelector('[data-pane="compliance"]');
     if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
   }
@@ -1236,10 +1303,24 @@
         const availableCtrls = actionCtrls.filter(c => !_state.riskSelected[c.pk_Risk_Control_ID] && !_state.complianceSelected[c.pk_Risk_Control_ID]);
         const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0 || fsCtrls.length > 0;
 
-        // Gap badge — not shown when a Framework_Statement control satisfies the requirement
+        // Gap / N/A / Self-certified badge
         if (!isCovered) {
-          const gapBadge = _el('span', 'wiz9-cmp-gap-badge'); gapBadge.textContent = '⚠ Gap';
-          refRow.appendChild(gapBadge);
+          const naEntry = _state.hsNotApplicable[h.standard_ref];
+          if (naEntry) {
+            const naBadge = _el('span', 'wiz9-cmp-na-badge'); naBadge.textContent = '⊘ Not Applicable';
+            refRow.appendChild(naBadge);
+            const editBtn = _el('button', 'wiz9-cmp-na-btn wiz9-cmp-na-btn--edit'); editBtn.textContent = 'Edit';
+            editBtn.addEventListener('click', () => _showNaForm(item, h.standard_ref, naEntry.reason));
+            refRow.appendChild(editBtn);
+            const reasonNote = _el('div', 'wiz9-cmp-na-reason'); reasonNote.textContent = naEntry.reason;
+            item.appendChild(reasonNote);
+          } else {
+            const gapBadge = _el('span', 'wiz9-cmp-gap-badge'); gapBadge.textContent = '⚠ Gap';
+            refRow.appendChild(gapBadge);
+            const naBtn = _el('button', 'wiz9-cmp-na-btn'); naBtn.textContent = 'Mark N/A';
+            naBtn.addEventListener('click', () => _showNaForm(item, h.standard_ref, ''));
+            refRow.appendChild(naBtn);
+          }
         } else if (fsCtrls.length > 0 && riskCtrls.length === 0 && compCtrls.length === 0) {
           const certBadge = _el('span', 'wiz9-cmp-self-cert-badge'); certBadge.textContent = '✓ Self-certified';
           refRow.appendChild(certBadge);
@@ -1719,8 +1800,25 @@
 .wiz9-cmp-count--ctrl{background:#d1fae5;color:#065f46}
 .wiz9-cmp-count--test{background:#fef3c7;color:#92400e}
 
-/* Gap badge on HS items */
+/* Gap / N/A badges on HS items */
 .wiz9-cmp-gap-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;white-space:nowrap;flex-shrink:0}
+.wiz9-cmp-na-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:#f1f5f9;border:1px solid #cbd5e1;color:#475569;white-space:nowrap;flex-shrink:0}
+.wiz9-cmp-na-btn{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid #cbd5e1;background:#f8fafc;color:#475569;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.wiz9-cmp-na-btn:hover{background:#f1f5f9}
+.wiz9-cmp-na-btn--edit{color:#0d9488;border-color:#99f6e4;background:#f0fdfa}
+.wiz9-cmp-na-btn--edit:hover{background:#ccfbf1}
+.wiz9-cmp-na-reason{font-size:11px;color:#64748b;font-style:italic;padding:4px 8px 6px;border-left:2px solid #cbd5e1;margin:4px 0 2px}
+.wiz9-cmp-na-form{margin:8px 0 4px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;display:flex;flex-direction:column;gap:8px}
+.wiz9-cmp-na-form-lbl{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em}
+.wiz9-cmp-na-textarea{font-size:12px;color:#1e293b;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;resize:vertical;font-family:inherit;line-height:1.4;width:100%;box-sizing:border-box}
+.wiz9-cmp-na-textarea:focus{outline:none;border-color:#0d9488}
+.wiz9-cmp-na-form-btns{display:flex;gap:6px;flex-wrap:wrap}
+.wiz9-cmp-na-confirm-btn{font-size:12px;font-weight:600;padding:5px 12px;border-radius:4px;border:none;background:#0d9488;color:#fff;cursor:pointer}
+.wiz9-cmp-na-confirm-btn:hover{background:#0f766e}
+.wiz9-cmp-na-cancel-btn{font-size:12px;font-weight:500;padding:5px 12px;border-radius:4px;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer}
+.wiz9-cmp-na-cancel-btn:hover{background:#f8fafc}
+.wiz9-cmp-na-clear-btn{font-size:12px;font-weight:500;padding:5px 12px;border-radius:4px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;margin-left:auto}
+.wiz9-cmp-na-clear-btn:hover{background:#fef2f2}
 
 /* Sub-label variants */
 .wiz9-cmp-sub-lbl--comp{color:#6d28d9}
