@@ -27,6 +27,7 @@
   const _wizState = {
     step_index: 0,
     answers:    {}, // riskName → 'yes'|'partially'|'no'
+    rationales: {}, // riskName → string
     complete:   false
   };
 
@@ -138,6 +139,9 @@
       if (wqs && Object.keys(_wizState.answers).length >= wqs.length) {
         _wizState.complete = true;
       }
+    }
+    if (saved8?.legal_assessment?.wizard_rationales) {
+      Object.assign(_wizState.rationales, saved8.legal_assessment.wizard_rationales);
     }
 
     _filteredFGItems = _buildFGItems();
@@ -462,6 +466,27 @@
       _renderLegalPane();
     };
 
+    // Rationale textarea — shown below buttons, pre-filled on answer click
+    const appliesIf = riskG?.applies_if || [];
+    const _genRationale = val => {
+      if (!appliesIf.length) return '';
+      const conditions = appliesIf.join('; ');
+      if (val === 'yes')
+        return `This risk applies to this AI system. The following conditions are present: ${conditions}.`;
+      if (val === 'partially')
+        return `This risk partially applies to this AI system. One or more of the following conditions may be present: ${conditions}.`;
+      return `This risk is not applicable to this AI system. None of the following conditions apply: ${conditions}.`;
+    };
+
+    const rationaleTa = document.createElement('textarea');
+    rationaleTa.className = 'wiz8-rationale-ta';
+    rationaleTa.placeholder = 'Select an answer above to generate a rationale, or type your own…';
+    rationaleTa.rows = 3;
+    rationaleTa.value = _wizState.rationales[wq.risk_name] || '';
+    rationaleTa.addEventListener('input', () => {
+      _wizState.rationales[wq.risk_name] = rationaleTa.value;
+    });
+
     [
       ['yes',       '✓  Yes, this risk applies',  'wiz8-q-btn--yes'],
       ['partially', '~  Partially applies',        'wiz8-q-btn--part'],
@@ -469,10 +494,29 @@
     ].forEach(([val, label, mod]) => {
       const btn = _el('button', `wiz8-q-btn ${mod}${answer === val ? ' wiz8-q-btn--selected' : ''}`);
       btn.textContent = label;
-      btn.addEventListener('click', () => { _wizState.answers[wq.risk_name] = val; advance(); });
+      btn.addEventListener('click', () => {
+        _wizState.answers[wq.risk_name] = val;
+        // Highlight selected button
+        btnRow.querySelectorAll('.wiz8-q-btn').forEach(b => b.classList.remove('wiz8-q-btn--selected'));
+        btn.classList.add('wiz8-q-btn--selected');
+        // Pre-fill rationale if not already customised
+        const existing = _wizState.rationales[wq.risk_name] || '';
+        const prevGen  = ['yes', 'partially', 'no'].map(v => _genRationale(v));
+        if (!existing || prevGen.includes(existing)) {
+          _wizState.rationales[wq.risk_name] = _genRationale(val);
+          rationaleTa.value = _wizState.rationales[wq.risk_name];
+        }
+      });
       btnRow.appendChild(btn);
     });
     wrap.appendChild(btnRow);
+
+    const rationaleWrap = _el('div', 'wiz8-rationale-wrap');
+    const rationaleLbl = _el('label', 'wiz8-rationale-lbl');
+    rationaleLbl.textContent = 'Rationale';
+    rationaleWrap.appendChild(rationaleLbl);
+    rationaleWrap.appendChild(rationaleTa);
+    wrap.appendChild(rationaleWrap);
 
     // Navigation row
     const navRow = _el('div', 'wiz8-q-nav-row');
@@ -649,16 +693,18 @@
         risk_source:   'EU_AI_Act',
         selected:      ans === 'yes' || ans === 'partially',
         wizard_answer: ans,
+        rationale:     _wizState.rationales[wq.risk_name] || '',
         relevance:     _computeRelevance(wq.risk_name)
       };
     });
     const sel = risks.filter(r => r.selected).length;
     return {
-      completed:       true,
-      assessment_date: today,
-      wizard_answers:  { ..._wizState.answers },
-      total_risks:     wqs.length,
-      selected_count:  sel,
+      completed:          true,
+      assessment_date:    today,
+      wizard_answers:     { ..._wizState.answers },
+      wizard_rationales:  { ..._wizState.rationales },
+      total_risks:        wqs.length,
+      selected_count:     sel,
       risks
     };
   }
@@ -1030,7 +1076,11 @@
 .wiz8-q-risk-name{font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0 0 10px;line-height:1.35}
 .wiz8-q-text{font-size:14px;font-weight:600;color:var(--teal-700,#0f766e);line-height:1.55;margin:0 0 16px;padding:12px 14px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px}
 .wiz8-q-answer-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);margin:0 0 10px}
-.wiz8-q-btn-row{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.wiz8-q-btn-row{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.wiz8-rationale-wrap{margin-bottom:20px}
+.wiz8-rationale-lbl{display:block;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.wiz8-rationale-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.55;resize:vertical;background:var(--color-bg-subtle,#f8fafc)}
+.wiz8-rationale-ta:focus{outline:none;border-color:#0d9488;background:#fff}
 .wiz8-q-btn{width:100%;padding:13px 18px;font-size:13px;font-weight:600;border:2px solid var(--color-border);border-radius:8px;cursor:pointer;text-align:left;background:#fff;color:var(--color-text-primary);font-family:inherit;transition:background .12s,border-color .12s}
 .wiz8-q-btn:hover{background:var(--color-bg-subtle,#f8fafc);border-color:var(--teal-300,#5eead4)}
 .wiz8-q-btn--yes.wiz8-q-btn--selected{background:#f0fdf4;border-color:#4ade80;color:#15803d}
