@@ -503,6 +503,9 @@
           _wizState.rationales[wq.risk_name] = _genRationale(val);
           rationaleTa.value = _wizState.rationales[wq.risk_name];
         }
+        // Scroll rationale into view so user sees it was filled
+        rationaleWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        rationaleTa.focus();
       });
       btnRow.appendChild(btn);
     });
@@ -1086,9 +1089,9 @@
 .wiz8-q-text{font-size:14px;font-weight:600;color:var(--teal-700,#0f766e);line-height:1.55;margin:0 0 16px;padding:12px 14px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px}
 .wiz8-q-answer-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);margin:0 0 10px}
 .wiz8-q-btn-row{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.wiz8-rationale-wrap{margin-bottom:20px}
-.wiz8-rationale-lbl{display:block;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
-.wiz8-rationale-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.55;resize:vertical;background:var(--color-bg-subtle,#f8fafc)}
+.wiz8-rationale-wrap{margin-bottom:20px;border-top:1px solid var(--color-border,#e5e7eb);padding-top:14px;margin-top:4px}
+.wiz8-rationale-lbl{display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary,#374151);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.wiz8-rationale-ta{width:100%;box-sizing:border-box;font-size:13px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border,#e2e8f0);border-radius:6px;padding:10px 12px;line-height:1.6;resize:vertical;background:var(--color-bg-subtle,#f8fafc);min-height:80px}
 .wiz8-rationale-ta:focus{outline:none;border-color:#0d9488;background:#fff}
 .wiz8-q-btn{width:100%;padding:13px 18px;font-size:13px;font-weight:600;border:2px solid var(--color-border);border-radius:8px;cursor:pointer;text-align:left;background:#fff;color:var(--color-text-primary);font-family:inherit;transition:background .12s,border-color .12s}
 .wiz8-q-btn:hover{background:var(--color-bg-subtle,#f8fafc);border-color:var(--teal-300,#5eead4)}
