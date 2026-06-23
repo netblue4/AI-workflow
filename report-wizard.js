@@ -658,6 +658,8 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       ...(s9.compliance_additions || []).map(c => c.control_id)
     ]);
 
+    const hsNA = s9.hs_not_applicable || {};
+
     // Build article number → ART-xxx lookup
     const artByNum = new Map();
     (_tbl.articles || []).forEach(a => {
@@ -702,8 +704,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           const fsCtrls   = ctrls.filter(c => c.control_source === 'Framework_Statement');
           const selCtrls  = ctrls.filter(c => selectedCtrlIds.has(c.pk_Risk_Control_ID) && c.control_source !== 'Framework_Statement');
           const covered   = selCtrls.length > 0 || fsCtrls.length > 0;
+          const isNA      = !covered && !!hsNA[h.standard_ref];
 
-          if (covered) coveredCount++; else gapCount++;
+          if (covered) coveredCount++; else if (!isNA) gapCount++;
 
           // Find test control for any selected risk control under this HS
           let testRef = null;
@@ -713,14 +716,18 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             if (tc) { testRef = tc.control_ref; testRiskId = c.fk_Risk_ID; break; }
           }
 
-          html += `<div class="trace-hs ${covered ? '' : 'trace-hs--gap'}">
+          const rowClass  = covered ? '' : (isNA ? 'trace-hs--na' : 'trace-hs--gap');
+          const badgeKey  = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? 'fs' : 'ok') : (isNA ? 'na' : 'gap');
+          const badgeTxt  = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? '✓ Self-certified' : '✓ Covered') : (isNA ? '⊘ Not Applicable' : '⚠ Gap');
+          const naReason  = isNA ? hsNA[h.standard_ref].reason : '';
+
+          html += `<div class="trace-hs ${rowClass}">
             <div class="trace-hs-row">
               <span class="trace-hs-ref mono">${_esc(h.standard_ref)}</span>
               <span class="trace-hs-name">${_esc(h.standard_name || '')}</span>
-              <span class="trace-cov-badge trace-cov-badge--${covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? 'fs' : 'ok') : 'gap'}">
-                ${covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? '✓ Self-certified' : '✓ Covered') : '⚠ Gap'}
-              </span>
-            </div>`;
+              <span class="trace-cov-badge trace-cov-badge--${badgeKey}">${badgeTxt}</span>
+            </div>
+            ${naReason ? `<div class="trace-na-reason">${_esc(naReason)}</div>` : ''}`;
 
           if (selCtrls.length > 0) {
             html += `<div class="trace-ctrl-list">
@@ -740,10 +747,12 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       html += `</div>`;
     });
 
+    const naCount      = Object.keys(hsNA).length;
+    const totalHS      = coveredCount + gapCount + naCount;
     const summaryClass = gapCount === 0 ? 'trace-summary--ok' : 'trace-summary--warn';
     const summaryText  = gapCount === 0
-      ? `✓ All ${coveredCount} harmonised standard requirements are covered. No gaps identified.`
-      : `⚠ ${gapCount} gap${gapCount !== 1 ? 's' : ''} identified across ${coveredCount + gapCount} HS requirements. Gaps must be resolved before conformity sign-off.`;
+      ? `✓ ${coveredCount} HS requirement${coveredCount !== 1 ? 's' : ''} covered${naCount > 0 ? `, ${naCount} marked Not Applicable` : ''}. No unresolved gaps.`
+      : `⚠ ${gapCount} gap${gapCount !== 1 ? 's' : ''} identified across ${totalHS} HS requirements. Gaps must be resolved before conformity sign-off.${naCount > 0 ? ` (${naCount} marked Not Applicable)` : ''}`;
 
     return `<div class="trace-summary ${summaryClass}">${summaryText}</div>` + html;
   }
@@ -1204,6 +1213,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-no-hs{padding:8px 12px;font-size:9pt;color:#888;border:1px solid #e5e7eb;border-top:none}
 .trace-hs{border:1px solid #e5e7eb;border-top:none;padding:6px 12px}
 .trace-hs--gap{background:#fff7ed}
+.trace-hs--na{background:#f8fafc}
 .trace-hs-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .trace-hs-ref{font-size:8.5pt;color:#555;flex-shrink:0}
 .trace-hs-name{flex:1;font-size:9pt}
@@ -1211,6 +1221,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-cov-badge--ok{background:#d1fae5;color:#065f46}
 .trace-cov-badge--fs{background:#ede9fe;color:#7c3aed}
 .trace-cov-badge--gap{background:#fee2e2;color:#991b1b}
+.trace-cov-badge--na{background:#f1f5f9;color:#475569}
+.trace-na-reason{font-size:8.5pt;color:#64748b;font-style:italic;padding:3px 4px 5px;border-left:2px solid #cbd5e1;margin-top:4px}
 .trace-ctrl-list{display:flex;gap:4px;flex-wrap:wrap;padding-top:4px}
 .trace-ctrl-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#e0e7ff;color:#3730a3;font-family:monospace}
 .trace-ctrl-chip--fs{background:#ede9fe;color:#7c3aed}
