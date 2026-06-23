@@ -64,6 +64,7 @@
     _state.legal_risks    = {};
     _wizState.step_index  = 0;
     _wizState.answers     = {};
+    _wizState.rationales  = {};
     _wizState.complete    = false;
 
     _injectStyles();
@@ -135,10 +136,6 @@
     }
     if (saved8?.legal_assessment?.wizard_answers) {
       Object.assign(_wizState.answers, saved8.legal_assessment.wizard_answers);
-      const wqs = _legalGuidance?.wizard_questions;
-      if (wqs && Object.keys(_wizState.answers).length >= wqs.length) {
-        _wizState.complete = true;
-      }
     }
     if (saved8?.legal_assessment?.wizard_rationales) {
       Object.assign(_wizState.rationales, saved8.legal_assessment.wizard_rationales);
@@ -648,12 +645,24 @@
     applyBtn.addEventListener('click', _handleSaveLegal);
     actRow.appendChild(applyBtn);
 
-    const restartBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
-    restartBtn.textContent = '↺  Start over';
-    restartBtn.style.marginLeft = 'auto';
+    const reviewBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
+    reviewBtn.textContent = '← Review & Edit Rationales';
+    reviewBtn.style.marginLeft = 'auto';
+    reviewBtn.addEventListener('click', () => {
+      _wizState.step_index = 0;
+      _wizState.complete   = false;
+      _renderLegalPane();
+    });
+    actRow.appendChild(reviewBtn);
+
+    const restartBtn = _el('button', 'wiz8-q-nav-btn');
+    restartBtn.textContent = '↺ Start over';
+    restartBtn.style.marginLeft = '8px';
+    restartBtn.style.opacity = '0.7';
     restartBtn.addEventListener('click', () => {
       _wizState.step_index = 0;
       _wizState.answers    = {};
+      _wizState.rationales = {};
       _wizState.complete   = false;
       _renderLegalPane();
     });
