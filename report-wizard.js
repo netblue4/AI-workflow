@@ -483,12 +483,6 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   function _riskAssessmentSection(s8, s11) {
     if (!s8) return _notComplete('Step 5 — Risk Assessment has not yet been completed.');
 
-    // Build applies_if lookup from guidance JSON
-    const guidanceRisks = _tbl.legalGuidance?.risks || {};
-    const appliesIfByName = new Map(
-      Object.entries(guidanceRisks).map(([name, def]) => [name, def.applies_if || []])
-    );
-
     let html = '';
 
     const la = s8.legal_assessment;
@@ -498,53 +492,43 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     } else {
       const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
 
-      html += `<p class="section-meta">Completed: ${la.assessment_date} &nbsp;|&nbsp; ${la.selected_count} of ${la.total_risks} risks accepted &nbsp;|&nbsp; <em>Click a row to expand rationale</em></p>`;
-      html += `<div class="risk-acc-list">`;
+      html += `<p class="section-meta">Completed: ${la.assessment_date} &nbsp;|&nbsp; ${la.selected_count} of ${la.total_risks} risks accepted</p>`;
+      html += `<table class="data-table data-table--risk">
+  <thead>
+    <tr>
+      <th style="width:22%">Risk</th>
+      <th style="width:9%">Answer</th>
+      <th style="width:12%">Status</th>
+      <th style="width:10%">Residual Risk</th>
+      <th>Rationale</th>
+    </tr>
+  </thead>
+  <tbody>`;
 
-      (la.risks || []).map(r => {
-        const rel = r.relevance || {};
-        const prefiltered = rel.status === 'not_applicable';
-        const appliesIf = appliesIfByName.get(r.risk_name) || [];
-        const riskId = riskIdByName.get(r.risk_name);
-        const residual = s11?.residual_risks?.[riskId];
+      (la.risks || []).forEach(r => {
+        const prefiltered = r.relevance?.status === 'not_applicable';
+        const riskId      = riskIdByName.get(r.risk_name);
+        const residual    = s11?.residual_risks?.[riskId];
         const residualHtml = residual?.level
           ? `<span class="rag-residual rag-residual--${_esc(residual.level)}">${_esc(residual.level.charAt(0).toUpperCase() + residual.level.slice(1))}</span>`
-          : '';
+          : '—';
         const statusKey = r.selected ? 'accept' : (prefiltered ? 'filter' : 'excl');
         const statusTxt = r.selected ? '✓ Accepted' : (prefiltered ? '⊘ Pre-filtered' : '✗ Excluded');
-        const rowMod    = r.selected ? '' : ' risk-acc-item--dim';
+        const rowCls    = r.selected ? '' : ' class="row-dim"';
+        const rationale = r.rationale
+          ? _esc(r.rationale)
+          : `<span class="trace-none">—</span>`;
 
-        const rationale = r.rationale || '';
-        const appliesIfHtml = appliesIf.length
-          ? `<div class="risk-acc-applies"><strong>Applies if any of:</strong><ul class="applies-if-list">${appliesIf.map(a => `<li>${_esc(a)}</li>`).join('')}</ul></div>`
-          : '';
-        const filterNote = prefiltered
-          ? `<div class="applies-if-filter" style="margin-bottom:6px">${_esc(rel.trigger_reason || 'Article not applicable — pre-filtered by Step 3 classification')}</div>`
-          : '';
-        const rationaleHtml = rationale
-          ? `<div class="risk-acc-rationale"><strong>Rationale:</strong> ${_esc(rationale)}</div>`
-          : `<div class="risk-acc-rationale risk-acc-rationale--empty">No rationale recorded.</div>`;
-
-        html += `<details class="risk-acc-item${rowMod}"${r.selected ? ' open' : ''}>
-  <summary class="risk-acc-summary">
-    <span class="risk-acc-left">
-      ${riskId ? `<span class="risk-id-badge">${_esc(riskId)}</span>` : ''}
-      <span class="risk-acc-name">${_esc(r.risk_name)}</span>
-    </span>
-    <span class="risk-acc-right">
-      ${residualHtml}
-      <span class="status-pill status-pill--${statusKey}">${statusTxt}</span>
-      <span class="risk-acc-ans">${_esc(r.wizard_answer || '—')}</span>
-    </span>
-    <span class="risk-acc-chev">▸</span>
-  </summary>
-  <div class="risk-acc-body">
-    ${filterNote}${rationaleHtml}${appliesIfHtml}
-  </div>
-</details>`;
+        html += `<tr${rowCls}>
+      <td>${riskId ? `<span class="risk-id-badge">${_esc(riskId)}</span> ` : ''}${_esc(r.risk_name)}</td>
+      <td>${_esc(r.wizard_answer || '—')}</td>
+      <td><span class="status-pill status-pill--${statusKey}">${statusTxt}</span></td>
+      <td class="center">${residualHtml}</td>
+      <td class="reason-cell">${rationale}</td>
+    </tr>`;
       });
 
-      html += `</div>`;
+      html += `</tbody></table>`;
     }
 
     return html;
@@ -1258,28 +1242,6 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-risk-tag{display:inline-block;font-size:7.5pt;font-weight:700;padding:0 4px;border-radius:3px;background:#fef3c7;color:#92400e;font-family:monospace;margin-right:2px}
 .risk-id-badge{display:inline-block;font-size:8pt;font-weight:700;padding:1px 5px;border-radius:3px;background:#fef3c7;color:#92400e;font-family:monospace;margin-right:4px}
 
-/* Risk assessment accordion (§3) */
-.risk-acc-list{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
-.risk-acc-item{border:1px solid #e5e7eb;border-radius:5px;overflow:hidden}
-.risk-acc-item--dim{opacity:.65}
-.risk-acc-summary{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;cursor:pointer;list-style:none;user-select:none}
-.risk-acc-summary::-webkit-details-marker{display:none}
-.risk-acc-summary:hover{background:#f1f5f9}
-.risk-acc-left{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
-.risk-acc-name{font-size:9.5pt;font-weight:600;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.risk-acc-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.risk-acc-ans{font-size:8.5pt;color:#6b7280;min-width:40px;text-align:right}
-.risk-acc-chev{font-size:10pt;color:#9ca3af;transition:transform .15s;flex-shrink:0}
-details[open] .risk-acc-chev{transform:rotate(90deg)}
-.risk-acc-body{padding:10px 14px;border-top:1px solid #e5e7eb;font-size:9.5pt;background:#fff}
-.risk-acc-rationale{margin-bottom:8px;line-height:1.5;color:#374151}
-.risk-acc-rationale--empty{color:#9ca3af;font-style:italic}
-.risk-acc-applies{font-size:9pt;color:#555}
-@media print{
-  details{display:block}
-  .risk-acc-body{display:block!important}
-  .risk-acc-chev{display:none}
-}
 
 /* Test plans */
 .test-progress-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:4px}
