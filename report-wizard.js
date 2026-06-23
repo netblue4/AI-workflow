@@ -547,6 +547,13 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const ctrlStatus = new Map();
     (s11?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
 
+    // Build lookup: control ID → HS standard refs
+    const hsRefByCtrl = new Map((_tbl.riskControls || []).map(rc => [rc.pk_Risk_Control_ID, rc.fk_Harmonised_Standard_IDs || '']));
+    const _hsCell = id => {
+      const refs = (hsRefByCtrl.get(id) || '').split(',').map(s => s.trim()).filter(Boolean);
+      return refs.length ? refs.map(r => `<span class="hs-ref-chip">${_esc(r)}</span>`).join(' ') : '<span class="ctrl-src src-eu">EU AI Act</span>';
+    };
+
     const byRisk = new Map();
     riskCtrls.forEach(c => {
       const key = c.risk_id || 'unknown';
@@ -573,18 +580,18 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         html += `<div class="ctrl-group">
           <div class="ctrl-group-hdr">${riskLabel}</div>
           <table class="data-table data-table--sched">
-            <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
+            <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
             <tbody>
             ${selected.map(c => `<tr>
               <td class="mono">${_esc(c.control_id)}</td>
               <td>${_esc(c.control_name || '—')}</td>
-              <td><span class="ctrl-src src-eu">EU AI Act</span></td>
+              <td>${_hsCell(c.control_id)}</td>
               <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
             </tr>`).join('')}
             ${deselected.map(c => `<tr class="ctrl-row--dim">
               <td class="mono">${_esc(c.control_id)}</td>
               <td>${_esc(c.control_name || '—')}</td>
-              <td><span class="ctrl-src src-eu">EU AI Act</span></td>
+              <td>${_hsCell(c.control_id)}</td>
               <td><span class="status-pill status-pill--excl">✗ Not selected</span></td>
             </tr>`).join('')}
             </tbody>
@@ -597,12 +604,12 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     if (regularAdds.length > 0) {
       html += `<h3 class="sub-heading">Compliance Team Additions</h3>
       <table class="data-table data-table--sched">
-        <thead><tr><th>Control ID</th><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
+        <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
         <tbody>
         ${regularAdds.map(c => `<tr>
           <td class="mono">${_esc(c.control_id)}</td>
           <td>${_esc(c.control_name || '—')}</td>
-          <td><span class="ctrl-src src-eu">EU AI Act</span></td>
+          <td>${_hsCell(c.control_id)}</td>
           <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
         </tr>`).join('')}
         </tbody>
@@ -698,6 +705,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       if (hsReqs.length === 0) {
         html += '<p class="trace-no-hs">No harmonised standard requirements mapped to this article.</p>';
       } else {
+        html += `<table class="data-table data-table--trace">
+          <thead><tr><th style="width:35%">HS Standard</th><th>Risks, Controls &amp; Tests</th><th style="width:16%">Status</th></tr></thead>
+          <tbody>`;
         hsReqs.forEach(h => {
           const ctrls = (ctrlsByRef.get(h.standard_ref) || [])
             .filter((c, i, a) => a.findIndex(x => x.pk_Risk_Control_ID === c.pk_Risk_Control_ID) === i);
@@ -708,41 +718,37 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
           if (covered) coveredCount++; else if (!isNA) gapCount++;
 
-          // Find test control for any selected risk control under this HS
-          let testRef = null;
-          let testRiskId = null;
+          let testRef = null, testRiskId = null;
           for (const c of selCtrls) {
             const tc = tcByRC.get(c.pk_Risk_Control_ID);
             if (tc) { testRef = tc.control_ref; testRiskId = c.fk_Risk_ID; break; }
           }
 
-          const rowClass  = covered ? '' : (isNA ? 'trace-hs--na' : 'trace-hs--gap');
-          const badgeKey  = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? 'fs' : 'ok') : (isNA ? 'na' : 'gap');
-          const badgeTxt  = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? '✓ Self-certified' : '✓ Covered') : (isNA ? '⊘ Not Applicable' : '⚠ Gap');
-          const naReason  = isNA ? hsNA[h.standard_ref].reason : '';
+          const badgeKey = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? 'fs' : 'ok') : (isNA ? 'na' : 'gap');
+          const badgeTxt = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? '✓ Self-certified' : '✓ Covered') : (isNA ? '⊘ N/A' : '⚠ Gap');
+          const naReason = isNA ? hsNA[h.standard_ref].reason : '';
+          const rowCls   = covered ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
 
-          html += `<div class="trace-hs ${rowClass}">
-            <div class="trace-hs-row">
-              <span class="trace-hs-ref mono">${_esc(h.standard_ref)}</span>
-              <span class="trace-hs-name">${_esc(h.standard_name || '')}</span>
-              <span class="trace-cov-badge trace-cov-badge--${badgeKey}">${badgeTxt}</span>
-            </div>
-            ${naReason ? `<div class="trace-na-reason">${_esc(naReason)}</div>` : ''}`;
-
+          // Controls & tests cell
+          let ctrlCell = '';
           if (selCtrls.length > 0) {
-            html += `<div class="trace-ctrl-list">
-              ${selCtrls.map(c => `<span class="trace-ctrl-chip"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`).join('')}
-              ${testRef ? `<span class="trace-test-chip"><span class="trace-risk-tag">${_esc(testRiskId)}</span> 🧪 ${_esc(testRef)}</span>` : ''}
-            </div>`;
-          }
-          if (fsCtrls.length > 0 && selCtrls.length === 0) {
-            html += `<div class="trace-ctrl-list">
-              ${fsCtrls.map(c => `<span class="trace-ctrl-chip trace-ctrl-chip--fs"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`).join('')}
-            </div>`;
+            ctrlCell += selCtrls.map(c =>
+              `<span class="trace-ctrl-chip"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`
+            ).join('');
+            if (testRef) ctrlCell += `<span class="trace-test-chip"><span class="trace-risk-tag">${_esc(testRiskId)}</span> 🧪 ${_esc(testRef)}</span>`;
+          } else if (fsCtrls.length > 0) {
+            ctrlCell += fsCtrls.map(c =>
+              `<span class="trace-ctrl-chip trace-ctrl-chip--fs"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`
+            ).join('');
           }
 
-          html += `</div>`;
+          html += `<tr class="${rowCls}">
+            <td><span class="mono small">${_esc(h.standard_ref)}</span> ${_esc(h.standard_name || '')}${h.standard_text ? `<div class="trace-hs-desc">${_esc(h.standard_text)}</div>` : ''}</td>
+            <td><div class="trace-ctrl-list">${ctrlCell || '<span class="trace-none">—</span>'}</div></td>
+            <td><span class="trace-cov-badge trace-cov-badge--${badgeKey}">${badgeTxt}</span>${naReason ? `<div class="trace-na-reason">${_esc(naReason)}</div>` : ''}</td>
+          </tr>`;
         });
+        html += `</tbody></table>`;
       }
       html += `</div>`;
     });
@@ -1212,8 +1218,13 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-art-name{flex:1}
 .trace-no-hs{padding:8px 12px;font-size:9pt;color:#888;border:1px solid #e5e7eb;border-top:none}
 .trace-hs{border:1px solid #e5e7eb;border-top:none;padding:6px 12px}
-.trace-hs--gap{background:#fff7ed}
-.trace-hs--na{background:#f8fafc}
+.data-table--trace{margin-bottom:0;border-radius:0 0 4px 4px}
+.data-table--trace td{vertical-align:top;padding:6px 10px}
+.trace-row--gap td{background:#fff7ed}
+.trace-row--na td{background:#f8fafc}
+.trace-hs-desc{font-size:8pt;color:#6b7280;margin-top:3px;line-height:1.4}
+.trace-none{color:#9ca3af;font-size:9pt}
+.hs-ref-chip{font-size:7.5pt;font-family:monospace;background:#e0e7ff;color:#3730a3;padding:1px 4px;border-radius:3px;white-space:nowrap;display:inline-block;margin:1px 1px 1px 0}
 .trace-hs-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .trace-hs-ref{font-size:8.5pt;color:#555;flex-shrink:0}
 .trace-hs-name{flex:1;font-size:9pt}
