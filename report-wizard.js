@@ -496,33 +496,31 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       html += `<table class="data-table data-table--risk">
   <thead>
     <tr>
-      <th style="width:22%">Risk</th>
-      <th style="width:9%">Answer</th>
-      <th style="width:12%">Status</th>
-      <th style="width:10%">Residual Risk</th>
+      <th style="width:25%">Risk</th>
+      <th style="width:11%">Applicable</th>
+      <th style="width:12%">Residual Risk</th>
       <th>Rationale</th>
     </tr>
   </thead>
   <tbody>`;
 
       (la.risks || []).forEach(r => {
-        const prefiltered = r.relevance?.status === 'not_applicable';
         const riskId      = riskIdByName.get(r.risk_name);
         const residual    = s11?.residual_risks?.[riskId];
         const residualHtml = residual?.level
           ? `<span class="rag-residual rag-residual--${_esc(residual.level)}">${_esc(residual.level.charAt(0).toUpperCase() + residual.level.slice(1))}</span>`
           : '—';
-        const statusKey = r.selected ? 'accept' : (prefiltered ? 'filter' : 'excl');
-        const statusTxt = r.selected ? '✓ Accepted' : (prefiltered ? '⊘ Pre-filtered' : '✗ Excluded');
-        const rowCls    = r.selected ? '' : ' class="row-dim"';
+        const ans     = (r.wizard_answer || '').toLowerCase();
+        const ansKey  = ans === 'yes' ? 'yes' : ans === 'no' ? 'no' : ans === 'partially' ? 'partial' : 'na';
+        const ansTxt  = ans === 'yes' ? 'Yes' : ans === 'no' ? 'No' : ans === 'partially' ? 'Partially' : _esc(r.wizard_answer || '—');
+        const rowCls  = r.selected ? '' : ' class="row-dim"';
         const rationale = r.rationale
           ? _esc(r.rationale)
           : `<span class="trace-none">—</span>`;
 
         html += `<tr${rowCls}>
       <td>${riskId ? `<span class="risk-id-badge">${_esc(riskId)}</span> ` : ''}${_esc(r.risk_name)}</td>
-      <td>${_esc(r.wizard_answer || '—')}</td>
-      <td><span class="status-pill status-pill--${statusKey}">${statusTxt}</span></td>
+      <td><span class="ans-pill ans-pill--${ansKey}">${ansTxt}</span></td>
       <td class="center">${residualHtml}</td>
       <td class="reason-cell">${rationale}</td>
     </tr>`;
@@ -1185,6 +1183,12 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .status-pill--filter{background:#ede9fe;color:#5b21b6}
 .status-pill--pend{background:#fef3c7;color:#92400e}
 .status-pill--na{background:#f3f4f6;color:#6b7280}
+
+.ans-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:8.5pt;font-weight:700;white-space:nowrap}
+.ans-pill--yes{background:#d1fae5;color:#065f46}
+.ans-pill--partial{background:#fef3c7;color:#92400e}
+.ans-pill--no{background:#f3f4f6;color:#6b7280}
+.ans-pill--na{background:#f3f4f6;color:#9ca3af}
 
 /* Controls */
 .ctrl-group{border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:10px}
