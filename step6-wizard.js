@@ -1509,22 +1509,10 @@
 
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
-    WizUtils.injectStyles('wiz-shared-styles', `
-.wiz-shell{display:flex;flex-direction:column;height:100%}
-.wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
-.wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
-.wiz-tab--active{color:var(--teal-600,#0d9488);border-bottom-color:var(--teal-600,#0d9488)}
-.wiz-pane-wrap{flex:1;overflow-y:auto}
-.wiz-pane{min-height:100%}
-.wiz-pane--hidden{display:none}
-.wiz-action-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-top:1px solid var(--color-border);margin-top:24px;gap:12px;flex-wrap:wrap}
-.wiz-btn-primary{padding:9px 20px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
+    WizUtils.injectStyles('wiz9-styles', `
 .wiz8-stat{display:flex;flex-direction:column;gap:2px}
 .wiz8-stat-num{font-size:24px;font-weight:700;color:#15803d;line-height:1}
 .wiz8-stat-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
-    `);
-    WizUtils.injectStyles('wiz9-styles', `
 /* Source card */
 .wiz9-source-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:12px}
 .wiz9-source-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#166534;margin:0 0 10px}

@@ -1054,7 +1054,7 @@
 
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
-    WizUtils.injectStyles('wiz-shared-styles', `
+    WizUtils.injectStyles('wiz7-base-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
 .wiz-tab-strip{display:flex;gap:2px;padding:14px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-surface)}
 .wiz-tab{padding:8px 16px;font-size:12px;font-weight:500;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--color-text-secondary);font-family:inherit;transition:color .15s,border-color .15s;white-space:nowrap}
@@ -1066,8 +1066,7 @@
 .wiz-action-row{display:flex;gap:10px;margin-top:24px}
 .wiz-btn-primary{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s}
 .wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
-`;
-    `);
+`);
     WizUtils.injectStyles('wiz10-styles', `
 /* ---- Tab 1: test control card styles ---- */
 .s7-src-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af;white-space:nowrap;flex-shrink:0}

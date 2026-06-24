@@ -980,18 +980,6 @@
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
     WizUtils.injectStyles('wiz5-styles', `
-/* Shared base layout */
-.wiz-shell{display:flex;flex-direction:column;height:100%}
-.wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
-.wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
-.wiz-tab--active{color:var(--teal-600,#0d9488);border-bottom-color:var(--teal-600,#0d9488)}
-.wiz-pane-wrap{flex:1;overflow-y:auto}
-.wiz-pane{min-height:100%}
-.wiz-pane--hidden{display:none}
-.wiz-action-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-top:1px solid var(--color-border);margin-top:24px;gap:12px;flex-wrap:wrap}
-.wiz-btn-primary{padding:9px 20px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
-
 /* Source cards */
 .wiz8-source-card{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-bottom:12px}
 .wiz5-source-card--dpia{background:#faf5ff;border-color:#ddd6fe}

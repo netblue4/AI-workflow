@@ -240,15 +240,6 @@
       .s2-copy-btn { align-self:flex-start; }
       .s2-prompt-area { width:100%;padding:12px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6; }
 
-      /* Collapsible section (duplicated from step3 so step2 works standalone) */
-      .wiz-collapsible-section { border:1px solid var(--color-border);border-radius:var(--radius-md,6px);overflow:hidden; }
-      .wiz-collapsible-header { padding:12px 16px;background:var(--color-bg);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px; }
-      .wiz-collapsible-header:hover { background:var(--color-surface); }
-      .wiz-collapsible-header-left { flex:1; }
-      .wiz-collapsible-header-left .section-label { margin-bottom:0; }
-      .wiz-collapsible-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0; }
-      .wiz-collapsible-body { padding:14px 16px;border-top:1px solid var(--color-border); }
-      .wiz-gate-chevron { display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s; }
     `);
   }
 

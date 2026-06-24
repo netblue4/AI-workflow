@@ -130,5 +130,30 @@ window.WizUtils = (function () {
     return dl;
   }
 
+  injectStyles('wiz-shared-styles', `
+.wiz-shell{display:flex;flex-direction:column;height:100%}
+.wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
+.wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
+.wiz-tab--active{color:var(--teal-600,#0d9488);border-bottom-color:var(--teal-600,#0d9488)}
+.wiz-pane-wrap{flex:1;overflow-y:auto}
+.wiz-pane{min-height:100%}
+.wiz-pane--hidden{display:none}
+.wiz-action-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-top:1px solid var(--color-border);margin-top:24px;gap:12px;flex-wrap:wrap}
+.wiz-btn-primary{padding:9px 20px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
+.wiz-btn-secondary{padding:9px 20px;background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer}
+.wiz-btn-secondary:hover{background:var(--color-bg-hover,#f1f5f9)}
+`);
+  injectStyles('wiz-collapsible-styles', `
+.wiz-collapsible-section{border:1px solid var(--color-border);border-radius:var(--radius-md,6px);overflow:hidden;margin-bottom:20px}
+.wiz-collapsible-header{padding:12px 16px;background:var(--color-bg);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.wiz-collapsible-header:hover{background:var(--color-surface)}
+.wiz-collapsible-header-left{flex:1}
+.wiz-collapsible-header-left .section-label{margin-bottom:0}
+.wiz-collapsible-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.wiz-collapsible-body{padding:14px 16px;border-top:1px solid var(--color-border)}
+.wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
+`);
+
   return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList };
 })();
