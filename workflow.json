@@ -20,7 +20,7 @@
       "title": "Due diligence",
       "owners": ["ISG Team", "DPO", "AI Taskforce"],
       "colorKey": "purple",
-      "steps": ["step-5"]
+      "steps": ["step-5", "step-6"]
     },
     {
       "id": "phase-3",
@@ -28,7 +28,7 @@
       "title": "Build",
       "owners": ["Development Team", "ISG Team"],
       "colorKey": "green",
-      "steps": ["step-6"]
+      "steps": []
     },
     {
       "id": "phase-4",
@@ -162,7 +162,7 @@
       "id": "step-5",
       "number": 5,
       "phaseId": "phase-2",
-      "title": "Risk assessment",
+      "title": "Risk identification",
       "isNew": false,
       "owners": ["ISG Team"],
       "ownerIcon": "shield",
@@ -183,8 +183,8 @@
     {
       "id": "step-6",
       "number": 6,
-      "phaseId": "phase-3",
-      "title": "Control identification and disclosure design",
+      "phaseId": "phase-2",
+      "title": "Control identification",
       "isNew": false,
       "owners": ["ISG Team"],
       "ownerIcon": "shield",
@@ -204,7 +204,7 @@
       "id": "step-7",
       "number": 7,
       "phaseId": "phase-4",
-      "title": "Content verification testing",
+      "title": "Control verification testing",
       "isNew": false,
       "owners": ["AI Taskforce", "Authorised Users"],
       "ownerIcon": "users",
@@ -253,7 +253,7 @@
       "id": "step-9",
       "number": 9,
       "phaseId": "phase-4",
-      "title": "Operational controls activation",
+      "title": "Residual risk",
       "isNew": true,
       "owners": ["CISO", "ISG Team"],
       "ownerIcon": "shield",

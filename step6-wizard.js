@@ -242,7 +242,7 @@
 
     if (_riskData.length === 0) {
       const warn = _el('div', 'wiz9-warn');
-      warn.innerHTML = '<strong>No risks selected in Step 5.</strong> Complete the Risk Assessment (Step 5) and confirm at least one risk before returning to this step.';
+      warn.innerHTML = '<strong>No risks selected in Step 5.</strong> Complete the Risk Identification (Step 5) and confirm at least one risk before returning to this step.';
       card.appendChild(warn);
       return card;
     }
@@ -286,10 +286,10 @@
     const step8 = _record?.['step-5'];
     if (!step8) {
       const w = _el('div', 'wiz9-info');
-      w.innerHTML = '<strong>Step 5 (Risk Assessment) not yet completed.</strong> Complete and save the risk assessment first.';
+      w.innerHTML = '<strong>Step 5 (Risk Identification) not yet completed.</strong> Complete and save the risk identification first.';
       card.appendChild(w); return card;
     }
-    const lbl = _el('p', 'wiz9-source-label'); lbl.textContent = 'Step 5 — Risk Assessment'; card.appendChild(lbl);
+    const lbl = _el('p', 'wiz9-source-label'); lbl.textContent = 'Step 5 — Risk Identification'; card.appendChild(lbl);
     const grid = _el('div', 'wiz9-source-grid');
     const cell = (l, v, mod) => {
       const c = _el('div', 'wiz9-source-cell');

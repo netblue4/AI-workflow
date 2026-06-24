@@ -120,7 +120,7 @@ ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_ragSummaryPage(s9, s10, s11)}
 ${_section(1, 'System Classification', _classificationSection(s3))}
 ${_section(2, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
-${_section(3, 'Risk Assessment', _riskAssessmentSection(s8, s11))}
+${_section(3, 'Risk Identification', _riskAssessmentSection(s8, s11))}
 ${_section(4, 'Control Schedule', _controlScheduleSection(s9, s11))}
 ${_section(5, 'Verification Evidence', _verificationSection(s10))}
 ${_section(6, 'Outstanding Items', _outstandingItemsSection(s9, s10, s11))}
@@ -268,7 +268,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     if (!s9) {
       html += `<div class="outstanding-warn">Step 6 (Control Identification) not yet completed.</div>`;
     } else if (!s11) {
-      html += `<div class="outstanding-warn">Step 9 (Operational Controls Activation) not yet completed.</div>`;
+      html += `<div class="outstanding-warn">Step 9 (Residual Risk) not yet completed.</div>`;
     } else {
       const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
       const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
@@ -289,7 +289,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     // Outstanding tests
     const outstandingTests = [];
     if (!s10) {
-      html += `<div class="outstanding-warn">Step 7 (Verification Testing) not yet completed.</div>`;
+      html += `<div class="outstanding-warn">Step 7 (Control Verification Testing) not yet completed.</div>`;
     } else {
       const DONE_STATUSES = new Set(['evidence_provided', 'completed', 'waived', 'not_applicable']);
       (s10.plans || []).forEach(plan => {
@@ -364,9 +364,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     const steps = [
       ['System Classification', !!s3],
-      ['Risk Assessment',        !!s8?.legal_assessment?.completed],
+      ['Risk Identification',    !!s8?.legal_assessment?.completed],
       ['Control Identification', !!s9],
-      ['Verification Testing',   !!s10]
+      ['Control Verification',   !!s10]
     ];
 
     return `
@@ -481,7 +481,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
   // ---- Section 2: Risk Assessment ----------------------------
   function _riskAssessmentSection(s8, s11) {
-    if (!s8) return _notComplete('Step 5 — Risk Assessment has not yet been completed.');
+    if (!s8) return _notComplete('Step 5 — Risk Identification has not yet been completed.');
 
     let html = '';
 
@@ -567,7 +567,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     const regularAdds = compAdds.filter(c => !_isFS(c));
 
-    const s11date = s11?.activation_date ? ` &nbsp;|&nbsp; Step 9 recorded: ${s11.activation_date}` : ' &nbsp;|&nbsp; <em>Step 9 — Operational Controls Activation not yet completed</em>';
+    const s11date = s11?.activation_date ? ` &nbsp;|&nbsp; Step 9 recorded: ${s11.activation_date}` : ' &nbsp;|&nbsp; <em>Step 9 — Residual Risk not yet completed</em>';
     let html = `<p class="section-meta">Step 6 date: ${s9.assessment_date || '—'}${s11date}</p>`;
 
     // ---- Risk Team Controls -----------------------------------------
@@ -752,7 +752,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
   // ---- Section 5: Verification Evidence ----------------------
   function _verificationSection(s10) {
-    if (!s10) return _notComplete('Step 7 — Content Verification Testing has not yet been completed.');
+    if (!s10) return _notComplete('Step 7 — Control Verification Testing has not yet been completed.');
 
     const plans    = s10.plans || [];
     const uncov    = s10.uncovered_controls || [];

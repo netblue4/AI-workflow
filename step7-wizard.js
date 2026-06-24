@@ -630,7 +630,7 @@
 
     return {
       step_id:                'step-7',
-      step_title:             'Content Verification Testing',
+      step_title:             'Control Verification Testing',
       assessment_date:        today,
       assessed_by:            meta.assessed_by || '',
       use_case_id:            meta.use_case_id || '',
