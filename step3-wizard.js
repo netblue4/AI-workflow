@@ -1058,15 +1058,6 @@
       .wiz-tier-card.selected-tier_1 { border-color:var(--teal-border);background:var(--teal-fill); }
       .wiz-tier-card.selected-tier_2 { border-color:var(--amber-border);background:var(--amber-fill); }
 
-      /* Collapsible Axis A section */
-      .wiz-collapsible-section { border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px; }
-      .wiz-collapsible-header { padding:12px 16px;background:var(--color-bg);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px; }
-      .wiz-collapsible-header:hover { background:var(--color-surface); }
-      .wiz-collapsible-header-left { flex:1; }
-      .wiz-collapsible-header-left .section-label { margin-bottom:0; }
-      .wiz-collapsible-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0; }
-      .wiz-collapsible-body { padding:14px 16px;border-top:1px solid var(--color-border); }
-
       /* Gates */
       .wiz-gate-section { border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;transition:opacity var(--transition); }
       .wiz-gate-header { padding:12px 16px;background:var(--color-bg);border-bottom:1px solid var(--color-border); }

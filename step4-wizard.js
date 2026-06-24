@@ -529,20 +529,6 @@
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
     WizUtils.injectStyles('wiz4-styles', `
-/* ---- Shared wizard base layout ---- */
-.wiz-shell{display:flex;flex-direction:column;height:100%}
-.wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
-.wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
-.wiz-tab--active{color:var(--teal-600,#0d9488);border-bottom-color:var(--teal-600,#0d9488)}
-.wiz-pane-wrap{flex:1;overflow-y:auto}
-.wiz-pane{min-height:100%}
-.wiz-pane--hidden{display:none}
-.wiz-action-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-top:1px solid var(--color-border);margin-top:24px;gap:12px;flex-wrap:wrap}
-.wiz-btn-primary{padding:9px 20px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
-.wiz-btn-secondary{padding:9px 20px;background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer}
-.wiz-btn-secondary:hover{background:var(--color-bg-hover,#f1f5f9)}
-
 /* ---- DPIA info note ---- */
 .dpia-info-note{background:var(--info-50,#f0f9ff);border:1px solid var(--info-200,#bae6fd);border-left:3px solid var(--info-400,#38bdf8);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--info-800,#075985);line-height:1.6;margin-bottom:20px}
 
