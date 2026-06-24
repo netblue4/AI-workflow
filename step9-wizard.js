@@ -100,24 +100,21 @@
       seen.add(controlId);
       const tbl = rcById.get(controlId);
       _controls.push({
-        key:       controlId,
-        name:      tbl?.jkName      || controlName || controlId,
-        objective: tbl?.jkObjective || '',
+        key:                   controlId,
+        name:                  tbl?.jkName      || controlName || controlId,
+        objective:             tbl?.jkObjective || '',
         source,
-        risk_id:   riskId || '',
-        risk_name: riskNameById.get(riskId) || ''
+        risk_id:               riskId || '',
+        risk_name:             riskNameById.get(riskId) || '',
+        implementationEvidence: tbl?.jkImplementationEvidence || ''
       });
     };
 
-    // Framework_Statement controls are part of the governance framework and do
-    // not need operationalising, so they are excluded from this step entirely.
-    const _isFS = c => (c.control_source || '').includes('Framework');
-
-    (s6.risk_controls || []).filter(c => c.selected && !_isFS(c)).forEach(c =>
+    (s6.risk_controls || []).filter(c => c.selected).forEach(c =>
       push(c.control_id, c.control_name, c.control_source || 'EU AI Act', c.risk_id)
     );
 
-    (s6.compliance_additions || []).filter(c => !_isFS(c)).forEach(c =>
+    (s6.compliance_additions || []).forEach(c =>
       push(c.control_id, c.control_name, 'Compliance', null)
     );
 
@@ -138,8 +135,9 @@
 
   // ---- Restore saved state ------------------------------------
   function _restoreState() {
+    const isFS = c => (c.source || '').includes('Framework');
     _controls.forEach(c => {
-      _state[c.key] = { notes: '', status: 'not_started' };
+      _state[c.key] = { notes: isFS(c) ? (c.implementationEvidence || '') : '', status: 'not_started' };
     });
     const saved = _record?.['step-9']?.controls || [];
     saved.forEach(s => {
@@ -354,8 +352,9 @@
 
     // Header: source badge + control name
     const hdr = _el('div', 's9-ctrl-hdr');
-    const srcBadge = _el('span', `s9-src-badge s9-src-badge--${sourceType}`);
-    srcBadge.textContent = sourceType === 'eu' ? 'EU AI Act' : sourceType === 'dpia' ? 'DPIA' : 'Compliance';
+    const _ctrlIsFS = (ctrl.source || '').includes('Framework');
+    const srcBadge = _el('span', `s9-src-badge s9-src-badge--${_ctrlIsFS ? 'framework' : sourceType}`);
+    srcBadge.textContent = _ctrlIsFS ? 'Self-certified' : sourceType === 'eu' ? 'EU AI Act' : sourceType === 'dpia' ? 'DPIA' : 'Compliance';
     hdr.appendChild(srcBadge);
     const name = _el('span', 's9-ctrl-name');
     name.textContent = ctrl.name;
@@ -684,6 +683,7 @@
 .s9-src-badge--eu{background:#dbeafe;color:#1e40af}
 .s9-src-badge--compliance{background:#ede9fe;color:#6d28d9}
 .s9-src-badge--dpia{background:#ccfbf1;color:#0f766e}
+.s9-src-badge--framework{background:#fef3c7;color:#92400e}
 
 .s9-obj-wrap{margin-bottom:10px}
 .s9-field-label{display:block;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}

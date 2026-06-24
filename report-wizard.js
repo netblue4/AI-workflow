@@ -772,10 +772,15 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     </div>
     <p class="test-progress-lbl">${pct}% of tests resolved</p>`;
 
-    if (plans.length === 0) {
+    const _isFSControl = c => (c.control_source || '').includes('Framework') || (c._isFramework === true);
+    const filteredPlans = plans
+      .map(p => ({ ...p, test_controls: (p.test_controls || []).filter(tc => !_isFSControl(tc)) }))
+      .filter(p => p.test_controls.length > 0);
+
+    if (filteredPlans.length === 0) {
       html += _notComplete('No test plans generated. Ensure Step 6 control selection is complete.');
     } else {
-      plans.forEach(p => {
+      filteredPlans.forEach(p => {
         html += `<div class="test-plan">
           <div class="test-plan-hdr">
             <span class="test-plan-ref mono">${_esc(p.plan_ref)}</span>
@@ -785,7 +790,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           <table class="data-table data-table--sched">
             <thead><tr><th>Test Control</th><th>Name</th><th>Standards</th><th>Status</th></tr></thead>
             <tbody>
-            ${(p.test_controls || []).map(tc => `<tr>
+            ${p.test_controls.map(tc => `<tr>
               <td class="mono">${_esc(tc.control_ref || tc.test_control_id)}</td>
               <td>${_esc(tc.control_name)}</td>
               <td class="mono small">${_esc(tc.fk_Harmonised_Standard_IDs || '—')}</td>
@@ -797,13 +802,14 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       });
     }
 
-    if (uncov.length > 0) {
-      html += `<h3 class="sub-heading">Controls Without Automated Test Coverage (${uncov.length})</h3>
+    const filteredUncov = uncov.filter(c => !_isFSControl(c));
+    if (filteredUncov.length > 0) {
+      html += `<h3 class="sub-heading">Controls Without Automated Test Coverage (${filteredUncov.length})</h3>
         <p class="section-meta">Manual evidence review required for the following controls.</p>
         <table class="data-table">
           <thead><tr><th>Control ID</th><th>Name</th><th>Source</th></tr></thead>
           <tbody>
-          ${uncov.map(c => `<tr>
+          ${filteredUncov.map(c => `<tr>
             <td class="mono">${_esc(c.control_id)}</td>
             <td>${_esc(c.control_name)}</td>
             <td>${_esc(c.control_source || '—')}</td>

@@ -148,20 +148,8 @@
       const rc = rcById.get(sc.control_id);
       if (!rc) { uncovered.push(sc); return; }
 
-      // Framework_Statement controls have no automated test — they are
-      // self-certified against completed workflow steps. Surface them under
-      // their risk as a review card pre-filled with their implementation evidence.
-      if ((rc.control_source || '').includes('Framework')) {
-        _ensureRisk(rc.fk_Risk_ID).test_controls.push({
-          pk_Test_Control_ID:          rc.pk_Risk_Control_ID,
-          jkName:                      rc.jkName,
-          jkObjective:                 rc.jkObjective || '',
-          fk_Harmonised_Standard_IDs:  rc.fk_Harmonised_Standard_IDs || '',
-          jkImplementationEvidence:    rc.jkImplementationEvidence || '',
-          _isFramework:                true
-        });
-        return;
-      }
+      // Framework_Statement controls have no automated test — skip entirely
+      if ((rc.control_source || '').includes('Framework')) return;
 
       const tc = tcByRC.get(sc.control_id);
       if (!tc) { uncovered.push(sc); return; }
@@ -169,7 +157,7 @@
       _ensureRisk(rc.fk_Risk_ID).test_controls.push(tc);
     });
 
-    return { plans: Array.from(riskMap.values()), uncovered };
+    return { plans: Array.from(riskMap.values()).filter(r => r.test_controls.length > 0), uncovered };
   }
 
   // ---- Tabs ---------------------------------------------------
