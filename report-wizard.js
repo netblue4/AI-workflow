@@ -496,9 +496,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       html += `<table class="data-table data-table--risk">
   <thead>
     <tr>
-      <th style="width:25%">Risk</th>
-      <th style="width:11%">Applicable</th>
-      <th style="width:12%">Residual Risk</th>
+      <th style="width:20%">Risk</th>
+      <th style="width:8%">Applicable</th>
+      <th style="width:9%">Residual Risk</th>
       <th>Rationale</th>
     </tr>
   </thead>
