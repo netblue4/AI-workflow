@@ -1155,11 +1155,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .dt-label{font-weight:600;color:#555;white-space:nowrap;width:220px}
 .reason-cell{font-size:9pt;color:#555}
 .data-table--risk{table-layout:fixed}
-.data-table--risk th:nth-child(1),.data-table--risk td:nth-child(1){width:18%}
-.data-table--risk th:nth-child(2),.data-table--risk td:nth-child(2){width:9%;white-space:nowrap}
-.data-table--risk th:nth-child(3),.data-table--risk td:nth-child(3){width:11%;white-space:nowrap}
-.data-table--risk th:nth-child(4),.data-table--risk td:nth-child(4){width:11%}
-.data-table--risk th:nth-child(5),.data-table--risk td:nth-child(5){width:51%}
+.data-table--risk th:nth-child(1),.data-table--risk td:nth-child(1){width:20%}
+.data-table--risk th:nth-child(2),.data-table--risk td:nth-child(2){width:8%;white-space:nowrap}
+.data-table--risk th:nth-child(3),.data-table--risk td:nth-child(3){width:9%}
+.data-table--risk th:nth-child(4),.data-table--risk td:nth-child(4){width:63%}
 .data-table--sched{table-layout:fixed}
 .data-table--sched th:nth-child(1),.data-table--sched td:nth-child(1){width:13%}
 .data-table--sched th:nth-child(2),.data-table--sched td:nth-child(2){width:47%}
