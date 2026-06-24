@@ -153,20 +153,6 @@
     return result;
   }
 
-  // ---- Category colour palette --------------------------------
-  const _CAT_COLORS = {
-    amber:   { bg: '#fef3c7', text: '#92400e' },
-    rose:    { bg: '#ffe4e6', text: '#9f1239' },
-    teal:    { bg: '#ccfbf1', text: '#115e59' },
-    slate:   { bg: '#f1f5f9', text: '#334155' },
-    red:     { bg: '#fee2e2', text: '#b91c1c' },
-    purple:  { bg: '#ede9fe', text: '#6d28d9' },
-    indigo:  { bg: '#e0e7ff', text: '#4338ca' },
-    orange:  { bg: '#ffedd5', text: '#9a3412' },
-    green:   { bg: '#dcfce7', text: '#166534' },
-    blue:    { bg: '#dbeafe', text: '#1e40af' }
-  };
-
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     const strip = _el('div', 'wiz-tab-strip');

@@ -14,7 +14,7 @@
 
   // ---- Module state -------------------------------------------
   let _step = null, _colorKey = null, _phaseTitle = null;
-  let _container = null, _tblData = null, _record = null;
+  let _container = null, _tblData = null, _record = null, _config = null;
 
   // Tab 1 — test controls
   let _planData  = [];  // [{risk_id, risk_name, test_controls:[]}]
@@ -28,32 +28,7 @@
   // Tab 3 — residual risk
   const _residualState = {}; // risk_id → { likelihood, impact, justification }
 
-  const STATUS_OPTIONS = [
-    { value: 'not_started',       label: 'Not started' },
-    { value: 'in_progress',       label: 'In progress' },
-    { value: 'evidence_provided', label: 'Evidence provided' },
-    { value: 'waived',            label: 'Waived' }
-  ];
   const STATUS_LEGACY_MAP = { pending: 'not_started', completed: 'evidence_provided', not_applicable: 'waived' };
-  const STATUS_COLORS = {
-    not_started:       { bg: '#f1f5f9', text: '#475569' },
-    in_progress:       { bg: '#fef3c7', text: '#92400e' },
-    evidence_provided: { bg: '#dcfce7', text: '#166534' },
-    waived:            { bg: '#ede9fe', text: '#6d28d9' }
-  };
-
-  const RISK_MATRIX = {
-    low:      { low: 'low',    medium: 'low',    high: 'medium',   critical: 'medium'   },
-    medium:   { low: 'low',    medium: 'medium', high: 'high',     critical: 'high'     },
-    high:     { low: 'medium', medium: 'high',   high: 'high',     critical: 'critical' },
-    critical: { low: 'medium', medium: 'high',   high: 'critical', critical: 'critical' }
-  };
-  const RESIDUAL_COLORS = {
-    low:      { bg: '#dcfce7', text: '#166534' },
-    medium:   { bg: '#fef3c7', text: '#92400e' },
-    high:     { bg: '#fed7aa', text: '#9a3412' },
-    critical: { bg: '#fee2e2', text: '#991b1b' }
-  };
 
   // ---- Public API ---------------------------------------------
   window.mountStep7Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -86,16 +61,18 @@
   async function _loadData(pw) {
     pw.innerHTML = '<p style="padding:32px;color:var(--color-text-secondary)">Loading…</p>';
     try {
-      const [rRes, rcRes, tcRes] = await Promise.all([
+      const [rRes, rcRes, tcRes, cfgRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
-        fetch('tbl_Test_Controls.json')
+        fetch('tbl_Test_Controls.json'),
+        fetch('step-7.json')
       ]);
-      if (!rRes.ok || !rcRes.ok || !tcRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, testControls] = await Promise.all([
-        rRes.json(), rcRes.json(), tcRes.json()
+      if (!rRes.ok || !rcRes.ok || !tcRes.ok || !cfgRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, testControls, cfg] = await Promise.all([
+        rRes.json(), rcRes.json(), tcRes.json(), cfgRes.json()
       ]);
       _tblData = { risks, riskControls, testControls };
+      _config  = cfg;
     } catch (_) {
       pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files.</p>`;
       return;
@@ -496,7 +473,7 @@
 
     const sel = document.createElement('select');
     sel.className = 's7-ctrl-status-sel';
-    STATUS_OPTIONS.forEach(opt => {
+    _config.status_options.forEach(opt => {
       const o = document.createElement('option');
       o.value = opt.value; o.textContent = opt.label;
       if (opt.value === status) o.selected = true;
@@ -504,7 +481,7 @@
     });
 
     const pill = _el('span', `s7-ctrl-pill s7-ctrl-pill--${status}`);
-    pill.textContent = STATUS_OPTIONS.find(o => o.value === status)?.label || status;
+    pill.textContent = _config.status_options.find(o => o.value === status)?.label || status;
 
     sel.addEventListener('change', () => {
       _testState.status[tc.pk_Test_Control_ID] = sel.value;
@@ -522,7 +499,7 @@
     const pill = card.querySelector('.s7-ctrl-pill');
     if (pill) {
       pill.className   = `s7-ctrl-pill s7-ctrl-pill--${status}`;
-      pill.textContent = STATUS_OPTIONS.find(o => o.value === status)?.label || status;
+      pill.textContent = _config.status_options.find(o => o.value === status)?.label || status;
     }
     const sel = card.querySelector('.s7-ctrl-status-sel');
     if (sel) sel.value = status;
@@ -761,7 +738,7 @@
     const statusLbl  = _el('label', 's9-field-label'); statusLbl.textContent = 'Status';
     const select     = document.createElement('select');
     select.className = 's9-status-select';
-    STATUS_OPTIONS.forEach(opt => {
+    _config.status_options.forEach(opt => {
       const o = document.createElement('option');
       o.value = opt.value; o.textContent = opt.label;
       if (opt.value === st.status) o.selected = true;
@@ -788,8 +765,8 @@
   }
 
   function _applyActPillStyle(el, status) {
-    const opt = STATUS_OPTIONS.find(o => o.value === status);
-    const col = STATUS_COLORS[status] || STATUS_COLORS.not_started;
+    const opt = _config.status_options.find(o => o.value === status);
+    const col = _config.status_colors[status] || _config.status_colors.not_started;
     el.textContent      = opt?.label || status;
     el.style.background = col.bg;
     el.style.color      = col.text;
@@ -953,8 +930,8 @@
     if (!likelihood || !impact) {
       el.textContent = '—'; el.style.background = '#f1f5f9'; el.style.color = '#94a3b8'; return;
     }
-    const level = RISK_MATRIX[likelihood]?.[impact] || '';
-    const col   = RESIDUAL_COLORS[level] || { bg: '#f1f5f9', text: '#94a3b8' };
+    const level = _config.risk_matrix[likelihood]?.[impact] || '';
+    const col   = _config.residual_colors[level] || { bg: '#f1f5f9', text: '#94a3b8' };
     el.textContent      = level ? level.charAt(0).toUpperCase() + level.slice(1) : '—';
     el.style.background = col.bg;
     el.style.color      = col.text;
@@ -1028,7 +1005,7 @@
         residual_risks[riskId] = {
           likelihood:    rr.likelihood,
           impact:        rr.impact,
-          level:         RISK_MATRIX[rr.likelihood]?.[rr.impact] || '',
+          level:         _config.risk_matrix[rr.likelihood]?.[rr.impact] || '',
           justification: rr.justification || ''
         };
       }
