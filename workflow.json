@@ -36,7 +36,7 @@
       "title": "Verification",
       "owners": ["AI Taskforce", "ISG Team", "Authorised Users"],
       "colorKey": "blue",
-      "steps": ["step-7", "step-10", "step-9"]
+      "steps": ["step-7", "step-10"]
     },
     {
       "id": "phase-5",
@@ -204,20 +204,26 @@
       "id": "step-7",
       "number": 7,
       "phaseId": "phase-4",
-      "title": "Control verification testing",
+      "title": "Residual risk",
       "isNew": false,
-      "owners": ["AI Taskforce", "Authorised Users"],
-      "ownerIcon": "users",
+      "owners": ["AI Taskforce", "ISG Team"],
+      "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR4"],
-      "summary": "Structured pre-approval testing of AI-generated output against defined criteria. Evaluates factual accuracy, bias, and IP compliance. The AI Taskforce conducts checks against documented criteria — not subjective review.",
+      "requirements": ["AI SR4", "AI SR1", "AI SR8"],
+      "summary": "Three-part residual risk assessment. First, verify that tester Jira tickets confirm each test control has been executed with evidence. Second, verify that developer Jira tickets confirm each operational control is live in the deployed system. Third, once both are confirmed, record the residual risk level per identified risk and document justification.",
       "deliverables": [
-        "Content verification report: accuracy, bias, and IP checks against defined criteria",
-        "AI Taskforce sign-off with documented pass/fail criteria"
+        "Test control evidence records: per-control status and evidence links",
+        "Operational control activation records: per-control status and developer evidence",
+        "Residual risk register: likelihood, impact, level, and justification per risk"
       ],
-      "gates": [],
-      "requirementLabels": ["AI SR4 — Content Verification"],
+      "gates": [
+        {
+          "type": "danger",
+          "text": "Gate: Residual risk assessment panels are locked until both test and activation evidence is complete for each risk group."
+        }
+      ],
+      "requirementLabels": ["AI SR4 — Control Verification", "AI SR1 — Governance controls", "AI SR8 — Disclosure active"],
       "detailFile": "step-7.json"
     },
     {
@@ -248,34 +254,6 @@
       ],
       "requirementLabels": ["AI SR2 — AI Change Board", "AI SR9 — High-risk AI", "AI SR6 — Authorisation records"],
       "detailFile": "step-8.json"
-    },
-    {
-      "id": "step-9",
-      "number": 9,
-      "phaseId": "phase-4",
-      "title": "Residual risk",
-      "isNew": true,
-      "owners": ["CISO", "ISG Team"],
-      "ownerIcon": "shield",
-      "applicability": "Live operation",
-      "applicabilityKey": "ops",
-      "requirements": ["AI SR1", "AI SR4", "AI SR8"],
-      "summary": "Before any user accesses the approved tool, the controls defined in Step 6 must be active and verified. This ensures system protections do not evaporate once the workflow ends. Controls are the organisation's responsibility, not the user's.",
-      "deliverables": [
-        "Output logging active and reviewed against logging standards",
-        "Human review checkpoints configured for high-stakes content (Tier 2)",
-        "Disclosure and labelling templates deployed and tested",
-        "Anomaly flagging or output monitoring mechanism in place",
-        "Access controls enforced: no Group entity email addresses, MFA required"
-      ],
-      "gates": [
-        {
-          "type": "danger",
-          "text": "Gate: Tool access must not be granted until all controls from the approved control schedule are confirmed active. Verified by ISG, not self-certified by the requestor."
-        }
-      ],
-      "requirementLabels": ["AI SR1 — Governance controls", "AI SR4 — System-level verification", "AI SR8 — Disclosure active"],
-      "detailFile": "step-9.json"
     },
     {
       "id": "step-10",
