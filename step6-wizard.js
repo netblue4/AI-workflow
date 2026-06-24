@@ -84,6 +84,13 @@
         r.controls.forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = true; })
       );
     }
+    // Framework_Statement controls are always applicable — the assessor cannot
+    // mark them N/A, so force-select them regardless of any prior saved state.
+    _riskData.forEach(r =>
+      r.controls.forEach(c => {
+        if (c.control_source === 'Framework_Statement') _state.riskSelected[c.pk_Risk_Control_ID] = true;
+      })
+    );
     if (saved9?.compliance_additions) {
       saved9.compliance_additions.forEach(c => {
         if (c.selected) _state.complianceSelected[c.control_id] = true;
@@ -452,9 +459,10 @@
   }
 
   function _updateRiskBadge(secEl, risk) {
-    const actionable = risk.controls.filter(c => c.control_source !== 'Framework_Statement');
-    const total = actionable.length;
-    const sel   = actionable.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]).length;
+    // Count all controls including Framework_Statement self-certifications —
+    // FS controls are always selected, so they should be reflected in the tally.
+    const total = risk.controls.length;
+    const sel   = risk.controls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]).length;
     const badge = secEl.querySelector(`#wiz9-rb-${_safeId(risk.risk_id)}`);
     if (!badge) return;
     badge.textContent = `${sel} / ${total}`;

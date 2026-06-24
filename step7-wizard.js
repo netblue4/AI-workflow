@@ -132,14 +132,7 @@
     const riskMap   = new Map(); // risk_id → {risk_id, risk_name, test_controls:[]}
     const uncovered = [];
 
-    selectedControls.forEach(sc => {
-      const rc = rcById.get(sc.control_id);
-      if (!rc) { uncovered.push(sc); return; }
-
-      const tc = tcByRC.get(sc.control_id);
-      if (!tc) { uncovered.push(sc); return; }
-
-      const riskId = rc.fk_Risk_ID;
+    const _ensureRisk = riskId => {
       if (!riskMap.has(riskId)) {
         const risk = riskById.get(riskId);
         riskMap.set(riskId, {
@@ -148,7 +141,32 @@
           test_controls: []
         });
       }
-      riskMap.get(riskId).test_controls.push(tc);
+      return riskMap.get(riskId);
+    };
+
+    selectedControls.forEach(sc => {
+      const rc = rcById.get(sc.control_id);
+      if (!rc) { uncovered.push(sc); return; }
+
+      // Framework_Statement controls have no automated test — they are
+      // self-certified against completed workflow steps. Surface them under
+      // their risk as a review card pre-filled with their implementation evidence.
+      if ((rc.control_source || '').includes('Framework')) {
+        _ensureRisk(rc.fk_Risk_ID).test_controls.push({
+          pk_Test_Control_ID:          rc.pk_Risk_Control_ID,
+          jkName:                      rc.jkName,
+          jkObjective:                 rc.jkObjective || '',
+          fk_Harmonised_Standard_IDs:  rc.fk_Harmonised_Standard_IDs || '',
+          jkImplementationEvidence:    rc.jkImplementationEvidence || '',
+          _isFramework:                true
+        });
+        return;
+      }
+
+      const tc = tcByRC.get(sc.control_id);
+      if (!tc) { uncovered.push(sc); return; }
+
+      _ensureRisk(rc.fk_Risk_ID).test_controls.push(tc);
     });
 
     return { plans: Array.from(riskMap.values()), uncovered };
@@ -364,8 +382,8 @@
 
     // Header: source badge + name
     const hdr = _el('div', 's7-ctrl-hdr');
-    const srcBadge = _el('span', 's7-src-badge');
-    srcBadge.textContent = 'EU AI Act';
+    const srcBadge = _el('span', tc._isFramework ? 's7-src-badge s7-src-badge--fs' : 's7-src-badge');
+    srcBadge.textContent = tc._isFramework ? 'Self-certified' : 'EU AI Act';
     hdr.appendChild(srcBadge);
     const name = _el('span', 's7-ctrl-name');
     name.textContent = tc.jkName;
@@ -379,7 +397,8 @@
       card.appendChild(obj);
     }
 
-    // Evidence / notes textarea
+    // Evidence / notes textarea — Framework controls pre-fill from their
+    // documented implementation evidence; the assessor can update it.
     const notesWrap = _el('div', 's7-ctrl-notes-wrap');
     const notesLbl = _el('label', 's7-ctrl-notes-lbl');
     notesLbl.textContent = 'Evidence / Notes';
@@ -388,6 +407,9 @@
     textarea.className = 's7-ctrl-notes';
     textarea.placeholder = 'Add evidence link or notes…';
     textarea.rows = 2;
+    if (_state.testNotes[tc.pk_Test_Control_ID] === undefined && tc._isFramework && tc.jkImplementationEvidence) {
+      _state.testNotes[tc.pk_Test_Control_ID] = tc.jkImplementationEvidence;
+    }
     textarea.value = _state.testNotes[tc.pk_Test_Control_ID] || '';
     textarea.addEventListener('input', () => {
       _state.testNotes[tc.pk_Test_Control_ID] = textarea.value;
@@ -813,6 +835,7 @@
     s.textContent = `
 /* ---- Step 7 minimal control card styles -------------------- */
 .s7-src-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af;white-space:nowrap;flex-shrink:0}
+.s7-src-badge--fs{background:#ede9fe;color:#7c3aed}
 .s7-ctrl-card{padding:14px 16px;border-bottom:1px solid var(--color-border)}
 .s7-ctrl-card:last-child{border-bottom:none}
 .s7-ctrl-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
