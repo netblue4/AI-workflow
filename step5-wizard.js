@@ -1138,7 +1138,7 @@ RISK ASSESSMENT SUMMARY (JSON) — output this block exactly at the end
     const card = _el('div', 'step-detail-card');
 
     const title = _el('h2', 'step-detail-title');
-    title.textContent = 'Risk Assessment Review';
+    title.textContent = 'Risk Identification Review';
     card.appendChild(title);
 
     const sub = _el('p', 'step-detail-summary');

@@ -601,7 +601,7 @@
 
     const rec9 = {
       step_id:         'step-9',
-      step_title:      'Operational controls activation',
+      step_title:      'Residual risk',
       activation_date: today,
       assessed_by:     meta.assessed_by || '',
       use_case_id:     meta.use_case_id || '',
