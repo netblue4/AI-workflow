@@ -31,19 +31,9 @@
     complete:   false
   };
 
-  // Category color palette — maps JSON color keys to CSS values
-  const _CAT_COLORS = {
-    amber:   { bg: '#fef3c7', text: '#92400e' },
-    rose:    { bg: '#ffe4e6', text: '#9f1239' },
-    teal:    { bg: '#ccfbf1', text: '#115e59' },
-    slate:   { bg: '#f1f5f9', text: '#334155' },
-    red:     { bg: '#fee2e2', text: '#b91c1c' },
-    purple:  { bg: '#ede9fe', text: '#6d28d9' },
-    indigo:  { bg: '#e0e7ff', text: '#4338ca' },
-    orange:  { bg: '#ffedd5', text: '#9a3412' },
-    green:   { bg: '#dcfce7', text: '#166534' },
-    blue:    { bg: '#dbeafe', text: '#1e40af' }
-  };
+  // Category color palette — populated from step8-legal-risk-guidance.json after load
+  const _FALLBACK_COLOR = { bg: '#f1f5f9', text: '#334155' };
+  const _catColor = key => (_legalGuidance?.color_palette?.[key] || _FALLBACK_COLOR);
 
   // ---- Public API ---------------------------------------------
   window.mountStep5Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -784,7 +774,7 @@ RISK ASSESSMENT SUMMARY (JSON) — output this block exactly at the end
     const relevance = _computeRelevance(wq.risk_name);
     const category  = riskG?.category || null;
     const catColor  = category ? (_legalGuidance.categories?.[category]?.color || 'slate') : 'slate';
-    const catColors = _CAT_COLORS[catColor] || _CAT_COLORS.slate;
+    const catColors = _catColor(catColor);
     const answer    = _wizState.answers[wq.risk_name] || null;
 
     const wrap = _el('div', 'wiz8-guided-wrap');
@@ -1016,7 +1006,7 @@ RISK ASSESSMENT SUMMARY (JSON) — output this block exactly at the end
         const row = _el('div', 'wiz8-summary-cat-row');
         const catTag = _el('span', 'wiz8-cat-tag');
         catTag.textContent = cat;
-        const c = _CAT_COLORS[_legalGuidance.categories?.[cat]?.color || 'slate'] || _CAT_COLORS.slate;
+        const c = _catColor(_legalGuidance.categories?.[cat]?.color || 'slate');
         catTag.style.background = c.bg; catTag.style.color = c.text;
         row.appendChild(catTag);
         const names = _el('span', 'wiz8-summary-risk-names');
@@ -1291,7 +1281,7 @@ RISK ASSESSMENT SUMMARY (JSON) — output this block exactly at the end
         const item = _el('div', 'wiz8-cat-legend-item');
         const tag  = _el('span', 'wiz8-cat-tag');
         tag.textContent = name;
-        const c = _CAT_COLORS[info.color] || _CAT_COLORS.slate;
+        const c = _catColor(info.color || 'slate');
         tag.style.background = c.bg; tag.style.color = c.text;
         item.appendChild(tag);
         const desc = _el('span', 'wiz8-cat-legend-desc'); desc.textContent = info.description; item.appendChild(desc);
@@ -1328,7 +1318,7 @@ RISK ASSESSMENT SUMMARY (JSON) — output this block exactly at the end
         if (g?.category) {
           const catTag = _el('span', 'wiz8-cat-tag');
           catTag.textContent = g.category;
-          const c = _CAT_COLORS[_legalGuidance.categories?.[g.category]?.color || 'slate'] || _CAT_COLORS.slate;
+          const c = _catColor(_legalGuidance.categories?.[g.category]?.color || 'slate');
           catTag.style.background = c.bg; catTag.style.color = c.text;
           rnh.appendChild(catTag);
         }

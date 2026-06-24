@@ -180,7 +180,11 @@
 
     // Scope note
     const note = _el('div', 'dpia-info-note');
-    note.innerHTML = '<strong>GDPR Art.35 scope:</strong> A DPIA is required where AI processing is likely to result in a high risk to individuals — including systematic profiling, processing of special-category data at scale, or automated decision-making with legal effects (Art.22). The data types inventory produced here feeds directly into the Risk Assessment in Step 5.';
+    if (_detail?.scope_note) {
+      const strong = _el('strong'); strong.textContent = 'GDPR Art.35 scope: ';
+      note.appendChild(strong);
+      note.appendChild(document.createTextNode(_detail.scope_note));
+    }
     card.appendChild(note);
 
     // Sections
@@ -512,45 +516,7 @@
     sub.textContent = 'A Data Protection Impact Assessment is mandatory where processing is likely to result in a high risk to individuals. The sections below summarise the key legal obligations.';
     card.appendChild(sub);
 
-    const sections = [
-      { heading: 'When is a DPIA mandatory? (Art.35(1)–(3))', items: [
-        'Systematic and extensive profiling with significant effects on individuals',
-        'Large-scale processing of special-category data (Art.9) or criminal conviction data (Art.10)',
-        'Systematic monitoring of publicly accessible areas at large scale',
-        'Processing types on the supervisory authority high-risk list',
-        'New technologies used in a way that creates high risk to data subjects'
-      ]},
-      { heading: 'Mandatory DPIA content (Art.35(7))', items: [
-        '(a) Description of processing: nature, scope, context, purpose, legitimate interests',
-        '(b) Assessment of necessity and proportionality',
-        '(c) Assessment of risks to rights and freedoms of data subjects',
-        '(d) Measures to address risks: safeguards, security measures, oversight mechanisms'
-      ]},
-      { heading: 'DPO consultation (Art.35(2))', items: [
-        'The controller shall seek the advice of the DPO when conducting a DPIA',
-        'DPO advice and the controller\'s decision must be documented',
-        'Failure to consult the DPO is an infringement of GDPR Art.35(2)'
-      ]},
-      { heading: 'Prior consultation of supervisory authority (Art.36)', items: [
-        'Required where the DPIA shows residual HIGH risk that cannot be mitigated',
-        'Controller must not begin processing until the supervisory authority provides written advice',
-        'Supervisory authority has 8 weeks to respond, extendable by 6 weeks',
-        'Art.36 consultation is a hard stop before deployment where residual risk is unacceptable'
-      ]},
-      { heading: 'Automated decision-making (Art.22)', items: [
-        'Applies where decisions based SOLELY on automated processing have legal or similarly significant effects',
-        'Data subject rights: human intervention, express point of view, contest the decision',
-        'Three lawful grounds: (a) contract performance, (b) legal authorisation, (c) explicit consent',
-        'Special category data subject to Art.22(4) additional restrictions',
-        'Explainability obligation: data subjects must receive "meaningful information about the logic involved"'
-      ]},
-      { heading: 'GDPR Art.9 special category safeguards', items: [
-        'Processing requires both an Art.6 lawful basis AND a specific Art.9(2) condition',
-        'Explicit consent (Art.9(2)(a)) requires a separate, specific consent act beyond standard consent',
-        'Employment/social security ground (Art.9(2)(b)) requires a basis in Union or Member State law',
-        'Additional safeguards must be implemented and documented alongside the Art.9(2) condition'
-      ]}
-    ];
+    const sections = _detail?.reference_sections || [];
 
     sections.forEach(sec => {
       const h = _el('p', 'section-label'); h.textContent = sec.heading; card.appendChild(h);
