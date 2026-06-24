@@ -3,7 +3,6 @@
     "pk_Harmonised_Standard_ID": "HS-001",
     "fk_AI_Article_ID": "ART-001",
     "standard_ref": "[18229-1.1]",
-    "standard_group": "[18229-1: Trustworthiness] - Transparency",
     "standard_name": "Intended Purpose",
     "standard_text": "Clear, documented declaration of what the system is designed to do."
   },
@@ -11,7 +10,6 @@
     "pk_Harmonised_Standard_ID": "HS-002",
     "fk_AI_Article_ID": "ART-001",
     "standard_ref": "[18229-1.2]",
-    "standard_group": "[18229-1: Trustworthiness] - Transparency",
     "standard_name": "Limitations",
     "standard_text": "Documentation of known 'blind spots', error conditions, or scenarios where the AI may fail."
   },
@@ -19,7 +17,6 @@
     "pk_Harmonised_Standard_ID": "HS-003",
     "fk_AI_Article_ID": "ART-001",
     "standard_ref": "[18229-1.3]",
-    "standard_group": "[18229-1: Trustworthiness] - Transparency",
     "standard_name": "Instructions for Use",
     "standard_text": "High-quality documentation that is clear, accessible, and provided in a digital/readable format."
   },
@@ -27,7 +24,6 @@
     "pk_Harmonised_Standard_ID": "HS-004",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[18229-1.4]",
-    "standard_group": "[18229-1: Trustworthiness] - Logging",
     "standard_name": "Event Recording",
     "standard_text": "Automated, immutable recording of start/end times, input data, and all system decisions."
   },
@@ -35,7 +31,6 @@
     "pk_Harmonised_Standard_ID": "HS-005",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[18229-1.5]",
-    "standard_group": "[18229-1: Trustworthiness] - Logging",
     "standard_name": "Traceability",
     "standard_text": "Ensuring logs allow for the full 'reconstruction' of events if a failure or accident occurs."
   },
@@ -43,7 +38,6 @@
     "pk_Harmonised_Standard_ID": "HS-006",
     "fk_AI_Article_ID": "ART-002",
     "standard_ref": "[18229-1.6]",
-    "standard_group": "[18229-1: Trustworthiness] - Human Oversight",
     "standard_name": "Automation Confidence Warning",
     "standard_text": "UI design that explicitly warns humans not to over-rely on AI suggestions."
   },
@@ -51,7 +45,6 @@
     "pk_Harmonised_Standard_ID": "HS-007",
     "fk_AI_Article_ID": "ART-002",
     "standard_ref": "[18229-1.7]",
-    "standard_group": "[18229-1: Trustworthiness] - Human Oversight",
     "standard_name": "Intervention Tools",
     "standard_text": "Inclusion of technical 'Override' or 'Stop' mechanisms (the 'Kill Switch')."
   },
@@ -59,7 +52,6 @@
     "pk_Harmonised_Standard_ID": "HS-008",
     "fk_AI_Article_ID": "ART-002",
     "standard_ref": "[18229-1.8]",
-    "standard_group": "[18229-1: Trustworthiness] - Human Oversight",
     "standard_name": "Interpretability",
     "standard_text": "Ensuring outputs provide sufficient context for a human to understand the 'why' behind a decision."
   },
@@ -67,7 +59,6 @@
     "pk_Harmonised_Standard_ID": "HS-009",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.1]",
-    "standard_group": "[18282: Cybersecurity] - Threat Mitigation",
     "standard_name": "Adversarial Attacks",
     "standard_text": "Defense against 'evasion attacks' where crafted input data is designed to fool the model's logic."
   },
@@ -75,7 +66,6 @@
     "pk_Harmonised_Standard_ID": "HS-010",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.2]",
-    "standard_group": "[18282: Cybersecurity] - Threat Mitigation",
     "standard_name": "Data Poisoning",
     "standard_text": "Protecting the training and RAG ingestion pipelines so malicious data doesn't corrupt the knowledge base."
   },
@@ -83,7 +73,6 @@
     "pk_Harmonised_Standard_ID": "HS-011",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.3]",
-    "standard_group": "[18282: Cybersecurity] - Threat Mitigation",
     "standard_name": "Model Inversion",
     "standard_text": "Preventing 'extraction' attacks where unauthorized parties try to 'steal' the model or training data via API queries."
   },
@@ -91,7 +80,6 @@
     "pk_Harmonised_Standard_ID": "HS-012",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.4]",
-    "standard_group": "[18282: Cybersecurity] - System Integrity",
     "standard_name": "Secure Development",
     "standard_text": "Procedures ensuring the code, RAG orchestrator, and model are built in a hardened, isolated environment."
   },
@@ -99,7 +87,6 @@
     "pk_Harmonised_Standard_ID": "HS-013",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.5]",
-    "standard_group": "[18282: Cybersecurity] - System Integrity",
     "standard_name": "Supply Chain Security",
     "standard_text": "Verifying the security and integrity of third-party libraries, pre-trained models, and external data sources."
   },
@@ -107,7 +94,6 @@
     "pk_Harmonised_Standard_ID": "HS-014",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.6]",
-    "standard_group": "[18282: Cybersecurity] - Infrastructure",
     "standard_name": "Access Control",
     "standard_text": "Standard identity management (RBAC/MFA) for who can modify model weights or access proprietary data."
   },
@@ -115,7 +101,6 @@
     "pk_Harmonised_Standard_ID": "HS-015",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.7]",
-    "standard_group": "[18282: Cybersecurity] - Infrastructure",
     "standard_name": "Model Robustness",
     "standard_text": "Ensuring the system remains secure and stable even when encountering 'noise' or unexpected data patterns."
   },
@@ -123,7 +108,6 @@
     "pk_Harmonised_Standard_ID": "HS-016",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18282.8]",
-    "standard_group": "[18282: Cybersecurity] - Defense-in-Depth",
     "standard_name": "Anomaly Detection",
     "standard_text": "Continuous monitoring of AI inputs and outputs for signs of a cyberattack, such as prompt injection."
   },
@@ -131,7 +115,6 @@
     "pk_Harmonised_Standard_ID": "HS-017",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.9]",
-    "standard_group": "[18229-2: Trustworthiness (Accuracy)] - Metric Requirements",
     "standard_name": "Metric Selection",
     "standard_text": "Selecting the appropriate 'yardstick' (e.g., F1-score for classification or Mean Absolute Error for regression) for the specific use case."
   },
@@ -139,7 +122,6 @@
     "pk_Harmonised_Standard_ID": "HS-018",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.10]",
-    "standard_group": "[18229-2: Trustworthiness (Accuracy)] - Metric Requirements",
     "standard_name": "Validation",
     "standard_text": "Rigorous testing to prove accuracy scores are not 'overfitted' to training data and remain valid on unseen data."
   },
@@ -147,7 +129,6 @@
     "pk_Harmonised_Standard_ID": "HS-019",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.11]",
-    "standard_group": "[18229-2: Trustworthiness (Accuracy)] - Metric Requirements",
     "standard_name": "Declaration",
     "standard_text": "Explicitly stating the achieved accuracy levels and metrics within the formal Instructions for Use."
   },
@@ -155,7 +136,6 @@
     "pk_Harmonised_Standard_ID": "HS-020",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.12]",
-    "standard_group": "[18229-2: Trustworthiness (Accuracy)] - Lifecycle Performance",
     "standard_name": "Consistency",
     "standard_text": "Continuous monitoring to detect if accuracy 'drifts' or degrades after the system is in production."
   },
@@ -163,7 +143,6 @@
     "pk_Harmonised_Standard_ID": "HS-021",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.13]",
-    "standard_group": "[18229-2: Trustworthiness (Accuracy)] - Lifecycle Performance",
     "standard_name": "Benchmarking",
     "standard_text": "Comparing AI performance against human expert benchmarks or recognized industry standards."
   },
@@ -171,7 +150,6 @@
     "pk_Harmonised_Standard_ID": "HS-022",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.14]",
-    "standard_group": "[18229-2: Trustworthiness (Accuracy)] - Technical Documentation",
     "standard_name": "Verification Methods",
     "standard_text": "Detailed documentation of the training/testing data split and the statistical methods used to verify results."
   },
@@ -179,7 +157,6 @@
     "pk_Harmonised_Standard_ID": "HS-023",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.15]",
-    "standard_group": "[18229-2: Trustworthiness (Robustness)] - Resilience Factors",
     "standard_name": "Input Noise",
     "standard_text": "Ensuring the AI can handle corrupted inputs (e.g., typos, sensor errors, or blurry data) without crashing."
   },
@@ -187,7 +164,6 @@
     "pk_Harmonised_Standard_ID": "HS-024",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.16]",
-    "standard_group": "[18229-2: Trustworthiness (Robustness)] - Resilience Factors",
     "standard_name": "Environment Changes",
     "standard_text": "Maintaining system functionality during external shifts, such as poor lighting or network latency."
   },
@@ -195,7 +171,6 @@
     "pk_Harmonised_Standard_ID": "HS-025",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.17]",
-    "standard_group": "[18229-2: Trustworthiness (Robustness)] - Resilience Factors",
     "standard_name": "Feedback Loops",
     "standard_text": "Implementing technical barriers to prevent the AI from learning from its own biased or incorrect outputs over time."
   },
@@ -203,7 +178,6 @@
     "pk_Harmonised_Standard_ID": "HS-026",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.18]",
-    "standard_group": "[18229-2: Trustworthiness (Robustness)] - Fail-Safe Mechanisms",
     "standard_name": "Graceful Degradation",
     "standard_text": "Designing the system to fail safely (e.g., a 'safe state' or limited functionality mode) rather than an abrupt collapse."
   },
@@ -211,7 +185,6 @@
     "pk_Harmonised_Standard_ID": "HS-027",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.19]",
-    "standard_group": "[18229-2: Trustworthiness (Robustness)] - Fail-Safe Mechanisms",
     "standard_name": "Technical Redundancy",
     "standard_text": "Utilizing backup modules or 'sanity check' algorithms to catch and mitigate AI errors in real-time."
   },
@@ -219,7 +192,6 @@
     "pk_Harmonised_Standard_ID": "HS-028",
     "fk_AI_Article_ID": "ART-003",
     "standard_ref": "[18229-2.20]",
-    "standard_group": "[18229-2: Trustworthiness (Robustness)] - Reproducibility",
     "standard_name": "Output Reliability",
     "standard_text": "Ensuring the AI produces consistent, non-random outputs when given the exact same inputs."
   },
@@ -227,7 +199,6 @@
     "pk_Harmonised_Standard_ID": "HS-029",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.1]",
-    "standard_group": "[18284: Quality and Governance] - Governance Practices",
     "standard_name": "Design Choices",
     "standard_text": "Documenting the rationale behind data selection, including intended purpose and suitability assessments."
   },
@@ -235,7 +206,6 @@
     "pk_Harmonised_Standard_ID": "HS-030",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.2]",
-    "standard_group": "[18284: Quality and Governance] - Governance Practices",
     "standard_name": "Data Origin",
     "standard_text": "Tracking the source and legal basis (provenance) of data collection and preparation."
   },
@@ -243,7 +213,6 @@
     "pk_Harmonised_Standard_ID": "HS-031",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.3]",
-    "standard_group": "[18284: Quality and Governance] - Governance Practices",
     "standard_name": "Data Preparation Operations",
     "standard_text": "Standardizing processes for annotation, labeling, cleaning, enrichment, and aggregation."
   },
@@ -251,7 +220,6 @@
     "pk_Harmonised_Standard_ID": "HS-032",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.4]",
-    "standard_group": "[18284: Quality and Governance] - Quality Metrics",
     "standard_name": "Representativeness",
     "standard_text": "Statistical proof (e.g., distribution analysis) that data reflects specific geographical, contextual, and behavioral settings."
   },
@@ -259,7 +227,6 @@
     "pk_Harmonised_Standard_ID": "HS-033",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.5]",
-    "standard_group": "[18284: Quality and Governance] - Quality Metrics",
     "standard_name": "Completeness",
     "standard_text": "Identifying and addressing 'data gaps' or missing information that could prevent regulatory compliance."
   },
@@ -267,7 +234,6 @@
     "pk_Harmonised_Standard_ID": "HS-034",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.6]",
-    "standard_group": "[18284: Quality and Governance] - Quality Metrics",
     "standard_name": "Accuracy / Correctness",
     "standard_text": "Implementing methods to detect and mitigate errors in labels and noise in the raw data."
   },
@@ -275,7 +241,6 @@
     "pk_Harmonised_Standard_ID": "HS-035",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.7]",
-    "standard_group": "[18284: Quality and Governance] - Lifecycle Requirements",
     "standard_name": "Dataset Splitting",
     "standard_text": "Establishing strict rules for training, validation, and testing splits to ensure unbiased performance evaluation."
   },
@@ -283,7 +248,6 @@
     "pk_Harmonised_Standard_ID": "HS-036",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.8]",
-    "standard_group": "[18284: Quality and Governance] - Lifecycle Requirements",
     "standard_name": "Data Retention",
     "standard_text": "Policies for storage duration (typically 10 years for documentation) and secure decommissioning mechanisms."
   },
@@ -291,7 +255,6 @@
     "pk_Harmonised_Standard_ID": "HS-037",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18284.9]",
-    "standard_group": "[18284: Quality and Governance] - Assumptions",
     "standard_name": "Formulation",
     "standard_text": "Explicit documentation of what the data is intended to measure and represent (e.g., 'past history as a predictor')."
   },
@@ -299,7 +262,6 @@
     "pk_Harmonised_Standard_ID": "HS-038",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18283.1]",
-    "standard_group": "[18283: Bias] - Bias Detection",
     "standard_name": "Representativeness",
     "standard_text": "Ensuring training, validation, and testing datasets proportionally cover all relevant subgroups (e.g., age, gender, ethnicity) to prevent under-representation bias."
   },
@@ -307,7 +269,6 @@
     "pk_Harmonised_Standard_ID": "HS-039",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18283.2]",
-    "standard_group": "[18283: Bias] - Bias Detection",
     "standard_name": "Bias Metrics",
     "standard_text": "Applying specific mathematical tests, such as Disparate Impact or Equalized Odds, to provide a quantitative proof that the model does not favor one group over another."
   },
@@ -315,7 +276,6 @@
     "pk_Harmonised_Standard_ID": "HS-040",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18283.3]",
-    "standard_group": "[18283: Bias] - Bias Detection",
     "standard_name": "Proxy Identification",
     "standard_text": "Identifying and analyzing 'hidden' variables (e.g., zip codes) that correlate with protected traits to prevent indirect discrimination."
   },
@@ -323,7 +283,6 @@
     "pk_Harmonised_Standard_ID": "HS-041",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18283.4]",
-    "standard_group": "[18283: Bias] - Human & Social Context",
     "standard_name": "Multi-stakeholder Input",
     "standard_text": "Engaging diverse teams to define 'fairness' for specific use cases, ensuring the system respects different societal and functional settings."
   },
@@ -331,7 +290,6 @@
     "pk_Harmonised_Standard_ID": "HS-042",
     "fk_AI_Article_ID": "ART-004",
     "standard_ref": "[18283.5]",
-    "standard_group": "[18283: Bias] - Human & Social Context",
     "standard_name": "Fundamental Rights",
     "standard_text": "Directly linking bias mitigation measures to the protection of fundamental rights and the prevention of discrimination prohibited under Union law."
   },
@@ -339,7 +297,6 @@
     "pk_Harmonised_Standard_ID": "HS-043",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.1]",
-    "standard_group": "[24970: AI System Logging] - Logging Triggers",
     "standard_name": "Monitoring Events",
     "standard_text": "Capturing automated performance benchmarks, safety checks, and anomalies triggered by the system's internal observability tools."
   },
@@ -347,7 +304,6 @@
     "pk_Harmonised_Standard_ID": "HS-044",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.2]",
-    "standard_group": "[24970: AI System Logging] - Logging Triggers",
     "standard_name": "Human Intervention",
     "standard_text": "Recording every instance of a user overriding, editing, or stopping an AI output, directly linking to Article 14 oversight duties."
   },
@@ -355,7 +311,6 @@
     "pk_Harmonised_Standard_ID": "HS-045",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.3]",
-    "standard_group": "[24970: AI System Logging] - Captured Information",
     "standard_name": "System State",
     "standard_text": "Snapshots of current model parameters, version IDs, and configuration hashes at the exact time a decision or output was generated."
   },
@@ -363,7 +318,6 @@
     "pk_Harmonised_Standard_ID": "HS-046",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.4]",
-    "standard_group": "[24970: AI System Logging] - Captured Information",
     "standard_name": "Input/Output Data",
     "standard_text": "Recording the specific user prompts and retrieved knowledge chunks that led to a high-risk or decision-making output."
   },
@@ -371,7 +325,6 @@
     "pk_Harmonised_Standard_ID": "HS-047",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.5]",
-    "standard_group": "[24970: AI System Logging] - Captured Information",
     "standard_name": "Errors & Failures",
     "standard_text": "Detailed diagnostic data including error codes, messages, severity levels, and the fallback mechanisms activated during a crash."
   },
@@ -379,7 +332,6 @@
     "pk_Harmonised_Standard_ID": "HS-048",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.6]",
-    "standard_group": "[24970: AI System Logging] - Storage & Governance",
     "standard_name": "Tamper Resistance",
     "standard_text": "Using technical controls like Write-Once-Read-Many (WORM) storage or cryptographic hashes to ensure logs cannot be altered after creation."
   },
@@ -387,7 +339,6 @@
     "pk_Harmonised_Standard_ID": "HS-049",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.7]",
-    "standard_group": "[24970: AI System Logging] - Storage & Governance",
     "standard_name": "Retention Periods",
     "standard_text": "Maintaining logs for at least 6 months (per Article 26(6)) or longer as mandated by sector-specific EU or national laws."
   },
@@ -395,7 +346,6 @@
     "pk_Harmonised_Standard_ID": "HS-050",
     "fk_AI_Article_ID": "ART-005",
     "standard_ref": "[24970.8]",
-    "standard_group": "[24970: AI System Logging] - Storage & Governance",
     "standard_name": "Privacy",
     "standard_text": "Balancing full traceability with GDPR requirements through data minimization, such as anonymizing user IDs where appropriate."
   },
@@ -403,7 +353,6 @@
     "pk_Harmonised_Standard_ID": "HS-051",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.1]",
-    "standard_group": "[18286: Quality Management System] - Organizational Strategy",
     "standard_name": "Compliance Strategy",
     "standard_text": "A formal plan for how the organization will maintain conformity (including modifications to the AI)."
   },
@@ -411,7 +360,6 @@
     "pk_Harmonised_Standard_ID": "HS-052",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.2]",
-    "standard_group": "[18286: Quality Management System] - Organizational Strategy",
     "standard_name": "Accountability Framework",
     "standard_text": "Defining clear roles and management responsibilities for AI safety."
   },
@@ -419,7 +367,6 @@
     "pk_Harmonised_Standard_ID": "HS-053",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.3]",
-    "standard_group": "[18286: Quality Management System] - Operational Controls",
     "standard_name": "Design & Development",
     "standard_text": "Procedures for design control, verification, and validation."
   },
@@ -427,7 +374,6 @@
     "pk_Harmonised_Standard_ID": "HS-054",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.4]",
-    "standard_group": "[18286: Quality Management System] - Operational Controls",
     "standard_name": "Resource Management",
     "standard_text": "Ensuring the right human and technical resources (e.g., compute power, specialized staff) are available."
   },
@@ -435,7 +381,6 @@
     "pk_Harmonised_Standard_ID": "HS-055",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.5]",
-    "standard_group": "[18286: Quality Management System] - Post-Launch Duties",
     "standard_name": "Post-Market Monitoring (PMM)",
     "standard_text": "A system to collect and analyze data on the AI's performance once it is in the hands of users."
   },
@@ -443,7 +388,6 @@
     "pk_Harmonised_Standard_ID": "HS-056",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.6]",
-    "standard_group": "[18286: Quality Management System] - Post-Launch Duties",
     "standard_name": "Incident Reporting",
     "standard_text": "Procedures for reporting 'serious incidents' to national authorities within strict timelines."
   },
@@ -451,7 +395,6 @@
     "pk_Harmonised_Standard_ID": "HS-057",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.7]",
-    "standard_group": "[18286: Quality Management System] - Documentation & Records",
     "standard_name": "Technical Documentation",
     "standard_text": "Maintaining the 'Technical File' required by Article 11."
   },
@@ -459,7 +402,6 @@
     "pk_Harmonised_Standard_ID": "HS-058",
     "fk_AI_Article_ID": "ART-006",
     "standard_ref": "[18286.8]",
-    "standard_group": "[18286: Quality Management System] - Documentation & Records",
     "standard_name": "Record-Keeping",
     "standard_text": "Systems for storing logs and version-controlled documentation for at least 10 years."
   },
@@ -467,7 +409,6 @@
     "pk_Harmonised_Standard_ID": "HS-059",
     "fk_AI_Article_ID": "ART-007",
     "standard_ref": "[18228.1]",
-    "standard_group": "[18228: Risk Management] - Key Risk Iterations",
     "standard_name": "Identification",
     "standard_text": "Identification and analysis of known and reasonably foreseeable risks the AI system may pose to health, safety, or fundamental rights."
   },
@@ -475,7 +416,6 @@
     "pk_Harmonised_Standard_ID": "HS-060",
     "fk_AI_Article_ID": "ART-007",
     "standard_ref": "[18228.2]",
-    "standard_group": "[18228: Risk Management] - Key Risk Iterations",
     "standard_name": "Estimation",
     "standard_text": "Estimation and evaluation of the risks that may emerge when the high-risk AI system is used in accordance with its intended purpose or under conditions of reasonably foreseeable misuse."
   },
@@ -483,7 +423,6 @@
     "pk_Harmonised_Standard_ID": "HS-061",
     "fk_AI_Article_ID": "ART-007",
     "standard_ref": "[18228.3]",
-    "standard_group": "[18228: Risk Management] - Key Risk Iterations",
     "standard_name": "Evaluation",
     "standard_text": "Evaluation of other emerging risks based on the analysis of data gathered from the post-market monitoring system."
   },
@@ -491,7 +430,6 @@
     "pk_Harmonised_Standard_ID": "HS-062",
     "fk_AI_Article_ID": "ART-007",
     "standard_ref": "[18228.4]",
-    "standard_group": "[18228: Risk Management] - Mitigation Hierarchy",
     "standard_name": "1. Elimination",
     "standard_text": "Elimination or reduction of risks as far as possible through adequate design and development."
   },
@@ -499,7 +437,6 @@
     "pk_Harmonised_Standard_ID": "HS-063",
     "fk_AI_Article_ID": "ART-007",
     "standard_ref": "[18228.5]",
-    "standard_group": "[18228: Risk Management] - Mitigation Hierarchy",
     "standard_name": "2. Mitigation",
     "standard_text": "Implementation of appropriate mitigation and control measures in relation to risks that cannot be eliminated."
   },
@@ -507,7 +444,6 @@
     "pk_Harmonised_Standard_ID": "HS-064",
     "fk_AI_Article_ID": "ART-007",
     "standard_ref": "[18228.6]",
-    "standard_group": "[18228: Risk Management] - Mitigation Hierarchy",
     "standard_name": "3. Information",
     "standard_text": "Provision of adequate information to deployers and, where appropriate, to persons likely to be affected by the system."
   },
@@ -515,7 +451,6 @@
     "pk_Harmonised_Standard_ID": "HS-065",
     "fk_AI_Article_ID": "ART-008",
     "standard_ref": "[18286.9]",
-    "standard_group": "[18286: Quality Management System] - System Description",
     "standard_name": "System Identity & Purpose",
     "standard_text": "Documented declaration of the system name, version, intended purpose, and the specific task it performs, as required by Annex IV point 1 of the AI Act."
   },
@@ -523,7 +458,6 @@
     "pk_Harmonised_Standard_ID": "HS-066",
     "fk_AI_Article_ID": "ART-008",
     "standard_ref": "[18286.10]",
-    "standard_group": "[18286: Quality Management System] - System Description",
     "standard_name": "Architecture & Components",
     "standard_text": "Description of the overall system architecture, key components, and the interactions between them, including any third-party models or services."
   },
@@ -531,7 +465,6 @@
     "pk_Harmonised_Standard_ID": "HS-067",
     "fk_AI_Article_ID": "ART-008",
     "standard_ref": "[18286.11]",
-    "standard_group": "[18286: Quality Management System] - System Description",
     "standard_name": "Training Methodology",
     "standard_text": "Documentation of the training approach, algorithms used, hyperparameters, and design choices made during development."
   },
@@ -539,7 +472,6 @@
     "pk_Harmonised_Standard_ID": "HS-068",
     "fk_AI_Article_ID": "ART-008",
     "standard_ref": "[18286.12]",
-    "standard_group": "[18286: Quality Management System] - Performance Evidence",
     "standard_name": "Accuracy & Metrics Achieved",
     "standard_text": "Documented evidence of the accuracy levels and performance metrics achieved during testing, to be included in the instructions for use per Article 13."
   },
@@ -547,7 +479,6 @@
     "pk_Harmonised_Standard_ID": "HS-069",
     "fk_AI_Article_ID": "ART-008",
     "standard_ref": "[18286.13]",
-    "standard_group": "[18286: Quality Management System] - Performance Evidence",
     "standard_name": "Testing & Validation Results",
     "standard_text": "Summary of testing and validation outcomes including datasets used, test conditions, and results demonstrating the system meets its intended performance levels."
   },
@@ -555,7 +486,6 @@
     "pk_Harmonised_Standard_ID": "HS-070",
     "fk_AI_Article_ID": "ART-008",
     "standard_ref": "[18286.14]",
-    "standard_group": "[18286: Quality Management System] - Change Management",
     "standard_name": "Version Control",
     "standard_text": "A versioning scheme is in place ensuring every release of the system is uniquely identified and traceable to its corresponding technical documentation."
   },
@@ -563,7 +493,6 @@
     "pk_Harmonised_Standard_ID": "HS-071",
     "fk_AI_Article_ID": "ART-008",
     "standard_ref": "[18286.15]",
-    "standard_group": "[18286: Quality Management System] - Change Management",
     "standard_name": "Modification Log",
     "standard_text": "An auditable log of all changes made to the system after initial placement on the market, including the nature of the change and whether a new conformity assessment was triggered."
   },
@@ -571,7 +500,6 @@
     "pk_Harmonised_Standard_ID": "HS-072",
     "fk_AI_Article_ID": "ART-009",
     "standard_ref": "[42001.1]",
-    "standard_group": "[42001: AI Management System] - Modification Assessment",
     "standard_name": "Scope of Change Evaluation",
     "standard_text": "A documented process exists to evaluate whether a proposed change to the AI system constitutes a substantial modification that affects the system's compliance with Chapter III Section 2 requirements."
   },
@@ -579,7 +507,6 @@
     "pk_Harmonised_Standard_ID": "HS-073",
     "fk_AI_Article_ID": "ART-009",
     "standard_ref": "[42001.2]",
-    "standard_group": "[42001: AI Management System] - Modification Assessment",
     "standard_name": "Provider Responsibility Trigger",
     "standard_text": "Where a deployer makes a substantial modification outside the original provider's intended purpose, the process confirms that the modifier assumes provider responsibilities under Article 25."
   },
@@ -587,7 +514,6 @@
     "pk_Harmonised_Standard_ID": "HS-074",
     "fk_AI_Article_ID": "ART-009",
     "standard_ref": "[42001.3]",
-    "standard_group": "[42001: AI Management System] - Re-conformity",
     "standard_name": "Re-assessment Requirement",
     "standard_text": "A substantial modification triggers a full or partial re-run of the conformity assessment process under Article 43 before the modified system is redeployed."
   },
@@ -595,7 +521,6 @@
     "pk_Harmonised_Standard_ID": "HS-075",
     "fk_AI_Article_ID": "ART-009",
     "standard_ref": "[42001.4]",
-    "standard_group": "[42001: AI Management System] - Re-conformity",
     "standard_name": "Updated Technical Documentation",
     "standard_text": "The technical documentation under Article 11 is updated to reflect the modification, including revised architecture, performance evidence, and modification log entries."
   },
@@ -603,7 +528,6 @@
     "pk_Harmonised_Standard_ID": "HS-076",
     "fk_AI_Article_ID": "ART-010",
     "standard_ref": "[42001.5]",
-    "standard_group": "[42001: AI Management System] - Operational Governance",
     "standard_name": "Instructions for Use Compliance",
     "standard_text": "The deployer operates the system strictly within the intended purpose and in accordance with the provider's instructions for use supplied under Article 13."
   },
@@ -611,7 +535,6 @@
     "pk_Harmonised_Standard_ID": "HS-077",
     "fk_AI_Article_ID": "ART-010",
     "standard_ref": "[42001.6]",
-    "standard_group": "[42001: AI Management System] - Operational Governance",
     "standard_name": "Human Oversight Implementation",
     "standard_text": "The deployer has assigned competent natural persons to perform human oversight of the system during operation, with the authority and capability to intervene or halt the system."
   },
@@ -619,7 +542,6 @@
     "pk_Harmonised_Standard_ID": "HS-078",
     "fk_AI_Article_ID": "ART-010",
     "standard_ref": "[42001.7]",
-    "standard_group": "[42001: AI Management System] - Operational Governance",
     "standard_name": "Monitoring & Logging",
     "standard_text": "The deployer monitors system operation and retains logs generated under Article 12 for the period specified by the provider or at least six months, and makes them available to authorities on request."
   },
@@ -627,7 +549,6 @@
     "pk_Harmonised_Standard_ID": "HS-079",
     "fk_AI_Article_ID": "ART-010",
     "standard_ref": "[42001.8]",
-    "standard_group": "[42001: AI Management System] - Impact Assessment",
     "standard_name": "Fundamental Rights Impact Assessment",
     "standard_text": "Prior to deployment in a public authority or regulated context, the deployer has conducted a fundamental rights impact assessment as required by Article 26(7), documented the findings, and notified the provider of any identified risks."
   },
@@ -635,7 +556,6 @@
     "pk_Harmonised_Standard_ID": "HS-080",
     "fk_AI_Article_ID": "ART-010",
     "standard_ref": "[42001.9]",
-    "standard_group": "[42001: AI Management System] - Impact Assessment",
     "standard_name": "Affected Persons Identification",
     "standard_text": "The categories of natural persons and groups likely to be affected by the system's outputs have been identified, documented, and considered in the deployment design and oversight arrangements."
   },
@@ -643,7 +563,6 @@
     "pk_Harmonised_Standard_ID": "HS-081",
     "fk_AI_Article_ID": "ART-011",
     "standard_ref": "[18286.16]",
-    "standard_group": "[18286: Quality Management System] - Pre-Market Review",
     "standard_name": "Articles 9-17 Completion Verification",
     "standard_text": "A structured internal review confirms that all applicable Article 9-17 controls in this framework have been assessed, that no controls remain in a Not Met status, and that evidence is available for each Applicable control."
   },
@@ -651,7 +570,6 @@
     "pk_Harmonised_Standard_ID": "HS-082",
     "fk_AI_Article_ID": "ART-011",
     "standard_ref": "[18286.17]",
-    "standard_group": "[18286: Quality Management System] - Pre-Market Review",
     "standard_name": "Competent Reviewer Sign-off",
     "standard_text": "The self-assessment has been reviewed and approved by a person with sufficient technical and legal competence to evaluate conformity with the AI Act requirements, whose identity and qualifications are recorded."
   },
@@ -659,7 +577,6 @@
     "pk_Harmonised_Standard_ID": "HS-083",
     "fk_AI_Article_ID": "ART-011",
     "standard_ref": "[18286.18]",
-    "standard_group": "[18286: Quality Management System] - Conformity Conclusion",
     "standard_name": "No Critical Gaps Declaration",
     "standard_text": "A formal written declaration confirms that no critical compliance gaps have been identified, or that all identified gaps have been resolved and re-assessed prior to market placement."
   },
@@ -667,7 +584,6 @@
     "pk_Harmonised_Standard_ID": "HS-084",
     "fk_AI_Article_ID": "ART-011",
     "standard_ref": "[18286.19]",
-    "standard_group": "[18286: Quality Management System] - Conformity Conclusion",
     "standard_name": "Self-Assessment Conclusion Statement",
     "standard_text": "A documented conclusion statement is produced confirming that the system meets all applicable requirements of Chapter III Section 2 of the AI Act and is ready for market placement or deployment."
   },
@@ -675,7 +591,6 @@
     "pk_Harmonised_Standard_ID": "HS-085",
     "fk_AI_Article_ID": "ART-011",
     "standard_ref": "[18286.20]",
-    "standard_group": "[18286: Quality Management System] - Assessment Record",
     "standard_name": "Conformity Review Date & Version",
     "standard_text": "The date the conformity assessment was completed, the version of the system assessed, and the version of this compliance framework used are recorded and retained as part of the technical documentation."
   },
@@ -683,7 +598,6 @@
     "pk_Harmonised_Standard_ID": "HS-086",
     "fk_AI_Article_ID": "ART-012",
     "standard_ref": "[12792.1]",
-    "standard_group": "[12792: AI Transparency Taxonomy] - Disclosure Requirements",
     "standard_name": "AI Identity Disclosure",
     "standard_text": "Natural persons interacting with the system are informed in a clear, timely, and unambiguous manner that they are interacting with an AI system, unless this is obvious from context."
   },
@@ -691,7 +605,6 @@
     "pk_Harmonised_Standard_ID": "HS-087",
     "fk_AI_Article_ID": "ART-012",
     "standard_ref": "[12792.2]",
-    "standard_group": "[12792: AI Transparency Taxonomy] - Disclosure Requirements",
     "standard_name": "Disclosure Timing & Clarity",
     "standard_text": "The AI disclosure is presented at the start of the interaction or before any consequential output is produced, and is expressed in plain language accessible to the intended audience."
   },
@@ -699,7 +612,6 @@
     "pk_Harmonised_Standard_ID": "HS-088",
     "fk_AI_Article_ID": "ART-012",
     "standard_ref": "[12792.3]",
-    "standard_group": "[12792: AI Transparency Taxonomy] - Synthetic Content",
     "standard_name": "AI-Generated Content Labelling",
     "standard_text": "Content generated or manipulated by the system that could be mistaken for authentic human-created content is labelled as AI-generated in a machine-readable format and, where technically feasible, in a manner visible to the end user."
   },
@@ -707,7 +619,6 @@
     "pk_Harmonised_Standard_ID": "HS-089",
     "fk_AI_Article_ID": "ART-012",
     "standard_ref": "[12792.4]",
-    "standard_group": "[12792: AI Transparency Taxonomy] - Synthetic Content",
     "standard_name": "Deep Fake Detection Support",
     "standard_text": "Where the system generates synthetic audio, image, or video content depicting real persons or events, technical measures are in place to embed provenance metadata or watermarking to support downstream detection."
   },
@@ -715,7 +626,6 @@
     "pk_Harmonised_Standard_ID": "HS-090",
     "fk_AI_Article_ID": "ART-012",
     "standard_ref": "[12792.5]",
-    "standard_group": "[12792: AI Transparency Taxonomy] - Deployer Duties",
     "standard_name": "Deployer Disclosure Implementation",
     "standard_text": "The deployer has implemented the provider's transparency instructions and can demonstrate that the disclosure mechanism is active in the production environment and has been tested for visibility and accessibility."
   },
@@ -723,7 +633,6 @@
     "pk_Harmonised_Standard_ID": "HS-091",
     "fk_AI_Article_ID": "ART-013",
     "standard_ref": "[18286.21]",
-    "standard_group": "[18286: Quality Management System] - Monitoring System",
     "standard_name": "PMM Plan & Scope",
     "standard_text": "A post-market monitoring plan is documented, covering the scope of monitoring, the data to be collected, the frequency of review, and the roles responsible for executing the plan."
   },
@@ -731,7 +640,6 @@
     "pk_Harmonised_Standard_ID": "HS-092",
     "fk_AI_Article_ID": "ART-013",
     "standard_ref": "[18286.22]",
-    "standard_group": "[18286: Quality Management System] - Monitoring System",
     "standard_name": "Performance Data Collection",
     "standard_text": "The system actively collects performance data during operation, including accuracy metrics, error rates, and user feedback, sufficient to detect degradation or emerging risks over time."
   },
@@ -739,7 +647,6 @@
     "pk_Harmonised_Standard_ID": "HS-093",
     "fk_AI_Article_ID": "ART-013",
     "standard_ref": "[18286.23]",
-    "standard_group": "[18286: Quality Management System] - Monitoring System",
     "standard_name": "Drift & Degradation Detection",
     "standard_text": "Automated or scheduled checks are in place to detect model drift, data distribution shift, or performance degradation, with defined thresholds that trigger a formal review or corrective action."
   },
@@ -747,7 +654,6 @@
     "pk_Harmonised_Standard_ID": "HS-094",
     "fk_AI_Article_ID": "ART-013",
     "standard_ref": "[18286.24]",
-    "standard_group": "[18286: Quality Management System] - Feedback Loop",
     "standard_name": "User Incident Reporting Channel",
     "standard_text": "A mechanism exists for deployers and affected persons to report issues, unexpected behaviour, or near-misses to the provider, and reported issues are logged and reviewed within a defined timeframe."
   },
@@ -755,7 +661,6 @@
     "pk_Harmonised_Standard_ID": "HS-095",
     "fk_AI_Article_ID": "ART-013",
     "standard_ref": "[18286.25]",
-    "standard_group": "[18286: Quality Management System] - Feedback Loop",
     "standard_name": "Corrective Action Process",
     "standard_text": "A documented corrective action process is in place to respond to PMM findings, including root cause analysis, remediation steps, re-testing, and where necessary triggering a re-assessment under Article 43."
   }
