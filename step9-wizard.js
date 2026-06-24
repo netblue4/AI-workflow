@@ -109,11 +109,15 @@
       });
     };
 
-    (s6.risk_controls || []).filter(c => c.selected).forEach(c =>
+    // Framework_Statement controls are part of the governance framework and do
+    // not need operationalising, so they are excluded from this step entirely.
+    const _isFS = c => (c.control_source || '').includes('Framework');
+
+    (s6.risk_controls || []).filter(c => c.selected && !_isFS(c)).forEach(c =>
       push(c.control_id, c.control_name, c.control_source || 'EU AI Act', c.risk_id)
     );
 
-    (s6.compliance_additions || []).forEach(c =>
+    (s6.compliance_additions || []).filter(c => !_isFS(c)).forEach(c =>
       push(c.control_id, c.control_name, 'Compliance', null)
     );
 

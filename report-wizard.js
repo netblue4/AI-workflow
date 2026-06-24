@@ -553,15 +553,19 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       return refs.length ? refs.map(r => `<span class="hs-ref-chip">${_esc(r)}</span>`).join(' ') : '<span class="ctrl-src src-eu">EU AI Act</span>';
     };
 
+    // Framework_Statement controls are part of the governance framework; they
+    // do not belong in the operational control schedule. Their HS coverage is
+    // still reflected in the Compliance Traceability section.
+    const _isFS = c => (c.control_source || '').includes('Framework');
+
     const byRisk = new Map();
-    riskCtrls.forEach(c => {
+    riskCtrls.filter(c => !_isFS(c)).forEach(c => {
       const key = c.risk_id || 'unknown';
       if (!byRisk.has(key)) byRisk.set(key, []);
       byRisk.get(key).push(c);
     });
 
-    const fsCtrls     = compAdds.filter(c => (c.control_source || '').includes('Framework'));
-    const regularAdds = compAdds.filter(c => !(c.control_source || '').includes('Framework'));
+    const regularAdds = compAdds.filter(c => !_isFS(c));
 
     const s11date = s11?.activation_date ? ` &nbsp;|&nbsp; Step 9 recorded: ${s11.activation_date}` : ' &nbsp;|&nbsp; <em>Step 9 — Operational Controls Activation not yet completed</em>';
     let html = `<p class="section-meta">Step 6 date: ${s9.assessment_date || '—'}${s11date}</p>`;
@@ -609,22 +613,6 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           <td class="mono">${_esc(c.control_id)}</td>
           <td>${_esc(c.control_name || '—')}</td>
           <td>${_hsCell(c.control_id)}</td>
-          <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
-        </tr>`).join('')}
-        </tbody>
-      </table>`;
-    }
-
-    // ---- Framework Self-Certifications ------------------------------
-    if (fsCtrls.length > 0) {
-      html += `<h3 class="sub-heading">Framework Self-Certifications</h3>
-      <table class="data-table data-table--sched">
-        <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
-        <tbody>
-        ${fsCtrls.map(c => `<tr>
-          <td class="mono">${_esc(c.control_id)}</td>
-          <td>${_esc(c.control_name || '—')}</td>
-          <td class="mono small">${_esc(c.fk_Harmonised_Standard_IDs || '—')}</td>
           <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
         </tr>`).join('')}
         </tbody>
