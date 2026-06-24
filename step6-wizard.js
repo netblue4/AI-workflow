@@ -7,6 +7,9 @@
   'use strict';
 
   // ---- Module state -------------------------------------------
+  const _el = WizUtils.el;
+  const _sectionLabel = WizUtils.sectionLabel;
+
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null;
   let _riskData = []; // [{ risk_id, display_name, risk_type, risk_source, risk_description, controls }]
@@ -65,10 +68,7 @@
       return;
     }
 
-    try {
-      const s = sessionStorage.getItem('ai_workflow_system_record');
-      if (s) _record = JSON.parse(s);
-    } catch (_) {}
+    _record = WizUtils.loadRecord();
 
     _riskData = _buildRiskControlData();
 
@@ -155,15 +155,12 @@
 
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
-    const strip = _el('div', 'wiz-tab-strip');
-    [['wizard', 'Step Wizard'], ['compliance', 'AI Act Compliance View'], ['reference', 'Reference'], ['framework', 'Framework Mapping']].forEach(([id, lbl], i) => {
-      const btn = document.createElement('button');
-      btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
-      btn.dataset.tab = id; btn.textContent = lbl;
-      btn.addEventListener('click', () => _switchTab(id));
-      strip.appendChild(btn);
-    });
-    return strip;
+    return WizUtils.buildTabStrip([
+      ['wizard', 'Step Wizard'],
+      ['compliance', 'AI Act Compliance View'],
+      ['reference', 'Reference'],
+      ['framework', 'Framework Mapping']
+    ], _switchTab);
   }
 
   function _switchTab(id) {
@@ -733,7 +730,7 @@
     }
     _record._meta.last_modified = new Date().toISOString();
     _record['step-6'] = rec9;
-    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 9 saved ✓');
     _renderResults(rec9);
   }
@@ -1008,7 +1005,7 @@
       hs_not_applicable: { ..._state.hsNotApplicable }
     };
 
-    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Compliance additions saved ✓');
 
     // Refresh wizard tab compliance section
@@ -1512,11 +1509,7 @@
 
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
-    // Inject shared wiz-* base classes if not already present (e.g. when step-5 hasn't run)
-    if (!document.getElementById('wiz-shared-styles')) {
-      const shared = document.createElement('style');
-      shared.id = 'wiz-shared-styles';
-      shared.textContent = `
+    WizUtils.injectStyles('wiz-shared-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
 .wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
 .wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
@@ -1530,14 +1523,8 @@
 .wiz8-stat{display:flex;flex-direction:column;gap:2px}
 .wiz8-stat-num{font-size:24px;font-weight:700;color:#15803d;line-height:1}
 .wiz8-stat-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
-`;
-      document.head.appendChild(shared);
-    }
-
-    if (document.getElementById('wiz9-styles')) return;
-    const s = document.createElement('style');
-    s.id = 'wiz9-styles';
-    s.textContent = `
+    `);
+    WizUtils.injectStyles('wiz9-styles', `
 /* Source card */
 .wiz9-source-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-bottom:12px}
 .wiz9-source-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#166534;margin:0 0 10px}
@@ -1850,23 +1837,9 @@
 .wiz9-cmp-save-summary{font-size:12px;color:#4c1d95;font-weight:500}
 .wiz9-cmp-save-btn{padding:7px 16px;background:#6d28d9;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
 .wiz9-cmp-save-btn:hover{background:#5b21b6}
-`;
-
-    document.head.appendChild(s);
+    `);
   }
 
-  // ---- Utilities ----------------------------------------------
-  function _el(tag, cls, props) {
-    const el = document.createElement(tag);
-    if (cls) el.className = cls;
-    if (props) Object.entries(props).forEach(([k, v]) => {
-      if (k === 'style') el.style.cssText = v; else el[k] = v;
-    });
-    return el;
-  }
-  function _sectionLabel(text) {
-    const p = _el('p', 'section-label'); p.textContent = text; return p;
-  }
   function _safeId(str) {
     return str.replace(/[^a-zA-Z0-9]/g, '_');
   }

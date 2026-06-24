@@ -8,6 +8,9 @@
   'use strict';
 
   // ---- Module state -------------------------------------------
+  const _el = WizUtils.el;
+  const _sectionLabel = WizUtils.sectionLabel;
+
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _legalGuidance = null, _record = null, _detail = null;
   let _step3Data = null, _step7Data = null;
@@ -115,10 +118,7 @@
       try { _detail = await detailRes.value.json(); } catch (_) {}
     }
 
-    try {
-      const s = sessionStorage.getItem('ai_workflow_system_record');
-      if (s) _record = JSON.parse(s);
-    } catch (_) {}
+    _record = WizUtils.loadRecord();
 
     _step3Data = _record?.['step-3'] ?? null;
     _step7Data = _record?.['step-4'] ?? null;
@@ -281,15 +281,11 @@
 
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
-    const strip = _el('div', 'wiz-tab-strip');
-    [['legal', 'Legal/Regulatory Risk Assessment'], ['review', 'Review'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
-      const btn = document.createElement('button');
-      btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
-      btn.dataset.tab = id; btn.textContent = lbl;
-      btn.addEventListener('click', () => _switchTab(id));
-      strip.appendChild(btn);
-    });
-    return strip;
+    return WizUtils.buildTabStrip([
+      ['legal', 'Legal/Regulatory Risk Assessment'],
+      ['review', 'Review'],
+      ['reference', 'Reference']
+    ], _switchTab);
   }
 
   function _switchTab(id) {
@@ -348,20 +344,7 @@
     promptArea.rows = 22;
     promptArea.value = _buildStep5Prompt();
 
-    copyBtn.addEventListener('click', () => {
-      const text = promptArea.value;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => {
-          copyBtn.textContent = 'Copied ✓';
-          setTimeout(() => { copyBtn.textContent = 'Copy prompt'; }, 2000);
-        });
-      } else {
-        promptArea.select();
-        document.execCommand('copy');
-        copyBtn.textContent = 'Copied ✓';
-        setTimeout(() => { copyBtn.textContent = 'Copy prompt'; }, 2000);
-      }
-    });
+    copyBtn.addEventListener('click', () => WizUtils.copyToClipboard(promptArea.value, copyBtn));
 
     promptWrap.append(copyBtn, promptArea);
     body.appendChild(promptWrap);
@@ -752,7 +735,7 @@
     _record._meta.last_modified = new Date().toISOString();
     if (!_record['step-5']) _record['step-5'] = {};
     _record['step-5'].legal_assessment = _buildLegalOutputRecord();
-    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Legal assessment saved ✓');
     _renderLegalPane();
   }
@@ -996,10 +979,7 @@
 
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
-    if (document.getElementById('wiz5-styles')) return;
-    const s = document.createElement('style');
-    s.id = 'wiz5-styles';
-    s.textContent = `
+    WizUtils.injectStyles('wiz5-styles', `
 /* Shared base layout */
 .wiz-shell{display:flex;flex-direction:column;height:100%}
 .wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
@@ -1241,16 +1221,7 @@
 .s5-jake-instructions{font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border);border-radius:4px;padding:12px 14px;margin-bottom:14px;line-height:1.6}
 .s5-prompt-wrap{display:flex;flex-direction:column;gap:8px}
 .s5-prompt-area{width:100%;padding:12px;border:1px solid var(--color-border-mid);border-radius:6px;font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6}
-`;
-    document.head.appendChild(s);
-  }
-
-  // ---- Utilities ----------------------------------------------
-  function _el(tag, cls) {
-    const el = document.createElement(tag); if (cls) el.className = cls; return el;
-  }
-  function _sectionLabel(text) {
-    const p = _el('p', 'section-label'); p.textContent = text; return p;
+    `);
   }
 
 })();
