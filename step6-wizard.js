@@ -48,25 +48,19 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    try {
-      const [rRes, cRes, tRes, aRes, hRes, tcRes] = await Promise.all([
-        fetch('tbl_Risks.json'),
-        fetch('tbl_Risk_Controls.json'),
-        fetch('tbl_Control_Task_Code.json'),
-        fetch('tbl_AI_Articles.json'),
-        fetch('tbl_Harmonised_Standards.json'),
-        fetch('tbl_Test_Controls.json')
-      ]);
-      if (!rRes.ok || !cRes.ok || !tRes.ok || !aRes.ok || !hRes.ok || !tcRes.ok)
-        throw new Error('fetch failed');
-      const [risks, controls, tasks, articles, hs, testControls] =
-        await Promise.all([rRes.json(), cRes.json(), tRes.json(), aRes.json(), hRes.json(), tcRes.json()]);
-      _tblData = { risks, controls, tasks, articles, hs, testControls };
-      _tcByRC  = new Map(testControls.filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
-    } catch (_) {
+    const [risks, controls, tasks, hs, testControls] = await WizUtils.fetchAll([
+      'tbl_Risks.json',
+      'tbl_Risk_Controls.json',
+      'tbl_Control_Task_Code.json',
+      'tbl_Harmonised_Standards.json',
+      'tbl_Test_Controls.json',
+    ]);
+    if (!risks || !controls || !tasks || !hs || !testControls) {
       pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load risk data files.</p>`;
       return;
     }
+    _tblData = { risks, controls, tasks, hs, testControls };
+    _tcByRC  = new Map(testControls.filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
 
     _record = WizUtils.loadRecord();
 
@@ -970,13 +964,8 @@
     saveBar.appendChild(saveBtn);
     wrap.insertBefore(saveBar, wrap.children[1]); // after header
 
-    if (!_tblData?.articles) {
-      wrap.appendChild(_el('p', 'wiz9-cmp-empty', { textContent: 'Article data not loaded.' }));
-      return wrap;
-    }
-
     const ix = _buildCmpIndexes();
-    _tblData.articles.forEach(art => wrap.appendChild(_buildCmpArticleRow(art, ix)));
+    WizUtils.ARTICLES.forEach(art => wrap.appendChild(_buildCmpArticleRow(art, ix)));
     return wrap;
   }
 

@@ -17,7 +17,34 @@
   const _sectionLabel = WizUtils.sectionLabel;
 
   let _step = null, _colorKey = null, _phaseTitle = null;
-  let _container = null, _tblData = null, _record = null, _config = null;
+  let _container = null, _tblData = null, _record = null;
+
+  const _config = {
+    status_options: [
+      { value: 'not_started',       label: 'Not started' },
+      { value: 'in_progress',       label: 'In progress' },
+      { value: 'evidence_provided', label: 'Evidence provided' },
+      { value: 'waived',            label: 'Waived' },
+    ],
+    status_colors: {
+      not_started:       { bg: '#f1f5f9', text: '#475569' },
+      in_progress:       { bg: '#fef3c7', text: '#92400e' },
+      evidence_provided: { bg: '#dcfce7', text: '#166534' },
+      waived:            { bg: '#ede9fe', text: '#6d28d9' },
+    },
+    risk_matrix: {
+      low:      { low: 'low',    medium: 'low',    high: 'medium',   critical: 'medium'   },
+      medium:   { low: 'low',    medium: 'medium', high: 'high',     critical: 'high'     },
+      high:     { low: 'medium', medium: 'high',   high: 'high',     critical: 'critical' },
+      critical: { low: 'medium', medium: 'high',   high: 'critical', critical: 'critical' },
+    },
+    residual_colors: {
+      low:      { bg: '#dcfce7', text: '#166534' },
+      medium:   { bg: '#fef3c7', text: '#92400e' },
+      high:     { bg: '#fed7aa', text: '#9a3412' },
+      critical: { bg: '#fee2e2', text: '#991b1b' },
+    },
+  };
 
   // Tab 1 — test controls
   let _planData  = [];  // [{risk_id, risk_name, test_controls:[]}]
@@ -63,23 +90,16 @@
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
     pw.innerHTML = '<p style="padding:32px;color:var(--color-text-secondary)">Loading…</p>';
-    try {
-      const [rRes, rcRes, tcRes, cfgRes] = await Promise.all([
-        fetch('tbl_Risks.json'),
-        fetch('tbl_Risk_Controls.json'),
-        fetch('tbl_Test_Controls.json'),
-        fetch('step-7.json')
-      ]);
-      if (!rRes.ok || !rcRes.ok || !tcRes.ok || !cfgRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, testControls, cfg] = await Promise.all([
-        rRes.json(), rcRes.json(), tcRes.json(), cfgRes.json()
-      ]);
-      _tblData = { risks, riskControls, testControls };
-      _config  = cfg;
-    } catch (_) {
+    const [risks, riskControls, testControls] = await WizUtils.fetchAll([
+      'tbl_Risks.json',
+      'tbl_Risk_Controls.json',
+      'tbl_Test_Controls.json',
+    ]);
+    if (!risks || !riskControls || !testControls) {
       pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load data files.</p>`;
       return;
     }
+    _tblData = { risks, riskControls, testControls };
 
     _record = WizUtils.loadRecord();
 

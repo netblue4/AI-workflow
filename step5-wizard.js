@@ -1,5 +1,5 @@
 /* Step 5 — Risk Assessment Wizard (Guided)
-   Data sources: tbl_Risks.json, tbl_Risk_Controls.json, tbl_AI_Articles.json
+   Data sources: tbl_Risks.json, tbl_Risk_Controls.json
    Guidance (analogues, applies-if, relevance, categories) loaded from step5-legal-risk-guidance.json.
    Selection at risk level. Identity from central _meta.
    Informed by Step 3 (RCN filter + relevance) and Step 7 (DPIA data types + relevance).
@@ -18,9 +18,7 @@
   // tbl_ data stores
   let _tblRisks    = [];   // all rows from tbl_Risks.json
   let _tblControls = [];   // all rows from tbl_Risk_Controls.json
-  let _tblArticles = [];   // all rows from tbl_AI_Articles.json
   let _controlsByRisk = new Map(); // pk_Risk_ID → [control, ...]
-  let _articleById    = new Map(); // pk_AI_Article_ID → article
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
@@ -52,9 +50,7 @@
     _filteredFGItems = [];
     _tblRisks        = [];
     _tblControls     = [];
-    _tblArticles     = [];
     _controlsByRisk  = new Map();
-    _articleById     = new Map();
     _state.legal_risks    = {};
     _wizState.step_index  = 0;
     _wizState.answers     = {};
@@ -74,49 +70,30 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    // Load all tbl_ data sources and guidance files
-    const [risksRes, ctrlsRes, artsRes, lgdRes, detailRes] = await Promise.allSettled([
-      fetch('tbl_Risks.json'),
-      fetch('tbl_Risk_Controls.json'),
-      fetch('tbl_AI_Articles.json'),
-      fetch('step5-legal-risk-guidance.json'),
-      fetch('step-5.json'),
+    const [risks, controls, guidance, detail] = await WizUtils.fetchAll([
+      'tbl_Risks.json',
+      'tbl_Risk_Controls.json',
+      'step5-legal-risk-guidance.json',
+      'step-5.json',
     ]);
 
-    if (risksRes.status === 'rejected' || !risksRes.value.ok) {
+    if (!risks) {
       pw.innerHTML = `<p style="padding:24px;color:var(--danger-600,#dc2626)">Could not load tbl_Risks.json</p>`;
       return;
     }
-    try {
-      _tblRisks = await risksRes.value.json();
-    } catch (_) { _tblRisks = []; }
+    _tblRisks = risks;
 
-    if (ctrlsRes.status === 'fulfilled' && ctrlsRes.value.ok) {
-      try {
-        _tblControls = await ctrlsRes.value.json();
-        _controlsByRisk = new Map();
-        _tblControls.forEach(c => {
-          if (!_controlsByRisk.has(c.fk_Risk_ID)) _controlsByRisk.set(c.fk_Risk_ID, []);
-          _controlsByRisk.get(c.fk_Risk_ID).push(c);
-        });
-      } catch (_) {}
+    if (controls) {
+      _tblControls = controls;
+      _controlsByRisk = new Map();
+      _tblControls.forEach(c => {
+        if (!_controlsByRisk.has(c.fk_Risk_ID)) _controlsByRisk.set(c.fk_Risk_ID, []);
+        _controlsByRisk.get(c.fk_Risk_ID).push(c);
+      });
     }
 
-    if (artsRes.status === 'fulfilled' && artsRes.value.ok) {
-      try {
-        _tblArticles = await artsRes.value.json();
-        _articleById = new Map();
-        _tblArticles.forEach(a => _articleById.set(a.pk_AI_Article_ID, a));
-      } catch (_) {}
-    }
-
-    if (lgdRes.status === 'fulfilled' && lgdRes.value.ok) {
-      try { _legalGuidance = await lgdRes.value.json(); } catch (_) {}
-    }
-
-    if (detailRes.status === 'fulfilled' && detailRes.value.ok) {
-      try { _detail = await detailRes.value.json(); } catch (_) {}
-    }
+    _legalGuidance = guidance;
+    _detail        = detail;
 
     _record = WizUtils.loadRecord();
 
@@ -171,9 +148,7 @@
 
     const groupMap = new Map(); // article_name → [riskObj, ...]
 
-    const euRisks = _tblRisks.filter(r => r.risk_source === 'EU_AI_Act');
-
-    for (const risk of euRisks) {
+    for (const risk of _tblRisks) {
       const controls = _controlsByRisk.get(risk.pk_Risk_ID) || [];
 
       // Apply RCN applicability filter from Step 3 using tbl_Risk_Controls.standard_ref
@@ -187,7 +162,7 @@
 
       if (applicable && matchedControls.length === 0) continue;
 
-      const articleName = _articleById.get(risk.fk_AI_Article_ID)?.article_name
+      const articleName = WizUtils.ARTICLES_BY_ID.get(risk.fk_AI_Article_ID)?.article_name
         || risk.fk_AI_Article_ID;
 
       const riskObj = {
@@ -261,11 +236,11 @@
     return isHigh ? 'high' : 'medium';
   }
 
-  // Returns the tbl_AI_Articles row for a legal risk by name
+  // Returns the article record for a legal risk by name
   function _getArticleForRisk(riskName) {
-    const risk = _tblRisks.find(r => r.risk_name === riskName && r.risk_source === 'EU_AI_Act');
+    const risk = _tblRisks.find(r => r.risk_name === riskName);
     if (!risk) return null;
-    return _articleById.get(risk.fk_AI_Article_ID) || null;
+    return WizUtils.ARTICLES_BY_ID.get(risk.fk_AI_Article_ID) || null;
   }
 
   // Returns null (no Step 3 data → no filtering), true (article triggered), or false (article not triggered)
@@ -937,9 +912,8 @@
 
     // Group EU AI Act risks by article name from tbl_ data
     const stepMap = new Map(); // article_name → [{jkName, ...}]
-    const euRisks = _tblRisks ? _tblRisks.filter(r => r.risk_source === 'EU_AI_Act') : [];
-    for (const risk of euRisks) {
-      const articleName = _articleById?.get(risk.fk_AI_Article_ID)?.article_name
+    for (const risk of (_tblRisks || [])) {
+      const articleName = WizUtils.ARTICLES_BY_ID?.get(risk.fk_AI_Article_ID)?.article_name
         || risk.fk_AI_Article_ID;
       if (!stepMap.has(articleName)) stepMap.set(articleName, []);
       if (!stepMap.get(articleName).find(r => r.jkName === risk.risk_name)) {

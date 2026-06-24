@@ -117,6 +117,36 @@ window.WizUtils = (function () {
     return { section, bodyEl };
   }
 
+  // ---- EU AI Act articles (replaces tbl_AI_Articles.json) -----------
+  const ARTICLES = [
+    { pk_AI_Article_ID: 'ART-001', article_name: 'Article 13: Transparency and Provision of Information to Deployers' },
+    { pk_AI_Article_ID: 'ART-002', article_name: 'Article 14: Human Oversight' },
+    { pk_AI_Article_ID: 'ART-003', article_name: 'Article 15: Accuracy, Robustness and Cybersecurity' },
+    { pk_AI_Article_ID: 'ART-004', article_name: 'Article 10: Data and Data Governance' },
+    { pk_AI_Article_ID: 'ART-005', article_name: 'Article 12: Record-Keeping' },
+    { pk_AI_Article_ID: 'ART-006', article_name: 'Article 17: Quality Management System' },
+    { pk_AI_Article_ID: 'ART-007', article_name: 'Article 9: Risk Management System' },
+    { pk_AI_Article_ID: 'ART-008', article_name: 'Article 11: Technical Documentation' },
+    { pk_AI_Article_ID: 'ART-009', article_name: 'Article 25: Substantial Modification' },
+    { pk_AI_Article_ID: 'ART-010', article_name: 'Article 26: Deployer Obligations' },
+    { pk_AI_Article_ID: 'ART-011', article_name: 'Article 43: Conformity Assessment' },
+    { pk_AI_Article_ID: 'ART-012', article_name: 'Article 50: Transparency Obligations for Certain AI Systems' },
+    { pk_AI_Article_ID: 'ART-013', article_name: 'Article 72: Post-Market Monitoring' },
+    { pk_AI_Article_ID: 'ART-014', article_name: 'Article 5: Prohibited AI Practices' },
+    { pk_AI_Article_ID: 'ART-015', article_name: 'Article 6: Classification of High-Risk AI Systems' },
+    { pk_AI_Article_ID: 'ART-016', article_name: 'Article 16: Obligations for Providers of High-Risk AI Systems' },
+  ];
+  const ARTICLES_BY_ID = new Map(ARTICLES.map(a => [a.pk_AI_Article_ID, a]));
+
+  // ---- Shared async JSON loader -------------------------------------
+  // Returns an array parallel to urls; null for any fetch/parse failure.
+  async function fetchAll(urls) {
+    const results = await Promise.allSettled(urls.map(u => fetch(u)));
+    return Promise.all(results.map(r =>
+      r.status === 'fulfilled' && r.value.ok ? r.value.json().catch(() => null) : null
+    ));
+  }
+
   // ---- Deliverables list ----------------------------------------------
   function buildDeliverablesList(deliverables) {
     const dl = document.createElement('ul');
@@ -155,5 +185,5 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, fetchAll, ARTICLES, ARTICLES_BY_ID };
 })();
