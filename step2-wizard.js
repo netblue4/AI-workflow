@@ -6,7 +6,9 @@
 (function () {
   'use strict';
 
-  let _stylesInjected = false;
+  const _el = WizUtils.el;
+  const _sectionLabel = WizUtils.sectionLabel;
+
   let _state = { business_case: '', business_case_url: '' };
   let _record = {};
   let _detail = null;
@@ -17,10 +19,7 @@
     _detail = detail;
     _injectStyles();
 
-    try {
-      const saved = sessionStorage.getItem('ai_workflow_system_record');
-      if (saved) _record = JSON.parse(saved);
-    } catch (_) {}
+    _record = WizUtils.loadRecord();
 
     if (_record['step-2']) {
       _state.business_case     = _record['step-2'].business_case     || '';
@@ -65,13 +64,7 @@
     // Deliverables
     if (step.deliverables?.length) {
       card.appendChild(_sectionLabel('Deliverables'));
-      const dl = _el('ul', 'deliverables-list', { style: 'margin-bottom:20px' });
-      step.deliverables.forEach(d => {
-        const li = _el('li', 'deliverable-item');
-        li.innerHTML = `<span class="deliverable-icon">${typeof ICONS !== 'undefined' ? ICONS.check : ''}</span><span>${d}</span>`;
-        dl.appendChild(li);
-      });
-      card.appendChild(dl);
+      card.appendChild(WizUtils.buildDeliverablesList(step.deliverables));
     }
 
     // Gates
@@ -176,20 +169,7 @@
     promptArea.rows = 24;
     promptArea.value = _buildPrompt(_state.business_case);
 
-    copyBtn.addEventListener('click', () => {
-      const text = promptArea.value;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => {
-          copyBtn.textContent = 'Copied ✓';
-          setTimeout(() => { copyBtn.textContent = 'Copy prompt'; }, 2000);
-        });
-      } else {
-        promptArea.select();
-        document.execCommand('copy');
-        copyBtn.textContent = 'Copied ✓';
-        setTimeout(() => { copyBtn.textContent = 'Copy prompt'; }, 2000);
-      }
-    });
+    copyBtn.addEventListener('click', () => WizUtils.copyToClipboard(promptArea.value, copyBtn));
 
     promptWrap.append(copyBtn, promptArea);
     body.appendChild(promptWrap);
@@ -234,18 +214,13 @@
       created: new Date().toISOString()
     };
     _record._meta.last_modified = new Date().toISOString();
-    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    WizUtils.saveRecord(_record);
   }
 
   // ── Styles ────────────────────────────────────────────────────────────────
 
   function _injectStyles() {
-    if (_stylesInjected) return;
-    _stylesInjected = true;
-    if (document.getElementById('wiz2-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'wiz2-styles';
-    style.textContent = `
+    WizUtils.injectStyles('wiz2-styles', `
       /* Step 2 form */
       .s2-identity-note { font-size:12px;color:var(--color-text-secondary);background:var(--info-fill,#eff6ff);border:1px solid var(--info-border,#bfdbfe);border-radius:var(--radius-md,6px);padding:10px 14px;margin-bottom:20px;line-height:1.5; }
       .s2-form-section { margin-bottom:24px; }
@@ -274,21 +249,7 @@
       .wiz-collapsible-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0; }
       .wiz-collapsible-body { padding:14px 16px;border-top:1px solid var(--color-border); }
       .wiz-gate-chevron { display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s; }
-    `;
-    document.head.appendChild(style);
+    `);
   }
-
-  // ── DOM helper ────────────────────────────────────────────────────────────
-
-  function _el(tag, className, props = {}) {
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    Object.entries(props).forEach(([k, v]) => {
-      if (k === 'style') el.style.cssText = v; else el[k] = v;
-    });
-    return el;
-  }
-
-  function _sectionLabel(text) { return _el('p', 'section-label', { textContent: text }); }
 
 })();

@@ -13,6 +13,9 @@
   'use strict';
 
   // ---- Module state -------------------------------------------
+  const _el = WizUtils.el;
+  const _sectionLabel = WizUtils.sectionLabel;
+
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null, _config = null;
 
@@ -78,10 +81,7 @@
       return;
     }
 
-    try {
-      const s = sessionStorage.getItem('ai_workflow_system_record');
-      if (s) _record = JSON.parse(s);
-    } catch (_) {}
+    _record = WizUtils.loadRecord();
 
     // Tab 1: test plans
     const { plans, uncovered } = _buildPlanData();
@@ -227,20 +227,11 @@
 
   // ---- Tab strip ---------------------------------------------
   function _buildTabStrip() {
-    const strip = _el('div', 'wiz-tab-strip');
-    [
+    return WizUtils.buildTabStrip([
       ['tests',      'Control Tests'],
       ['activation', 'Control Activation'],
       ['residual',   'Residual Risk']
-    ].forEach(([id, lbl], i) => {
-      const btn = document.createElement('button');
-      btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
-      btn.dataset.tab = id;
-      btn.textContent = lbl;
-      btn.addEventListener('click', () => _switchTab(id));
-      strip.appendChild(btn);
-    });
-    return strip;
+    ], _switchTab);
   }
 
   function _switchTab(id) {
@@ -957,7 +948,7 @@
     }
     _record._meta.last_modified = new Date().toISOString();
     _record['step-7'] = rec;
-    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 7 saved ✓');
     _renderSaveResults(rec);
   }
@@ -1061,23 +1052,9 @@
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // ---- Helpers ------------------------------------------------
-  function _el(tag, cls) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    return e;
-  }
-
-  function _sectionLabel(text) {
-    const p = _el('p', 'section-label'); p.textContent = text; return p;
-  }
-
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
-    if (!document.getElementById('wiz-shared-styles')) {
-      const s = document.createElement('style');
-      s.id = 'wiz-shared-styles';
-      s.textContent = `
+    WizUtils.injectStyles('wiz-shared-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
 .wiz-tab-strip{display:flex;gap:2px;padding:14px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-surface)}
 .wiz-tab{padding:8px 16px;font-size:12px;font-weight:500;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--color-text-secondary);font-family:inherit;transition:color .15s,border-color .15s;white-space:nowrap}
@@ -1090,13 +1067,8 @@
 .wiz-btn-primary{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--teal-600,#0d9488);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s}
 .wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
 `;
-      document.head.appendChild(s);
-    }
-
-    if (document.getElementById('wiz10-styles')) return;
-    const s = document.createElement('style');
-    s.id = 'wiz10-styles';
-    s.textContent = `
+    `);
+    WizUtils.injectStyles('wiz10-styles', `
 /* ---- Tab 1: test control card styles ---- */
 .s7-src-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af;white-space:nowrap;flex-shrink:0}
 .s7-ctrl-card{padding:14px 16px;border-bottom:1px solid var(--color-border)}
@@ -1212,8 +1184,7 @@
 .s9-residual-select:disabled{background:var(--color-bg-subtle,#f8fafc);cursor:default}
 .s9-residual-level-pill{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;text-align:center;min-width:70px}
 .s9-residual-just{margin-top:0}
-`;
-    document.head.appendChild(s);
+    `);
   }
 
 })();

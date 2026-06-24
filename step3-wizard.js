@@ -12,8 +12,10 @@
 
   // ── Module state ─────────────────────────────────────────────────────────────
 
+  const _el = WizUtils.el;
+  const _sectionLabel = WizUtils.sectionLabel;
+
   let _detail = null;
-  let _stylesInjected = false;
 
   let _state = {
     axis_a_tier: null,         // 'tier_1' | 'tier_2'
@@ -31,10 +33,7 @@
     _detail = detail;
     _injectStyles();
 
-    try {
-      const saved = sessionStorage.getItem('ai_workflow_system_record');
-      if (saved) _record = JSON.parse(saved);
-    } catch (_) {}
+    _record = WizUtils.loadRecord();
     if (_record['step-3']) _restoreState(_record['step-3']);
 
     container.innerHTML = '';
@@ -202,13 +201,7 @@
 
     // Deliverables
     pane.appendChild(_sectionLabel('Deliverables'));
-    const dl = _el('ul', 'deliverables-list', { style: 'margin-bottom:24px' });
-    detail.deliverables.forEach(d => {
-      const li = _el('li', 'deliverable-item');
-      li.innerHTML = `<span class="deliverable-icon">${typeof ICONS !== 'undefined' ? ICONS.check : ''}</span><span>${d}</span>`;
-      dl.appendChild(li);
-    });
-    pane.appendChild(dl);
+    pane.appendChild(WizUtils.buildDeliverablesList(detail.deliverables));
 
     // SR9 note + requirement labels
     pane.appendChild(_el('div', 'gate-note info', { style: 'margin-bottom:8px', innerHTML: `<strong>AI SR9 clarification:</strong> ${detail.standard_note}` }));
@@ -751,7 +744,7 @@
     _record._meta.last_modified = new Date().toISOString();
     if (outputRecord.use_case_id) _record._meta.use_case_id = outputRecord.use_case_id;
     try {
-      sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record));
+      WizUtils.saveRecord(_record);
       // Reflect any use_case_id back to the central panel if it was set here
       if (typeof _ucSetIdentity === 'function') _ucSetIdentity(_record._meta);
     } catch (_) {}
@@ -1022,7 +1015,7 @@
         const step3Data = parsed['step-3'];
         if (!step3Data) { alert('This file does not contain Step 3 data. Other step records have been loaded.'); return; }
         _restoreState(step3Data);
-        try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+        WizUtils.saveRecord(_record);
         if (typeof selectStep === 'function') selectStep('step-3');
       } catch (err) { alert(`Could not parse record file: ${err.message}`); }
     };
@@ -1049,10 +1042,7 @@
   // ── Styles ────────────────────────────────────────────────────────────────────
 
   function _injectStyles() {
-    if (_stylesInjected) return;
-    _stylesInjected = true;
-    const style = document.createElement('style');
-    style.textContent = `
+    WizUtils.injectStyles('wiz3-styles', `
       /* Tab strip */
       .wiz-tab-strip { display:flex;margin-bottom:24px;border-bottom:1px solid var(--color-border); }
       .wiz-tab { padding:8px 18px;font-size:13px;font-weight:500;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;transition:color var(--transition),border-color var(--transition); }
@@ -1150,19 +1140,7 @@
       .ov-tier-card { background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:8px; }
       .ov-chip { display:inline-block;font-size:11px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:4px;padding:2px 7px;margin:2px 2px 2px 0;color:var(--color-text-secondary); }
       .ov-gate-row { display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--color-bg);border-radius:var(--radius-md);margin-bottom:6px; }
-    `;
-    document.head.appendChild(style);
+    `);
   }
-
-  // ── DOM helper ────────────────────────────────────────────────────────────────
-
-  function _el(tag, className, props = {}) {
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    Object.entries(props).forEach(([k, v]) => { if (k === 'style') el.style.cssText = v; else el[k] = v; });
-    return el;
-  }
-
-  function _sectionLabel(text) { return _el('p', 'section-label', { textContent: text }); }
 
 })();

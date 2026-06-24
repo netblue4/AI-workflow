@@ -6,6 +6,9 @@
   'use strict';
 
   // ---- Module state -------------------------------------------
+  const _el = WizUtils.el;
+  const _sectionLabel = WizUtils.sectionLabel;
+
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _detail = null, _record = null;
   const _answers = {}; // fieldId → string | string[]
@@ -34,10 +37,7 @@
 
   // ---- Init ---------------------------------------------------
   function _init(pw) {
-    try {
-      const s = sessionStorage.getItem('ai_workflow_system_record');
-      if (s) _record = JSON.parse(s);
-    } catch (_) {}
+    _record = WizUtils.loadRecord();
     const s7 = _record?.['step-4'];
     if (s7?.answers) Object.assign(_answers, s7.answers);
     _renderPanes(pw);
@@ -113,16 +113,7 @@
 
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
-    const strip = _el('div', 'wiz-tab-strip');
-    [['wizard', 'Step Wizard'], ['reference', 'Reference']].forEach(([id, lbl], i) => {
-      const btn = document.createElement('button');
-      btn.className = `wiz-tab${i === 0 ? ' wiz-tab--active' : ''}`;
-      btn.dataset.tab = id;
-      btn.textContent = lbl;
-      btn.addEventListener('click', () => _switchTab(id));
-      strip.appendChild(btn);
-    });
-    return strip;
+    return WizUtils.buildTabStrip([['wizard', 'Step Wizard'], ['reference', 'Reference']], _switchTab);
   }
 
   function _switchTab(id) {
@@ -171,11 +162,7 @@
     // Deliverables
     if (_step.deliverables?.length) {
       card.appendChild(_sectionLabel('Deliverables'));
-      const dl = _el('ul', 'deliverables-list');
-      _step.deliverables.forEach(d => {
-        const li = _el('li', 'deliverable-item'); li.textContent = d; dl.appendChild(li);
-      });
-      card.appendChild(dl);
+      card.appendChild(WizUtils.buildDeliverablesList(_step.deliverables));
     }
 
     // Scope note
@@ -432,7 +419,7 @@
     }
     _record._meta.last_modified = new Date().toISOString();
     _record['step-4'] = rec7;
-    try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(_record)); } catch (_) {}
+    WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('DPIA saved ✓');
     _renderResults(rec7);
     const prog = _container.querySelector('#dpia-progress');
@@ -541,10 +528,7 @@
 
   // ---- Style injection ----------------------------------------
   function _injectStyles() {
-    if (document.getElementById('wiz4-styles')) return;
-    const s = document.createElement('style');
-    s.id = 'wiz4-styles';
-    s.textContent = `
+    WizUtils.injectStyles('wiz4-styles', `
 /* ---- Shared wizard base layout ---- */
 .wiz-shell{display:flex;flex-direction:column;height:100%}
 .wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
@@ -625,18 +609,7 @@
 .dpia-ref-list{padding-left:20px;margin:0 0 16px}
 .dpia-ref-item{font-size:13px;color:var(--color-text-secondary);line-height:1.65;padding:3px 0}
 `;
-    document.head.appendChild(s);
-  }
-
-  // ---- Utilities ----------------------------------------------
-  function _el(tag, cls) {
-    const el = document.createElement(tag);
-    if (cls) el.className = cls;
-    return el;
-  }
-
-  function _sectionLabel(text) {
-    const p = _el('p', 'section-label'); p.textContent = text; return p;
+    `);
   }
 
 })();
