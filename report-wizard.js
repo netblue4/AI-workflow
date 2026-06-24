@@ -100,7 +100,6 @@
     const s8  = _record?.['step-5']  || null;
     const s9  = _record?.['step-6']  || null;
     const s10 = _record?.['step-7']  || null;
-    const s11 = _record?.['step-9']  || null;
     const meta = _record?._meta      || {};
 
     const today = new Date().toISOString().slice(0, 10);
@@ -117,13 +116,13 @@
 </head>
 <body>
 ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
-${_ragSummaryPage(s9, s10, s11)}
+${_ragSummaryPage(s9, s10)}
 ${_section(1, 'System Classification', _classificationSection(s3))}
 ${_section(2, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
-${_section(3, 'Risk Identification', _riskAssessmentSection(s8, s11))}
-${_section(4, 'Control Schedule', _controlScheduleSection(s9, s11))}
+${_section(3, 'Risk Identification', _riskAssessmentSection(s8, s10))}
+${_section(4, 'Control Schedule', _controlScheduleSection(s9, s10))}
 ${_section(5, 'Verification Evidence', _verificationSection(s10))}
-${_section(6, 'Outstanding Items', _outstandingItemsSection(s9, s10, s11))}
+${_section(6, 'Outstanding Items', _outstandingItemsSection(s9, s10))}
 ${_section(7, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
 ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
 </body>
@@ -131,16 +130,16 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- RAG Summary Page (CAB Sign-off) ----------------------
-  function _ragSummaryPage(s9, s10, s11) {
+  function _ragSummaryPage(s9, s10) {
     if (!s9) return '';
 
     // Build lookup maps
     const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
     const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
 
-    // Control statuses from s11
+    // Control statuses from s10 (activation controls now in step-7)
     const ctrlStatus = new Map();
-    (s11?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
+    (s10?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
 
     // Test plans by risk
     const testByRisk = new Map();
@@ -166,8 +165,8 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const dpiaAdds  = s9.dpia_controls || [];
     const addlCount = compAdds.length + dpiaAdds.length;
 
-    // Count all s11 controls
-    (s11?.controls || []).forEach(c => {
+    // Count all activation controls from s10
+    (s10?.controls || []).forEach(c => {
       totalCtrls++;
       if (c.status === 'evidence_provided' || c.status === 'waived') doneCtrls++;
     });
@@ -213,7 +212,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       const ctrlCls  = ctrlTotal === 0 ? 'na' : (ctrlDone === ctrlTotal ? 'ok' : (ctrlDone > 0 ? 'warn' : 'na'));
       const testCls  = testTotal === 0 ? 'na' : (testDone === testTotal ? 'ok' : (testDone > 0 ? 'warn' : 'na'));
 
-      const residualLevel = s11?.residual_risks?.[riskId]?.level;
+      const residualLevel = s10?.residual_risks?.[riskId]?.level;
       const residualHtml  = residualLevel
         ? `<span class="rag-residual rag-residual--${_esc(residualLevel)}">${_esc(residualLevel.charAt(0).toUpperCase() + residualLevel.slice(1))}</span>`
         : `<span class="rag-residual rag-residual--na">—</span>`;
@@ -260,17 +259,16 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- Outstanding Items Section -----------------------------
-  function _outstandingItemsSection(s9, s10, s11) {
+  function _outstandingItemsSection(s9, s10) {
     let html = '';
 
     // Outstanding controls
     const outstandingCtrls = [];
     if (!s9) {
       html += `<div class="outstanding-warn">Step 6 (Control Identification) not yet completed.</div>`;
-    } else if (!s11) {
-      html += `<div class="outstanding-warn">Step 9 (Residual Risk) not yet completed.</div>`;
+    } else if (!s10?.controls?.length) {
+      html += `<div class="outstanding-warn">Step 7 (Residual Risk) — Control Activation tab not yet completed.</div>`;
     } else {
-      const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
       const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
 
       const selectedKeys = new Set([
@@ -279,7 +277,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         ...(s9.dpia_controls || []).map(c => 'DPIA__' + c.control_name)
       ]);
 
-      (s11.controls || []).forEach(c => {
+      (s10.controls || []).forEach(c => {
         if (!selectedKeys.has(c.key)) return;
         if (c.status === 'evidence_provided' || c.status === 'waived') return;
         outstandingCtrls.push(c);
@@ -305,7 +303,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       });
     }
 
-    if (s9 && s11 && s10 && outstandingCtrls.length === 0 && outstandingTests.length === 0) {
+    if (s9 && s10 && outstandingCtrls.length === 0 && outstandingTests.length === 0) {
       return `<div class="outstanding-clear">✓ All controls evidenced and all tests resolved. Ready for CAB sign-off.</div>`;
     }
 
@@ -480,7 +478,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- Section 2: Risk Assessment ----------------------------
-  function _riskAssessmentSection(s8, s11) {
+  function _riskAssessmentSection(s8, s10) {
     if (!s8) return _notComplete('Step 5 — Risk Identification has not yet been completed.');
 
     let html = '';
@@ -506,7 +504,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
       (la.risks || []).forEach(r => {
         const riskId      = riskIdByName.get(r.risk_name);
-        const residual    = s11?.residual_risks?.[riskId];
+        const residual    = s10?.residual_risks?.[riskId];
         const residualHtml = residual?.level
           ? `<span class="rag-residual rag-residual--${_esc(residual.level)}">${_esc(residual.level.charAt(0).toUpperCase() + residual.level.slice(1))}</span>`
           : '—';
@@ -533,7 +531,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- Section 3: Control Schedule ---------------------------
-  function _controlScheduleSection(s9, s11) {
+  function _controlScheduleSection(s9, s10) {
     if (!s9) return _notComplete('Step 6 — Control Identification has not yet been completed.');
 
     const riskCtrls = s9.risk_controls || [];
@@ -542,9 +540,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
 
-    // Build lookup: control key → operational status from Step 9
+    // Build lookup: control key → operational status from Step 7 (activation tab)
     const ctrlStatus = new Map();
-    (s11?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
+    (s10?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
 
     // Build lookup: control ID → HS standard refs
     const hsRefByCtrl = new Map((_tbl.riskControls || []).map(rc => [rc.pk_Risk_Control_ID, rc.fk_Harmonised_Standard_IDs || '']));
@@ -567,8 +565,8 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     const regularAdds = compAdds.filter(c => !_isFS(c));
 
-    const s11date = s11?.activation_date ? ` &nbsp;|&nbsp; Step 9 recorded: ${s11.activation_date}` : ' &nbsp;|&nbsp; <em>Step 9 — Residual Risk not yet completed</em>';
-    let html = `<p class="section-meta">Step 6 date: ${s9.assessment_date || '—'}${s11date}</p>`;
+    const s7date = s10?.assessment_date ? ` &nbsp;|&nbsp; Step 7 recorded: ${s10.assessment_date}` : ' &nbsp;|&nbsp; <em>Step 7 — Residual Risk not yet completed</em>';
+    let html = `<p class="section-meta">Step 6 date: ${s9.assessment_date || '—'}${s7date}</p>`;
 
     // ---- Risk Team Controls -----------------------------------------
     html += `<h3 class="sub-heading">Risk Team Controls</h3>`;
