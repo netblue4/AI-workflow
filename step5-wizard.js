@@ -1,6 +1,6 @@
 /* Step 5 — Risk Assessment Wizard (Guided)
    Data sources: tbl_Risks.json, tbl_Risk_Controls.json, tbl_AI_Articles.json
-   Guidance (analogues, applies-if, relevance, categories) loaded from step8-legal-risk-guidance.json.
+   Guidance (analogues, applies-if, relevance, categories) loaded from step5-legal-risk-guidance.json.
    Selection at risk level. Identity from central _meta.
    Informed by Step 3 (RCN filter + relevance) and Step 7 (DPIA data types + relevance).
 */
@@ -31,7 +31,7 @@
     complete:   false
   };
 
-  // Category color palette — populated from step8-legal-risk-guidance.json after load
+  // Category color palette — populated from step5-legal-risk-guidance.json after load
   const _FALLBACK_COLOR = { bg: '#f1f5f9', text: '#334155' };
   const _catColor = key => (_legalGuidance?.color_palette?.[key] || _FALLBACK_COLOR);
 
@@ -76,7 +76,7 @@
       fetch('tbl_Risks.json'),
       fetch('tbl_Risk_Controls.json'),
       fetch('tbl_AI_Articles.json'),
-      fetch('step8-legal-risk-guidance.json'),
+      fetch('step5-legal-risk-guidance.json'),
       fetch('step-5.json'),
     ]);
 
@@ -215,7 +215,7 @@
     }));
   }
 
-  // ---- Relevance computation (uses step8-legal-risk-guidance.json) ------
+  // ---- Relevance computation (uses step5-legal-risk-guidance.json) ------
   function _computeRelevance(riskName) {
     if (!_legalGuidance) return 'unassessed';
     const g = _legalGuidance.risks?.[riskName];
@@ -408,7 +408,7 @@
     if (!wqs?.length) {
       const card = _el('div', 'step-detail-card');
       const p = _el('p', 'wiz8-notice');
-      p.innerHTML = 'No wizard questions defined. Add a <code>wizard_questions</code> array to <strong>step8-legal-risk-guidance.json</strong> to enable guided mode.';
+      p.innerHTML = 'No wizard questions defined. Add a <code>wizard_questions</code> array to <strong>step5-legal-risk-guidance.json</strong> to enable guided mode.';
       card.appendChild(p);
       return card;
     }
@@ -930,7 +930,7 @@
     const card = _el('div', 'step-detail-card');
     const title = _el('h2', 'step-detail-title'); title.textContent = 'Risk Catalogue Reference'; card.appendChild(title);
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Complete risk catalogue grouped by standard / requirement, with guidance from step8-legal-risk-guidance.json. Edit that file to adapt analogues, conditions, and relevance rules for your organisation.';
+    sub.textContent = 'Complete risk catalogue grouped by standard / requirement, with guidance from step5-legal-risk-guidance.json. Edit that file to adapt analogues, conditions, and relevance rules for your organisation.';
     card.appendChild(sub);
 
     // Category legend

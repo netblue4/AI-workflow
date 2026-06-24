@@ -29,7 +29,7 @@
         fetch('tbl_Test_Controls.json'),
         fetch('tbl_AI_SR_Controls.json'),
         fetch('workflow.json'),
-        fetch('step8-legal-risk-guidance.json')
+        fetch('step5-legal-risk-guidance.json')
       ]);
       if (!rRes.ok || !rcRes.ok || !hsRes.ok || !artRes.ok || !tcRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
       const [risks, riskControls, hs, articles, testControls, srControls, workflow] = await Promise.all([
