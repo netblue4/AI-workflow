@@ -214,7 +214,7 @@
     header.appendChild(left);
 
     const right = _el('div', 'dpia-section-header-right');
-    const badge = _el('span', 'dpia-section-badge');
+    const badge = _el('span', 'wiz-item-badge');
     badge.id = `dpia-badge-${section.id}`;
     right.appendChild(badge);
     const chevron = _el('span', 'dpia-chevron');
@@ -342,20 +342,20 @@
     const sectionEl = _container.querySelector(`[data-section-id="${section.id}"]`);
     if (sectionEl?.classList.contains('dpia-section--disabled')) {
       badge.textContent = 'N/A';
-      badge.className = 'dpia-section-badge dpia-section-badge--na';
+      badge.className = 'wiz-item-badge wiz-item-badge--na';
       return;
     }
 
     // Required fields — exclude dividers and hidden fields
     const required = (section.fields || []).filter(f => f.required && f.type !== 'divider');
-    if (!required.length) { badge.textContent = ''; badge.className = 'dpia-section-badge'; return; }
+    if (!required.length) { badge.textContent = ''; badge.className = 'wiz-item-badge'; return; }
 
     const visibleRequired = required.filter(f => {
       const el = _container.querySelector(`[data-field-id="${f.id}"]`);
       return !el?.classList.contains('dpia-field--hidden');
     });
 
-    if (!visibleRequired.length) { badge.textContent = ''; badge.className = 'dpia-section-badge'; return; }
+    if (!visibleRequired.length) { badge.textContent = ''; badge.className = 'wiz-item-badge'; return; }
 
     const filled = visibleRequired.filter(f => {
       const v = _answers[f.id];
@@ -365,10 +365,10 @@
 
     badge.textContent = `${filled.length} / ${visibleRequired.length}`;
     badge.className = filled.length === 0
-      ? 'dpia-section-badge dpia-section-badge--none'
+      ? 'wiz-item-badge wiz-item-badge--none'
       : filled.length === visibleRequired.length
-        ? 'dpia-section-badge dpia-section-badge--all'
-        : 'dpia-section-badge dpia-section-badge--partial';
+        ? 'wiz-item-badge wiz-item-badge--ok'
+        : 'wiz-item-badge wiz-item-badge--partial';
   }
 
   // ---- Progress counter ---------------------------------------
@@ -541,10 +541,6 @@
 .dpia-section-title{font-size:13px;font-weight:700;color:var(--color-text-primary)}
 .dpia-gdpr-ref{font-size:11px;color:var(--color-text-tertiary);font-style:italic;white-space:nowrap;flex-shrink:0}
 .dpia-section-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.dpia-section-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;min-width:40px;text-align:center}
-.dpia-section-badge--all{background:var(--success-100,#dcfce7);color:var(--success-700,#15803d)}
-.dpia-section-badge--partial{background:var(--warning-100,#fef3c7);color:var(--warning-700,#b45309)}
-.dpia-section-badge--none{background:var(--danger-100,#fee2e2);color:var(--danger-700,#b91c1c)}
 .dpia-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
 .dpia-section-body{padding:16px;display:flex;flex-direction:column;gap:16px}
 .dpia-collapsed{display:none}
@@ -555,7 +551,6 @@
 .dpia-na-notice{display:none;font-size:12px;color:var(--color-text-tertiary);background:var(--color-bg-subtle,#f8fafc);border:1px dashed var(--color-border);border-radius:5px;padding:10px 12px;line-height:1.55}
 .dpia-section--disabled .dpia-na-notice{display:block}
 .dpia-section--disabled .dpia-section-body > :not(.dpia-na-notice){display:none!important}
-.dpia-section-badge--na{background:var(--color-bg-subtle,#f1f5f9);color:var(--color-text-tertiary);font-weight:600}
 .dpia-field--hidden{display:none!important}
 
 /* ---- Divider ---- */

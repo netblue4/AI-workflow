@@ -196,6 +196,12 @@ window.WizUtils = (function () {
 .wiz-item-icon{display:flex;color:#ef4444;flex-shrink:0}
 .wiz-item-name{font-size:13px;font-weight:700;color:var(--color-text-primary);min-width:0}
 .wiz-art-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af;white-space:nowrap;flex-shrink:0;letter-spacing:.02em}
+.wiz-item-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;min-width:40px;text-align:center;flex-shrink:0}
+.wiz-item-badge--ok{background:#dcfce7;color:#15803d}
+.wiz-item-badge--partial{background:#fef3c7;color:#b45309}
+.wiz-item-badge--none{background:#fee2e2;color:#b91c1c}
+.wiz-item-badge--na{background:var(--color-bg-subtle,#f1f5f9);color:var(--color-text-tertiary)}
+.wiz-item-badge--info{background:#dbeafe;color:#1e40af}
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 

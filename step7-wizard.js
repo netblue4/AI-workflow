@@ -409,7 +409,7 @@
     hdr.appendChild(left);
 
     const right = _el('div', 'wiz10-plan-hdr-right');
-    const countBadge = _el('span', 'wiz10-plan-count');
+    const countBadge = _el('span', 'wiz-item-badge');
     countBadge.id = `s7t-plan-count-${idx}`;
     _updateTestPlanCount(plan, countBadge);
     right.appendChild(countBadge);
@@ -440,7 +440,7 @@
       _testState.status[t.pk_Test_Control_ID] === 'waived'
     ).length;
     el.textContent = `${done} / ${total} reviewed`;
-    el.className   = done === total ? 'wiz10-plan-count wiz10-plan-count--ok' : 'wiz10-plan-count wiz10-plan-count--pending';
+    el.className   = done === total ? 'wiz-item-badge wiz-item-badge--ok' : 'wiz-item-badge wiz-item-badge--info';
   }
 
   function _buildTestControlCard(tc, plan, planIdx) {
@@ -1138,9 +1138,6 @@
 .wiz10-plan-hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .wiz10-plan-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
 .wiz10-collapsed{display:none!important}
-.wiz10-plan-count{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;white-space:nowrap;flex-shrink:0}
-.wiz10-plan-count--pending{background:#dbeafe;color:#1e40af}
-.wiz10-plan-count--ok{background:#dcfce7;color:#166534}
 .wiz10-ctrl-list{display:flex;flex-direction:column;gap:1px;padding:0}
 .wiz10-uncovered-sec{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;margin-bottom:20px}
 .wiz10-uncovered-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
