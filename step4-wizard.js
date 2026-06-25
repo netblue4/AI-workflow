@@ -594,8 +594,7 @@
 /* ---- Reference pane ---- */
 .dpia-ref-list{padding-left:20px;margin:0 0 16px}
 .dpia-ref-item{font-size:13px;color:var(--color-text-secondary);line-height:1.65;padding:3px 0}
-`;
-    `);
+`);
   }
 
 })();
