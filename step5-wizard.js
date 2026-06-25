@@ -24,12 +24,10 @@
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
   };
 
-  // Legal guided wizard state
+  // Legal assessment state
   const _wizState = {
-    step_index: 0,
     answers:    {}, // riskName → 'yes'|'partially'|'no'
     rationales: {}, // riskName → string
-    complete:   false
   };
 
   // Category color palette — populated from step5-legal-risk-guidance.json after load
@@ -52,10 +50,8 @@
     _tblControls     = [];
     _controlsByRisk  = new Map();
     _state.legal_risks    = {};
-    _wizState.step_index  = 0;
     _wizState.answers     = {};
     _wizState.rationales  = {};
-    _wizState.complete    = false;
 
     _injectStyles();
 
@@ -360,340 +356,122 @@
     pane.appendChild(_buildLegalPane());
   }
 
-  // ---- Legal pane dispatcher ----------------------------------
+  // ---- Legal pane -----------------------------------------
   function _buildLegalPane() {
     const wqs = _legalGuidance?.wizard_questions;
     if (!wqs?.length) {
       const card = _el('div', 'step-detail-card');
-      const p = _el('p', 'wiz8-notice');
-      p.innerHTML = 'No wizard questions defined. Add a <code>wizard_questions</code> array to <strong>step5-legal-risk-guidance.json</strong> to enable guided mode.';
-      card.appendChild(p);
+      card.appendChild(_el('p', 'wiz8-notice', { innerHTML: 'No risk questions defined. Add a <code>wizard_questions</code> array to <strong>step5-legal-risk-guidance.json</strong>.' }));
       return card;
     }
-    const wrap = _el('div', 'wiz8-legal-wrap');
+    const wrap = _el('div', 's5-legal-wrap');
     const legalSaved = _record?.['step-5']?.legal_assessment?.completed;
     if (legalSaved) {
-      const note = _el('div', 'wiz8-legal-saved-note');
-      const date = _record['step-5'].legal_assessment.assessment_date || '';
+      const date  = _record['step-5'].legal_assessment.assessment_date || '';
       const count = _record['step-5'].legal_assessment.selected_count ?? 0;
-      note.innerHTML = `✓ Legal/regulatory assessment last saved on <strong>${date}</strong> — <strong>${count} risk${count !== 1 ? 's' : ''}</strong> confirmed. Complete the wizard again to update, or switch to <strong>Combined Review</strong>.`;
+      const note  = _el('div', 's5-saved-note');
+      note.innerHTML = `✓ Assessment last saved <strong>${date}</strong> — <strong>${count} risk${count !== 1 ? 's' : ''}</strong> confirmed.`;
       wrap.appendChild(note);
     }
-    wrap.appendChild(_wizState.complete ? _buildWizardSummary() : _buildQuestionScreen(_wizState.step_index));
-    return wrap;
-  }
-
-  // ---- Single question screen ---------------------------------
-  function _buildQuestionScreen(idx) {
-    const wqs   = _legalGuidance.wizard_questions;
-    const total = wqs.length;
-    const wq    = wqs[idx];
-    const riskG = _legalGuidance.risks?.[wq.risk_name];
-    const relevance = _computeRelevance(wq.risk_name);
-    const category  = riskG?.category || null;
-    const catColor  = category ? (_legalGuidance.categories?.[category]?.color || 'slate') : 'slate';
-    const catColors = _catColor(catColor);
-    const answer    = _wizState.answers[wq.risk_name] || null;
-
-    const wrap = _el('div', 'wiz8-guided-wrap');
-
-    // Progress bar
-    const progWrap = _el('div', 'wiz8-guided-prog-wrap');
-    const progMeta = _el('div', 'wiz8-guided-prog-meta');
-    const progTitle = _el('span', 'wiz8-guided-prog-title');
-    progTitle.textContent = 'Legal/Regulatory Risk Assessment';
-    const progLabel = _el('span', 'wiz8-guided-prog-label');
-    progLabel.textContent = `${idx + 1} of ${total}`;
-    progMeta.appendChild(progTitle); progMeta.appendChild(progLabel);
-    const progBar  = _el('div', 'wiz8-guided-prog-bar');
-    const progFill = _el('div', 'wiz8-guided-prog-fill');
-    progFill.style.width = Math.round((idx / total) * 100) + '%';
-    progBar.appendChild(progFill);
-    progWrap.appendChild(progMeta); progWrap.appendChild(progBar);
-    wrap.appendChild(progWrap);
-
-    // Question card
-    const qCard = _el('div', 'wiz8-q-card');
-    if (relevance === 'high') qCard.classList.add('wiz8-q-card--high');
-
-    // Meta row: category + relevance
-    const qMeta = _el('div', 'wiz8-q-meta');
-    if (category) {
-      const catTag = _el('span', 'wiz8-cat-tag');
-      catTag.textContent = category;
-      catTag.style.background = catColors.bg; catTag.style.color = catColors.text;
-      qMeta.appendChild(catTag);
-    }
-    if (relevance !== 'unassessed') {
-      const relBadge = _el('span', `wiz8-rel-badge wiz8-rel-badge--${relevance}`);
-      relBadge.textContent = relevance === 'high' ? '▲ HIGH' : '◆ MEDIUM';
-      qMeta.appendChild(relBadge);
-    }
-    qCard.appendChild(qMeta);
-
-    // Pre-filter banner — shown when Step 3 says this article isn't triggered
-    if (_isArticleApplicable(wq.risk_name) === false) {
-      const article = _getArticleForRisk(wq.risk_name);
-      const artNum  = article?.article_name.match(/^(Article \d+[a-zA-Z]*)/)?.[1] || 'this article';
-      const filterNote = _el('div', 'wiz8-prefilter-note');
-      filterNote.innerHTML = `<strong>Pre-filtered by Step 3 classification:</strong> ${artNum} is not triggered for this system. Pre-answered "No" — override below if needed.`;
-      qCard.appendChild(filterNote);
-      qCard.classList.add('wiz8-q-card--prefiltered');
-    }
-
-    // Risk name
-    const rName = _el('h3', 'wiz8-q-risk-name');
-    rName.textContent = wq.risk_name; qCard.appendChild(rName);
-
-    // Interrogative question text
-    const qText = _el('p', 'wiz8-q-text');
-    qText.textContent = wq.question; qCard.appendChild(qText);
-
-    // Applies-if conditions
-    if (riskG?.applies_if?.length) {
-      const aiWrap  = _el('div', 'wiz8-applies-wrap');
-      const aiLabel = _el('p', 'wiz8-applies-label');
-      aiLabel.textContent = 'This risk applies if any of:';
-      aiWrap.appendChild(aiLabel);
-      const aiList = _el('ul', 'wiz8-applies-list');
-      riskG.applies_if.forEach(cond => {
-        const li = _el('li', 'wiz8-applies-item'); li.textContent = cond; aiList.appendChild(li);
-      });
-      aiWrap.appendChild(aiList);
-      qCard.appendChild(aiWrap);
-    }
-
-    // Traditional analogue
-    if (riskG?.traditional_analog) {
-      const analogRow  = _el('div', 'wiz8-analog-row');
-      const analogIcon = _el('span', 'wiz8-analog-icon');
-      analogIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-      analogRow.appendChild(analogIcon);
-      const analogText = _el('span', 'wiz8-analog-text');
-      analogText.textContent = riskG.traditional_analog;
-      analogRow.appendChild(analogText);
-      qCard.appendChild(analogRow);
-    }
-
-    wrap.appendChild(qCard);
-
-    // Answer label
-    const ansLabel = _el('p', 'wiz8-q-answer-label');
-    ansLabel.textContent = 'Does this risk apply to your system?';
-    wrap.appendChild(ansLabel);
-
-    // Answer buttons
-    const btnRow = _el('div', 'wiz8-q-btn-row');
-
-    // Rationale textarea — pre-filled when an answer is clicked
-    const appliesIf = riskG?.applies_if || [];
-    const _genRationale = val => {
-      if (!appliesIf.length) return '';
-      const conditions = appliesIf.join('; ');
-      if (val === 'yes')
-        return `This risk applies to this AI system. The following conditions are present: ${conditions}.`;
-      if (val === 'partially')
-        return `This risk partially applies to this AI system. One or more of the following conditions may be present: ${conditions}.`;
-      return `This risk is not applicable to this AI system. None of the following conditions apply: ${conditions}.`;
-    };
-
-    const rationaleTa = document.createElement('textarea');
-    rationaleTa.className = 'wiz8-rationale-ta';
-    rationaleTa.placeholder = 'Select an answer above to generate a rationale, or type your own…';
-    rationaleTa.rows = 3;
-    rationaleTa.value = _wizState.rationales[wq.risk_name] || '';
-    rationaleTa.addEventListener('input', () => {
-      _wizState.rationales[wq.risk_name] = rationaleTa.value;
-    });
-
-    [
-      ['yes',       '✓  Yes, this risk applies',  'wiz8-q-btn--yes'],
-      ['partially', '~  Partially applies',        'wiz8-q-btn--part'],
-      ['no',        '✗  No / not applicable',      'wiz8-q-btn--no']
-    ].forEach(([val, label, mod]) => {
-      const btn = _el('button', `wiz8-q-btn ${mod}${answer === val ? ' wiz8-q-btn--selected' : ''}`);
-      btn.textContent = label;
-      btn.addEventListener('click', () => {
-        _wizState.answers[wq.risk_name] = val;
-        btnRow.querySelectorAll('.wiz8-q-btn').forEach(b => b.classList.remove('wiz8-q-btn--selected'));
-        btn.classList.add('wiz8-q-btn--selected');
-        // Pre-fill rationale if blank or previously auto-generated
-        const existing = _wizState.rationales[wq.risk_name] || '';
-        const prevGen  = ['yes', 'partially', 'no'].map(v => _genRationale(v));
-        if (!existing || prevGen.includes(existing)) {
-          _wizState.rationales[wq.risk_name] = _genRationale(val);
-          rationaleTa.value = _wizState.rationales[wq.risk_name];
-        }
-        rationaleWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        rationaleTa.focus();
-      });
-      btnRow.appendChild(btn);
-    });
-    wrap.appendChild(btnRow);
-
-    const rationaleWrap = _el('div', 'wiz8-rationale-wrap');
-    const rationaleLbl = _el('label', 'wiz8-rationale-lbl');
-    rationaleLbl.textContent = 'Rationale';
-    rationaleWrap.appendChild(rationaleLbl);
-    rationaleWrap.appendChild(rationaleTa);
-    wrap.appendChild(rationaleWrap);
-
-    // Navigation row
-    const navRow = _el('div', 'wiz8-q-nav-row');
-    if (idx > 0) {
-      const backBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
-      backBtn.textContent = '← Back';
-      backBtn.addEventListener('click', () => { _wizState.step_index = idx - 1; _renderLegalPane(); });
-      navRow.appendChild(backBtn);
-    } else {
-      navRow.appendChild(_el('span', '')); // left spacer
-    }
-
-    const navRight = _el('div', 'wiz8-q-nav-right');
-    const posLabel = _el('span', 'wiz8-q-nav-pos');
-    posLabel.textContent = `${idx + 1} / ${total}`;
-    navRight.appendChild(posLabel);
-
-    if (idx < total - 1) {
-      const nextBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--next');
-      nextBtn.textContent = 'Next →';
-      nextBtn.addEventListener('click', () => { _wizState.step_index = idx + 1; _renderLegalPane(); });
-      navRight.appendChild(nextBtn);
-    } else {
-      const finBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--finish');
-      finBtn.textContent = 'Finish ✓';
-      finBtn.addEventListener('click', () => { _wizState.complete = true; _renderLegalPane(); });
-      navRight.appendChild(finBtn);
-    }
-    navRow.appendChild(navRight);
-    wrap.appendChild(navRow);
-
-    return wrap;
-  }
-
-  // ---- Summary screen (after wizard completes) ----------------
-  function _buildWizardSummary() {
-    const wqs = _legalGuidance.wizard_questions;
-
-    const applicable    = wqs.filter(wq => ['yes', 'partially'].includes(_wizState.answers[wq.risk_name]));
-    const excluded      = wqs.filter(wq => _wizState.answers[wq.risk_name] === 'no');
-    const skipped       = wqs.filter(wq => !_wizState.answers[wq.risk_name]);
-    const highApp       = applicable.filter(wq => _computeRelevance(wq.risk_name) === 'high');
-    const preFiltered   = excluded.filter(wq => _isArticleApplicable(wq.risk_name) === false);
-
-    // Group applicable by category
-    const byCategory = {};
-    applicable.forEach(wq => {
-      const cat = _legalGuidance.risks?.[wq.risk_name]?.category || 'Other';
-      if (!byCategory[cat]) byCategory[cat] = [];
-      byCategory[cat].push(wq);
-    });
-
-    const wrap = _el('div', 'wiz8-guided-wrap');
-    const card = _el('div', 'step-detail-card');
-
-    // Heading
-    const tickRow = _el('div', 'wiz8-summary-tick-row');
-    const tickIcon = _el('span', 'wiz8-summary-tick-icon');
-    tickIcon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
-    const tickTitle = _el('h2', 'wiz8-summary-title');
-    tickTitle.textContent = 'Legal/Regulatory Assessment Complete';
-    tickRow.appendChild(tickIcon); tickRow.appendChild(tickTitle);
-    card.appendChild(tickRow);
-
-    // Stats
-    const stats = _el('div', 'wiz8-summary-stats');
-    [
-      [applicable.length, 'Risks identified',       '#15803d'],
-      [highApp.length,    'HIGH relevance',          '#b91c1c'],
-      [excluded.length,   'Excluded',                '#64748b'],
-      [skipped.length,    'Skipped',                 '#94a3b8']
-    ].forEach(([num, lbl, col]) => {
-      const s = _el('div', 'wiz8-stat');
-      const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num); n.style.color = col;
-      const l = _el('span', 'wiz8-stat-lbl'); l.textContent = lbl;
-      s.appendChild(n); s.appendChild(l); stats.appendChild(s);
-    });
-    card.appendChild(stats);
-
-    // Category breakdown
-    if (Object.keys(byCategory).length) {
-      card.appendChild(_sectionLabel('Identified Risks by Category'));
-      const catList = _el('div', 'wiz8-summary-cat-list');
-      Object.entries(byCategory).forEach(([cat, risks]) => {
-        const row = _el('div', 'wiz8-summary-cat-row');
-        const catTag = _el('span', 'wiz8-cat-tag');
-        catTag.textContent = cat;
-        const c = _catColor(_legalGuidance.categories?.[cat]?.color || 'slate');
-        catTag.style.background = c.bg; catTag.style.color = c.text;
-        row.appendChild(catTag);
-        const names = _el('span', 'wiz8-summary-risk-names');
-        names.textContent = risks.map(wq =>
-          wq.risk_name + (_wizState.answers[wq.risk_name] === 'partially' ? ' (partial)' : '')
-        ).join(' · ');
-        row.appendChild(names);
-        catList.appendChild(row);
-      });
-      card.appendChild(catList);
-    }
-
-    if (skipped.length) {
-      const skipNote = _el('p', 'wiz8-summary-skip-note');
-      skipNote.textContent = `${skipped.length} risk${skipped.length !== 1 ? 's' : ''} skipped — unanswered questions will default to not applicable.`;
-      card.appendChild(skipNote);
-    }
-
-    if (preFiltered.length) {
-      card.appendChild(_sectionLabel('Pre-filtered by Step 3 Classification'));
-      const pfNote = _el('div', 'wiz8-prefilter-summary');
-      pfNote.innerHTML = `<strong>${preFiltered.length} risk${preFiltered.length !== 1 ? 's were' : ' was'} pre-answered "No"</strong> because the associated AI Act article is not triggered for this system. These are excluded from the assessment. Return to any question to override.`;
-      card.appendChild(pfNote);
-      const pfList = _el('div', 'wiz8-prefilter-list');
-      preFiltered.forEach(wq => {
-        const article = _getArticleForRisk(wq.risk_name);
-        const artNum  = article?.article_name.match(/^(Article \d+[a-zA-Z]*)/)?.[1] || '';
-        const row = _el('div', 'wiz8-prefilter-item');
-        row.appendChild(_el('span', 'wiz8-prefilter-risk-name', { textContent: wq.risk_name }));
-        if (artNum) row.appendChild(_el('span', 'wiz8-prefilter-art-tag', { textContent: artNum }));
-        pfList.appendChild(row);
-      });
-      card.appendChild(pfList);
-    }
-
-    // Actions
+    wrap.appendChild(_buildRiskList(wqs));
     const actRow = _el('div', 'wiz-action-row');
-    const applyBtn = document.createElement('button');
-    applyBtn.className = 'wiz-btn-primary';
-    applyBtn.textContent = 'Save Legal Assessment ✓';
-    applyBtn.addEventListener('click', _handleSaveLegal);
-    actRow.appendChild(applyBtn);
-
-    const reviewBtn = _el('button', 'wiz8-q-nav-btn wiz8-q-nav-btn--back');
-    reviewBtn.textContent = '← Review & Edit Rationales';
-    reviewBtn.style.marginLeft = 'auto';
-    reviewBtn.addEventListener('click', () => {
-      _wizState.step_index = 0;
-      _wizState.complete   = false;
-      _renderLegalPane();
-    });
-    actRow.appendChild(reviewBtn);
-
-    const restartBtn = _el('button', 'wiz8-q-nav-btn');
-    restartBtn.textContent = '↺ Start over';
-    restartBtn.style.marginLeft = '8px';
-    restartBtn.style.opacity = '0.7';
-    restartBtn.addEventListener('click', () => {
-      _wizState.step_index = 0;
-      _wizState.answers    = {};
-      _wizState.rationales = {};
-      _wizState.complete   = false;
-      _renderLegalPane();
-    });
-    actRow.appendChild(restartBtn);
-    card.appendChild(actRow);
-
-    wrap.appendChild(card);
+    const saveBtn = _el('button', 'wiz-btn-primary');
+    saveBtn.textContent = 'Save Legal Assessment ✓';
+    saveBtn.addEventListener('click', _handleSaveLegal);
+    actRow.appendChild(saveBtn);
+    const clearBtn = _el('button', 'wiz-btn-secondary');
+    clearBtn.textContent = '↺ Clear all answers';
+    clearBtn.addEventListener('click', () => { _wizState.answers = {}; _wizState.rationales = {}; _renderLegalPane(); });
+    actRow.appendChild(clearBtn);
+    wrap.appendChild(actRow);
     return wrap;
+  }
+
+  // ---- Risk list (one collapsible row per risk) ---------------
+  function _buildRiskList(wqs) {
+    const BADGE = { yes: '✓ Yes', partially: '~ Partial', no: '✗ No' };
+    const list  = _el('div', 's5-risk-list');
+
+    wqs.forEach(wq => {
+      const riskG      = _legalGuidance.risks?.[wq.risk_name];
+      const answer     = _wizState.answers[wq.risk_name] || null;
+      const article    = _getArticleForRisk(wq.risk_name);
+      const artNum     = article?.article_name.match(/^(Article \d+[a-zA-Z]*)/)?.[1] || '';
+      const category   = riskG?.category || null;
+      const catColors  = _catColor(category ? (_legalGuidance.categories?.[category]?.color || 'slate') : 'slate');
+      const prefiltered = _isArticleApplicable(wq.risk_name) === false;
+      const appliesIf  = riskG?.applies_if || [];
+
+      // Badge lives in header — create before body so click handler can update it
+      const badge = _el('span', `s5-ans-badge${answer ? ' s5-ans-badge--' + answer : ''}`);
+      badge.textContent = answer ? BADGE[answer] : 'Unanswered';
+
+      const genRationale = val => {
+        if (!appliesIf.length) return '';
+        const c = appliesIf.join('; ');
+        if (val === 'yes')       return `This risk applies. Conditions present: ${c}.`;
+        if (val === 'partially') return `This risk partially applies. Conditions may be present: ${c}.`;
+        return `This risk does not apply. None of the conditions apply: ${c}.`;
+      };
+
+      const ta = document.createElement('textarea');
+      ta.className   = 's5-rationale-ta';
+      ta.placeholder = 'Rationale…';
+      ta.rows        = 2;
+      ta.value       = _wizState.rationales[wq.risk_name] || '';
+      ta.addEventListener('input', () => { _wizState.rationales[wq.risk_name] = ta.value; });
+
+      const btnRow = _el('div', 's5-answer-row');
+      [['yes', '✓ Yes'], ['partially', '~ Partial'], ['no', '✗ No']].forEach(([val, lbl]) => {
+        const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer === val ? ' s5-answer-btn--active' : ''}`);
+        btn.textContent = lbl;
+        btn.addEventListener('click', () => {
+          _wizState.answers[wq.risk_name] = val;
+          btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
+          btn.classList.add('s5-answer-btn--active');
+          badge.textContent = BADGE[val];
+          badge.className   = `s5-ans-badge s5-ans-badge--${val}`;
+          const existing = _wizState.rationales[wq.risk_name] || '';
+          const prevGen  = ['yes', 'partially', 'no'].map(v => genRationale(v));
+          if (!existing || prevGen.includes(existing)) {
+            _wizState.rationales[wq.risk_name] = genRationale(val);
+            ta.value = _wizState.rationales[wq.risk_name];
+          }
+        });
+        btnRow.appendChild(btn);
+      });
+
+      const body = _el('div', 's5-risk-body');
+      if (prefiltered) {
+        const note = _el('div', 's5-prefilter-note');
+        note.innerHTML = `<strong>Pre-filtered by Step 3:</strong> ${artNum} is not triggered for this system — pre-answered "No". Override below if needed.`;
+        body.appendChild(note);
+      }
+      if (appliesIf.length) {
+        body.appendChild(_el('p', 's5-applies-label', { textContent: 'Applies if any of:' }));
+        const ul = _el('ul', 's5-applies-list');
+        appliesIf.forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
+        body.appendChild(ul);
+      }
+      if (riskG?.traditional_analog) {
+        body.appendChild(_el('div', 's5-analog-row', { textContent: '💡 ' + riskG.traditional_analog }));
+      }
+      body.appendChild(btnRow);
+      body.appendChild(ta);
+
+      const subtitle = [artNum, category].filter(Boolean).join(' · ');
+      const { section } = WizUtils.buildCollapsible({ title: wq.risk_name, subtitle, body });
+      if (category) {
+        const catTag = _el('span', 'wiz8-cat-tag');
+        catTag.textContent = category;
+        catTag.style.background = catColors.bg; catTag.style.color = catColors.text;
+        section.querySelector('.wiz-collapsible-header-right').prepend(catTag);
+      }
+      section.querySelector('.wiz-collapsible-header-right').prepend(badge);
+      list.appendChild(section);
+    });
+
+    return list;
   }
 
   // ---- Legal assessment save helpers --------------------------
@@ -1014,114 +792,31 @@
 /* Category tag */
 .wiz8-cat-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
 
-/* Relevance badge */
-.wiz8-rel-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;letter-spacing:.03em}
-.wiz8-rel-badge--high{background:#fee2e2;color:#b91c1c}
-.wiz8-rel-badge--medium{background:#f1f5f9;color:#475569}
-
-/* Traditional IT analogue */
-.wiz8-analog-row{display:flex;gap:7px;align-items:flex-start;margin-bottom:10px;padding:9px 12px;background:#f8fafc;border-radius:6px;border:1px solid var(--color-border)}
-.wiz8-analog-icon{display:flex;color:#0284c7;flex-shrink:0;margin-top:1px}
-.wiz8-analog-text{font-size:12px;color:#334155;line-height:1.6;font-style:italic}
-
-/* Applies-if checklist */
-.wiz8-applies-wrap{margin-bottom:10px}
-.wiz8-applies-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 6px}
-.wiz8-applies-list{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:4px}
-.wiz8-applies-item{font-size:12px;color:var(--color-text-secondary);line-height:1.55;padding:5px 10px 5px 28px;background:#fff;border:1px solid var(--color-border);border-radius:5px;position:relative}
-.wiz8-applies-item::before{content:"✓";position:absolute;left:8px;color:#0d9488;font-weight:700;font-size:11px;top:6px}
-
-/* Collapsible description */
-.wiz8-desc-wrap{border:1px solid var(--color-border);border-radius:6px;overflow:hidden;margin-bottom:6px}
-.wiz8-desc-header{display:flex;align-items:center;gap:6px;padding:7px 11px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none}
-.wiz8-desc-header:hover{background:var(--color-bg-hover,#f1f5f9)}
-.wiz8-desc-icon{display:flex;color:var(--color-text-tertiary);flex-shrink:0}
-.wiz8-desc-label{font-size:12px;font-weight:600;color:var(--color-text-secondary);flex:1}
-.wiz8-desc-chevron{display:flex;color:var(--color-text-tertiary);transition:transform .2s}
-.wiz8-desc-body{padding:12px 14px}
-.wiz8-risk-desc-text{font-size:12px;color:var(--color-text-secondary);line-height:1.65;margin:0}
-
-/* Attack vectors */
-.wiz8-av-wrap{border:1px solid var(--color-border);border-radius:6px;overflow:hidden;margin-top:4px}
-.wiz8-av-header{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none}
-.wiz8-av-header:hover{background:var(--color-bg-hover,#f1f5f9)}
-.wiz8-av-icon{display:flex;color:#d97706;flex-shrink:0}
-.wiz8-av-label{font-size:12px;font-weight:600;color:#92400e;flex:1}
-.wiz8-av-chevron{display:flex;color:var(--color-text-tertiary);transition:transform .2s}
-.wiz8-av-body{padding:12px 14px;display:flex;flex-direction:column;gap:12px;background:#fffbeb}
-.wiz8-av-item{display:flex;gap:10px;align-items:flex-start}
-.wiz8-av-num{font-size:11px;font-weight:700;color:#b45309;background:#fef3c7;padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-top:2px}
-.wiz8-av-text{font-size:12px;color:var(--color-text-secondary);line-height:1.65;margin:0}
-
-/* Search */
-.wiz8-search-wrap{display:flex;align-items:center;gap:6px;margin-bottom:10px;background:#fff;border:1px solid var(--color-border);border-radius:6px;padding:0 10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.wiz8-search-icon{display:flex;color:var(--color-text-tertiary);flex-shrink:0}
-.wiz8-search-input{flex:1;border:none;outline:none;padding:10px 0;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:transparent}
-.wiz8-search-input::placeholder{color:var(--color-text-tertiary)}
-.wiz8-search-clear{display:flex;align-items:center;justify-content:center;background:var(--color-bg-subtle,#f8fafc);border:1px solid var(--color-border);border-radius:4px;width:20px;height:20px;cursor:pointer;color:var(--color-text-tertiary);flex-shrink:0;padding:0}
-.wiz8-search-clear:hover{color:var(--color-text-primary)}
-.wiz8-search-count{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap}
-.wiz8-risk-list{display:flex;flex-direction:column}
-
-/* Count/action */
+/* Count badge (used by reference pane) */
 .wiz8-count-badge{font-size:11px;font-weight:600;background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
-.wiz8-action-right{display:flex;gap:8px}
-.wiz8-count-lg{font-size:13px;font-weight:600;color:var(--teal-700,#0f766e)}
 
-/* Results */
-.wiz8-results{margin-top:16px}
-.wiz8-result-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px}
-.wiz8-result-title{font-size:14px;font-weight:700;color:#15803d;margin:0 0 14px}
-.wiz8-result-stats{display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap}
-.wiz8-stat{display:flex;flex-direction:column;gap:2px}
-.wiz8-stat-num{font-size:24px;font-weight:700;color:#15803d;line-height:1}
-.wiz8-stat-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
-.wiz8-result-note{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0}
-
-/* Guided wizard */
-.wiz8-guided-wrap{max-width:680px;margin:0 auto;padding:24px}
-.wiz8-guided-prog-wrap{margin-bottom:24px}
-.wiz8-guided-prog-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.wiz8-guided-prog-title{font-size:14px;font-weight:700;color:var(--color-text-primary)}
-.wiz8-guided-prog-label{font-size:12px;color:var(--color-text-tertiary);font-weight:500}
-.wiz8-guided-prog-bar{height:6px;background:var(--color-border);border-radius:3px;overflow:hidden}
-.wiz8-guided-prog-fill{height:100%;background:var(--teal-500,#14b8a6);border-radius:3px;transition:width .3s ease}
-.wiz8-q-card{background:#fff;border:1px solid var(--color-border);border-radius:10px;padding:20px 22px;margin-bottom:18px}
-.wiz8-q-card--high{border-left:3px solid #fca5a5}
-.wiz8-q-meta{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.wiz8-q-risk-name{font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0 0 10px;line-height:1.35}
-.wiz8-q-text{font-size:14px;font-weight:600;color:var(--teal-700,#0f766e);line-height:1.55;margin:0 0 16px;padding:12px 14px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px}
-.wiz8-q-answer-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);margin:0 0 10px}
-.wiz8-q-btn-row{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.wiz8-rationale-wrap{margin-bottom:20px;border-top:1px solid var(--color-border,#e5e7eb);padding-top:14px;margin-top:4px}
-.wiz8-rationale-lbl{display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary,#374151);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.wiz8-rationale-ta{width:100%;box-sizing:border-box;font-size:13px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border,#e2e8f0);border-radius:6px;padding:10px 12px;line-height:1.6;resize:vertical;background:var(--color-bg-subtle,#f8fafc);min-height:80px}
-.wiz8-rationale-ta:focus{outline:none;border-color:#0d9488;background:#fff}
-.wiz8-q-btn{width:100%;padding:13px 18px;font-size:13px;font-weight:600;border:2px solid var(--color-border);border-radius:8px;cursor:pointer;text-align:left;background:#fff;color:var(--color-text-primary);font-family:inherit;transition:background .12s,border-color .12s}
-.wiz8-q-btn:hover{background:var(--color-bg-subtle,#f8fafc);border-color:var(--teal-300,#5eead4)}
-.wiz8-q-btn--yes.wiz8-q-btn--selected{background:#f0fdf4;border-color:#4ade80;color:#15803d}
-.wiz8-q-btn--part.wiz8-q-btn--selected{background:#fffbeb;border-color:#fcd34d;color:#92400e}
-.wiz8-q-btn--no.wiz8-q-btn--selected{background:#f8fafc;border-color:#94a3b8;color:#475569}
-.wiz8-q-nav-row{display:flex;align-items:center;justify-content:space-between;padding-top:4px}
-.wiz8-q-nav-right{display:flex;align-items:center;gap:10px}
-.wiz8-q-nav-pos{font-size:11px;color:var(--color-text-tertiary)}
-.wiz8-q-nav-btn{padding:8px 16px;font-size:12px;font-weight:600;border:1px solid var(--color-border);border-radius:6px;cursor:pointer;background:#fff;color:var(--color-text-secondary);font-family:inherit;transition:background .12s}
-.wiz8-q-nav-btn:hover{background:var(--color-bg-subtle,#f8fafc)}
-.wiz8-q-nav-btn--next,.wiz8-q-nav-btn--finish{background:var(--teal-600,#0d9488);color:#fff;border-color:var(--teal-600,#0d9488)}
-.wiz8-q-nav-btn--next:hover,.wiz8-q-nav-btn--finish:hover{background:var(--teal-700,#0f766e)}
-
-/* Summary screen */
-.wiz8-summary-tick-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.wiz8-summary-tick-icon{color:#15803d;display:flex;flex-shrink:0}
-.wiz8-summary-title{font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0}
-.wiz8-summary-stats{display:flex;gap:28px;margin-bottom:20px;flex-wrap:wrap}
-.wiz8-summary-cat-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
-.wiz8-summary-cat-row{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:var(--color-bg-subtle,#f8fafc);border-radius:6px}
-.wiz8-summary-risk-names{font-size:12px;color:var(--color-text-secondary);line-height:1.5;padding-top:1px}
-.wiz8-summary-skip-note{font-size:12px;color:var(--color-text-tertiary);font-style:italic;margin:0 0 16px}
-
-/* Applied banner */
-.wiz8-applied-banner{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 14px;font-size:13px;color:#166534;margin-bottom:16px;line-height:1.5}
+/* Risk list */
+.s5-legal-wrap{display:flex;flex-direction:column}
+.s5-saved-note{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 14px;font-size:13px;color:#166534;line-height:1.5;margin:12px 24px 0}
+.s5-risk-list{display:flex;flex-direction:column}
+.s5-risk-body{display:flex;flex-direction:column;gap:10px}
+.s5-prefilter-note{background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:9px 13px;font-size:12px;color:#92400e;line-height:1.55}
+.s5-applies-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 5px}
+.s5-applies-list{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.s5-applies-list li{font-size:12px;color:var(--color-text-secondary);line-height:1.5;padding:4px 10px 4px 26px;background:#fff;border:1px solid var(--color-border);border-radius:5px;position:relative}
+.s5-applies-list li::before{content:"✓";position:absolute;left:8px;color:#0d9488;font-weight:700;font-size:11px;top:5px}
+.s5-analog-row{font-size:12px;color:#334155;line-height:1.5;padding:8px 12px;background:#f8fafc;border-radius:6px;border:1px solid var(--color-border)}
+.s5-answer-row{display:flex;gap:6px;flex-wrap:wrap}
+.s5-answer-btn{padding:7px 14px;font-size:12px;font-weight:600;border:1px solid var(--color-border);border-radius:6px;cursor:pointer;background:#fff;color:var(--color-text-secondary);font-family:inherit;transition:background .12s,border-color .12s}
+.s5-answer-btn--yes.s5-answer-btn--active{background:#f0fdf4;border-color:#4ade80;color:#15803d}
+.s5-answer-btn--partially.s5-answer-btn--active{background:#fffbeb;border-color:#fcd34d;color:#92400e}
+.s5-answer-btn--no.s5-answer-btn--active{background:#f8fafc;border-color:#94a3b8;color:#475569}
+.s5-rationale-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-bg-subtle,#f8fafc)}
+.s5-rationale-ta:focus{outline:none;border-color:#0d9488;background:#fff}
+.s5-ans-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;background:#f1f5f9;color:#64748b}
+.s5-ans-badge--yes{background:#dcfce7;color:#15803d}
+.s5-ans-badge--partially{background:#fef3c7;color:#b45309}
+.s5-ans-badge--no{background:#f1f5f9;color:#475569}
 
 /* Reference pane */
 .wiz8-cat-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
@@ -1140,8 +835,6 @@
 .wiz8-diag-src-badge--eu{background:#dbeafe;color:#1e40af}
 
 /* ---- Legal pane ---- */
-.wiz8-legal-wrap{display:flex;flex-direction:column}
-.wiz8-legal-saved-note{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 14px;font-size:13px;color:#166534;line-height:1.5;margin:12px 24px 0}
 
 /* ---- Combined Review pane ---- */
 .wiz8-review-sec{border:1px solid var(--color-border);border-radius:8px;padding:16px 18px;margin-bottom:16px}
