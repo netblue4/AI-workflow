@@ -252,7 +252,7 @@
     hLeft.appendChild(_el('span', 'wiz-item-name', { textContent: 'Axis A — Select your governance tier' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
     const initTier = _state.axis_a_tier;
-    const aBadge  = _el('span', 'wiz-gate-status-badge ' + (initTier ? 'wiz-gate-status-badge--complete' : 'wiz-gate-status-badge--none'));
+    const aBadge  = _el('span', 'wiz-item-badge ' + (initTier ? 'wiz-item-badge--ok' : 'wiz-item-badge--none'));
     aBadge.id     = 'wiz-axis-a-status';
     aBadge.textContent = initTier === 'tier_1' ? 'Tier 1 selected' : initTier === 'tier_2' ? 'Tier 2 selected' : 'Not selected';
     const aChevron = _el('span', 'wiz-gate-chevron');
@@ -353,7 +353,7 @@
 
     const hRight  = _el('div', 'wiz-gate-header-right');
     const { answered: initAns, total: initTot } = _gateAnsweredCount(gate);
-    const gBadge  = _el('span', 'wiz-gate-status-badge ' + (initAns === 0 ? 'wiz-gate-status-badge--none' : initAns === initTot ? 'wiz-gate-status-badge--complete' : 'wiz-gate-status-badge--partial'));
+    const gBadge  = _el('span', 'wiz-item-badge ' + (initAns === 0 ? 'wiz-item-badge--none' : initAns === initTot ? 'wiz-item-badge--ok' : 'wiz-item-badge--partial'));
     gBadge.id     = `wiz-gate-status-${gate.gate_id}`;
     gBadge.textContent = `${initAns} / ${initTot}`;
     const gChevron = _el('span', 'wiz-gate-chevron');
@@ -415,10 +415,10 @@
       const { answered, total } = _gateAnsweredCount(gate);
       badge.textContent = `${answered} / ${total}`;
       badge.className = answered === 0
-        ? 'wiz-gate-status-badge wiz-gate-status-badge--none'
+        ? 'wiz-item-badge wiz-item-badge--none'
         : answered === total
-          ? 'wiz-gate-status-badge wiz-gate-status-badge--complete'
-          : 'wiz-gate-status-badge wiz-gate-status-badge--partial';
+          ? 'wiz-item-badge wiz-item-badge--ok'
+          : 'wiz-item-badge wiz-item-badge--partial';
     });
   }
 
@@ -427,7 +427,7 @@
     if (!badge) return;
     const tier = _state.axis_a_tier;
     badge.textContent = tier === 'tier_1' ? 'Tier 1 selected' : tier === 'tier_2' ? 'Tier 2 selected' : 'Not selected';
-    badge.className = 'wiz-gate-status-badge ' + (tier ? 'wiz-gate-status-badge--complete' : 'wiz-gate-status-badge--none');
+    badge.className = 'wiz-item-badge ' + (tier ? 'wiz-item-badge--ok' : 'wiz-item-badge--none');
   }
 
   function _buildCollapsedQuestion(answerKey, questionText, subItems) {
@@ -1066,10 +1066,6 @@
       .wiz-gate-header-left { flex:1; }
       .wiz-gate-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0;padding-top:2px; }
       .wiz-gate-chevron { display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s; }
-      .wiz-gate-status-badge { font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap; }
-      .wiz-gate-status-badge--complete { background:#dcfce7;color:#15803d; }
-      .wiz-gate-status-badge--partial  { background:#fef3c7;color:#b45309; }
-      .wiz-gate-status-badge--none     { background:#fee2e2;color:#b91c1c; }
       .wiz-gate-body { padding:14px 16px;display:flex;flex-direction:column;gap:10px; }
 
       /* Questions */

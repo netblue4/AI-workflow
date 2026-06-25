@@ -352,7 +352,7 @@
     });
     right.appendChild(selAll); right.appendChild(deselAll);
 
-    const selBadge = _el('span', 'wiz9-risk-sel-badge');
+    const selBadge = _el('span', 'wiz-item-badge');
     selBadge.id = `wiz9-rb-${_safeId(risk.risk_id)}`;
     right.appendChild(selBadge);
 
@@ -440,10 +440,10 @@
     if (!badge) return;
     badge.textContent = `${sel} / ${total}`;
     badge.className = sel === 0
-      ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--none'
+      ? 'wiz-item-badge wiz-item-badge--none'
       : sel === total
-        ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--all'
-        : 'wiz9-risk-sel-badge wiz9-risk-sel-badge--partial';
+        ? 'wiz-item-badge wiz-item-badge--ok'
+        : 'wiz-item-badge wiz-item-badge--partial';
   }
 
   // ---- Control card -------------------------------------------
@@ -845,10 +845,10 @@
       const rn  = _el('span', 'wiz9-ref-risk-name'); rn.textContent = risk.display_name; hdr.appendChild(rn);
       const eb  = _el('span', 'wiz9-src-badge wiz9-src-badge--eu'); eb.textContent = 'EU AI Act'; hdr.appendChild(eb);
       const rb = _el('span', selCount === 0
-        ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--none'
+        ? 'wiz-item-badge wiz-item-badge--none'
         : selCount === risk.controls.length
-          ? 'wiz9-risk-sel-badge wiz9-risk-sel-badge--all'
-          : 'wiz9-risk-sel-badge wiz9-risk-sel-badge--partial');
+          ? 'wiz-item-badge wiz-item-badge--ok'
+          : 'wiz-item-badge wiz-item-badge--partial');
       rb.textContent = `${selCount} / ${risk.controls.length}`;
       hdr.appendChild(rb);
       sec.appendChild(hdr);
@@ -1536,10 +1536,6 @@
 .wiz9-risk-hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .wiz9-sel-btn{font-size:11px;font-weight:500;color:var(--teal-600,#0d9488);background:none;border:1px solid #99f6e4;border-radius:4px;padding:3px 8px;cursor:pointer;white-space:nowrap}
 .wiz9-sel-btn:hover{background:#f0fdfa}
-.wiz9-risk-sel-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;min-width:40px;text-align:center}
-.wiz9-risk-sel-badge--all{background:#dcfce7;color:#15803d}
-.wiz9-risk-sel-badge--partial{background:#fef3c7;color:#b45309}
-.wiz9-risk-sel-badge--none{background:#fee2e2;color:#b91c1c}
 .wiz9-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
 .wiz9-risk-body{padding:16px;display:flex;flex-direction:column;gap:12px}
 .wiz9-collapsed{display:none}

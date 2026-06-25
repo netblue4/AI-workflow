@@ -389,7 +389,8 @@
 
   // ---- Risk list (one collapsible row per risk) ---------------
   function _buildRiskList(wqs) {
-    const BADGE = { yes: '✓ Yes', partially: '~ Partial', no: '✗ No' };
+    const BADGE   = { yes: '✓ Yes', partially: '~ Partial', no: '✗ No' };
+    const ANS_MOD = { yes: 'ok', partially: 'partial', no: 'none' };
     const list  = _el('div', 's5-risk-list');
 
     wqs.forEach(wq => {
@@ -403,7 +404,7 @@
       const appliesIf  = riskG?.applies_if || [];
 
       // Badge lives in header — create before body so click handler can update it
-      const badge = _el('span', `s5-ans-badge${answer ? ' s5-ans-badge--' + answer : ''}`);
+      const badge = _el('span', `wiz-item-badge${answer ? ' wiz-item-badge--' + ANS_MOD[answer] : ''}`);
       badge.textContent = answer ? BADGE[answer] : 'Unanswered';
 
       const genRationale = val => {
@@ -430,7 +431,7 @@
           btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
           btn.classList.add('s5-answer-btn--active');
           badge.textContent = BADGE[val];
-          badge.className   = `s5-ans-badge s5-ans-badge--${val}`;
+          badge.className   = `wiz-item-badge wiz-item-badge--${ANS_MOD[val]}`;
           const existing = _wizState.rationales[wq.risk_name] || '';
           const prevGen  = ['yes', 'partially', 'no'].map(v => genRationale(v));
           if (!existing || prevGen.includes(existing)) {
@@ -813,10 +814,6 @@
 .s5-answer-btn--no.s5-answer-btn--active{background:#f8fafc;border-color:#94a3b8;color:#475569}
 .s5-rationale-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-bg-subtle,#f8fafc)}
 .s5-rationale-ta:focus{outline:none;border-color:#0d9488;background:#fff}
-.s5-ans-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;background:#f1f5f9;color:#64748b}
-.s5-ans-badge--yes{background:#dcfce7;color:#15803d}
-.s5-ans-badge--partially{background:#fef3c7;color:#b45309}
-.s5-ans-badge--no{background:#f1f5f9;color:#475569}
 
 /* Reference pane */
 .wiz8-cat-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
