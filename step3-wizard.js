@@ -249,7 +249,7 @@
 
     const header  = _el('div', 'wiz-collapsible-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_sectionLabel('Axis A — Select your governance tier'));
+    hLeft.appendChild(_el('span', 'wiz-item-name', { textContent: 'Axis A — Select your governance tier' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
     const initTier = _state.axis_a_tier;
     const aBadge  = _el('span', 'wiz-gate-status-badge ' + (initTier ? 'wiz-gate-status-badge--complete' : 'wiz-gate-status-badge--none'));
@@ -1060,9 +1060,9 @@
 
       /* Gates */
       .wiz-gate-section { border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;transition:opacity var(--transition); }
-      .wiz-gate-header { padding:12px 16px;background:var(--color-bg);border-bottom:1px solid var(--color-border); }
-      .wiz-gate-header--clickable { cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:flex-start;gap:12px; }
-      .wiz-gate-header--clickable:hover { background:var(--color-surface); }
+      .wiz-gate-header { padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border); }
+      .wiz-gate-header--clickable { cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:flex-start;gap:10px; }
+      .wiz-gate-header--clickable:hover { background:var(--color-bg-hover,#f1f5f9); }
       .wiz-gate-header-left { flex:1; }
       .wiz-gate-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0;padding-top:2px; }
       .wiz-gate-chevron { display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s; }

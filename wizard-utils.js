@@ -73,8 +73,12 @@ window.WizUtils = (function () {
     return strip;
   }
 
+  const _RISK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
   // ---- Collapsible section --------------------------------------------
-  // opts: { title, subtitle?, sectionClass?, headerClass?, bodyClass?, chevronClass?, body? }
+  // opts: { title, icon?, artId?, sectionClass?, headerClass?, bodyClass?, chevronClass?, body? }
+  // icon: true = standard risk warning triangle; or pass an SVG string
+  // artId: pk_AI_Article_ID — renders a wiz-art-tag chip in header-right
   function buildCollapsible(opts) {
     const section = document.createElement('div');
     section.className = opts.sectionClass || 'wiz-collapsible-section';
@@ -84,19 +88,20 @@ window.WizUtils = (function () {
 
     const hLeft = document.createElement('div');
     hLeft.className = 'wiz-collapsible-header-left';
-    const titleEl = el('p', 'section-label', { style: 'margin-bottom:2px', textContent: opts.title });
-    hLeft.appendChild(titleEl);
-    if (opts.subtitle) {
-      const subEl = document.createElement('p');
-      subEl.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
-      subEl.textContent = opts.subtitle;
-      hLeft.appendChild(subEl);
+    if (opts.icon) {
+      const iconEl = el('span', 'wiz-item-icon');
+      iconEl.innerHTML = opts.icon === true ? _RISK_ICON : opts.icon;
+      hLeft.appendChild(iconEl);
     }
+    hLeft.appendChild(el('span', 'wiz-item-name', { textContent: opts.title }));
 
     const hRight = document.createElement('div');
     hRight.className = 'wiz-collapsible-header-right';
+    if (opts.artId) {
+      hRight.appendChild(el('span', 'wiz-art-tag', { textContent: artLabel(opts.artId) }));
+    }
     const chevron = document.createElement('span');
-    chevron.className = opts.chevronClass || 'wiz-collapsible-chevron';
+    chevron.className = opts.chevronClass || 'wiz-gate-chevron';
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     hRight.appendChild(chevron);
     header.append(hLeft, hRight);
@@ -119,24 +124,31 @@ window.WizUtils = (function () {
 
   // ---- EU AI Act articles (replaces tbl_AI_Articles.json) -----------
   const ARTICLES = [
-    { pk_AI_Article_ID: 'ART-001', article_name: 'Article 13: Transparency and Provision of Information to Deployers' },
-    { pk_AI_Article_ID: 'ART-002', article_name: 'Article 14: Human Oversight' },
-    { pk_AI_Article_ID: 'ART-003', article_name: 'Article 15: Accuracy, Robustness and Cybersecurity' },
-    { pk_AI_Article_ID: 'ART-004', article_name: 'Article 10: Data and Data Governance' },
-    { pk_AI_Article_ID: 'ART-005', article_name: 'Article 12: Record-Keeping' },
-    { pk_AI_Article_ID: 'ART-006', article_name: 'Article 17: Quality Management System' },
-    { pk_AI_Article_ID: 'ART-007', article_name: 'Article 9: Risk Management System' },
-    { pk_AI_Article_ID: 'ART-008', article_name: 'Article 11: Technical Documentation' },
-    { pk_AI_Article_ID: 'ART-009', article_name: 'Article 25: Substantial Modification' },
-    { pk_AI_Article_ID: 'ART-010', article_name: 'Article 26: Deployer Obligations' },
-    { pk_AI_Article_ID: 'ART-011', article_name: 'Article 43: Conformity Assessment' },
-    { pk_AI_Article_ID: 'ART-012', article_name: 'Article 50: Transparency Obligations for Certain AI Systems' },
-    { pk_AI_Article_ID: 'ART-013', article_name: 'Article 72: Post-Market Monitoring' },
-    { pk_AI_Article_ID: 'ART-014', article_name: 'Article 5: Prohibited AI Practices' },
-    { pk_AI_Article_ID: 'ART-015', article_name: 'Article 6: Classification of High-Risk AI Systems' },
-    { pk_AI_Article_ID: 'ART-016', article_name: 'Article 16: Obligations for Providers of High-Risk AI Systems' },
+    { pk_AI_Article_ID: 'ART-001', article_name: 'Article 13: Transparency and Provision of Information to Deployers', short_name: 'Transparency' },
+    { pk_AI_Article_ID: 'ART-002', article_name: 'Article 14: Human Oversight', short_name: 'Human Oversight' },
+    { pk_AI_Article_ID: 'ART-003', article_name: 'Article 15: Accuracy, Robustness and Cybersecurity', short_name: 'Accuracy & Robustness' },
+    { pk_AI_Article_ID: 'ART-004', article_name: 'Article 10: Data and Data Governance', short_name: 'Data Governance' },
+    { pk_AI_Article_ID: 'ART-005', article_name: 'Article 12: Record-Keeping', short_name: 'Record-Keeping' },
+    { pk_AI_Article_ID: 'ART-006', article_name: 'Article 17: Quality Management System', short_name: 'Quality Management' },
+    { pk_AI_Article_ID: 'ART-007', article_name: 'Article 9: Risk Management System', short_name: 'Risk Management' },
+    { pk_AI_Article_ID: 'ART-008', article_name: 'Article 11: Technical Documentation', short_name: 'Technical Documentation' },
+    { pk_AI_Article_ID: 'ART-009', article_name: 'Article 25: Substantial Modification', short_name: 'Substantial Modification' },
+    { pk_AI_Article_ID: 'ART-010', article_name: 'Article 26: Deployer Obligations', short_name: 'Deployer Obligations' },
+    { pk_AI_Article_ID: 'ART-011', article_name: 'Article 43: Conformity Assessment', short_name: 'Conformity Assessment' },
+    { pk_AI_Article_ID: 'ART-012', article_name: 'Article 50: Transparency Obligations for Certain AI Systems', short_name: 'AI Transparency' },
+    { pk_AI_Article_ID: 'ART-013', article_name: 'Article 72: Post-Market Monitoring', short_name: 'Post-Market Monitoring' },
+    { pk_AI_Article_ID: 'ART-014', article_name: 'Article 5: Prohibited AI Practices', short_name: 'Prohibited Practices' },
+    { pk_AI_Article_ID: 'ART-015', article_name: 'Article 6: Classification of High-Risk AI Systems', short_name: 'High-Risk Classification' },
+    { pk_AI_Article_ID: 'ART-016', article_name: 'Article 16: Obligations for Providers of High-Risk AI Systems', short_name: 'Provider Obligations' },
   ];
   const ARTICLES_BY_ID = new Map(ARTICLES.map(a => [a.pk_AI_Article_ID, a]));
+
+  function artLabel(artId) {
+    const art = ARTICLES_BY_ID.get(artId);
+    if (!art) return '';
+    const m = art.article_name.match(/^(Article \d+[a-zA-Z]*)/);
+    return m ? `${m[1]} · ${art.short_name}` : art.short_name;
+  }
 
   // ---- Shared async JSON loader -------------------------------------
   // Returns an array parallel to urls; null for any fetch/parse failure.
@@ -176,14 +188,16 @@ window.WizUtils = (function () {
 `);
   injectStyles('wiz-collapsible-styles', `
 .wiz-collapsible-section{border:1px solid var(--color-border);border-radius:var(--radius-md,6px);overflow:hidden;margin-bottom:20px}
-.wiz-collapsible-header{padding:12px 16px;background:var(--color-bg);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.wiz-collapsible-header:hover{background:var(--color-surface)}
-.wiz-collapsible-header-left{flex:1}
-.wiz-collapsible-header-left .section-label{margin-bottom:0}
+.wiz-collapsible-header{padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wiz-collapsible-header:hover{background:var(--color-bg-hover,#f1f5f9)}
+.wiz-collapsible-header-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 .wiz-collapsible-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .wiz-collapsible-body{padding:14px 16px;border-top:1px solid var(--color-border)}
+.wiz-item-icon{display:flex;color:#ef4444;flex-shrink:0}
+.wiz-item-name{font-size:13px;font-weight:700;color:var(--color-text-primary);min-width:0}
+.wiz-art-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af;white-space:nowrap;flex-shrink:0;letter-spacing:.02em}
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, fetchAll, ARTICLES, ARTICLES_BY_ID };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel };
 })();

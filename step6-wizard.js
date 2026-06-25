@@ -135,11 +135,12 @@
         tasks: tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || []
       }));
       result.push({
-        risk_id:          tblRisk.pk_Risk_ID,
-        display_name:     tblRisk.risk_name,
-        risk_type:        'legal',
-        risk_source:      'EU_AI_Act',
-        risk_description: tblRisk.risk_description || '',
+        risk_id:           tblRisk.pk_Risk_ID,
+        display_name:      tblRisk.risk_name,
+        fk_AI_Article_ID:  tblRisk.fk_AI_Article_ID || '',
+        risk_type:         'legal',
+        risk_source:       'EU_AI_Act',
+        risk_description:  tblRisk.risk_description || '',
         controls
       });
     });
@@ -320,21 +321,16 @@
     // Left: risk heading
     const left = _el('div', 'wiz9-risk-hdr-left');
 
-    const riskIcon = _el('span', 'wiz9-risk-icon');
+    const riskIcon = _el('span', 'wiz-item-icon');
     riskIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
     left.appendChild(riskIcon);
 
-    const rName = _el('span', 'wiz9-risk-name');
+    const rName = _el('span', 'wiz-item-name');
     rName.textContent = risk.display_name;
     left.appendChild(rName);
 
-
-
-    // EU AI Act badge (if legal risk)
-    if (risk.risk_type === 'legal') {
-      const euBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
-      euBadge.textContent = 'EU AI Act';
-      left.appendChild(euBadge);
+    if (risk.fk_AI_Article_ID) {
+      left.appendChild(_el('span', 'wiz-art-tag', { textContent: WizUtils.artLabel(risk.fk_AI_Article_ID) }));
     }
 
     hdr.appendChild(left);
