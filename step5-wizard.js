@@ -459,8 +459,8 @@
       body.appendChild(btnRow);
       body.appendChild(ta);
 
-      const subtitle = [artNum, category].filter(Boolean).join(' · ');
-      const { section } = WizUtils.buildCollapsible({ title: wq.risk_name, subtitle, body });
+      const artId = article?.pk_AI_Article_ID || null;
+      const { section } = WizUtils.buildCollapsible({ title: wq.risk_name, icon: true, artId, body });
       if (category) {
         const catTag = _el('span', 'wiz8-cat-tag');
         catTag.textContent = category;

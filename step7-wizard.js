@@ -146,7 +146,7 @@
     const _ensureRisk = riskId => {
       if (!riskMap.has(riskId)) {
         const risk = riskById.get(riskId);
-        riskMap.set(riskId, { risk_id: riskId, risk_name: risk?.risk_name || riskId, test_controls: [] });
+        riskMap.set(riskId, { risk_id: riskId, risk_name: risk?.risk_name || riskId, fk_AI_Article_ID: risk?.fk_AI_Article_ID || '', test_controls: [] });
       }
       return riskMap.get(riskId);
     };
@@ -395,24 +395,29 @@
     const hdr  = _el('div', 'wiz10-plan-hdr');
     const left = _el('div', 'wiz10-plan-hdr-left');
 
-    const idBadge = _el('span', 'wiz10-plan-id-badge');
-    idBadge.textContent = plan.risk_id;
-    left.appendChild(idBadge);
+    const riskIcon = _el('span', 'wiz-item-icon');
+    riskIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    left.appendChild(riskIcon);
 
-    const riskName = _el('span', 'wiz10-plan-name');
+    const riskName = _el('span', 'wiz-item-name');
     riskName.textContent = plan.risk_name;
     left.appendChild(riskName);
 
+    if (plan.fk_AI_Article_ID) {
+      left.appendChild(_el('span', 'wiz-art-tag', { textContent: WizUtils.artLabel(plan.fk_AI_Article_ID) }));
+    }
+    hdr.appendChild(left);
+
+    const right = _el('div', 'wiz10-plan-hdr-right');
     const countBadge = _el('span', 'wiz10-plan-count');
     countBadge.id = `s7t-plan-count-${idx}`;
     _updateTestPlanCount(plan, countBadge);
-    left.appendChild(countBadge);
-
-    hdr.appendChild(left);
+    right.appendChild(countBadge);
     const chevron = _el('span', 'wiz10-plan-chevron');
     chevron.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
     chevron.style.transform = 'rotate(-90deg)';
-    hdr.appendChild(chevron);
+    right.appendChild(chevron);
+    hdr.appendChild(right);
     sec.appendChild(hdr);
 
     const ctrlList = _el('div', 'wiz10-ctrl-list');
@@ -1127,13 +1132,12 @@
 .wiz10-val-info{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;color:#1e40af}
 .wiz10-plan-list{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
 .wiz10-plan-sec{background:var(--color-bg,#fff);border:1px solid var(--color-border);border-radius:10px;overflow:hidden}
-.wiz10-plan-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border);cursor:pointer;user-select:none}
+.wiz10-plan-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border);cursor:pointer;user-select:none;gap:10px}
 .wiz10-plan-hdr:hover{background:var(--color-bg-hover,#f1f5f9)}
 .wiz10-plan-hdr-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap}
-.wiz10-plan-id-badge{font-size:10px;font-weight:700;background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.wiz10-plan-hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .wiz10-plan-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
 .wiz10-collapsed{display:none!important}
-.wiz10-plan-name{font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wiz10-plan-count{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;white-space:nowrap;flex-shrink:0}
 .wiz10-plan-count--pending{background:#dbeafe;color:#1e40af}
 .wiz10-plan-count--ok{background:#dcfce7;color:#166534}
