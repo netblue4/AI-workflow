@@ -21,22 +21,21 @@
   // ---- Data loading -------------------------------------------
   async function _loadData() {
     try {
-      const [rRes, rcRes, hsRes, artRes, tcRes, srRes, wfRes, lgRes] = await Promise.all([
+      const [rRes, rcRes, hsRes, tcRes, srRes, wfRes, lgRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Harmonised_Standards.json'),
-        fetch('tbl_AI_Articles.json'),
         fetch('tbl_Test_Controls.json'),
         fetch('tbl_AI_SR_Controls.json'),
         fetch('workflow.json'),
         fetch('step5-legal-risk-guidance.json')
       ]);
-      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !artRes.ok || !tcRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, hs, articles, testControls, srControls, workflow] = await Promise.all([
-        rRes.json(), rcRes.json(), hsRes.json(), artRes.json(), tcRes.json(), srRes.json(), wfRes.json()
+      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !tcRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, hs, testControls, srControls, workflow] = await Promise.all([
+        rRes.json(), rcRes.json(), hsRes.json(), tcRes.json(), srRes.json(), wfRes.json()
       ]);
       const legalGuidance = lgRes.ok ? await lgRes.json() : {};
-      _tbl = { risks, riskControls, hs, articles, testControls, srControls, workflow, legalGuidance };
+      _tbl = { risks, riskControls, hs, testControls, srControls, workflow, legalGuidance };
     } catch (_) {
       _container.innerHTML = '<p style="padding:32px;color:#dc2626">Could not load reference data files.</p>';
       return;
@@ -654,7 +653,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     // Build article number → ART-xxx lookup
     const artByNum = new Map();
-    (_tbl.articles || []).forEach(a => {
+    WizUtils.ARTICLES.forEach(a => {
       const m = a.article_name.match(/^(Article \d+[a-zA-Z]*)/);
       if (m) artByNum.set(m[1], a);
     });
