@@ -926,50 +926,41 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
 
     if (!srControls.length) return _notComplete('tbl_AI_SR_Controls.json could not be loaded.');
 
-    // Build SR ref → steps map by inverting workflow.json requirements
-    const srToSteps = new Map();
-    workflow.steps.forEach(step => {
-      (step.requirements || []).forEach(ref => {
-        if (!srToSteps.has(ref)) srToSteps.set(ref, []);
-        srToSteps.get(ref).push({ id: step.id, number: step.number, title: step.title });
-      });
-    });
+    // Step metadata lookup from workflow.json
+    const stepById = new Map((workflow.steps || []).map(s => [s.id, s]));
 
-    // Steps that have digital session records (wizard UIs)
-    const TRACKED = new Set(['step-3', 'step-4', 'step-5', 'step-6', 'step-7']);
-    const STEP_COMPLETE = {
-      'step-3':  !!_record?.['step-3'],
-      'step-4':  !!_record?.['step-4'],
-      'step-5':  !!_record?.['step-5']?.legal_assessment?.completed,
-      'step-6':  !!_record?.['step-6'],
-      'step-7':  !!_record?.['step-7']
+    // Steps that have digital wizard UIs saving to sessionStorage
+    const WIZARD_STEPS = new Set(['step-3', 'step-4', 'step-5', 'step-6', 'step-7']);
+    const stepComplete = id => {
+      if (id === 'step-5') return !!_record?.['step-5']?.legal_assessment?.completed;
+      return !!_record?.[id];
     };
 
     // Overall status counts for the summary banner
     let evidenced = 0, partial = 0, pending = 0;
 
     const rows = srControls.map(ctrl => {
-      const steps = srToSteps.get(ctrl.groupstandard_ref) || [];
-      const tracked = steps.filter(s => TRACKED.has(s.id));
-      const completedTracked = tracked.filter(s => STEP_COMPLETE[s.id]);
+      const steps = (ctrl.workflow_steps || []).map(id => stepById.get(id)).filter(Boolean);
+      const wizardSteps = steps.filter(s => WIZARD_STEPS.has(s.id));
+      const completedWizard = wizardSteps.filter(s => stepComplete(s.id));
 
       let status, statusClass;
-      if (tracked.length === 0) {
+      if (wizardSteps.length === 0) {
         status = '— Manual evidence'; statusClass = 'manual';
-      } else if (completedTracked.length === tracked.length) {
+      } else if (completedWizard.length === wizardSteps.length) {
         status = '✓ Evidenced'; statusClass = 'ok'; evidenced++;
-      } else if (completedTracked.length > 0) {
+      } else if (completedWizard.length > 0) {
         status = '◑ Partial'; statusClass = 'partial'; partial++;
       } else {
         status = '○ Pending'; statusClass = 'pend'; pending++;
       }
 
       const stepRows = steps.map(s => {
-        const isTracked  = TRACKED.has(s.id);
-        const isComplete = isTracked ? STEP_COMPLETE[s.id] : null;
-        const icon  = isTracked ? (isComplete ? '✓' : '○') : '—';
-        const cls   = isTracked ? (isComplete ? 'sr-step--done' : 'sr-step--pend') : 'sr-step--manual';
-        const note  = isTracked ? (isComplete ? 'digital record saved' : 'not yet completed') : 'physical artefact';
+        const isWizard   = WIZARD_STEPS.has(s.id);
+        const isComplete = isWizard ? stepComplete(s.id) : null;
+        const icon  = isWizard ? (isComplete ? '✓' : '○') : '—';
+        const cls   = isWizard ? (isComplete ? 'sr-step--done' : 'sr-step--pend') : 'sr-step--manual';
+        const note  = isWizard ? (isComplete ? 'digital record saved' : 'not yet completed') : 'physical artefact';
         return `<div class="sr-step ${cls}">
           <span class="sr-step-icon">${icon}</span>
           <span class="sr-step-num">Step ${s.number}</span>
@@ -1006,10 +997,9 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
 </div>`;
     });
 
-    const totalTracked = srControls.filter(c => {
-      const steps = srToSteps.get(c.groupstandard_ref) || [];
-      return steps.some(s => TRACKED.has(s.id));
-    }).length;
+    const totalTracked = srControls.filter(c =>
+      (c.workflow_steps || []).some(id => WIZARD_STEPS.has(id))
+    ).length;
 
     const summaryClass = partial + pending === 0 ? 'trace-summary--ok' : 'trace-summary--warn';
     const summaryText = partial + pending === 0
@@ -1019,7 +1009,7 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     return `
 <p class="section-meta">
   Risk Title: Flawed Deployment and Governance of Artificial Intelligence Tools &nbsp;|&nbsp;
-  ${srControls.length} controls &nbsp;|&nbsp; evidenced from workflow.json requirements mapping
+  ${srControls.length} controls &nbsp;|&nbsp; evidenced from tbl_AI_SR_Controls.json workflow_steps
 </p>
 <div class="trace-summary ${summaryClass}">${summaryText}</div>
 ${rows.join('')}`;

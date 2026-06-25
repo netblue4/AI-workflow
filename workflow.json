@@ -66,7 +66,6 @@
       "ownerIcon": "user",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR7"],
       "summary": "Before any request is submitted, the requestor must confirm they have completed annual AI risk awareness training. Untrained personnel may not operate AI tools under any tier.",
       "deliverables": [
         "Confirmation of current annual AI risk awareness training completion"
@@ -90,7 +89,6 @@
       "ownerIcon": "user",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR2", "AI SR6"],
       "summary": "Document the clear business necessity using the AI Tool Use Case request form. Specify access duration and whether use is single-instance or ongoing. Must be countersigned by a Department Head before submission to ISG.",
       "deliverables": [
         "Completed AI Tool Use Case request form, countersigned by Department Head"
@@ -109,7 +107,6 @@
       "ownerIcon": "user",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR2", "AI SR9"],
       "summary": "Classify as Tier 1 (general productivity) or Tier 2 (business-impacting content — marketing, legal, financial, code, translations). The tier drives the depth of due diligence in subsequent steps.",
       "deliverables": [
         "Tier assignment documented in the request form"
@@ -133,7 +130,6 @@
       "ownerIcon": "user",
       "applicability": "All tiers",
       "applicabilityKey": "all",
-      "requirements": ["AI SR3", "AI SR9", "AI SR6"],
       "summary": "Identify all data types to be processed and determine whether personal data, confidential business information, or Group-identifying data is involved. Where personal data is identified, complete a Data Protection Impact Assessment (GDPR Art.35). The data inventory and DPIA outputs feed directly into the Risk Assessment in Step 5.",
       "deliverables": [
         "Data inventory: types, sensitivity classification, personal/confidential data flag",
@@ -168,7 +164,6 @@
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR2", "AI SR9", "AI SR6"],
       "summary": "Conduct a formal risk assessment informed by the data types identified in the Data identification and DPIA (Step 4). Risks are grouped by the compliance control framework — covering legal risks (GDPR, IP, copyright) and regulatory risks (EU AI Act classification). Each risk is assessed against its attack vectors to determine relevance and priority.",
       "deliverables": [
         "Risk register: risks grouped by compliance control area with relevance assessment",
@@ -190,7 +185,6 @@
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR9", "AI SR8", "AI SR3"],
       "summary": "Define technical and operational controls to mitigate identified risks. Separately, design transparency and disclosure mechanisms — disclaimer templates, labelling standards, and version control — for Business-Impacting Content. Controls must be specific and verifiable, not delegated to user judgement.",
       "deliverables": [
         "Control schedule: encryption, access control, logging, human review checkpoints",
@@ -210,7 +204,6 @@
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR4", "AI SR1", "AI SR8"],
       "summary": "Three-part residual risk assessment. First, verify that tester Jira tickets confirm each test control has been executed with evidence. Second, verify that developer Jira tickets confirm each operational control is live in the deployed system. Third, once both are confirmed, record the residual risk level per identified risk and document justification.",
       "deliverables": [
         "Test control evidence records: per-control status and evidence links",
@@ -236,7 +229,6 @@
       "ownerIcon": "building",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "requirements": ["AI SR2", "AI SR6", "AI SR9"],
       "summary": "Submit the complete authorisation package. The Board reviews the business case, data identification and DPIA (Step 4), risk assessment (Step 5), control schedule (Step 6), and content verification evidence (Step 7). High-risk or prohibited AI systems under the EU AI Act require prior assessment here before any implementation.",
       "deliverables": [
         "Submission pack: business case, data identification and DPIA, risk assessment, control schedule, verification report",
@@ -265,7 +257,6 @@
       "ownerIcon": "users",
       "applicability": "Live operation",
       "applicabilityKey": "ops",
-      "requirements": ["AI SR4", "AI SR7"],
       "summary": "Before access is granted, authorised users receive a use-case-specific briefing that tells them exactly what they are responsible for — and what the system is responsible for. User obligations are narrow, behavioural, and achievable. Users are not asked to verify things the system should prevent.",
       "deliverables": [
         "Use-case-specific user obligations briefing delivered and acknowledged",
@@ -306,7 +297,6 @@
       "ownerIcon": "shield",
       "applicability": "All approved use cases",
       "applicabilityKey": "all",
-      "requirements": ["AI SR6", "AI SR1"],
       "summary": "Register the authorised use case in the central inventory. Retain all authorisation records, risk assessments, DPIAs, and periodic review documentation. TRAs and DPIAs retained outside ISG. AI risks factored into the RCSA process by ExCo.",
       "deliverables": [
         "Entry in CISO/ISG central AI tool use case inventory",
@@ -326,7 +316,6 @@
       "ownerIcon": "shield",
       "applicability": "All approved use cases",
       "applicabilityKey": "all",
-      "requirements": ["AI SR5", "AI SR7", "AI SR1"],
       "summary": "Periodic reviews confirm the business case remains valid, risk assessments are current, and operational controls are still active. Triggered reviews are initiated immediately following security incidents or significant changes.",
       "deliverables": [
         "Review schedule at risk-proportionate frequency",
