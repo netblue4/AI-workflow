@@ -387,8 +387,22 @@ async function selectStep(stepId) {
     mountStep9Wizard(panel, step, detailData, color, phaseTitle);
   } else {
     panel.innerHTML = renderDetail(step, color, phaseTitle);
+    const attest = ATTEST_STEPS[stepId];
+    if (attest && window.WizUtils) {
+      panel.appendChild(WizUtils.buildAttestation({ stepId, ...attest }));
+    }
   }
 }
+
+// Steps without a full wizard can still be completed digitally — a checkbox
+// + name attestation records evidence to the system record (no upload needed),
+// which the report's Internal Standard Compliance section reads as "met".
+const ATTEST_STEPS = {
+  'step-1':  { title: 'Confirm training prerequisite', statement: 'I confirm the requestor has completed current annual AI risk awareness training.', nameLabel: 'Confirmed by' },
+  'step-10': { title: 'Confirm user obligations briefing', statement: 'I confirm the use-case-specific user obligations briefing has been delivered and acknowledged.', nameLabel: 'Briefed by' },
+  'step-11': { title: 'Confirm central inventory registration', statement: 'I confirm this use case has been registered in the central AI inventory and all authorisation records retained.', nameLabel: 'Registered by' },
+  'step-12': { title: 'Confirm periodic / triggered review', statement: 'I confirm the periodic or triggered review has been completed and outcomes recorded.', nameLabel: 'Reviewed by' }
+};
 
 // ---- Central record key (shared by all step wizards) -------
 const UC_RECORD_KEY = 'ai_workflow_system_record';

@@ -69,16 +69,31 @@
     bar.appendChild(printBtn);
     shell.appendChild(bar);
 
-    // Iframe preview
+    // Iframe preview (built first so the approval panel can refresh it)
     const iframe = document.createElement('iframe');
     iframe.className = 'rpt-iframe';
     iframe.setAttribute('title', 'Conformity Assessment Report Preview');
-    shell.appendChild(iframe);
 
+    // Digital AI Change Board approval — replaces the paper signature.
+    // Ticking the box + naming the approver records step-8 evidence digitally.
+    if (window.WizUtils) {
+      const approval = WizUtils.buildAttestation({
+        stepId: 'step-8',
+        title: 'AI Change Board Decision',
+        statement: 'The AI Change Board has reviewed this conformity assessment and approves the identified AI system for deployment.',
+        nameLabel: 'Approver name (AI Change Board)',
+        onChange: () => {
+          _record = WizUtils.loadRecord();
+          iframe.srcdoc = _buildReportHTML();
+        }
+      });
+      shell.appendChild(approval);
+    }
+
+    shell.appendChild(iframe);
     _container.appendChild(shell);
 
-    const html = _buildReportHTML();
-    iframe.srcdoc = html;
+    iframe.srcdoc = _buildReportHTML();
   }
 
   function _handlePrint() {
@@ -895,6 +910,34 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
   identified in this assessment, subject to the outstanding items noted above.</p>
 </div>
 
+${_signatureBlock()}`;
+  }
+
+  // Digital AI Change Board approval if recorded; otherwise blank signature lines.
+  function _signatureBlock() {
+    const a = _record?.['step-8'];
+    if (a?.attested) {
+      const when = (a.attested_at || new Date().toISOString()).slice(0, 10);
+      return `
+<table class="sig-table sig-table--approved">
+  <tr>
+    <td class="sig-cell">
+      <div class="sig-approved">✓ Approved</div>
+      <div class="sig-label">AI Change Board Decision</div>
+    </td>
+    <td class="sig-cell">
+      <div class="sig-filled">${_esc(a.attested_by || '—')}</div>
+      <div class="sig-label">Approver Name</div>
+    </td>
+    <td class="sig-cell">
+      <div class="sig-filled">${_esc(when)}</div>
+      <div class="sig-label">Date</div>
+    </td>
+  </tr>
+</table>
+<p class="approval-note">Digitally approved via the AI governance workflow — no physical signature required.</p>`;
+    }
+    return `
 <table class="sig-table">
   <tr>
     <td class="sig-cell">
@@ -929,8 +972,13 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     // Step metadata lookup from workflow.json
     const stepById = new Map((workflow.steps || []).map(s => [s.id, s]));
 
-    // Steps that have digital wizard UIs saving to sessionStorage
-    const WIZARD_STEPS = new Set(['step-3', 'step-4', 'step-5', 'step-6', 'step-7']);
+    // Steps that can be completed digitally — full wizards (3–7) plus the
+    // lighter checkbox/attestation steps (1, 2, 8, 10–12). Completing any of
+    // these in-app records evidence without a file upload.
+    const TRACKED_STEPS = new Set([
+      'step-1', 'step-2', 'step-3', 'step-4', 'step-5',
+      'step-6', 'step-7', 'step-8', 'step-10', 'step-11', 'step-12'
+    ]);
     const stepComplete = id => {
       if (id === 'step-5') return !!_record?.['step-5']?.legal_assessment?.completed;
       return !!_record?.[id];
@@ -941,26 +989,26 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
 
     const rows = srControls.map(ctrl => {
       const steps = (ctrl.workflow_steps || []).map(id => stepById.get(id)).filter(Boolean);
-      const wizardSteps = steps.filter(s => WIZARD_STEPS.has(s.id));
-      const completedWizard = wizardSteps.filter(s => stepComplete(s.id));
+      const trackedSteps = steps.filter(s => TRACKED_STEPS.has(s.id));
+      const completedTracked = trackedSteps.filter(s => stepComplete(s.id));
 
       let status, statusClass;
-      if (wizardSteps.length === 0) {
+      if (trackedSteps.length === 0) {
         status = '— Manual evidence'; statusClass = 'manual';
-      } else if (completedWizard.length === wizardSteps.length) {
+      } else if (completedTracked.length === trackedSteps.length) {
         status = '✓ Evidenced'; statusClass = 'ok'; evidenced++;
-      } else if (completedWizard.length > 0) {
+      } else if (completedTracked.length > 0) {
         status = '◑ Partial'; statusClass = 'partial'; partial++;
       } else {
         status = '○ Pending'; statusClass = 'pend'; pending++;
       }
 
       const stepRows = steps.map(s => {
-        const isWizard   = WIZARD_STEPS.has(s.id);
-        const isComplete = isWizard ? stepComplete(s.id) : null;
-        const icon  = isWizard ? (isComplete ? '✓' : '○') : '—';
-        const cls   = isWizard ? (isComplete ? 'sr-step--done' : 'sr-step--pend') : 'sr-step--manual';
-        const note  = isWizard ? (isComplete ? 'digital record saved' : 'not yet completed') : 'physical artefact';
+        const isTracked  = TRACKED_STEPS.has(s.id);
+        const isComplete = isTracked ? stepComplete(s.id) : null;
+        const icon  = isTracked ? (isComplete ? '✓' : '○') : '—';
+        const cls   = isTracked ? (isComplete ? 'sr-step--done' : 'sr-step--pend') : 'sr-step--manual';
+        const note  = isTracked ? (isComplete ? 'digital record saved' : 'not yet completed') : 'physical artefact';
         return `<div class="sr-step ${cls}">
           <span class="sr-step-icon">${icon}</span>
           <span class="sr-step-num">Step ${s.number}</span>
@@ -998,7 +1046,7 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     });
 
     const totalTracked = srControls.filter(c =>
-      (c.workflow_steps || []).some(id => WIZARD_STEPS.has(id))
+      (c.workflow_steps || []).some(id => TRACKED_STEPS.has(id))
     ).length;
 
     const summaryClass = partial + pending === 0 ? 'trace-summary--ok' : 'trace-summary--warn';
@@ -1245,6 +1293,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .sig-cell{padding:8px 16px 0 0;vertical-align:bottom;width:33%}
 .sig-line{border-bottom:1px solid #333;height:40px;margin-bottom:4px}
 .sig-label{font-size:8.5pt;color:#555;font-weight:600}
+.sig-table--approved .sig-cell{border-bottom:1px solid #86efac;padding-bottom:4px}
+.sig-filled{height:40px;display:flex;align-items:flex-end;font-size:11pt;font-weight:600;color:#111;margin-bottom:4px}
+.sig-approved{height:40px;display:flex;align-items:flex-end;font-size:11pt;font-weight:700;color:#15803d;margin-bottom:4px}
+.approval-note{margin-top:10px;font-size:8.5pt;color:#15803d;font-style:italic}
 
 /* SR Controls — Section 7 */
 .sr-ctrl-block{border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:14px}
