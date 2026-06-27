@@ -172,6 +172,86 @@ window.WizUtils = (function () {
     return dl;
   }
 
+  // ---- Digital attestation block --------------------------------------
+  // A lightweight "complete this step without uploading evidence" control.
+  // Checkbox + name + Save writes a digital record to _record[stepId], which
+  // the report's Internal Standard Compliance section reads as evidence.
+  // opts: { stepId, title?, statement, nameLabel?, onChange? }
+  function buildAttestation(opts) {
+    const wrap = el('div', 'wiz-attest');
+    wrap.appendChild(el('div', 'wiz-attest-title', { textContent: opts.title || 'Confirm completion' }));
+
+    const cbRow = el('label', 'wiz-attest-check');
+    const cb = el('input', null, { type: 'checkbox' });
+    cbRow.append(cb, el('span', null, { textContent: opts.statement }));
+    wrap.appendChild(cbRow);
+
+    const field = el('div', 'wiz-attest-field');
+    field.appendChild(el('label', 'wiz-attest-label', { textContent: opts.nameLabel || 'Name' }));
+    const nameInput = el('input', 'wiz-attest-input', { type: 'text', placeholder: 'Full name' });
+    field.appendChild(nameInput);
+    wrap.appendChild(field);
+
+    const footer = el('div', 'wiz-attest-footer');
+    const btn = el('button', 'wiz-btn-primary', { textContent: 'Save confirmation' });
+    const status = el('span', 'wiz-attest-status');
+    footer.append(btn, status);
+    wrap.appendChild(footer);
+
+    function paint() {
+      const r = loadRecord()[opts.stepId];
+      if (r && r.attested) {
+        wrap.classList.add('wiz-attest--done');
+        status.className = 'wiz-attest-status wiz-attest-status--ok';
+        status.textContent = `✓ Recorded — ${r.attested_by || '—'}, ${(r.attested_at || '').slice(0, 10)}`;
+      } else {
+        wrap.classList.remove('wiz-attest--done');
+        status.className = 'wiz-attest-status';
+        status.textContent = '';
+      }
+    }
+
+    // Hydrate from any existing record
+    const rec0 = loadRecord();
+    const r0 = rec0[opts.stepId];
+    cb.checked = !!(r0 && r0.attested);
+    nameInput.value = (r0 && r0.attested_by) || (rec0._meta && rec0._meta.assessed_by) || '';
+    paint();
+
+    btn.addEventListener('click', () => {
+      const rec = loadRecord();
+      if (cb.checked) {
+        const name = nameInput.value.trim();
+        if (!name) {
+          status.className = 'wiz-attest-status wiz-attest-status--err';
+          status.textContent = 'Enter a name to confirm.';
+          nameInput.focus();
+          return;
+        }
+        rec[opts.stepId] = {
+          step_id: opts.stepId,
+          attested: true,
+          attested_by: name,
+          attested_at: new Date().toISOString()
+        };
+      } else {
+        delete rec[opts.stepId];
+      }
+      if (!rec._meta) rec._meta = {
+        schema_version: '1.0',
+        title: 'AI Acceptable Use — System Authorisation Record',
+        standard: 'ISO/IEC 42001-aligned',
+        created: new Date().toISOString()
+      };
+      rec._meta.last_modified = new Date().toISOString();
+      saveRecord(rec);
+      paint();
+      if (opts.onChange) opts.onChange(cb.checked);
+    });
+
+    return wrap;
+  }
+
   injectStyles('wiz-shared-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
 .wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
@@ -185,6 +265,18 @@ window.WizUtils = (function () {
 .wiz-btn-primary:hover{background:var(--teal-700,#0f766e)}
 .wiz-btn-secondary{padding:9px 20px;background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer}
 .wiz-btn-secondary:hover{background:var(--color-bg-hover,#f1f5f9)}
+.wiz-attest{border:1px solid var(--color-border,#e2e8f0);border-radius:var(--radius-md,8px);padding:16px 18px;margin:20px 24px;background:var(--color-bg-subtle,#f8fafc)}
+.wiz-attest--done{border-color:#86efac;background:#f0fdf4}
+.wiz-attest-title{font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px}
+.wiz-attest-check{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--color-text-primary);cursor:pointer;line-height:1.5;margin-bottom:14px}
+.wiz-attest-check input{margin-top:2px;width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:var(--teal-600,#0d9488)}
+.wiz-attest-field{display:flex;flex-direction:column;gap:4px;margin-bottom:14px;max-width:340px}
+.wiz-attest-label{font-size:11px;font-weight:600;color:var(--color-text-secondary)}
+.wiz-attest-input{padding:8px 11px;border:1px solid var(--color-border-mid,#cbd5e1);border-radius:6px;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface,#fff)}
+.wiz-attest-footer{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.wiz-attest-status{font-size:12px;font-weight:600}
+.wiz-attest-status--ok{color:#15803d}
+.wiz-attest-status--err{color:#b91c1c}
 `);
   injectStyles('wiz-collapsible-styles', `
 .wiz-collapsible-section{border:1px solid var(--color-border);border-radius:var(--radius-md,6px);overflow:hidden;margin-bottom:20px}
@@ -205,5 +297,5 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel };
 })();
