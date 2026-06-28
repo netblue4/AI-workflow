@@ -62,11 +62,12 @@
     { "step": "step-7", "note": "Test control evidence — validation" }
   ],
   "[18229-2.11]": [
-    { "step": "step-7", "note": "Test control evidence — declaration" },
+    { "step": "step-7", "note": "Test control evidence — accuracy achieved" },
+    { "step": "step-10", "note": "User obligations briefing — accuracy stated in Instructions for Use" },
     { "step": "step-8", "note": "AI Change Board sign-off" }
   ],
   "[18229-2.12]": [
-    { "step": "step-7", "note": "Test control evidence — consistency" }
+    { "step": "step-12", "note": "Periodic & triggered review — accuracy drift detection" }
   ],
   "[18229-2.13]": [
     { "step": "step-7", "note": "Test control evidence — benchmarking" }
