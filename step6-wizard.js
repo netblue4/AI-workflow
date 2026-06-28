@@ -48,18 +48,19 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    const [risks, controls, tasks, hs, testControls] = await WizUtils.fetchAll([
+    const [risks, controls, tasks, hs, testControls, hsEvidence] = await WizUtils.fetchAll([
       'tbl_Risks.json',
       'tbl_Risk_Controls.json',
       'tbl_Control_Task_Code.json',
       'tbl_Harmonised_Standards.json',
       'tbl_Test_Controls.json',
+      'tbl_HS_Evidence.json',
     ]);
     if (!risks || !controls || !tasks || !hs || !testControls) {
       pw.innerHTML = `<p style="padding:24px;color:#dc2626">Could not load risk data files.</p>`;
       return;
     }
-    _tblData = { risks, controls, tasks, hs, testControls };
+    _tblData = { risks, controls, tasks, hs, testControls, hsEvidence: hsEvidence || {} };
     _tcByRC  = new Map(testControls.filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
 
     _record = WizUtils.loadRecord();
@@ -153,6 +154,7 @@
     return WizUtils.buildTabStrip([
       ['wizard', 'Step Wizard'],
       ['compliance', 'AI Act Compliance View'],
+      ['evidence', 'Evidence Map'],
       ['reference', 'Reference'],
       ['framework', 'Framework Mapping']
     ], _switchTab);
@@ -172,6 +174,10 @@
       const cmpPane = _container.querySelector('[data-pane="compliance"]');
       if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
     }
+    if (id === 'evidence') {
+      const evPane = _container.querySelector('[data-pane="evidence"]');
+      if (evPane) { evPane.innerHTML = ''; evPane.appendChild(_buildEvidenceMapPane()); }
+    }
     if (id === 'framework') {
       const fwPane = _container.querySelector('[data-pane="framework"]');
       if (fwPane && typeof createFrameworkMapping === 'function') {
@@ -186,13 +192,15 @@
     pw.innerHTML = '';
     const wz  = _el('div', 'wiz-pane');                  wz.dataset.pane = 'wizard';
     const cmp = _el('div', 'wiz-pane wiz-pane--hidden'); cmp.dataset.pane = 'compliance';
+    const evm = _el('div', 'wiz-pane wiz-pane--hidden'); evm.dataset.pane = 'evidence';
     const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
     const fw  = _el('div', 'wiz-pane wiz-pane--hidden'); fw.dataset.pane  = 'framework';
     wz.appendChild(_buildWizardPane());
     cmp.appendChild(_buildCompliancePane());
+    evm.appendChild(_buildEvidenceMapPane());
     ref.appendChild(_buildReferencePane());
     if (typeof createFrameworkMapping === 'function') fw.appendChild(createFrameworkMapping(null, null, null));
-    pw.appendChild(wz); pw.appendChild(cmp); pw.appendChild(ref); pw.appendChild(fw);
+    pw.appendChild(wz); pw.appendChild(cmp); pw.appendChild(evm); pw.appendChild(ref); pw.appendChild(fw);
   }
 
   // ---- Wizard pane --------------------------------------------
@@ -401,7 +409,7 @@
         const badge = _el('span', 'wiz9-src-badge wiz9-fs-src-badge'); badge.textContent = 'Self-certified';
         hdr.appendChild(badge);
         hdr.appendChild(_el('span', 'wiz9-ctrl-name', { textContent: ctrl.jkName }));
-        if (ctrl.fk_Harmonised_Standard_IDs) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
+        if (ctrl.fk_Harmonised_Standard_IDs) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
         card.appendChild(hdr);
         if (ctrl.jkObjective) {
           const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective; card.appendChild(obj);
@@ -479,7 +487,7 @@
 
     if (ctrl.fk_Harmonised_Standard_IDs) {
       const stdRef = _el('span', 'wiz9-standard-ref');
-      stdRef.textContent = ctrl.fk_Harmonised_Standard_IDs;
+      stdRef.textContent = WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs);
       hdr.appendChild(stdRef);
     }
 
@@ -617,7 +625,7 @@
         const dot = _el('span', 'wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--hs'); row.appendChild(dot);
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-        if (ctrl.fk_Harmonised_Standard_IDs) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
+        if (ctrl.fk_Harmonised_Standard_IDs) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
         const compBadge = _el('span', 'wiz9-comp-adds-badge'); compBadge.textContent = 'Compliance'; row.appendChild(compBadge);
         body.appendChild(row);
       });
@@ -876,7 +884,7 @@
 
         const cn = _el('span', 'wiz9-ref-ctrl-name'); cn.textContent = ctrl.jkName; ch.appendChild(cn);
         if (ctrl.fk_Harmonised_Standard_IDs) {
-          const stdRef = _el('span', 'wiz9-standard-ref'); stdRef.textContent = ctrl.fk_Harmonised_Standard_IDs; ch.appendChild(stdRef);
+          const stdRef = _el('span', 'wiz9-standard-ref'); stdRef.textContent = WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs); ch.appendChild(stdRef);
         }
         cc.appendChild(ch);
 
@@ -962,6 +970,107 @@
 
     const ix = _buildCmpIndexes();
     WizUtils.ARTICLES.forEach(art => wrap.appendChild(_buildCmpArticleRow(art, ix)));
+    return wrap;
+  }
+
+  // ================================================================
+  // ---- Evidence Map — HS requirements × workflow steps -----------
+  // ================================================================
+  const _EVM_STEP_COLS = [
+    ['step-1', '1'], ['step-2', '2'], ['step-3', '3'], ['step-4', '4'],
+    ['step-5', '5'], ['step-6', '6'], ['step-7', '7'], ['step-8', '8'],
+    ['step-10', '10'], ['step-11', '11'], ['step-12', '12']
+  ];
+
+  function _buildEvidenceMapPane() {
+    const wrap = _el('div', 'wiz9-evm-wrap');
+    const hsEvidence = _tblData.hsEvidence || {};
+
+    const hdr = _el('div', 'wiz9-cmp-header');
+    hdr.appendChild(_el('h3', 'wiz9-cmp-title', { textContent: 'Evidence Map' }));
+    hdr.appendChild(_el('p', 'wiz9-cmp-subtitle', { textContent: 'Every harmonised standard requirement against the workflow steps that evidence it. ● = step complete · ○ = mapped but pending. Hover a dot for the deliverable.' }));
+    wrap.appendChild(hdr);
+
+    // Summary
+    let fully = 0, progress = 0, unmapped = 0, totalReqs = 0;
+    (_tblData.hs || []).forEach(h => {
+      totalReqs++;
+      const ev = hsEvidence[h.standard_ref] || [];
+      if (!ev.length) { unmapped++; return; }
+      const d = ev.filter(e => WizUtils.isStepComplete(e.step, _record)).length;
+      if (d === ev.length) fully++; else progress++;
+    });
+    const summary = _el('div', 'wiz9-evm-summary');
+    summary.innerHTML =
+      `<span class="wiz9-evm-sum wiz9-evm-sum--ok">${fully} fully evidenced</span>` +
+      `<span class="wiz9-evm-sum wiz9-evm-sum--partial">${progress} in progress</span>` +
+      `<span class="wiz9-evm-sum wiz9-evm-sum--none">${unmapped} unmapped</span>` +
+      `<span class="wiz9-evm-sum-total">of ${totalReqs} requirements</span>`;
+    wrap.appendChild(summary);
+
+    const table = _el('table', 'wiz9-evm-table');
+    const thead = document.createElement('thead');
+    const hrow = document.createElement('tr');
+    hrow.appendChild(_el('th', 'wiz9-evm-th-req', { textContent: 'Requirement' }));
+    _EVM_STEP_COLS.forEach(([id, label]) => {
+      const done = WizUtils.isStepComplete(id, _record);
+      const th = _el('th', 'wiz9-evm-th-step' + (done ? ' wiz9-evm-th-step--done' : ''), { textContent: label });
+      th.title = id + (done ? ' (complete)' : '');
+      hrow.appendChild(th);
+    });
+    hrow.appendChild(_el('th', 'wiz9-evm-th-status', { textContent: 'Status' }));
+    thead.appendChild(hrow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    WizUtils.ARTICLES.forEach(art => {
+      const reqs = (_tblData.hs || []).filter(h => h.fk_AI_Article_ID === art.pk_AI_Article_ID);
+      if (!reqs.length) return;
+
+      const arow = document.createElement('tr');
+      const ath = _el('td', 'wiz9-evm-art', { textContent: art.article_name });
+      ath.colSpan = _EVM_STEP_COLS.length + 2;
+      arow.appendChild(ath);
+      tbody.appendChild(arow);
+
+      reqs.forEach(h => {
+        const evidence = hsEvidence[h.standard_ref] || [];
+        const mapped = new Map(evidence.map(e => [e.step, e]));
+        const tr = document.createElement('tr');
+
+        const reqTd = _el('td', 'wiz9-evm-req');
+        reqTd.appendChild(_el('span', 'wiz9-evm-ref', { textContent: WizUtils.fmtStdRef(h.standard_ref) }));
+        reqTd.appendChild(_el('span', 'wiz9-evm-name', { textContent: h.standard_name }));
+        tr.appendChild(reqTd);
+
+        let total = 0, done = 0;
+        _EVM_STEP_COLS.forEach(([id]) => {
+          const td = _el('td', 'wiz9-evm-cell');
+          if (mapped.has(id)) {
+            total++;
+            const c = WizUtils.isStepComplete(id, _record);
+            if (c) done++;
+            const e = mapped.get(id);
+            const dot = _el('span', 'wiz9-evm-dot ' + (c ? 'wiz9-evm-dot--done' : 'wiz9-evm-dot--pend'), { textContent: c ? '●' : '○' });
+            dot.title = `Step ${(id.match(/\d+/) || [''])[0]} · ${e.note}${e.ref ? ' · ' + e.ref : ''}`;
+            td.appendChild(dot);
+          }
+          tr.appendChild(td);
+        });
+
+        const stTd = _el('td', 'wiz9-evm-status');
+        let key, txt;
+        if (total === 0)        { key = 'none';    txt = '—'; }
+        else if (done === total){ key = 'ok';      txt = '✓'; }
+        else if (done > 0)      { key = 'partial'; txt = `${done}/${total}`; }
+        else                    { key = 'pend';    txt = '○'; }
+        stTd.appendChild(_el('span', 'wiz9-evm-status-badge wiz9-evm-status-badge--' + key, { textContent: txt }));
+        tr.appendChild(stTd);
+        tbody.appendChild(tr);
+      });
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
     return wrap;
   }
 
@@ -1186,6 +1295,13 @@
       });
     });
 
+    // Count HS requirements in this article fully evidenced by completed steps
+    const hsEvidence = _tblData.hsEvidence || {};
+    const evReqs = hs.filter(h => {
+      const ev = hsEvidence[h.standard_ref] || [];
+      return ev.length > 0 && ev.every(e => WizUtils.isStepComplete(e.step, _record));
+    }).length;
+
     const row = _el('div', 'wiz9-cmp-article');
 
     // ── Header (always visible) ──────────────────────────────────
@@ -1212,6 +1328,7 @@
     right.appendChild(_mkCount(risks.length,     'wiz9-cmp-count--risk', 'Risk', 'Risks'));
     right.appendChild(_mkCount(selCtrlIds.size,  'wiz9-cmp-count--ctrl', 'Ctrl', 'Ctrls'));
     right.appendChild(_mkCount(testIds.size,     'wiz9-cmp-count--test', 'Test', 'Tests'));
+    right.appendChild(_mkCount(evReqs,           'wiz9-cmp-count--ev',   'Ev',   'Ev'));
     const chev = _el('span', 'wiz9-cmp-chevron', { textContent: '▸' });
     right.appendChild(chev);
 
@@ -1272,7 +1389,7 @@
 
         // HS ref + name + description
         const refRow = _el('div', 'wiz9-cmp-hs-ref-row');
-        refRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: h.standard_ref }));
+        refRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(h.standard_ref) }));
         const txt = _el('div', 'wiz9-cmp-hs-txt');
         txt.appendChild(_el('span', 'wiz9-cmp-hs-name', { textContent: h.standard_name }));
         txt.appendChild(_el('span', 'wiz9-cmp-hs-desc', { textContent: h.standard_text }));
@@ -1288,7 +1405,10 @@
         const riskCtrls      = actionCtrls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]);
         const compCtrls      = actionCtrls.filter(c => !!_state.complianceSelected[c.pk_Risk_Control_ID]);
         const availableCtrls = actionCtrls.filter(c => !_state.riskSelected[c.pk_Risk_Control_ID] && !_state.complianceSelected[c.pk_Risk_Control_ID]);
-        const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0 || fsCtrls.length > 0;
+        // Workflow evidence — documentary proof produced by completing steps
+        const evidence         = (_tblData.hsEvidence || {})[h.standard_ref] || [];
+        const evidenceComplete = evidence.length > 0 && evidence.every(e => WizUtils.isStepComplete(e.step, _record));
+        const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0 || fsCtrls.length > 0 || evidenceComplete;
 
         // Gap / N/A / Self-certified badge
         if (!isCovered) {
@@ -1311,6 +1431,9 @@
         } else if (fsCtrls.length > 0 && riskCtrls.length === 0 && compCtrls.length === 0) {
           const certBadge = _el('span', 'wiz9-cmp-self-cert-badge'); certBadge.textContent = '✓ Self-certified';
           refRow.appendChild(certBadge);
+        } else if (evidenceComplete && riskCtrls.length === 0 && compCtrls.length === 0 && fsCtrls.length === 0) {
+          const evBadge = _el('span', 'wiz9-cmp-evidenced-badge'); evBadge.textContent = '✓ Evidenced';
+          refRow.appendChild(evBadge);
         }
 
         // Coverage area
@@ -1347,7 +1470,7 @@
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--hs'));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-            if (ctrl.fk_Harmonised_Standard_IDs) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
+            if (ctrl.fk_Harmonised_Standard_IDs) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
             implArea.appendChild(aRow);
           });
         }
@@ -1383,6 +1506,21 @@
           });
           trow.appendChild(tlist);
           implArea.appendChild(trow);
+        }
+
+        // Workflow Evidence — steps whose deliverables document this requirement
+        if (evidence.length > 0) {
+          const evDone = evidence.filter(e => WizUtils.isStepComplete(e.step, _record)).length;
+          implArea.appendChild(_el('p', 'wiz9-cmp-sub-lbl wiz9-cmp-sub-lbl--ev', { textContent: `Workflow Evidence (${evDone}/${evidence.length})` }));
+          evidence.forEach(e => {
+            const done = WizUtils.isStepComplete(e.step, _record);
+            const eRow = _el('div', `wiz9-cmp-ev-row${done ? ' wiz9-cmp-ev-row--done' : ''}`);
+            eRow.appendChild(_el('span', 'wiz9-cmp-ev-status', { textContent: done ? '✓' : '○' }));
+            const num = (e.step.match(/\d+/) || [''])[0];
+            eRow.appendChild(_el('span', 'wiz9-cmp-ev-step', { textContent: `Step ${num}` }));
+            eRow.appendChild(_el('span', 'wiz9-cmp-ev-note', { textContent: e.note + (e.ref ? ` · ${e.ref}` : '') }));
+            implArea.appendChild(eRow);
+          });
         }
 
         item.appendChild(implArea);
@@ -1759,6 +1897,46 @@
 
 .wiz9-cmp-count--ctrl{background:#d1fae5;color:#065f46}
 .wiz9-cmp-count--test{background:#fef3c7;color:#92400e}
+.wiz9-cmp-count--ev{background:#dbeafe;color:#1e40af}
+
+/* Evidence Map matrix */
+.wiz9-evm-wrap{padding:4px 0;overflow-x:auto}
+.wiz9-evm-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+.wiz9-evm-sum{font-size:12px;font-weight:700;padding:2px 10px;border-radius:10px}
+.wiz9-evm-sum--ok{background:#dcfce7;color:#15803d}
+.wiz9-evm-sum--partial{background:#fef3c7;color:#b45309}
+.wiz9-evm-sum--none{background:#f1f5f9;color:#64748b}
+.wiz9-evm-sum-total{font-size:12px;color:var(--color-text-tertiary)}
+.wiz9-evm-table{border-collapse:collapse;font-size:12px;margin-top:8px}
+.wiz9-evm-table th,.wiz9-evm-table td{border:1px solid var(--color-border,#e2e8f0)}
+.wiz9-evm-th-req{text-align:left;padding:6px 8px;background:var(--color-bg-subtle,#f8fafc);min-width:240px}
+.wiz9-evm-th-step{width:30px;padding:6px 2px;text-align:center;font-size:11px;font-weight:700;color:var(--color-text-secondary);background:var(--color-bg-subtle,#f8fafc)}
+.wiz9-evm-th-step--done{color:#15803d;background:#f0fdf4}
+.wiz9-evm-th-status{padding:6px 8px;background:var(--color-bg-subtle,#f8fafc);text-align:center}
+.wiz9-evm-art td{background:#eef2ff;font-weight:700;font-size:11px;color:#3730a3;padding:5px 8px;letter-spacing:.02em}
+.wiz9-evm-req{padding:5px 8px}
+.wiz9-evm-ref{display:block;font-family:monospace;font-size:10px;color:#1e40af}
+.wiz9-evm-name{display:block;font-size:12px;color:var(--color-text-primary)}
+.wiz9-evm-cell{text-align:center;padding:3px 2px}
+.wiz9-evm-dot{font-size:11px;line-height:1}
+.wiz9-evm-dot--done{color:#16a34a}
+.wiz9-evm-dot--pend{color:#cbd5e1}
+.wiz9-evm-status{text-align:center;padding:3px 6px}
+.wiz9-evm-status-badge{font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;display:inline-block;min-width:26px}
+.wiz9-evm-status-badge--ok{background:#dcfce7;color:#15803d}
+.wiz9-evm-status-badge--partial{background:#fef3c7;color:#b45309}
+.wiz9-evm-status-badge--pend{background:#fee2e2;color:#b91c1c}
+.wiz9-evm-status-badge--none{background:#f1f5f9;color:#94a3b8}
+
+/* Workflow evidence sub-section */
+.wiz9-cmp-sub-lbl--ev{color:#1e40af}
+.wiz9-cmp-evidenced-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;white-space:nowrap;flex-shrink:0}
+.wiz9-cmp-ev-row{display:flex;align-items:baseline;gap:8px;padding:3px 0 3px 4px;font-size:12px;color:var(--color-text-secondary)}
+.wiz9-cmp-ev-status{color:#94a3b8;font-weight:700;flex-shrink:0;width:12px;text-align:center}
+.wiz9-cmp-ev-row--done .wiz9-cmp-ev-status{color:#16a34a}
+.wiz9-cmp-ev-step{font-weight:700;color:var(--color-text-primary);flex-shrink:0}
+.wiz9-cmp-ev-note{color:var(--color-text-secondary);min-width:0}
+.wiz9-cmp-ev-row--done .wiz9-cmp-ev-note{color:var(--color-text-primary)}
 
 /* Gap / N/A badges on HS items */
 .wiz9-cmp-gap-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;white-space:nowrap;flex-shrink:0}

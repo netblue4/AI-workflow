@@ -297,7 +297,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     // Requirement cell
                     const reqCell = document.createElement('td');
                     reqCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
-                    reqCell.appendChild(fwBadge(hsRef, hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
+                    reqCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
                     row.appendChild(reqCell);
 
                     // Define cell — Framework_Statement controls
