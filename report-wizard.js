@@ -21,23 +21,21 @@
   // ---- Data loading -------------------------------------------
   async function _loadData() {
     try {
-      const [rRes, rcRes, hsRes, tcRes, srRes, wfRes, lgRes, evRes] = await Promise.all([
+      const [rRes, rcRes, hsRes, tcRes, srRes, wfRes, lgRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Harmonised_Standards.json'),
         fetch('tbl_Test_Controls.json'),
         fetch('tbl_AI_SR_Controls.json'),
         fetch('workflow.json'),
-        fetch('step5-legal-risk-guidance.json'),
-        fetch('tbl_HS_Evidence.json')
+        fetch('step5-legal-risk-guidance.json')
       ]);
       if (!rRes.ok || !rcRes.ok || !hsRes.ok || !tcRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
       const [risks, riskControls, hs, testControls, srControls, workflow] = await Promise.all([
         rRes.json(), rcRes.json(), hsRes.json(), tcRes.json(), srRes.json(), wfRes.json()
       ]);
       const legalGuidance = lgRes.ok ? await lgRes.json() : {};
-      const hsEvidence    = evRes.ok ? await evRes.json() : {};
-      _tbl = { risks, riskControls, hs, testControls, srControls, workflow, legalGuidance, hsEvidence };
+      _tbl = { risks, riskControls, hs, testControls, srControls, workflow, legalGuidance };
     } catch (_) {
       _container.innerHTML = '<p style="padding:32px;color:#dc2626">Could not load reference data files.</p>';
       return;
@@ -714,9 +712,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             .filter((c, i, a) => a.findIndex(x => x.pk_Risk_Control_ID === c.pk_Risk_Control_ID) === i);
           const fsCtrls   = ctrls.filter(c => c.control_source === 'Framework_Statement');
           const selCtrls  = ctrls.filter(c => selectedCtrlIds.has(c.pk_Risk_Control_ID) && c.control_source !== 'Framework_Statement');
-          const evidence         = (_tbl.hsEvidence || {})[h.standard_ref] || [];
-          const evidenceComplete = evidence.length > 0 && evidence.every(e => WizUtils.isStepComplete(e.step, _record));
-          const covered   = selCtrls.length > 0 || fsCtrls.length > 0 || evidenceComplete;
+          const covered   = selCtrls.length > 0 || fsCtrls.length > 0;
           const isNA      = !covered && !!hsNA[h.standard_ref];
 
           if (covered) coveredCount++; else if (!isNA) gapCount++;
@@ -727,12 +723,8 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             if (tc) { testRef = tc.control_ref; testRiskId = c.fk_Risk_ID; break; }
           }
 
-          let badgeKey, badgeTxt;
-          if (covered) {
-            if (selCtrls.length > 0)     { badgeKey = 'ok'; badgeTxt = '✓ Covered'; }
-            else if (fsCtrls.length > 0) { badgeKey = 'fs'; badgeTxt = '✓ Self-certified'; }
-            else                         { badgeKey = 'ev'; badgeTxt = '✓ Evidenced'; }
-          } else { badgeKey = isNA ? 'na' : 'gap'; badgeTxt = isNA ? '⊘ N/A' : '⚠ Gap'; }
+          const badgeKey = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? 'fs' : 'ok') : (isNA ? 'na' : 'gap');
+          const badgeTxt = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? '✓ Self-certified' : '✓ Covered') : (isNA ? '⊘ N/A' : '⚠ Gap');
           const naReason = isNA ? hsNA[h.standard_ref].reason : '';
           const rowCls   = covered ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
 
@@ -747,13 +739,6 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             ctrlCell += fsCtrls.map(c =>
               `<span class="trace-ctrl-chip trace-ctrl-chip--fs"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`
             ).join('');
-          }
-          if (evidence.length > 0) {
-            ctrlCell += evidence.map(e => {
-              const done = WizUtils.isStepComplete(e.step, _record);
-              const num  = (e.step.match(/\d+/) || [''])[0];
-              return `<span class="trace-ev-chip trace-ev-chip--${done ? 'done' : 'pend'}" title="${_esc(e.note + (e.ref ? ' · ' + e.ref : ''))}">${done ? '✓' : '○'} 📄 Step ${num}</span>`;
-            }).join('');
           }
 
           html += `<tr class="${rowCls}">
@@ -1281,14 +1266,11 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-cov-badge--fs{background:#ede9fe;color:#7c3aed}
 .trace-cov-badge--gap{background:#fee2e2;color:#991b1b}
 .trace-cov-badge--na{background:#f1f5f9;color:#475569}
-.trace-cov-badge--ev{background:#dbeafe;color:#1e40af}
 .trace-na-reason{font-size:8.5pt;color:#64748b;font-style:italic;padding:3px 4px 5px;border-left:2px solid #cbd5e1;margin-top:4px}
 .trace-ctrl-list{display:flex;gap:4px;flex-wrap:wrap;padding-top:4px}
 .trace-ctrl-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#e0e7ff;color:#3730a3;font-family:monospace}
 .trace-ctrl-chip--fs{background:#ede9fe;color:#7c3aed}
 .trace-test-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#f0fdf4;color:#166534}
-.trace-ev-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#f1f5f9;color:#64748b;white-space:nowrap}
-.trace-ev-chip--done{background:#dbeafe;color:#1e40af}
 .trace-risk-tag{display:inline-block;font-size:7.5pt;font-weight:700;padding:0 4px;border-radius:3px;background:#fef3c7;color:#92400e;font-family:monospace;margin-right:2px}
 .risk-id-badge{display:inline-block;font-size:8pt;font-weight:700;padding:1px 5px;border-radius:3px;background:#fef3c7;color:#92400e;font-family:monospace;margin-right:4px}
 
