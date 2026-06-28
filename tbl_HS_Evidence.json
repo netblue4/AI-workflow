@@ -1,0 +1,346 @@
+{
+  "_meta": {
+    "description": "Maps each harmonised standard (HS) requirement to the workflow step(s) whose deliverables provide documentary evidence for it. DRAFT — review and correct each mapping. step = workflow step id; note = the deliverable/section that evidences it; ref = optional legal/standard anchor.",
+    "keyed_by": "standard_ref (matches tbl_Harmonised_Standards.json)"
+  },
+  "[18229-1.1]": [
+    { "step": "step-2", "note": "Business case documentation" },
+    { "step": "step-4", "note": "DPIA — System description", "ref": "Art.35(7)(a)" }
+  ],
+  "[18229-1.2]": [
+    { "step": "step-5", "note": "Risk identification — known limitations / blind spots" },
+    { "step": "step-2", "note": "Business case — scope of use" }
+  ],
+  "[18229-1.3]": [
+    { "step": "step-10", "note": "User obligations briefing" },
+    { "step": "step-6", "note": "Disclosure framework" }
+  ],
+  "[18229-1.6]": [
+    { "step": "step-6", "note": "Control identification — human review checkpoints" }
+  ],
+  "[18229-1.7]": [
+    { "step": "step-6", "note": "Control identification — human oversight controls" },
+    { "step": "step-7", "note": "Control activation verification" }
+  ],
+  "[18229-1.8]": [
+    { "step": "step-6", "note": "Control identification — interpretability controls" },
+    { "step": "step-4", "note": "DPIA — explainability / transparency level" }
+  ],
+  "[18282.1]": [
+    { "step": "step-5", "note": "Risk identification — attack vector analysis" },
+    { "step": "step-7", "note": "Test control evidence" }
+  ],
+  "[18282.2]": [
+    { "step": "step-5", "note": "Risk identification — attack vector analysis" },
+    { "step": "step-7", "note": "Test control evidence" }
+  ],
+  "[18282.3]": [
+    { "step": "step-5", "note": "Risk identification — attack vector analysis" },
+    { "step": "step-7", "note": "Test control evidence" }
+  ],
+  "[18282.4]": [
+    { "step": "step-6", "note": "Control identification — secure development controls" },
+    { "step": "step-7", "note": "Test control evidence" }
+  ],
+  "[18282.5]": [
+    { "step": "step-5", "note": "Risk identification — supply chain risk" },
+    { "step": "step-6", "note": "Control identification — supply chain controls" }
+  ],
+  "[18282.6]": [
+    { "step": "step-6", "note": "Control identification — access control" },
+    { "step": "step-4", "note": "DPIA — technical security measures" }
+  ],
+  "[18282.7]": [
+    { "step": "step-5", "note": "Risk identification — robustness risk" },
+    { "step": "step-7", "note": "Residual risk — robustness testing" }
+  ],
+  "[18282.8]": [
+    { "step": "step-6", "note": "Control identification — logging / anomaly detection" },
+    { "step": "step-12", "note": "Periodic & triggered review — monitoring" }
+  ],
+  "[18229-2.9]": [
+    { "step": "step-7", "note": "Test plan — metric selection" }
+  ],
+  "[18229-2.10]": [
+    { "step": "step-7", "note": "Test control evidence — validation" }
+  ],
+  "[18229-2.11]": [
+    { "step": "step-7", "note": "Test control evidence — declaration" },
+    { "step": "step-8", "note": "AI Change Board sign-off" }
+  ],
+  "[18229-2.12]": [
+    { "step": "step-7", "note": "Test control evidence — consistency" }
+  ],
+  "[18229-2.13]": [
+    { "step": "step-7", "note": "Test control evidence — benchmarking" }
+  ],
+  "[18229-2.14]": [
+    { "step": "step-7", "note": "Test control evidence — verification methods" }
+  ],
+  "[18229-2.15]": [
+    { "step": "step-7", "note": "Test control evidence — input noise" }
+  ],
+  "[18229-2.16]": [
+    { "step": "step-7", "note": "Test control evidence — environment changes" },
+    { "step": "step-12", "note": "Triggered review" }
+  ],
+  "[18229-2.17]": [
+    { "step": "step-7", "note": "Test control evidence — feedback loops" },
+    { "step": "step-12", "note": "Periodic & triggered review" }
+  ],
+  "[18229-2.18]": [
+    { "step": "step-6", "note": "Control identification — graceful degradation" },
+    { "step": "step-7", "note": "Test control evidence" }
+  ],
+  "[18229-2.19]": [
+    { "step": "step-6", "note": "Control identification — technical redundancy" },
+    { "step": "step-7", "note": "Test control evidence" }
+  ],
+  "[18229-2.20]": [
+    { "step": "step-7", "note": "Test control evidence — output reliability" }
+  ],
+  "[18284.1]": [
+    { "step": "step-4", "note": "DPIA — System description / design choices" }
+  ],
+  "[18284.2]": [
+    { "step": "step-4", "note": "DPIA — Data inventory / data flows (origin)" }
+  ],
+  "[18284.3]": [
+    { "step": "step-4", "note": "DPIA — Data inventory (preparation)" }
+  ],
+  "[18284.4]": [
+    { "step": "step-4", "note": "DPIA — Data inventory (representativeness)" },
+    { "step": "step-5", "note": "Risk identification — data quality" }
+  ],
+  "[18284.5]": [
+    { "step": "step-4", "note": "DPIA — Data inventory (completeness)" }
+  ],
+  "[18284.6]": [
+    { "step": "step-4", "note": "DPIA — Data inventory (accuracy)" },
+    { "step": "step-7", "note": "Test control evidence — accuracy" }
+  ],
+  "[18284.7]": [
+    { "step": "step-4", "note": "DPIA — Data inventory (dataset splitting)" }
+  ],
+  "[18284.8]": [
+    { "step": "step-4", "note": "DPIA — Data retention period" }
+  ],
+  "[18284.9]": [
+    { "step": "step-4", "note": "DPIA — Data inventory (formulation)" }
+  ],
+  "[18283.1]": [
+    { "step": "step-4", "note": "DPIA — Data inventory (representativeness)" },
+    { "step": "step-5", "note": "Risk identification — bias" }
+  ],
+  "[18283.2]": [
+    { "step": "step-5", "note": "Risk identification — bias metrics" },
+    { "step": "step-7", "note": "Test control evidence — bias" }
+  ],
+  "[18283.3]": [
+    { "step": "step-5", "note": "Risk identification — proxy identification" },
+    { "step": "step-4", "note": "DPIA — data inventory" }
+  ],
+  "[18283.4]": [
+    { "step": "step-5", "note": "Risk identification — multi-stakeholder input" },
+    { "step": "step-6", "note": "Control identification" }
+  ],
+  "[18283.5]": [
+    { "step": "step-4", "note": "DPIA — Fundamental rights assessment" },
+    { "step": "step-5", "note": "Risk identification — fundamental rights" }
+  ],
+  "[18229-1.4]": [
+    { "step": "step-6", "note": "Control identification — event logging" }
+  ],
+  "[18229-1.5]": [
+    { "step": "step-6", "note": "Control identification — traceability / logging" },
+    { "step": "step-11", "note": "Central inventory & record-keeping" }
+  ],
+  "[24970.1]": [
+    { "step": "step-6", "note": "Control identification — logging" },
+    { "step": "step-12", "note": "Periodic & triggered review — monitoring" }
+  ],
+  "[24970.2]": [
+    { "step": "step-6", "note": "Control identification — human intervention logging" },
+    { "step": "step-12", "note": "Periodic & triggered review" }
+  ],
+  "[24970.3]": [
+    { "step": "step-6", "note": "Control identification — system state logging" }
+  ],
+  "[24970.4]": [
+    { "step": "step-6", "note": "Control identification — input/output logging" }
+  ],
+  "[24970.5]": [
+    { "step": "step-6", "note": "Control identification — error/failure logging" },
+    { "step": "step-12", "note": "Periodic & triggered review" }
+  ],
+  "[24970.6]": [
+    { "step": "step-6", "note": "Control identification — tamper resistance" }
+  ],
+  "[24970.7]": [
+    { "step": "step-11", "note": "Central inventory & record-keeping — retention" },
+    { "step": "step-4", "note": "DPIA — Data retention period" }
+  ],
+  "[24970.8]": [
+    { "step": "step-4", "note": "DPIA — privacy / data protection", "ref": "Art.35" },
+    { "step": "step-6", "note": "Control identification — privacy logging" }
+  ],
+  "[18286.1]": [
+    { "step": "step-3", "note": "System classification" },
+    { "step": "step-8", "note": "AI Change Board sign-off" }
+  ],
+  "[18286.2]": [
+    { "step": "step-6", "note": "Control identification — accountability controls" },
+    { "step": "step-8", "note": "AI Change Board sign-off" }
+  ],
+  "[18286.3]": [
+    { "step": "step-6", "note": "Control identification" },
+    { "step": "step-7", "note": "Residual risk" }
+  ],
+  "[18286.4]": [
+    { "step": "step-1", "note": "Training prerequisite check" },
+    { "step": "step-11", "note": "Central inventory & record-keeping" }
+  ],
+  "[18286.5]": [
+    { "step": "step-12", "note": "Periodic & triggered review — PMM" }
+  ],
+  "[18286.6]": [
+    { "step": "step-12", "note": "Periodic & triggered review — incident reporting" }
+  ],
+  "[18286.7]": [
+    { "step": "step-11", "note": "Central inventory & record-keeping — technical documentation" },
+    { "step": "step-8", "note": "AI Change Board sign-off" }
+  ],
+  "[18286.8]": [
+    { "step": "step-11", "note": "Central inventory & record-keeping" }
+  ],
+  "[18228.1]": [
+    { "step": "step-5", "note": "Risk identification" },
+    { "step": "step-4", "note": "DPIA — risk identification" }
+  ],
+  "[18228.2]": [
+    { "step": "step-5", "note": "Risk identification — estimation" }
+  ],
+  "[18228.3]": [
+    { "step": "step-5", "note": "Risk identification — evaluation" }
+  ],
+  "[18228.4]": [
+    { "step": "step-6", "note": "Control identification — elimination" },
+    { "step": "step-7", "note": "Residual risk" }
+  ],
+  "[18228.5]": [
+    { "step": "step-6", "note": "Control identification — mitigation" },
+    { "step": "step-7", "note": "Residual risk" }
+  ],
+  "[18228.6]": [
+    { "step": "step-10", "note": "User obligations briefing" },
+    { "step": "step-6", "note": "Disclosure framework" }
+  ],
+  "[18286.9]": [
+    { "step": "step-2", "note": "Business case documentation" },
+    { "step": "step-3", "note": "System classification" }
+  ],
+  "[18286.10]": [
+    { "step": "step-11", "note": "Central inventory — technical documentation (architecture)" },
+    { "step": "step-4", "note": "DPIA — System description" }
+  ],
+  "[18286.11]": [
+    { "step": "step-11", "note": "Central inventory — technical documentation (training)" },
+    { "step": "step-4", "note": "DPIA — Data inventory" }
+  ],
+  "[18286.12]": [
+    { "step": "step-7", "note": "Test control evidence — accuracy & metrics" }
+  ],
+  "[18286.13]": [
+    { "step": "step-7", "note": "Test control evidence — testing & validation" }
+  ],
+  "[18286.14]": [
+    { "step": "step-6", "note": "Disclosure framework — version control" },
+    { "step": "step-11", "note": "Central inventory & record-keeping" }
+  ],
+  "[18286.15]": [
+    { "step": "step-11", "note": "Central inventory — modification log" },
+    { "step": "step-12", "note": "Periodic & triggered review" }
+  ],
+  "[42001.1]": [
+    { "step": "step-3", "note": "System classification — substantial modification", "ref": "Art.25" }
+  ],
+  "[42001.2]": [
+    { "step": "step-3", "note": "System classification — provider trigger", "ref": "Art.25" }
+  ],
+  "[42001.3]": [
+    { "step": "step-3", "note": "System classification" },
+    { "step": "step-12", "note": "Triggered review" }
+  ],
+  "[42001.4]": [
+    { "step": "step-11", "note": "Central inventory — updated technical documentation" },
+    { "step": "step-12", "note": "Triggered review" }
+  ],
+  "[42001.5]": [
+    { "step": "step-10", "note": "User obligations briefing" },
+    { "step": "step-6", "note": "Control identification" }
+  ],
+  "[42001.6]": [
+    { "step": "step-6", "note": "Control identification — human oversight" },
+    { "step": "step-10", "note": "User obligations briefing" }
+  ],
+  "[42001.7]": [
+    { "step": "step-12", "note": "Periodic & triggered review — monitoring & logging" },
+    { "step": "step-6", "note": "Control identification — logging" }
+  ],
+  "[42001.8]": [
+    { "step": "step-4", "note": "DPIA — Fundamental rights impact assessment" }
+  ],
+  "[42001.9]": [
+    { "step": "step-4", "note": "DPIA — Data subjects / affected persons" }
+  ],
+  "[18286.16]": [
+    { "step": "step-8", "note": "AI Change Board approval — package review" }
+  ],
+  "[18286.17]": [
+    { "step": "step-8", "note": "AI Change Board approval — competent reviewer sign-off" }
+  ],
+  "[18286.18]": [
+    { "step": "step-8", "note": "AI Change Board approval — no critical gaps" },
+    { "step": "step-6", "note": "Compliance View — gaps resolved" }
+  ],
+  "[18286.19]": [
+    { "step": "step-8", "note": "AI Change Board approval — self-assessment conclusion" }
+  ],
+  "[18286.20]": [
+    { "step": "step-8", "note": "AI Change Board approval — review date & version" },
+    { "step": "step-11", "note": "Central inventory & record-keeping" }
+  ],
+  "[12792.1]": [
+    { "step": "step-6", "note": "Disclosure framework — AI identity disclosure" }
+  ],
+  "[12792.2]": [
+    { "step": "step-6", "note": "Disclosure framework — timing & clarity" }
+  ],
+  "[12792.3]": [
+    { "step": "step-6", "note": "Disclosure framework — content labelling" }
+  ],
+  "[12792.4]": [
+    { "step": "step-6", "note": "Disclosure framework — deep fake support" },
+    { "step": "step-5", "note": "Risk identification" }
+  ],
+  "[12792.5]": [
+    { "step": "step-6", "note": "Disclosure framework — deployer disclosure" },
+    { "step": "step-10", "note": "User obligations briefing" }
+  ],
+  "[18286.21]": [
+    { "step": "step-12", "note": "Periodic & triggered review — PMM plan & scope" }
+  ],
+  "[18286.22]": [
+    { "step": "step-12", "note": "Periodic & triggered review — performance data collection" }
+  ],
+  "[18286.23]": [
+    { "step": "step-12", "note": "Periodic & triggered review — drift & degradation detection" }
+  ],
+  "[18286.24]": [
+    { "step": "step-12", "note": "Periodic & triggered review — user incident channel" },
+    { "step": "step-10", "note": "User obligations briefing" }
+  ],
+  "[18286.25]": [
+    { "step": "step-12", "note": "Periodic & triggered review — corrective action process" }
+  ]
+}

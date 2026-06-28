@@ -150,6 +150,16 @@ window.WizUtils = (function () {
     return m ? `${m[1]} · ${art.short_name}` : art.short_name;
   }
 
+  // ---- Step completion ------------------------------------------------
+  // A step counts as complete when it has a saved record. Step 5 is special:
+  // its record exists before the legal assessment is finished, so we key off
+  // the completion flag instead.
+  function isStepComplete(stepId, record) {
+    const rec = record || loadRecord();
+    if (stepId === 'step-5') return !!(rec && rec['step-5'] && rec['step-5'].legal_assessment && rec['step-5'].legal_assessment.completed);
+    return !!(rec && rec[stepId]);
+  }
+
   // ---- Harmonised standard reference formatting ---------------------
   // These standards are not yet confirmed, so refs are displayed with a
   // provisional "PRN" prefix to avoid implying they are accepted ISO
@@ -313,5 +323,5 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel, fmtStdRef, STD_REF_PREFIX };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel, fmtStdRef, STD_REF_PREFIX, isStepComplete };
 })();
