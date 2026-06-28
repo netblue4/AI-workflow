@@ -138,10 +138,7 @@
     { "step": "step-5", "note": "Risk identification — proxy identification" },
     { "step": "step-4", "note": "DPIA — data inventory" }
   ],
-  "[18283.4]": [
-    { "step": "step-5", "note": "Risk identification — multi-stakeholder input" },
-    { "step": "step-6", "note": "Control identification" }
-  ],
+  "[18283.4]": [],
   "[18283.5]": [
     { "step": "step-4", "note": "DPIA — Fundamental rights assessment" },
     { "step": "step-5", "note": "Risk identification — fundamental rights" }
