@@ -401,7 +401,7 @@
         const badge = _el('span', 'wiz9-src-badge wiz9-fs-src-badge'); badge.textContent = 'Self-certified';
         hdr.appendChild(badge);
         hdr.appendChild(_el('span', 'wiz9-ctrl-name', { textContent: ctrl.jkName }));
-        if (ctrl.fk_Harmonised_Standard_IDs) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
+        if (ctrl.fk_Harmonised_Standard_IDs) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
         card.appendChild(hdr);
         if (ctrl.jkObjective) {
           const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective; card.appendChild(obj);
@@ -479,7 +479,7 @@
 
     if (ctrl.fk_Harmonised_Standard_IDs) {
       const stdRef = _el('span', 'wiz9-standard-ref');
-      stdRef.textContent = ctrl.fk_Harmonised_Standard_IDs;
+      stdRef.textContent = WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs);
       hdr.appendChild(stdRef);
     }
 
@@ -617,7 +617,7 @@
         const dot = _el('span', 'wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--hs'); row.appendChild(dot);
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
         row.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-        if (ctrl.fk_Harmonised_Standard_IDs) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
+        if (ctrl.fk_Harmonised_Standard_IDs) row.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
         const compBadge = _el('span', 'wiz9-comp-adds-badge'); compBadge.textContent = 'Compliance'; row.appendChild(compBadge);
         body.appendChild(row);
       });
@@ -876,7 +876,7 @@
 
         const cn = _el('span', 'wiz9-ref-ctrl-name'); cn.textContent = ctrl.jkName; ch.appendChild(cn);
         if (ctrl.fk_Harmonised_Standard_IDs) {
-          const stdRef = _el('span', 'wiz9-standard-ref'); stdRef.textContent = ctrl.fk_Harmonised_Standard_IDs; ch.appendChild(stdRef);
+          const stdRef = _el('span', 'wiz9-standard-ref'); stdRef.textContent = WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs); ch.appendChild(stdRef);
         }
         cc.appendChild(ch);
 
@@ -1272,7 +1272,7 @@
 
         // HS ref + name + description
         const refRow = _el('div', 'wiz9-cmp-hs-ref-row');
-        refRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: h.standard_ref }));
+        refRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(h.standard_ref) }));
         const txt = _el('div', 'wiz9-cmp-hs-txt');
         txt.appendChild(_el('span', 'wiz9-cmp-hs-name', { textContent: h.standard_name }));
         txt.appendChild(_el('span', 'wiz9-cmp-hs-desc', { textContent: h.standard_text }));
@@ -1347,7 +1347,7 @@
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-dot wiz9-cmp-ctrl-dot--hs'));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-id',   { textContent: ctrl.pk_Risk_Control_ID }));
             aRow.appendChild(_el('span', 'wiz9-cmp-ctrl-name', { textContent: ctrl.jkName || '' }));
-            if (ctrl.fk_Harmonised_Standard_IDs) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: ctrl.fk_Harmonised_Standard_IDs }));
+            if (ctrl.fk_Harmonised_Standard_IDs) aRow.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
             implArea.appendChild(aRow);
           });
         }

@@ -562,7 +562,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const hsRefByCtrl = new Map((_tbl.riskControls || []).map(rc => [rc.pk_Risk_Control_ID, rc.fk_Harmonised_Standard_IDs || '']));
     const _hsCell = id => {
       const refs = (hsRefByCtrl.get(id) || '').split(',').map(s => s.trim()).filter(Boolean);
-      return refs.length ? refs.map(r => `<span class="hs-ref-chip">${_esc(r)}</span>`).join(' ') : '<span class="ctrl-src src-eu">EU AI Act</span>';
+      return refs.length ? refs.map(r => `<span class="hs-ref-chip">${_esc(WizUtils.fmtStdRef(r))}</span>`).join(' ') : '<span class="ctrl-src src-eu">EU AI Act</span>';
     };
 
     // Framework_Statement controls are part of the governance framework; they
@@ -742,7 +742,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           }
 
           html += `<tr class="${rowCls}">
-            <td><span class="mono small">${_esc(h.standard_ref)}</span> ${_esc(h.standard_name || '')}${h.standard_text ? `<div class="trace-hs-desc">${_esc(h.standard_text)}</div>` : ''}</td>
+            <td><span class="mono small">${_esc(WizUtils.fmtStdRef(h.standard_ref))}</span> ${_esc(h.standard_name || '')}${h.standard_text ? `<div class="trace-hs-desc">${_esc(h.standard_text)}</div>` : ''}</td>
             <td><div class="trace-ctrl-list">${ctrlCell || '<span class="trace-none">—</span>'}</div></td>
             <td><span class="trace-cov-badge trace-cov-badge--${badgeKey}">${badgeTxt}</span>${naReason ? `<div class="trace-na-reason">${_esc(naReason)}</div>` : ''}</td>
           </tr>`;
@@ -805,7 +805,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             ${p.test_controls.map(tc => `<tr>
               <td class="mono">${_esc(tc.control_ref || tc.test_control_id)}</td>
               <td>${_esc(tc.control_name)}</td>
-              <td class="mono small">${_esc(tc.fk_Harmonised_Standard_IDs || '—')}</td>
+              <td class="mono small">${tc.fk_Harmonised_Standard_IDs ? _esc(WizUtils.fmtStdRef(tc.fk_Harmonised_Standard_IDs)) : '—'}</td>
               <td><span class="status-pill status-pill--${_testStatusKey(tc.status)}">${_testStatusLabel(tc.status)}</span></td>
             </tr>`).join('')}
             </tbody>
