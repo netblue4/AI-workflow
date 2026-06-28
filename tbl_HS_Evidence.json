@@ -7,10 +7,7 @@
     { "step": "step-2", "note": "Business case documentation" },
     { "step": "step-4", "note": "DPIA — System description", "ref": "Art.35(7)(a)" }
   ],
-  "[18229-1.2]": [
-    { "step": "step-5", "note": "Risk identification — known limitations / blind spots" },
-    { "step": "step-2", "note": "Business case — scope of use" }
-  ],
+  "[18229-1.2]": [],
   "[18229-1.3]": [
     { "step": "step-10", "note": "User obligations briefing" },
     { "step": "step-6", "note": "Disclosure framework" }
