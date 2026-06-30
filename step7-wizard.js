@@ -248,9 +248,9 @@
   // ---- Tab strip ---------------------------------------------
   function _buildTabStrip() {
     return WizUtils.buildTabStrip([
-      ['tests',      'Control Tests'],
-      ['activation', 'Control Activation'],
-      ['residual',   'Residual Risk']
+      ['legal',    'Legal/Regulatory'],
+      ['dpia',     'DPIA'],
+      ['groupstd', 'Group Standards']
     ], _switchTab);
   }
 
@@ -259,22 +259,147 @@
       t.classList.toggle('wiz-tab--active', t.dataset.tab === id));
     _container.querySelectorAll('.wiz-pane').forEach(p =>
       p.classList.toggle('wiz-pane--hidden', p.dataset.pane !== id));
+    // Rebuild the legal domain pane on entry so residual reflects latest state
+    if (id === 'legal') {
+      const p = _container.querySelector('[data-pane="legal"]');
+      if (p) { p.innerHTML = ''; p.appendChild(_buildDomainRiskPane()); }
+    }
   }
 
   // ---- Panes -------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const pTests = _el('div', 'wiz-pane');              pTests.dataset.pane = 'tests';
-    const pAct   = _el('div', 'wiz-pane wiz-pane--hidden'); pAct.dataset.pane = 'activation';
-    const pRes   = _el('div', 'wiz-pane wiz-pane--hidden'); pRes.dataset.pane = 'residual';
+    const pLegal = _el('div', 'wiz-pane');                  pLegal.dataset.pane = 'legal';
+    const pDpia  = _el('div', 'wiz-pane wiz-pane--hidden'); pDpia.dataset.pane  = 'dpia';
+    const pGs    = _el('div', 'wiz-pane wiz-pane--hidden'); pGs.dataset.pane    = 'groupstd';
 
-    pTests.appendChild(_buildTestsPane());
-    pAct.appendChild(_buildActivationPane());
-    pRes.appendChild(_buildResidualPane());
+    pLegal.appendChild(_buildDomainRiskPane());
+    pDpia.appendChild(_buildDomainPlaceholder('DPIA'));
+    pGs.appendChild(_buildDomainPlaceholder('Group Standards'));
 
-    pw.appendChild(pTests);
-    pw.appendChild(pAct);
-    pw.appendChild(pRes);
+    pw.appendChild(pLegal);
+    pw.appendChild(pDpia);
+    pw.appendChild(pGs);
+  }
+
+  // ===========================================================
+  // DOMAIN PANE — per-risk Activation → Testing → Residual
+  // ===========================================================
+  function _domainMuted(txt) {
+    const p = _el('p', '');
+    p.style.cssText = 'font-size:12px;color:var(--color-text-tertiary);margin:4px 0 10px;padding-left:2px';
+    p.textContent = txt;
+    return p;
+  }
+
+  function _buildDomainRollup(riskIds) {
+    const levels = {};
+    let assessed = 0;
+    riskIds.forEach(id => {
+      const rr = _residualState[id] || {};
+      if (rr.likelihood && rr.impact) {
+        assessed++;
+        const lvl = _config.risk_matrix[rr.likelihood]?.[rr.impact] || '';
+        if (lvl) levels[lvl] = (levels[lvl] || 0) + 1;
+      }
+    });
+    const wrap = _el('div', '');
+    wrap.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 14px;padding:10px 12px;border:1px solid var(--color-border,#e2e8f0);border-radius:8px;background:var(--color-bg-subtle,#f8fafc)';
+    const lead = _el('span', '');
+    lead.style.cssText = 'font-size:12px;font-weight:700;color:var(--color-text-secondary)';
+    lead.textContent = `${assessed} / ${riskIds.length} risks assessed`;
+    wrap.appendChild(lead);
+    ['critical', 'high', 'medium', 'low'].forEach(lvl => {
+      if (!levels[lvl]) return;
+      const col = _config.residual_colors[lvl] || { bg: '#f1f5f9', text: '#475569' };
+      const pill = _el('span', '');
+      pill.style.cssText = `font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;background:${col.bg};color:${col.text}`;
+      pill.textContent = `${levels[lvl]} ${lvl.charAt(0).toUpperCase() + lvl.slice(1)}`;
+      wrap.appendChild(pill);
+    });
+    return wrap;
+  }
+
+  function _buildRiskBlock(riskId, riskName) {
+    const sec = _el('div', 's9-risk-acc');
+
+    const hdr  = _el('div', 's9-risk-acc-hdr');
+    const left = _el('div', 's9-risk-acc-left');
+    left.appendChild(_el('span', 's9-risk-acc-id',   { textContent: riskId }));
+    left.appendChild(_el('span', 's9-risk-acc-name', { textContent: riskName }));
+    hdr.appendChild(left);
+    const rr = _residualState[riskId] || {};
+    const lvlPill = _el('span', 's9-risk-acc-id');
+    lvlPill.title = 'Residual level';
+    _applyResidualLevel(lvlPill, rr.likelihood, rr.impact);
+    hdr.appendChild(lvlPill);
+    const chevron = _el('span', 's9-risk-acc-chevron');
+    chevron.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    chevron.style.transform = 'rotate(-90deg)';
+    hdr.appendChild(chevron);
+    sec.appendChild(hdr);
+
+    const body = _el('div', 's9-risk-acc-body s9-collapsed');
+
+    // 1 · Control Activation
+    body.appendChild(_sectionLabel('1 · Control Activation'));
+    const actCtrls = _controls.filter(c => c.risk_id === riskId);
+    if (actCtrls.length) actCtrls.forEach(c => body.appendChild(_buildActControlCard(c, 'eu')));
+    else body.appendChild(_domainMuted('No activation controls for this risk.'));
+
+    // 2 · Control Testing
+    body.appendChild(_sectionLabel('2 · Control Testing'));
+    const plan = _planData.find(p => p.risk_id === riskId);
+    if (plan && plan.test_controls.length) {
+      const planIdx = _planData.indexOf(plan);
+      plan.test_controls.forEach(tc => body.appendChild(_buildTestControlCard(tc, plan, planIdx)));
+    } else {
+      body.appendChild(_domainMuted('No test controls defined for this risk.'));
+    }
+
+    // 3 · Residual Risk
+    body.appendChild(_sectionLabel('3 · Residual Risk'));
+    body.appendChild(_buildResidualPanel(riskId));
+
+    sec.appendChild(body);
+    hdr.addEventListener('click', () => {
+      const collapsed = body.classList.toggle('s9-collapsed');
+      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
+    });
+    return sec;
+  }
+
+  function _buildDomainRiskPane() {
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('p', `step-detail-eyebrow color-${_colorKey}`, { textContent: _phaseTitle }));
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — Legal/Regulatory' }));
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk: confirm control activation, record control testing, then assess residual risk. Residual unlocks once that risk’s activation and testing are evidenced or waived.' }));
+
+    const riskIds = Array.from(new Set(_controls.filter(c => c.risk_id).map(c => c.risk_id)));
+    if (!riskIds.length) {
+      const warn = _el('div', 's9-warn');
+      warn.innerHTML = '<strong>No Legal/Regulatory risk controls found.</strong> Complete Step 6 first.';
+      card.appendChild(warn);
+      return card;
+    }
+    const riskNameById = new Map((_tblData.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
+
+    card.appendChild(_buildDomainRollup(riskIds));
+    const list = _el('div', '');
+    riskIds.forEach(id => list.appendChild(_buildRiskBlock(id, riskNameById.get(id) || id)));
+    card.appendChild(list);
+    card.appendChild(_buildSaveRow('Save Residual Risk', _handleSave));
+    return card;
+  }
+
+  function _buildDomainPlaceholder(name) {
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('p', `step-detail-eyebrow color-${_colorKey}`, { textContent: _phaseTitle }));
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + name }));
+    const note = _el('div', 's9-warn');
+    note.innerHTML = `<strong>${name} residual assessment is being added in the next pass.</strong> The Legal/Regulatory tab shows the per-risk Activation → Testing → Residual pattern for review.`;
+    card.appendChild(note);
+    return card;
   }
 
   // ===========================================================
