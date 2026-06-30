@@ -41,12 +41,12 @@
     // Standard full-width title section (from workflow.json)
     container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
 
-    // White content section — tabs + classification wizard
-    const card = _el('div', 'step-content-section');
-
-    // ── Tab strip ────────────────────────────────────────────────────────────
+    // ── Tab strip (above the content, matching other steps) ──────────────────
     const tabStrip = _buildTabStrip();
-    card.appendChild(tabStrip);
+    container.appendChild(tabStrip);
+
+    // White content section — classification wizard
+    const card = _el('div', 'step-content-section');
 
     // ── Wizard tab (default) ─────────────────────────────────────────────────
     const wizardPane = _buildWizardPane(detail);
