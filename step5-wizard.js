@@ -22,6 +22,7 @@
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
+    group_standard_risks: {}, // pk_Risk_ID → boolean (Group Standard risks, assessor-marked)
   };
 
   // Legal assessment state
@@ -108,6 +109,11 @@
     }
     if (saved8?.legal_assessment?.wizard_rationales) {
       Object.assign(_wizState.rationales, saved8.legal_assessment.wizard_rationales);
+    }
+    if (saved8?.group_standard_assessment?.risks) {
+      saved8.group_standard_assessment.risks.forEach(r => {
+        _state.group_standard_risks[r.risk_id] = r.selected;
+      });
     }
 
     _filteredFGItems = _buildFGItems();
@@ -254,6 +260,7 @@
   function _buildTabStrip() {
     return WizUtils.buildTabStrip([
       ['legal', 'Legal/Regulatory Risk Assessment'],
+      ['groupstd', 'Group Standards Risks'],
       ['review', 'Review'],
       ['reference', 'Reference']
     ], _switchTab);
@@ -268,6 +275,10 @@
     if (id === 'review') {
       const pane = _container.querySelector('[data-pane="review"]');
       if (pane) { pane.innerHTML = ''; pane.appendChild(_buildCombinedReviewPane()); }
+    }
+    if (id === 'groupstd') {
+      const pane = _container.querySelector('[data-pane="groupstd"]');
+      if (pane) { pane.innerHTML = ''; pane.appendChild(_buildGroupStandardsPane()); }
     }
   }
 
@@ -338,13 +349,15 @@
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const legal  = _el('div', 'wiz-pane');                  legal.dataset.pane  = 'legal';
+    const gstd   = _el('div', 'wiz-pane wiz-pane--hidden'); gstd.dataset.pane   = 'groupstd';
     const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
     const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
     legal.appendChild(_buildAskJakeCollapsible());
     legal.appendChild(_buildLegalPane());
+    gstd.appendChild(_buildGroupStandardsPane());
     review.appendChild(_buildCombinedReviewPane());
     ref.appendChild(_buildReferencePane());
-    pw.appendChild(legal); pw.appendChild(review); pw.appendChild(ref);
+    pw.appendChild(legal); pw.appendChild(gstd); pw.appendChild(review); pw.appendChild(ref);
   }
 
 
@@ -516,6 +529,129 @@
       wizard_rationales:  { ..._wizState.rationales },
       total_risks:        wqs.length,
       selected_count:     sel,
+      risks
+    };
+  }
+
+  // ---- Group Standards pane -----------------------------------
+  function _renderGroupStandardsPane() {
+    const pane = _container.querySelector('[data-pane="groupstd"]');
+    if (!pane) return;
+    pane.innerHTML = '';
+    pane.appendChild(_buildGroupStandardsPane());
+  }
+
+  function _buildGroupStandardsPane() {
+    const card = _el('div', 'step-detail-card');
+
+    const title = _el('h2', 'step-detail-title');
+    title.textContent = 'Group Standards Risk Assessment';
+    card.appendChild(title);
+
+    const sub = _el('p', 'step-detail-summary');
+    sub.textContent = 'Risks derived from the Acceptable Use of AI Tools Standard. Mark each risk as applicable to this use case; applicable risks are treated with controls in Step 6.';
+    card.appendChild(sub);
+
+    const gsRisks = (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard');
+    if (!gsRisks.length) {
+      card.appendChild(_el('p', 'wiz8-notice', { textContent: 'No Group Standard risks defined.' }));
+      return card;
+    }
+
+    const saved = _record?.['step-5']?.group_standard_assessment;
+    if (saved?.completed) {
+      const c = saved.selected_count ?? 0;
+      const note = _el('div', 's5-saved-note');
+      note.innerHTML = `✓ Assessment last saved <strong>${saved.assessment_date || ''}</strong> — <strong>${c} risk${c !== 1 ? 's' : ''}</strong> marked applicable.`;
+      card.appendChild(note);
+    }
+
+    const list = _el('div', 's5-gs-list');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:12px;margin:12px 0';
+    gsRisks.forEach(r => list.appendChild(_buildGroupStandardItem(r)));
+    card.appendChild(list);
+
+    const actRow = _el('div', 'wiz-action-row');
+    const saveBtn = _el('button', 'wiz-btn-primary');
+    saveBtn.textContent = 'Save Group Standards Assessment ✓';
+    saveBtn.addEventListener('click', _handleSaveGroupStandards);
+    actRow.appendChild(saveBtn);
+    card.appendChild(actRow);
+
+    return card;
+  }
+
+  function _buildGroupStandardItem(risk) {
+    const applicable = !!_state.group_standard_risks[risk.pk_Risk_ID];
+    const item = _el('div', 's5-gs-item');
+    item.style.cssText = `border:1px solid ${applicable ? '#6366f1' : 'var(--color-border,#e2e8f0)'};border-radius:8px;padding:12px 14px;background:var(--color-surface,#fff)`;
+
+    const head = _el('div', '');
+    head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px';
+
+    const left = _el('div', '');
+    left.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0';
+    const tag = _el('span', '');
+    tag.style.cssText = 'font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#eef2ff;color:#3730a3;white-space:nowrap';
+    tag.textContent = risk.groupstandard_ref || 'Group Standard';
+    const name = _el('span', '');
+    name.style.cssText = 'font-weight:600;font-size:14px;color:var(--color-text-primary)';
+    name.textContent = risk.risk_name;
+    left.append(tag, name);
+    head.appendChild(left);
+
+    const toggle = _el('label', '');
+    toggle.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = applicable;
+    const lbl = _el('span', '');
+    lbl.textContent = applicable ? 'Applicable' : 'Not applicable';
+    cb.addEventListener('change', () => {
+      _state.group_standard_risks[risk.pk_Risk_ID] = cb.checked;
+      item.style.borderColor = cb.checked ? '#6366f1' : 'var(--color-border,#e2e8f0)';
+      lbl.textContent = cb.checked ? 'Applicable' : 'Not applicable';
+    });
+    toggle.append(cb, lbl);
+    head.appendChild(toggle);
+    item.appendChild(head);
+
+    const desc = _el('p', '');
+    desc.style.cssText = 'margin:8px 0 0;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)';
+    desc.textContent = risk.risk_description;
+    item.appendChild(desc);
+
+    return item;
+  }
+
+  function _handleSaveGroupStandards() {
+    if (!_record) _record = {};
+    if (!_record._meta) {
+      _record._meta = { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), last_modified: new Date().toISOString() };
+    }
+    _record._meta.last_modified = new Date().toISOString();
+    if (!_record['step-5']) _record['step-5'] = {};
+    _record['step-5'].group_standard_assessment = _buildGroupStandardOutputRecord();
+    WizUtils.saveRecord(_record);
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Group Standards assessment saved ✓');
+    _renderGroupStandardsPane();
+  }
+
+  function _buildGroupStandardOutputRecord() {
+    const today = new Date().toISOString().slice(0, 10);
+    const gsRisks = (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard');
+    const risks = gsRisks.map(r => ({
+      risk_id:           r.pk_Risk_ID,
+      risk_name:         r.risk_name,
+      risk_source:       'Group_Standard',
+      groupstandard_ref: r.groupstandard_ref || '',
+      selected:          !!_state.group_standard_risks[r.pk_Risk_ID]
+    }));
+    return {
+      completed:       true,
+      assessment_date: today,
+      total_risks:     gsRisks.length,
+      selected_count:  risks.filter(r => r.selected).length,
       risks
     };
   }
