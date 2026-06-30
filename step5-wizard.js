@@ -359,8 +359,7 @@
     const gstd   = _el('div', 'wiz-pane wiz-pane--hidden'); gstd.dataset.pane   = 'groupstd';
     const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
     const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
-    legal.appendChild(_buildAskJakeCollapsible());
-    legal.appendChild(_buildLegalPane());
+    legal.appendChild(_buildLegalCard());
     dpia.appendChild(_buildDpiaRisksPane());
     gstd.appendChild(_buildGroupStandardsPane());
     review.appendChild(_buildCombinedReviewPane());
@@ -369,12 +368,21 @@
   }
 
 
+  // White content card for the legal tab (Ask JAKE + risk list), matching
+  // the other Step 5 panes.
+  function _buildLegalCard() {
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_buildAskJakeCollapsible());
+    card.appendChild(_buildLegalPane());
+    return card;
+  }
+
   // ---- Re-render legal pane in place --------------------------
   function _renderLegalPane() {
     const pane = _container.querySelector('[data-pane="legal"]');
     if (!pane) return;
     pane.innerHTML = '';
-    pane.appendChild(_buildLegalPane());
+    pane.appendChild(_buildLegalCard());
   }
 
   // ---- Legal pane -----------------------------------------
