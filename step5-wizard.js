@@ -259,7 +259,8 @@
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     return WizUtils.buildTabStrip([
-      ['legal', 'Legal/Regulatory Risk Assessment'],
+      ['legal', 'Legal/Regulatory Risks'],
+      ['dpia', 'DPIA Risks'],
       ['groupstd', 'Group Standards Risks'],
       ['review', 'Review'],
       ['reference', 'Reference']
@@ -279,6 +280,10 @@
     if (id === 'groupstd') {
       const pane = _container.querySelector('[data-pane="groupstd"]');
       if (pane) { pane.innerHTML = ''; pane.appendChild(_buildGroupStandardsPane()); }
+    }
+    if (id === 'dpia') {
+      const pane = _container.querySelector('[data-pane="dpia"]');
+      if (pane) { pane.innerHTML = ''; pane.appendChild(_buildDpiaRisksPane()); }
     }
   }
 
@@ -349,15 +354,17 @@
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const legal  = _el('div', 'wiz-pane');                  legal.dataset.pane  = 'legal';
+    const dpia   = _el('div', 'wiz-pane wiz-pane--hidden'); dpia.dataset.pane   = 'dpia';
     const gstd   = _el('div', 'wiz-pane wiz-pane--hidden'); gstd.dataset.pane   = 'groupstd';
     const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
     const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
     legal.appendChild(_buildAskJakeCollapsible());
     legal.appendChild(_buildLegalPane());
+    dpia.appendChild(_buildDpiaRisksPane());
     gstd.appendChild(_buildGroupStandardsPane());
     review.appendChild(_buildCombinedReviewPane());
     ref.appendChild(_buildReferencePane());
-    pw.appendChild(legal); pw.appendChild(gstd); pw.appendChild(review); pw.appendChild(ref);
+    pw.appendChild(legal); pw.appendChild(dpia); pw.appendChild(gstd); pw.appendChild(review); pw.appendChild(ref);
   }
 
 
@@ -582,46 +589,86 @@
   }
 
   function _buildGroupStandardItem(risk) {
-    const applicable = !!_state.group_standard_risks[risk.pk_Risk_ID];
-    const item = _el('div', 's5-gs-item');
-    item.style.cssText = `border:1px solid ${applicable ? '#6366f1' : 'var(--color-border,#e2e8f0)'};border-radius:8px;padding:12px 14px;background:var(--color-surface,#fff)`;
+    const cur = _state.group_standard_risks[risk.pk_Risk_ID]; // true | false | undefined
+    const badgeFor = v => v === true ? ['Applicable', 'ok'] : v === false ? ['Not applicable', 'none'] : ['Unanswered', ''];
+    const [btxt, bmod] = badgeFor(cur);
+    const badge = _el('span', `wiz-item-badge${bmod ? ' wiz-item-badge--' + bmod : ''}`);
+    badge.textContent = btxt;
 
-    const head = _el('div', '');
-    head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px';
+    const body = _el('div', 's5-risk-body');
 
-    const left = _el('div', '');
-    left.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0';
-    const tag = _el('span', '');
-    tag.style.cssText = 'font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#eef2ff;color:#3730a3;white-space:nowrap';
-    tag.textContent = risk.groupstandard_ref || 'Group Standard';
-    const name = _el('span', '');
-    name.style.cssText = 'font-weight:600;font-size:14px;color:var(--color-text-primary)';
-    name.textContent = risk.risk_name;
-    left.append(tag, name);
-    head.appendChild(left);
+    // Yellow "derived from" information banner
+    const banner = _el('div', '');
+    banner.style.cssText = 'background:#fef9c3;border:1px solid #fde68a;color:#854d0e;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.5;margin-bottom:10px';
+    banner.innerHTML = `<strong>Risk derived from</strong> the Acceptable Use of AI Tools Standard — ${risk.groupstandard_ref || 'Group Standard'}.`;
+    body.appendChild(banner);
 
-    const toggle = _el('label', '');
-    toggle.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = applicable;
-    const lbl = _el('span', '');
-    lbl.textContent = applicable ? 'Applicable' : 'Not applicable';
-    cb.addEventListener('change', () => {
-      _state.group_standard_risks[risk.pk_Risk_ID] = cb.checked;
-      item.style.borderColor = cb.checked ? '#6366f1' : 'var(--color-border,#e2e8f0)';
-      lbl.textContent = cb.checked ? 'Applicable' : 'Not applicable';
+    if (risk.risk_description) {
+      const desc = _el('p', '');
+      desc.style.cssText = 'margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)';
+      desc.textContent = risk.risk_description;
+      body.appendChild(desc);
+    }
+
+    // Yes / No applicability buttons
+    const btnRow = _el('div', 's5-answer-row');
+    [['yes', '✓ Yes', true], ['no', '✗ No', false]].forEach(([key, lbl, val]) => {
+      const btn = _el('button', `s5-answer-btn s5-answer-btn--${key}${cur === val ? ' s5-answer-btn--active' : ''}`);
+      btn.textContent = lbl;
+      btn.addEventListener('click', () => {
+        _state.group_standard_risks[risk.pk_Risk_ID] = val;
+        btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
+        btn.classList.add('s5-answer-btn--active');
+        const [t, m] = badgeFor(val);
+        badge.textContent = t;
+        badge.className = `wiz-item-badge${m ? ' wiz-item-badge--' + m : ''}`;
+      });
+      btnRow.appendChild(btn);
     });
-    toggle.append(cb, lbl);
-    head.appendChild(toggle);
-    item.appendChild(head);
+    body.appendChild(btnRow);
 
-    const desc = _el('p', '');
-    desc.style.cssText = 'margin:8px 0 0;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)';
-    desc.textContent = risk.risk_description;
-    item.appendChild(desc);
+    const { section } = WizUtils.buildCollapsible({ title: risk.risk_name, icon: true, body });
+    section.querySelector('.wiz-collapsible-header-right').prepend(badge);
+    return section;
+  }
 
-    return item;
+  // ---- DPIA Risks pane (read-only list from Step 4) -----------
+  function _buildDpiaRisksPane() {
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'DPIA Risks' }));
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'Privacy risks identified during the Data Protection Impact Assessment (Step 4).' }));
+
+    const step4 = _record?.['step-4'];
+    if (!step4) {
+      card.appendChild(_el('p', 'wiz8-notice', { innerHTML: '<strong>Step 4 (DPIA) not yet completed.</strong> Complete and save the DPIA first.' }));
+      return card;
+    }
+    const risks = step4.data_types_identified?.privacy_risks || [];
+    if (!risks.length) {
+      card.appendChild(_el('p', 'wiz8-notice', { textContent: 'No privacy risks were recorded in the DPIA.' }));
+      return card;
+    }
+
+    const list = _el('div', '');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:12px';
+    risks.forEach(r => {
+      const item = _el('div', '');
+      item.style.cssText = 'display:flex;align-items:flex-start;gap:8px;border:1px solid var(--color-border,#e2e8f0);border-radius:6px;padding:10px 12px;background:var(--color-surface,#fff)';
+      const dot = _el('span', ''); dot.style.cssText = 'color:#0d9488;font-weight:700;flex-shrink:0;line-height:1.5'; dot.textContent = '•';
+      const txt = _el('span', ''); txt.style.cssText = 'font-size:13px;line-height:1.5;color:var(--color-text-primary)'; txt.textContent = r;
+      item.append(dot, txt);
+      list.appendChild(item);
+    });
+    card.appendChild(list);
+
+    const inh = step4.inherent_risk_rating, res = step4.residual_risk_rating;
+    if (inh || res) {
+      const r = _el('p', 'step-detail-summary');
+      r.style.marginTop = '14px';
+      r.innerHTML = `Inherent risk rating: <strong>${inh || '—'}</strong> &nbsp;·&nbsp; Residual risk rating: <strong>${res || '—'}</strong>`;
+      card.appendChild(r);
+    }
+    return card;
   }
 
   function _handleSaveGroupStandards() {
