@@ -30,10 +30,10 @@
     "fk_Harmonised_Standard_IDs": "[18282.6],[18282.4],[24970.8]",
     "control_name": "AI Data Protection and Encryption Standards",
     "control_objective": "Ensure personal, confidential and Group-identifying data is not exposed to external AI tools, and that AI tool content is handled in line with the Information Classification, Access Control and Logging standards — including symmetric encryption where data is confidential or secret — under a defined AI data-governance framework.",
-    "control_description": "The workflow identifies all data types and runs a DPIA to determine whether personal, confidential or special-category data is involved (Step 4), and records the encryption, access-control and logging controls committed for the use case (Step 6). The live encryption implementation, access control lists and platform logs, and the DPO / Data Governance Team / AI Taskforce accountability assignments, are operational artefacts maintained outside the workflow and referenced as evidence.",
+    "control_description": "The workflow identifies all data types and runs a DPIA to determine whether personal, confidential or special-category data is involved (Step 4), records the encryption, access-control and logging controls committed for the use case (Step 6), and confirms each control is live in the deployed system at control activation (Step 7). The DPO / Data Governance Team / AI Taskforce accountability assignments are governance artefacts maintained outside the workflow.",
     "control_evidence": "Technical architecture designs confirming symmetric encryption implementation, system-generated access control lists (ACLs), and AI platform interaction logs.",
     "csa_checklist_item": "Confirm that symmetric encryption, access controls, and logging protocols are actively enforced on all AI integrations handling confidential or secret data.",
-    "workflow_steps": ["step-4", "step-6"]
+    "workflow_steps": ["step-4", "step-6", "step-7"]
   },
   {
     "pk_SR_Control_ID": "AISR-004",
