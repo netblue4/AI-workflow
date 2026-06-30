@@ -288,7 +288,8 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       const selectedKeys = new Set([
         ...(s9.risk_controls || []).filter(c => c.selected).map(c => c.control_id),
         ...(s9.compliance_additions || []).map(c => c.control_id),
-        ...(s9.dpia_controls || []).map(c => 'DPIA__' + c.control_name)
+        ...(s9.dpia_controls || []).map(c => 'DPIA__' + c.control_name),
+        ...((s9.group_standard_controls && s9.group_standard_controls.controls) || []).filter(c => c.selected).map(c => c.control_id)
       ]);
 
       (s10.controls || []).forEach(c => {
@@ -541,6 +542,52 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       html += `</tbody></table>`;
     }
 
+    // ---- Group Standards Risk Assessment ----
+    const gsa = s8.group_standard_assessment;
+    html += `<h3 class="sub-heading">Group Standards Risk Assessment (Acceptable Use of AI Tools Standard)</h3>`;
+    if (!gsa?.completed) {
+      html += _notComplete('Group Standards assessment not yet saved.');
+    } else {
+      html += `<p class="section-meta">Completed: ${gsa.assessment_date} &nbsp;|&nbsp; ${gsa.selected_count} of ${gsa.total_risks} risks applicable</p>`;
+      html += `<table class="data-table data-table--risk">
+  <thead><tr><th style="width:20%">Risk</th><th style="width:8%">Applicable</th><th style="width:9%">Residual Risk</th><th>Standard</th></tr></thead>
+  <tbody>`;
+      (gsa.risks || []).forEach(r => {
+        const residual = s10?.residual_risks?.[r.risk_id];
+        const residualHtml = residual?.level
+          ? `<span class="rag-residual rag-residual--${_esc(residual.level)}">${_esc(residual.level.charAt(0).toUpperCase() + residual.level.slice(1))}</span>`
+          : '—';
+        const ansKey = r.selected ? 'yes' : 'no';
+        const ansTxt = r.selected ? 'Yes' : 'No';
+        const rowCls = r.selected ? '' : ' class="row-dim"';
+        html += `<tr${rowCls}>
+      <td><span class="risk-id-badge">${_esc(r.risk_id)}</span> ${_esc(r.risk_name)}</td>
+      <td><span class="ans-pill ans-pill--${ansKey}">${ansTxt}</span></td>
+      <td class="center">${residualHtml}</td>
+      <td class="reason-cell">${_esc(r.groupstandard_ref || '—')}</td>
+    </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+
+    // ---- DPIA Risk Assessment ----
+    const s4 = _record?.['step-4'];
+    html += `<h3 class="sub-heading">DPIA Risk Assessment</h3>`;
+    if (!s4) {
+      html += _notComplete('Step 4 — DPIA not yet completed.');
+    } else {
+      const pr   = (s4.data_types_identified || {}).privacy_risks || [];
+      const pill = rating => rating
+        ? `<span class="rag-residual rag-residual--${_esc((rating || '').toLowerCase())}">${_esc(rating)}</span>`
+        : '—';
+      html += `<p class="section-meta">Inherent risk: ${pill(s4.inherent_risk_rating)} &nbsp;|&nbsp; Residual risk: ${pill(s4.residual_risk_rating)} &nbsp;<span class="trace-none">(carried from the Step 4 DPIA)</span></p>`;
+      if (pr.length) {
+        html += `<ul style="margin:4px 0 0 18px;line-height:1.7">${pr.map(x => `<li>${_esc(x)}</li>`).join('')}</ul>`;
+      } else {
+        html += _notComplete('No privacy risks recorded in the DPIA.');
+      }
+    }
+
     return html;
   }
 
@@ -645,6 +692,36 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         </tr>`).join('')}
         </tbody>
       </table>`;
+    }
+
+    // ---- Group Standards Controls -----------------------------------
+    const gsCtrls = ((s9.group_standard_controls && s9.group_standard_controls.controls) || []).filter(c => c.selected);
+    if (gsCtrls.length > 0) {
+      html += `<h3 class="sub-heading">Group Standards Controls</h3>`;
+      const gsByRisk = new Map();
+      gsCtrls.forEach(c => {
+        const k = c.risk_id || 'unknown';
+        if (!gsByRisk.has(k)) gsByRisk.set(k, []);
+        gsByRisk.get(k).push(c);
+      });
+      gsByRisk.forEach((ctrls, riskId) => {
+        const riskName  = riskNameById.get(riskId);
+        const riskLabel = riskName ? `${_esc(riskId)} — ${_esc(riskName)}` : _esc(riskId);
+        html += `<div class="ctrl-group">
+          <div class="ctrl-group-hdr">${riskLabel}</div>
+          <table class="data-table data-table--sched">
+            <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
+            <tbody>
+            ${ctrls.map(c => `<tr>
+              <td class="mono">${_esc(c.control_id)}</td>
+              <td>${_esc(c.control_name || '—')}</td>
+              <td>${_hsCell(c.control_id)}</td>
+              <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
+            </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      });
     }
 
     return html;
