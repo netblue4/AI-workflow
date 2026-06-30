@@ -78,6 +78,7 @@
     _injectStyles();
 
     const shell = _el('div', 'wiz-shell');
+    shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle));
     shell.appendChild(_buildTabStrip());
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
@@ -382,7 +383,6 @@
 
   function _buildDomainRiskPane(domain, title) {
     const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('p', `step-detail-eyebrow color-${_colorKey}`, { textContent: _phaseTitle }));
     card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + title }));
     card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk: confirm control activation, record control testing, then assess residual risk. Residual unlocks once that risk’s activation and testing are evidenced or waived.' }));
 
@@ -408,7 +408,6 @@
   // and the residual rating carried (read-only) from Step 4.
   function _buildDpiaResidualPane() {
     const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('p', `step-detail-eyebrow color-${_colorKey}`, { textContent: _phaseTitle }));
     card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — DPIA' }));
 
     const step4 = _record?.['step-4'];

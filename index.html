@@ -386,10 +386,14 @@ async function selectStep(stepId) {
   } else if (stepId === 'step-9') {
     mountStep9Wizard(panel, step, detailData, color, phaseTitle);
   } else {
-    panel.innerHTML = renderDetail(step, color, phaseTitle);
+    panel.innerHTML = '';
+    panel.appendChild(WizUtils.buildStepHeader(step, color, phaseTitle));
     const attest = ATTEST_STEPS[stepId];
     if (attest && window.WizUtils) {
-      panel.appendChild(WizUtils.buildAttestation({ stepId, ...attest }));
+      const content = document.createElement('div');
+      content.className = 'step-content-section';
+      content.appendChild(WizUtils.buildAttestation({ stepId, ...attest }));
+      panel.appendChild(content);
     }
   }
 }

@@ -27,6 +27,7 @@
     _injectStyles();
 
     const shell = _el('div', 'wiz-shell');
+    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
     shell.appendChild(_buildTabStrip());
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
@@ -138,31 +139,10 @@
   function _buildWizardPane() {
     const card = _el('div', 'step-detail-card');
 
-    // Header
-    const ey = _el('p', `step-detail-eyebrow color-${_colorKey}`);
-    ey.textContent = _phaseTitle;
-    card.appendChild(ey);
-
-    const title = _el('h2', 'step-detail-title');
-    title.textContent = `Step ${_step.number} — ${_step.title}`;
-    card.appendChild(title);
-
-    const meta = _el('div', 'step-detail-meta');
-    (_step.owners || []).forEach(o => {
-      const t = _el('span', 'owner-tag'); t.textContent = o; meta.appendChild(t);
-    });
-    card.appendChild(meta);
-
     if (_detail?.description) {
       const d = _el('p', 'step-detail-summary');
       d.textContent = _detail.description;
       card.appendChild(d);
-    }
-
-    // Deliverables
-    if (_step.deliverables?.length) {
-      card.appendChild(_sectionLabel('Deliverables'));
-      card.appendChild(WizUtils.buildDeliverablesList(_step.deliverables));
     }
 
     // Scope note

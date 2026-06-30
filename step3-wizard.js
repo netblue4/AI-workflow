@@ -37,26 +37,12 @@
     if (_record['step-3']) _restoreState(_record['step-3']);
 
     container.innerHTML = '';
-    const card = _el('div', 'step-detail-card');
 
-    // ── Step header (shared across both tabs) ────────────────────────────────
-    const eyebrow = _el('div', 'step-detail-eyebrow');
-    eyebrow.append(
-      _el('span', `step-detail-number color-${colorKey}`, { textContent: step.number }),
-      _el('span', 'step-detail-phase-label', { textContent: phaseTitle })
-    );
-    const titleEl = _el('h1', 'step-detail-title', { textContent: step.title });
-    const meta = _el('div', 'step-detail-meta');
-    meta.appendChild(_el('span', 'owner-tag', {
-      innerHTML: `${(typeof ICONS !== 'undefined' ? ICONS[step.ownerIcon] : '') || ''}&nbsp;${step.owners.join(', ')}`
-    }));
-    (step.requirements || []).forEach(r =>
-      meta.appendChild(_el('span', 'badge sr', { textContent: r }))
-    );
-    const applicMap = { all: 'all', tier2: 'tier2', ops: 'ops', 'personal-data': 'pdata' };
-    meta.appendChild(_el('span', `badge ${applicMap[step.applicabilityKey] || 'all'}`, { textContent: step.applicability }));
-    const summary = _el('p', 'step-detail-summary', { textContent: detail.classification_model.description });
-    card.append(eyebrow, titleEl, meta, summary);
+    // Standard full-width title section (from workflow.json)
+    container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
+
+    // White content section — tabs + classification wizard
+    const card = _el('div', 'step-content-section');
 
     // ── Tab strip ────────────────────────────────────────────────────────────
     const tabStrip = _buildTabStrip();
