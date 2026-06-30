@@ -57,6 +57,7 @@
     _injectStyles();
 
     const shell = _el('div', 'wiz-shell');
+    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
     shell.appendChild(_buildTabStrip());
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);

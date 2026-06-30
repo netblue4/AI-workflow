@@ -239,6 +239,15 @@ body {
   padding: 28px 32px;
 }
 
+/* Tabbed steps (wiz-shell): let the whole step flow in the page scroll so
+   the title section scrolls away like every other step, and let content
+   span the full width to match the full-width title. */
+#detail-panel .wiz-shell { height: auto; }
+#detail-panel .wiz-pane-wrap { overflow-y: visible; }
+#detail-panel .wiz-pane { min-height: 0; }
+#detail-panel .wiz-shell > .step-title-section { padding-left: 24px; padding-right: 24px; }
+#detail-panel .wiz-pane-wrap .step-detail-card { max-width: none; }
+
 /* --- Step detail card -------------------------------------- */
 .step-detail-card {
   background: var(--color-surface);
