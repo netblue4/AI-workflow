@@ -131,5 +131,14 @@
     "risk_name": "Quality Management System Conformity Failure",
     "risk_description": "The organisation has not established and maintained a documented Quality Management System (QMS) for the AI system as required by Art.17. Without a QMS, there is no systematic process for controlling design changes, no accountable owner for AI safety, no mechanism to detect performance degradation in production, and no structured process for incident reporting. The absence of a QMS does not cause a single failure event — it is a silent governance gap that allows compliance to erode over time as the model is updated, data drifts, deployment context changes, and responsible persons change, with no organisational system to detect or respond to any of it.",
     "risk_role": "Engineer"
+  },
+  {
+    "pk_Risk_ID": "GSR-001",
+    "fk_AI_Article_ID": null,
+    "risk_category": "Group_Standard",
+    "groupstandard_ref": "AI SR1",
+    "risk_name": "Inadequate Oversight and Monitoring of AI Tool Usage",
+    "risk_description": "Without defined oversight, AI tool usage can drift outside the bounds set in the Acceptable Use of AI Tools Standard: unapproved use cases proliferate, authorised controls silently fail or fall out of date, and emerging risks (usage spikes, new data exposure, model or behaviour changes) go undetected between formal reviews. The Standard makes the CISO responsible for overseeing and monitoring AI tool usage. Absent a monitoring capability — defined metrics, a collection mechanism, anomaly and incident escalation, and a feedback loop into the RCSA — the organisation cannot demonstrate that approved use cases remain controlled in line with the Standard, and loses the early-warning signal that triggers review or corrective action.",
+    "risk_role": "CISO"
   }
 ]
