@@ -194,9 +194,10 @@
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     return WizUtils.buildTabStrip([
-      ['wizard', 'Controls for identified risks'],
-      ['compliance', 'Controls for AI Act Compliance'],
-      ['groupstd', 'Controls for Group Standards Compliance'],
+      ['wizard', 'Legal/Regulatory Controls'],
+      ['dpia', 'DPIA Controls'],
+      ['groupstd', 'Group Standards Controls'],
+      ['compliance', 'AI Act Compliance Controls'],
       ['reference', 'Reference'],
       ['framework', 'Framework Mapping']
     ], _switchTab);
@@ -220,6 +221,10 @@
       const gsPane = _container.querySelector('[data-pane="groupstd"]');
       if (gsPane) { gsPane.innerHTML = ''; gsPane.appendChild(_buildGroupStandardsCompliancePane()); }
     }
+    if (id === 'dpia') {
+      const dpPane = _container.querySelector('[data-pane="dpia"]');
+      if (dpPane) { dpPane.innerHTML = ''; dpPane.appendChild(_buildDpiaControlsPane()); }
+    }
     if (id === 'framework') {
       const fwPane = _container.querySelector('[data-pane="framework"]');
       if (fwPane && typeof createFrameworkMapping === 'function') {
@@ -233,16 +238,18 @@
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const wz  = _el('div', 'wiz-pane');                  wz.dataset.pane = 'wizard';
+    const dp  = _el('div', 'wiz-pane wiz-pane--hidden'); dp.dataset.pane  = 'dpia';
     const cmp = _el('div', 'wiz-pane wiz-pane--hidden'); cmp.dataset.pane = 'compliance';
     const gs  = _el('div', 'wiz-pane wiz-pane--hidden'); gs.dataset.pane  = 'groupstd';
     const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
     const fw  = _el('div', 'wiz-pane wiz-pane--hidden'); fw.dataset.pane  = 'framework';
     wz.appendChild(_buildWizardPane());
+    dp.appendChild(_buildDpiaControlsPane());
     cmp.appendChild(_buildCompliancePane());
     gs.appendChild(_buildGroupStandardsCompliancePane());
     ref.appendChild(_buildReferencePane());
     if (typeof createFrameworkMapping === 'function') fw.appendChild(createFrameworkMapping(null, null, null));
-    pw.appendChild(wz); pw.appendChild(cmp); pw.appendChild(gs); pw.appendChild(ref); pw.appendChild(fw);
+    pw.appendChild(wz); pw.appendChild(dp); pw.appendChild(cmp); pw.appendChild(gs); pw.appendChild(ref); pw.appendChild(fw);
   }
 
   // ---- Wizard pane --------------------------------------------
@@ -300,9 +307,6 @@
       legalRisks.forEach((r, i) => ll.appendChild(_buildRiskAccordion(r, i)));
       card.appendChild(ll);
     }
-    card.appendChild(_buildDpiaAdditionsSection());
-    card.appendChild(_buildComplianceAdditionsSection());
-
     card.appendChild(_buildActionRow());
     card.appendChild(_el('div', 'wiz9-results'));
     return card;
@@ -827,18 +831,17 @@
   }
 
   // ---- DPIA Additions section (wizard tab) --------------------
+  function _buildDpiaControlsPane() {
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('p', `step-detail-eyebrow color-${_colorKey}`, { textContent: _phaseTitle }));
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'DPIA Controls' }));
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'Technical security measures committed in the DPIA (Step 4). These are carried forward automatically into the control register.' }));
+    card.appendChild(_buildDpiaAdditionsSection());
+    return card;
+  }
+
   function _buildDpiaAdditionsSection() {
     const wrap = _el('div', 'wiz9-dpia-adds-wrap');
-
-    const hdr = _el('div', 'wiz9-dpia-adds-hdr');
-    const icon = _el('span', 'wiz9-dpia-adds-icon');
-    icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>`;
-    hdr.appendChild(icon);
-    const titleWrap = _el('div', 'wiz9-dpia-adds-title-wrap');
-    titleWrap.appendChild(_el('span', 'wiz9-dpia-adds-title', { textContent: 'DPIA Controls' }));
-    titleWrap.appendChild(_el('span', 'wiz9-dpia-adds-sub', { textContent: 'Technical security measures committed in the DPIA (Step 4). These are carried forward automatically into the control register.' }));
-    hdr.appendChild(titleWrap);
-    wrap.appendChild(hdr);
 
     const body = _el('div', 'wiz9-dpia-adds-body');
     const step4 = _record?.['step-4'];
