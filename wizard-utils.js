@@ -188,6 +188,53 @@ window.WizUtils = (function () {
     return dl;
   }
 
+  // ---- Standard step title section ------------------------------------
+  // Full-width header shared by every step. Reads its content from the step's
+  // workflow.json entry. Layout: phase eyebrow, "number — title", owners,
+  // Summary (deliverables-style box), Deliverables, Gates and Notes.
+  function buildStepHeader(step, colorKey, phaseTitle) {
+    const icons = (typeof ICONS !== 'undefined') ? ICONS : (typeof window !== 'undefined' && window.ICONS) || {};
+    const sec = el('div', 'step-title-section');
+
+    if (phaseTitle) sec.appendChild(el('p', 'step-detail-phase-label', { textContent: phaseTitle }));
+    sec.appendChild(el('h1', 'step-detail-title step-title-lg', { textContent: `${step.number} — ${step.title}` }));
+
+    const meta = el('div', 'step-detail-meta');
+    const owner = el('span', 'owner-tag');
+    owner.innerHTML = `${icons[step.ownerIcon] || ''}&nbsp;${(step.owners || []).join(', ')}`;
+    meta.appendChild(owner);
+    (step.requirements || []).forEach(r => meta.appendChild(el('span', 'badge sr', { textContent: r })));
+    if (step.applicability) meta.appendChild(el('span', `badge ${step.applicabilityKey || 'all'}`, { textContent: step.applicability }));
+    sec.appendChild(meta);
+
+    if (step.summary) {
+      sec.appendChild(sectionLabel('Summary'));
+      sec.appendChild(el('div', 'step-summary-box', { textContent: step.summary }));
+    }
+
+    if (step.deliverables && step.deliverables.length) {
+      sec.appendChild(sectionLabel('Deliverables'));
+      sec.appendChild(buildDeliverablesList(step.deliverables));
+    }
+
+    if (step.gates && step.gates.length) {
+      sec.appendChild(sectionLabel('Gates and Notes'));
+      step.gates.forEach(g => {
+        const n = el('div', `gate-note ${g.type || 'info'}`);
+        n.innerHTML = g.text;
+        sec.appendChild(n);
+      });
+    }
+
+    if (step.requirementLabels && step.requirementLabels.length) {
+      const rl = el('div', 'req-list', { style: 'margin-top:14px' });
+      step.requirementLabels.forEach(r => rl.appendChild(el('span', 'req-pill', { textContent: r })));
+      sec.appendChild(rl);
+    }
+
+    return sec;
+  }
+
   // ---- Digital attestation block --------------------------------------
   // A lightweight "complete this step without uploading evidence" control.
   // Checkbox + name + Save writes a digital record to _record[stepId], which
@@ -313,5 +360,5 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel, fmtStdRef, STD_REF_PREFIX };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel, fmtStdRef, STD_REF_PREFIX };
 })();

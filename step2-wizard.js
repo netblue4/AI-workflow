@@ -27,59 +27,19 @@
     }
 
     container.innerHTML = '';
-    const card = _el('div', 'step-detail-card');
 
-    // Step header
-    const eyebrow = _el('div', 'step-detail-eyebrow');
-    eyebrow.append(
-      _el('span', `step-detail-number color-${colorKey}`, { textContent: step.number }),
-      _el('span', 'step-detail-phase-label', { textContent: phaseTitle })
-    );
-    card.appendChild(eyebrow);
-    card.appendChild(_el('h1', 'step-detail-title', { textContent: step.title }));
+    // Standard full-width title section (from workflow.json)
+    container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
 
-    const meta = _el('div', 'step-detail-meta');
-    meta.appendChild(_el('span', 'owner-tag', {
-      innerHTML: `${(typeof ICONS !== 'undefined' ? ICONS[step.ownerIcon] : '') || ''}&nbsp;${step.owners.join(', ')}`
-    }));
-    (step.requirements || []).forEach(r =>
-      meta.appendChild(_el('span', 'badge sr', { textContent: r }))
-    );
-    const applicMap = { all: 'all', tier2: 'tier2', ops: 'ops', 'personal-data': 'pdata' };
-    meta.appendChild(_el('span', `badge ${applicMap[step.applicabilityKey] || 'all'}`, { textContent: step.applicability }));
-    card.appendChild(meta);
-    card.appendChild(_el('p', 'step-detail-summary', { textContent: step.summary }));
+    // White content section — the fields to capture
+    const card = _el('div', 'step-content-section');
 
-    // Identity note
     const identNote = _el('div', 's2-identity-note');
     identNote.innerHTML = '<strong>Use case identity</strong> (name, ID, and assessor) is captured in the <strong>Use Case Record</strong> panel in the left sidebar. Complete that panel before proceeding.';
     card.appendChild(identNote);
 
-    // Business case form
     card.appendChild(_buildBusinessCaseForm());
-
-    // Ask JAKE collapsible
     card.appendChild(_buildAskJakeSection());
-
-    // Deliverables
-    if (step.deliverables?.length) {
-      card.appendChild(_sectionLabel('Deliverables'));
-      card.appendChild(WizUtils.buildDeliverablesList(step.deliverables));
-    }
-
-    // Gates
-    (step.gates || []).forEach(g => {
-      const note = _el('div', `gate-note ${g.type}`);
-      note.textContent = g.text;
-      card.appendChild(note);
-    });
-
-    // Requirement labels
-    const reqList = _el('div', 'req-list', { style: 'margin-top:16px' });
-    (step.requirementLabels || []).forEach(r =>
-      reqList.appendChild(_el('span', 'req-pill', { textContent: r }))
-    );
-    card.appendChild(reqList);
 
     container.appendChild(card);
   };

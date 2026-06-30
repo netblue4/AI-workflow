@@ -204,6 +204,41 @@ body {
 .detail-panel::-webkit-scrollbar-track { background: transparent; }
 .detail-panel::-webkit-scrollbar-thumb { background: var(--color-border-mid); border-radius: 3px; }
 
+/* --- Standardised step sections ---------------------------- */
+/* Full-width title section — scrolls with the page (not sticky). */
+.step-title-section {
+  max-width: none;
+  margin-bottom: 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--color-border);
+}
+.step-title-lg {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+/* Summary rendered in the deliverables visual style */
+.step-summary-box {
+  padding: 10px 14px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+/* Step-specific overview (classification results, input source, etc.) */
+.step-overview-section {
+  max-width: none;
+  margin-bottom: 22px;
+}
+/* White content section — the wizard / fields to capture */
+.step-content-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+}
+
 /* --- Step detail card -------------------------------------- */
 .step-detail-card {
   background: var(--color-surface);
