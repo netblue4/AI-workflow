@@ -13,12 +13,14 @@
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null;
   let _riskData = []; // [{ risk_id, display_name, risk_type, risk_source, risk_description, controls }]
+  let _gsRiskData = []; // applicable Group Standard risks + controls (Group Standards tab)
   let _tcByRC   = null; // fk_Risk_Control_ID → test control (R→T pairing)
 
   const _state = {
     riskSelected: {},       // risk team picks (Step Wizard tab)
     complianceSelected: {}, // compliance team additions (Compliance View tab)
-    hsNotApplicable: {}     // standard_ref → { reason, date } — N/A decisions
+    hsNotApplicable: {},    // standard_ref → { reason, date } — N/A decisions
+    gsSelected: {}          // Group Standard control picks (pk_Risk_Control_ID → bool)
   };
 
   // ---- Public API ---------------------------------------------
@@ -34,6 +36,7 @@
     _state.riskSelected = {};
     _state.complianceSelected = {};
     _state.hsNotApplicable = {};
+    _state.gsSelected = {};
 
     _injectStyles();
 
@@ -65,6 +68,7 @@
     _record = WizUtils.loadRecord();
 
     _riskData = _buildRiskControlData();
+    _gsRiskData = _buildGroupStandardControlData();
 
     // Restore prior control selections
     const saved9 = _record?.['step-6'];
@@ -92,6 +96,16 @@
     }
     if (saved9?.hs_not_applicable) {
       Object.assign(_state.hsNotApplicable, saved9.hs_not_applicable);
+    }
+    if (saved9?.group_standard_controls?.controls) {
+      saved9.group_standard_controls.controls.forEach(c => {
+        if (c.selected) _state.gsSelected[c.control_id] = true;
+      });
+    } else {
+      // Default: select all controls for applicable Group Standard risks
+      _gsRiskData.forEach(r =>
+        r.controls.forEach(c => { _state.gsSelected[c.pk_Risk_Control_ID] = true; })
+      );
     }
 
     _renderPanes(pw);
@@ -148,11 +162,41 @@
     return result;
   }
 
+  // ---- Build applicable Group Standard risks + their controls -
+  function _buildGroupStandardControlData() {
+    if (!_tblData) return [];
+    const gsa = _record?.['step-5']?.group_standard_assessment;
+    const selected = (gsa?.risks || []).filter(r => r.selected);
+    if (!selected.length) return [];
+
+    const tblRiskById = new Map(_tblData.risks.map(r => [r.pk_Risk_ID, r]));
+    const ctrlsByRisk = new Map();
+    for (const ctrl of _tblData.controls) {
+      if (!ctrlsByRisk.has(ctrl.fk_Risk_ID)) ctrlsByRisk.set(ctrl.fk_Risk_ID, []);
+      ctrlsByRisk.get(ctrl.fk_Risk_ID).push(ctrl);
+    }
+
+    return selected.map(r5 => {
+      const tblRisk = tblRiskById.get(r5.risk_id);
+      if (!tblRisk) return null;
+      return {
+        risk_id:           tblRisk.pk_Risk_ID,
+        display_name:      tblRisk.risk_name,
+        groupstandard_ref: tblRisk.groupstandard_ref || r5.groupstandard_ref || '',
+        risk_type:         'group_standard',
+        risk_source:       'Group_Standard',
+        risk_description:  tblRisk.risk_description || '',
+        controls:          (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || [])
+      };
+    }).filter(Boolean);
+  }
+
   // ---- Tabs ---------------------------------------------------
   function _buildTabStrip() {
     return WizUtils.buildTabStrip([
-      ['wizard', 'Step Wizard'],
-      ['compliance', 'AI Act Compliance View'],
+      ['wizard', 'Controls for identified risks'],
+      ['compliance', 'Controls for AI Act Compliance'],
+      ['groupstd', 'Controls for Group Standards Compliance'],
       ['reference', 'Reference'],
       ['framework', 'Framework Mapping']
     ], _switchTab);
@@ -172,6 +216,10 @@
       const cmpPane = _container.querySelector('[data-pane="compliance"]');
       if (cmpPane) { cmpPane.innerHTML = ''; cmpPane.appendChild(_buildCompliancePane()); }
     }
+    if (id === 'groupstd') {
+      const gsPane = _container.querySelector('[data-pane="groupstd"]');
+      if (gsPane) { gsPane.innerHTML = ''; gsPane.appendChild(_buildGroupStandardsCompliancePane()); }
+    }
     if (id === 'framework') {
       const fwPane = _container.querySelector('[data-pane="framework"]');
       if (fwPane && typeof createFrameworkMapping === 'function') {
@@ -186,13 +234,15 @@
     pw.innerHTML = '';
     const wz  = _el('div', 'wiz-pane');                  wz.dataset.pane = 'wizard';
     const cmp = _el('div', 'wiz-pane wiz-pane--hidden'); cmp.dataset.pane = 'compliance';
+    const gs  = _el('div', 'wiz-pane wiz-pane--hidden'); gs.dataset.pane  = 'groupstd';
     const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
     const fw  = _el('div', 'wiz-pane wiz-pane--hidden'); fw.dataset.pane  = 'framework';
     wz.appendChild(_buildWizardPane());
     cmp.appendChild(_buildCompliancePane());
+    gs.appendChild(_buildGroupStandardsCompliancePane());
     ref.appendChild(_buildReferencePane());
     if (typeof createFrameworkMapping === 'function') fw.appendChild(createFrameworkMapping(null, null, null));
-    pw.appendChild(wz); pw.appendChild(cmp); pw.appendChild(ref); pw.appendChild(fw);
+    pw.appendChild(wz); pw.appendChild(cmp); pw.appendChild(gs); pw.appendChild(ref); pw.appendChild(fw);
   }
 
   // ---- Wizard pane --------------------------------------------
@@ -510,6 +560,156 @@
     return card;
   }
 
+  // ================================================================
+  // ---- Group Standards Compliance — controls for GS risks --------
+  // ================================================================
+  function _buildGroupStandardsCompliancePane() {
+    const card = _el('div', 'step-detail-card');
+    const ey = _el('p', `step-detail-eyebrow color-${_colorKey}`); ey.textContent = _phaseTitle; card.appendChild(ey);
+    const title = _el('h2', 'step-detail-title'); title.textContent = 'Controls for Group Standards Compliance'; card.appendChild(title);
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'Select the controls that treat each applicable Group Standard risk (derived from the Acceptable Use of AI Tools Standard).' }));
+
+    if (_gsRiskData.length === 0) {
+      const warn = _el('div', 'wiz9-warn');
+      warn.innerHTML = '<strong>No applicable Group Standard risks.</strong> In Step 5 → Group Standards Risks, mark at least one risk as applicable and save.';
+      card.appendChild(warn);
+      return card;
+    }
+
+    card.appendChild(_sectionLabel(`Group Standard Risks (${_gsRiskData.length})`));
+    card.appendChild(_el('p', 'wiz9-intro', { innerHTML: 'Review controls grouped by risk and select those relevant to this use case. The assessor decides which monitoring controls apply.' }));
+
+    const list = _el('div', 'wiz9-risk-list');
+    _gsRiskData.forEach((r, i) => list.appendChild(_buildGsRiskAccordion(r, i)));
+    card.appendChild(list);
+
+    const actRow = _el('div', 'wiz-action-row');
+    const saveBtn = _el('button', 'wiz-btn-primary');
+    saveBtn.textContent = 'Save Group Standards Controls ✓';
+    saveBtn.addEventListener('click', _handleGroupStandardsSave);
+    actRow.appendChild(saveBtn);
+    card.appendChild(actRow);
+    card.appendChild(_el('div', 'wiz9-results', { id: 'gs-results' }));
+    return card;
+  }
+
+  function _buildGsRiskAccordion(risk, idx) {
+    const sec = _el('div', 'wiz9-risk-sec');
+    sec.dataset.riskId = risk.risk_id;
+
+    const hdr = _el('div', 'wiz9-risk-hdr');
+    const left = _el('div', 'wiz9-risk-hdr-left');
+    left.appendChild(_el('span', 'wiz-art-tag', { textContent: risk.groupstandard_ref || 'Group Standard' }));
+    left.appendChild(_el('span', 'wiz9-risk-name', { textContent: risk.display_name }));
+    hdr.appendChild(left);
+
+    const right = _el('div', 'wiz9-risk-hdr-right');
+    const badge = _el('span', 'wiz-item-badge'); badge.id = `gs-rb-${_safeId(risk.risk_id)}`;
+    right.appendChild(badge);
+    const chevron = _el('span', 'wiz9-chevron');
+    chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    chevron.style.transform = idx === 0 ? '' : 'rotate(-90deg)';
+    right.appendChild(chevron);
+    hdr.appendChild(right);
+    sec.appendChild(hdr);
+
+    const body = _el('div', 'wiz9-risk-body' + (idx === 0 ? '' : ' wiz9-collapsed'));
+    if (risk.risk_description) body.appendChild(_el('p', 'wiz9-risk-desc', { textContent: risk.risk_description }));
+    if (risk.controls.length) {
+      body.appendChild(_el('p', 'wiz9-ctrl-section-label', { textContent: `Controls (${risk.controls.length})` }));
+      risk.controls.forEach(c => body.appendChild(_buildGsControlCard(risk, c)));
+    } else {
+      body.appendChild(_el('p', 'wiz9-intro', { textContent: 'No controls available for this risk.' }));
+    }
+    sec.appendChild(body);
+
+    hdr.addEventListener('click', e => {
+      if (e.target.closest('.wiz9-ctrl-cb')) return;
+      const collapsed = body.classList.toggle('wiz9-collapsed');
+      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
+    });
+
+    _updateGsBadge(sec, risk);
+    return sec;
+  }
+
+  function _buildGsControlCard(risk, ctrl) {
+    const card = _el('div', 'wiz9-ctrl-card');
+    const hdr = _el('div', 'wiz9-ctrl-hdr');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 'wiz9-ctrl-cb';
+    cb.dataset.key = ctrl.pk_Risk_Control_ID;
+    cb.checked = !!_state.gsSelected[ctrl.pk_Risk_Control_ID];
+    cb.addEventListener('change', e => {
+      _state.gsSelected[ctrl.pk_Risk_Control_ID] = e.target.checked;
+      const sec = _container.querySelector(`.wiz9-risk-sec[data-risk-id="${CSS.escape(risk.risk_id)}"]`);
+      if (sec) _updateGsBadge(sec, risk);
+    });
+    hdr.appendChild(cb);
+
+    const icon = _el('span', 'wiz9-ctrl-icon');
+    icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+    hdr.appendChild(icon);
+
+    hdr.appendChild(_el('span', 'wiz9-src-badge wiz9-src-badge--gs', { textContent: 'Group Standard' }));
+    hdr.appendChild(_el('span', 'wiz9-ctrl-name', { textContent: ctrl.jkName }));
+    if (ctrl.fk_Harmonised_Standard_IDs) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
+    card.appendChild(hdr);
+
+    if (ctrl.jkObjective) card.appendChild(_el('p', 'wiz9-ctrl-obj', { textContent: ctrl.jkObjective }));
+    return card;
+  }
+
+  function _updateGsBadge(secEl, risk) {
+    const total = risk.controls.length;
+    const sel = risk.controls.filter(c => !!_state.gsSelected[c.pk_Risk_Control_ID]).length;
+    const badge = secEl.querySelector(`#gs-rb-${_safeId(risk.risk_id)}`);
+    if (!badge) return;
+    badge.textContent = `${sel} / ${total}`;
+    badge.className = sel === 0 ? 'wiz-item-badge wiz-item-badge--none'
+      : sel === total ? 'wiz-item-badge wiz-item-badge--ok'
+      : 'wiz-item-badge wiz-item-badge--partial';
+  }
+
+  function _handleGroupStandardsSave() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!_record) _record = {};
+    if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString(), last_modified: new Date().toISOString() };
+    _record._meta.last_modified = new Date().toISOString();
+    const existing = _record['step-6'] || { step_id: 'step-6', step_title: 'Control identification' };
+    existing.group_standard_controls = _buildGroupStandardControlsOutput(today);
+    _record['step-6'] = existing;
+    WizUtils.saveRecord(_record);
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Group Standards controls saved ✓');
+    const results = _container.querySelector('#gs-results');
+    if (results) {
+      const n = existing.group_standard_controls.selected_count;
+      results.innerHTML = `<div class="wiz9-info">✓ Saved — <strong>${n}</strong> Group Standard control${n !== 1 ? 's' : ''} selected.</div>`;
+    }
+  }
+
+  function _buildGroupStandardControlsOutput(today) {
+    const controls = [];
+    _gsRiskData.forEach(r => {
+      r.controls.forEach(c => {
+        controls.push({
+          control_id:     c.pk_Risk_Control_ID,
+          control_name:   c.jkName,
+          control_source: c.control_source || 'Group_Standard',
+          fk_Harmonised_Standard_IDs: c.fk_Harmonised_Standard_IDs || '',
+          risk_id:        r.risk_id,
+          selected:       !!_state.gsSelected[c.pk_Risk_Control_ID]
+        });
+      });
+    });
+    return {
+      assessment_date: today || new Date().toISOString().slice(0, 10),
+      total_risks:     _gsRiskData.length,
+      selected_count:  controls.filter(c => c.selected).length,
+      controls
+    };
+  }
+
   // ---- Task + Code Sample section -----------------------------
   function _buildTaskCodeSection(tasks) {
     const count = tasks.length;
@@ -774,7 +974,9 @@
       dpia_controls_count:      dpiaCount,
       risk_controls,
       compliance_additions: complianceAdditions,
-      dpia_controls:        dpiaControls
+      dpia_controls:        dpiaControls,
+      // Preserve the Group Standards selections so this save does not wipe them
+      group_standard_controls: _buildGroupStandardControlsOutput(today)
     };
   }
 
@@ -1554,6 +1756,7 @@
 /* Source badges */
 .wiz9-src-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;letter-spacing:.03em}
 .wiz9-src-badge--eu{background:#dbeafe;color:#1e40af}
+.wiz9-src-badge--gs{background:#eef2ff;color:#3730a3}
 
 /* Legal risk names in cluster header */
 .wiz9-legal-risk-names{font-size:11px;color:var(--color-text-tertiary);font-style:italic;min-width:0;overflow:hidden;text-overflow:ellipsis}
