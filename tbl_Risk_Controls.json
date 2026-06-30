@@ -656,5 +656,65 @@
     "jkImplementationEvidence": "A 'Supply Chain Integrity Report' generated on every build or ingestion run showing the three-path check result per asset, the failure reason where applicable, the pipeline decision, and a zero count of hash-mismatched or stale-verified assets consumed by the pipeline without a blocking alert.",
     "jkAttackVector": "An attacker compromises a popular NLP utility library used in the Orchestrator's dependency chain and publishes a malicious patch version. The organisation's lockfile pins the major version but not the exact hash. The next CI run installs the patched version, which exfiltrates model weights to an external bucket during the build artefact packaging step. With no per-package hash check against the lockfile, the compromised library passes all name-and-version checks and is included in the deployed artefact.",
     "jkMaturity": "High"
+  },
+  {
+    "pk_Risk_Control_ID": "[GSC-001]",
+    "fk_Risk_ID": "GSR-001",
+    "fk_Harmonised_Standard_IDs": "[18286.21]",
+    "control_source": "Group_Standard",
+    "jkName": "Oversight Scope & Monitoring Plan",
+    "jkText": "The CISO maintains a documented AI tool oversight and monitoring plan that defines what aspects of AI tool usage are monitored, the monitoring frequency, the metrics and thresholds applied, and the roles responsible. The plan is reviewed and updated as the AI tool estate and risk profile change.",
+    "jkObjective": "Establish a CISO-owned plan defining the scope, cadence and ownership of AI tool usage monitoring.",
+    "jkImplementationEvidence": "The current AI tool oversight and monitoring plan, reviewed at each periodic review (Step 12), with the control's status recorded and monitored in Riskonnect under the RCSA.",
+    "jkAttackVector": null,
+    "jkMaturity": null
+  },
+  {
+    "pk_Risk_Control_ID": "[GSC-002]",
+    "fk_Risk_ID": "GSR-001",
+    "fk_Harmonised_Standard_IDs": "[18286.22]",
+    "control_source": "Group_Standard",
+    "jkName": "AI Tool Usage Data Collection",
+    "jkText": "The ISG team collects usage data across all authorised AI tools — access events, request volumes, user populations, and data-classification flags — into a central monitoring view available to the CISO. Collection runs continuously and feeds the periodic and triggered reviews.",
+    "jkObjective": "Provide the CISO with systematic, ongoing visibility of AI tool usage as the basis for oversight.",
+    "jkImplementationEvidence": "Usage-monitoring records reviewed at each periodic review (Step 12), with the control's status recorded and monitored in Riskonnect under the RCSA.",
+    "jkAttackVector": null,
+    "jkMaturity": null
+  },
+  {
+    "pk_Risk_Control_ID": "[GSC-003]",
+    "fk_Risk_ID": "GSR-001",
+    "fk_Harmonised_Standard_IDs": "[18286.23]",
+    "control_source": "Group_Standard",
+    "jkName": "Usage Drift & Anomaly Detection",
+    "jkText": "Monitoring of AI tool usage includes detection of drift and anomalies — material shifts in usage volume, user population, data classification handled, or tool behaviour — that may signal emerging risk between scheduled reviews. Detected anomalies are flagged to the CISO and can initiate a triggered review.",
+    "jkObjective": "Detect material changes in AI tool usage between formal reviews so emerging risk is surfaced early.",
+    "jkImplementationEvidence": "Anomaly and drift detection outputs reviewed at periodic and triggered reviews (Step 12), with the control's status recorded and monitored in Riskonnect under the RCSA.",
+    "jkAttackVector": null,
+    "jkMaturity": null
+  },
+  {
+    "pk_Risk_Control_ID": "[GSC-004]",
+    "fk_Risk_ID": "GSR-001",
+    "fk_Harmonised_Standard_IDs": "[18286.24]",
+    "control_source": "Group_Standard",
+    "jkName": "Incident & Escalation Channel",
+    "jkText": "A defined channel routes AI tool incidents, issues and user-reported concerns to the CISO and the risk function for assessment. The channel is communicated to authorised users and feeds the triggered-review process where a security incident or breach related to AI tool usage occurs.",
+    "jkObjective": "Provide a defined escalation path for AI tool incidents into CISO oversight and triggered review.",
+    "jkImplementationEvidence": "Incident and escalation records and any resulting triggered reviews (Step 12), with the control's status recorded and monitored in Riskonnect under the RCSA.",
+    "jkAttackVector": null,
+    "jkMaturity": null
+  },
+  {
+    "pk_Risk_Control_ID": "[GSC-005]",
+    "fk_Risk_ID": "GSR-001",
+    "fk_Harmonised_Standard_IDs": "[18286.25]",
+    "control_source": "Group_Standard",
+    "jkName": "Corrective Action & RCSA Update",
+    "jkText": "Findings from AI tool usage monitoring — anomalies, incidents, control failures or recurring issues — are translated into corrective actions, and the status of the affected controls is updated in the RCSA. Recurring issues also feed targeted awareness and training under AI SR7.",
+    "jkObjective": "Close the loop from monitoring findings to corrective action and updated RCSA control status.",
+    "jkImplementationEvidence": "Corrective action records and updated RCSA control status in Riskonnect, evidenced through periodic and triggered review outputs (Step 12).",
+    "jkAttackVector": null,
+    "jkMaturity": null
   }
 ]
