@@ -173,7 +173,7 @@
     const riskNameById = new Map((_tblData.risks        || []).map(r => [r.pk_Risk_ID, r.risk_name]));
     const seen         = new Set();
 
-    const push = (controlId, controlName, source, riskId) => {
+    const push = (controlId, controlName, source, riskId, domain) => {
       if (seen.has(controlId)) return;
       seen.add(controlId);
       const tbl = rcById.get(controlId);
@@ -182,6 +182,7 @@
         name:                   tbl?.jkName      || controlName || controlId,
         objective:              tbl?.jkObjective || '',
         source,
+        domain,
         risk_id:                riskId || '',
         risk_name:              riskNameById.get(riskId) || '',
         implementationEvidence: tbl?.jkImplementationEvidence || ''
@@ -189,16 +190,19 @@
     };
 
     (s6.risk_controls || []).filter(c => c.selected).forEach(c =>
-      push(c.control_id, c.control_name, c.control_source || 'EU AI Act', c.risk_id)
+      push(c.control_id, c.control_name, c.control_source || 'EU AI Act', c.risk_id, 'legal')
     );
     (s6.compliance_additions || []).forEach(c =>
-      push(c.control_id, c.control_name, 'Compliance', null)
+      push(c.control_id, c.control_name, 'Compliance', null, 'compliance')
+    );
+    ((s6.group_standard_controls?.controls) || []).filter(c => c.selected).forEach(c =>
+      push(c.control_id, c.control_name, 'Group Standard', c.risk_id, 'group_standard')
     );
     (s6.dpia_controls || []).forEach(c => {
       const key = 'DPIA__' + c.control_name;
       if (seen.has(key)) return;
       seen.add(key);
-      _controls.push({ key, name: c.control_name, objective: '', source: 'DPIA', risk_id: '', risk_name: '', implementationEvidence: '' });
+      _controls.push({ key, name: c.control_name, objective: '', source: 'DPIA', domain: 'dpia', risk_id: '', risk_name: '', implementationEvidence: '' });
     });
   }
 
@@ -259,10 +263,18 @@
       t.classList.toggle('wiz-tab--active', t.dataset.tab === id));
     _container.querySelectorAll('.wiz-pane').forEach(p =>
       p.classList.toggle('wiz-pane--hidden', p.dataset.pane !== id));
-    // Rebuild the legal domain pane on entry so residual reflects latest state
+    // Rebuild the active domain pane on entry so residual reflects latest state
     if (id === 'legal') {
       const p = _container.querySelector('[data-pane="legal"]');
-      if (p) { p.innerHTML = ''; p.appendChild(_buildDomainRiskPane()); }
+      if (p) { p.innerHTML = ''; p.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory')); }
+    }
+    if (id === 'groupstd') {
+      const p = _container.querySelector('[data-pane="groupstd"]');
+      if (p) { p.innerHTML = ''; p.appendChild(_buildDomainRiskPane('group_standard', 'Group Standards')); }
+    }
+    if (id === 'dpia') {
+      const p = _container.querySelector('[data-pane="dpia"]');
+      if (p) { p.innerHTML = ''; p.appendChild(_buildDpiaResidualPane()); }
     }
   }
 
@@ -273,9 +285,9 @@
     const pDpia  = _el('div', 'wiz-pane wiz-pane--hidden'); pDpia.dataset.pane  = 'dpia';
     const pGs    = _el('div', 'wiz-pane wiz-pane--hidden'); pGs.dataset.pane    = 'groupstd';
 
-    pLegal.appendChild(_buildDomainRiskPane());
-    pDpia.appendChild(_buildDomainPlaceholder('DPIA'));
-    pGs.appendChild(_buildDomainPlaceholder('Group Standards'));
+    pLegal.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory'));
+    pDpia.appendChild(_buildDpiaResidualPane());
+    pGs.appendChild(_buildDomainRiskPane('group_standard', 'Group Standards'));
 
     pw.appendChild(pLegal);
     pw.appendChild(pDpia);
@@ -369,16 +381,16 @@
     return sec;
   }
 
-  function _buildDomainRiskPane() {
+  function _buildDomainRiskPane(domain, title) {
     const card = _el('div', 'step-detail-card');
     card.appendChild(_el('p', `step-detail-eyebrow color-${_colorKey}`, { textContent: _phaseTitle }));
-    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — Legal/Regulatory' }));
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + title }));
     card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk: confirm control activation, record control testing, then assess residual risk. Residual unlocks once that risk’s activation and testing are evidenced or waived.' }));
 
-    const riskIds = Array.from(new Set(_controls.filter(c => c.risk_id).map(c => c.risk_id)));
+    const riskIds = Array.from(new Set(_controls.filter(c => c.domain === domain && c.risk_id).map(c => c.risk_id)));
     if (!riskIds.length) {
       const warn = _el('div', 's9-warn');
-      warn.innerHTML = '<strong>No Legal/Regulatory risk controls found.</strong> Complete Step 6 first.';
+      warn.innerHTML = `<strong>No ${title} risk controls found.</strong> Select controls for ${title} risks in Steps 5 and 6 first.`;
       card.appendChild(warn);
       return card;
     }
@@ -392,13 +404,84 @@
     return card;
   }
 
-  function _buildDomainPlaceholder(name) {
+  // DPIA residual — the DPIA is assessed as a whole in Step 4, so this is a
+  // single block: security measures as activation controls, no test controls,
+  // and the residual rating carried (read-only) from Step 4.
+  function _buildDpiaResidualPane() {
     const card = _el('div', 'step-detail-card');
     card.appendChild(_el('p', `step-detail-eyebrow color-${_colorKey}`, { textContent: _phaseTitle }));
-    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + name }));
-    const note = _el('div', 's9-warn');
-    note.innerHTML = `<strong>${name} residual assessment is being added in the next pass.</strong> The Legal/Regulatory tab shows the per-risk Activation → Testing → Residual pattern for review.`;
-    card.appendChild(note);
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — DPIA' }));
+
+    const step4 = _record?.['step-4'];
+    if (!step4) {
+      const warn = _el('div', 's9-warn');
+      warn.innerHTML = '<strong>Step 4 (DPIA) not yet completed.</strong> Complete and save the DPIA first.';
+      card.appendChild(warn);
+      return card;
+    }
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'The DPIA is assessed as a whole in Step 4. Confirm the security-measure controls are live; the residual rating is carried from the DPIA.' }));
+
+    const di = step4.data_types_identified || {};
+    const privacyRisks = di.privacy_risks || [];
+
+    // Privacy risks (context, read-only)
+    card.appendChild(_sectionLabel(`Privacy risks identified (${privacyRisks.length})`));
+    if (privacyRisks.length) {
+      const ul = _el('ul', '');
+      ul.style.cssText = 'margin:0 0 8px;padding-left:18px;font-size:13px;line-height:1.7;color:var(--color-text-primary)';
+      privacyRisks.forEach(r => { const li = document.createElement('li'); li.textContent = r; ul.appendChild(li); });
+      card.appendChild(ul);
+    } else {
+      card.appendChild(_domainMuted('No privacy risks were recorded in the DPIA.'));
+    }
+
+    // Single DPIA block
+    const sec  = _el('div', 's9-risk-acc');
+    const hdr  = _el('div', 's9-risk-acc-hdr');
+    const left = _el('div', 's9-risk-acc-left');
+    left.appendChild(_el('span', 's9-risk-acc-id',   { textContent: 'DPIA' }));
+    left.appendChild(_el('span', 's9-risk-acc-name', { textContent: 'Data Protection Impact Assessment' }));
+    hdr.appendChild(left);
+    const chevron = _el('span', 's9-risk-acc-chevron');
+    chevron.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    hdr.appendChild(chevron);
+    sec.appendChild(hdr);
+
+    const body = _el('div', 's9-risk-acc-body');
+
+    body.appendChild(_sectionLabel('1 · Control Activation'));
+    const dpiaCtrls = _controls.filter(c => c.domain === 'dpia');
+    if (dpiaCtrls.length) dpiaCtrls.forEach(c => body.appendChild(_buildActControlCard(c, 'dpia')));
+    else body.appendChild(_domainMuted('No security-measure controls were recorded in the DPIA.'));
+
+    body.appendChild(_sectionLabel('2 · Control Testing'));
+    body.appendChild(_domainMuted('Not applicable — DPIA controls are not separately test-evidenced.'));
+
+    body.appendChild(_sectionLabel('3 · Residual Risk'));
+    const ratings = _el('div', '');
+    ratings.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+    const mkPill = (label, rating) => {
+      const col = _config.residual_colors[(rating || '').toLowerCase()] || { bg: '#f1f5f9', text: '#94a3b8' };
+      const w = _el('div', ''); w.style.cssText = 'display:flex;align-items:center;gap:6px';
+      w.appendChild(_el('span', '', { textContent: label }));
+      const pill = _el('span', ''); pill.style.cssText = `font-size:12px;font-weight:700;padding:2px 10px;border-radius:10px;background:${col.bg};color:${col.text}`;
+      pill.textContent = rating || '—';
+      w.appendChild(pill);
+      return w;
+    };
+    ratings.appendChild(mkPill('Inherent', step4.inherent_risk_rating));
+    ratings.appendChild(mkPill('Residual', step4.residual_risk_rating));
+    body.appendChild(ratings);
+    body.appendChild(_domainMuted('Residual rating is owned by the Step 4 DPIA. Update it there if it changes.'));
+
+    sec.appendChild(body);
+    hdr.addEventListener('click', () => {
+      const collapsed = body.classList.toggle('s9-collapsed');
+      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
+    });
+    card.appendChild(sec);
+
+    card.appendChild(_buildSaveRow('Save Activation Record', _handleSave));
     return card;
   }
 
