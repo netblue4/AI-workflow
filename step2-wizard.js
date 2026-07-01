@@ -182,19 +182,19 @@
   function _injectStyles() {
     WizUtils.injectStyles('wiz2-styles', `
       /* Step 2 form */
-      .s2-identity-note { font-size:12px;color:var(--color-text-secondary);background:var(--info-fill,#eff6ff);border:1px solid var(--info-border,#bfdbfe);border-radius:var(--radius-md,6px);padding:10px 14px;margin-bottom:20px;line-height:1.5; }
+      .s2-identity-note { font-size:12px;color:var(--color-text-secondary);background:var(--info-fill,rgba(80,150,225,0.12));border:1px solid var(--info-border,rgba(80,150,225,0.40));border-radius:var(--radius-md,6px);padding:10px 14px;margin-bottom:20px;line-height:1.5; }
       .s2-form-section { margin-bottom:24px; }
       .s2-field-label { display:block;font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:4px; }
       .s2-field-hint { font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;line-height:1.5; }
       .s2-textarea { width:100%;padding:10px 12px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface);resize:vertical;box-sizing:border-box;line-height:1.6; }
-      .s2-textarea:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,#ccfbf1); }
+      .s2-textarea:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16)); }
       .s2-input { display:block;width:100%;padding:8px 10px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface);box-sizing:border-box;margin-top:4px; }
-      .s2-input:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,#ccfbf1); }
+      .s2-input:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16)); }
 
       /* Ask JAKE collapsible */
       .s2-jake-section { margin-top:24px;margin-bottom:24px; }
-      .s2-jake-header { background:var(--teal-50,#f0fdfa) !important; }
-      .s2-jake-header:hover { background:var(--teal-100,#ccfbf1) !important; }
+      .s2-jake-header { background:var(--teal-50,rgba(93,202,165,0.10)) !important; }
+      .s2-jake-header:hover { background:var(--teal-100,rgba(93,202,165,0.16)) !important; }
       .s2-jake-instructions { font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm,4px);padding:12px 14px;margin-bottom:14px;line-height:1.6; }
       .s2-prompt-wrap { display:flex;flex-direction:column;gap:8px; }
       .s2-copy-btn { align-self:flex-start; }

@@ -965,7 +965,7 @@
   function _appendSaveRow(container, record) {
     // Step result is already in sessionStorage — instruct user to use the central Save Record button
     const note = _el('div', '', {
-      style: 'margin-top:16px;padding:10px 14px;background:var(--success-50,#f0fdf4);border:1px solid var(--success-200,#bbf7d0);border-radius:6px;font-size:12px;color:var(--success-700,#15803d);'
+      style: 'margin-top:16px;padding:10px 14px;background:var(--success-50,rgba(52,199,120,0.10));border:1px solid var(--success-200,rgba(52,199,120,0.40));border-radius:6px;font-size:12px;color:var(--success-700,#8cebb0);'
     });
     note.innerHTML = '<strong>Classification saved to record.</strong> Use the <strong>Save Record</strong> button in the sidebar to download the full system record JSON.';
     container.appendChild(note);
@@ -1046,9 +1046,9 @@
 
       /* Gates */
       .wiz-gate-section { border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:12px;overflow:hidden;transition:opacity var(--transition); }
-      .wiz-gate-header { padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);border-bottom:1px solid var(--color-border); }
+      .wiz-gate-header { padding:12px 16px;background:var(--color-bg-subtle,#211d15);border-bottom:1px solid var(--color-border); }
       .wiz-gate-header--clickable { cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:flex-start;gap:10px; }
-      .wiz-gate-header--clickable:hover { background:var(--color-bg-hover,#f1f5f9); }
+      .wiz-gate-header--clickable:hover { background:var(--color-bg-hover,#262219); }
       .wiz-gate-header-left { flex:1; }
       .wiz-gate-header-right { display:flex;align-items:center;gap:8px;flex-shrink:0;padding-top:2px; }
       .wiz-gate-chevron { display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s; }
@@ -1064,7 +1064,7 @@
 
       /* Actions */
       .wiz-action-row { display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border); }
-      .wiz-btn-primary { padding:10px 22px;border-radius:var(--radius-md);font-size:14px;font-weight:500;cursor:pointer;background:var(--teal-border);color:#fff;border:none;font-family:inherit;transition:opacity var(--transition); }
+      .wiz-btn-primary { padding:10px 22px;border-radius:var(--radius-md);font-size:14px;font-weight:500;cursor:pointer;background:var(--teal-border);color:#241d08;border:none;font-family:inherit;transition:opacity var(--transition); }
       .wiz-btn-primary:hover { opacity:0.88; }
       .wiz-btn-secondary { padding:10px 22px;border-radius:var(--radius-md);font-size:14px;font-weight:500;cursor:pointer;background:var(--color-surface);color:var(--color-text-secondary);border:1px solid var(--color-border-mid);font-family:inherit;transition:background var(--transition); }
       .wiz-btn-secondary:hover { background:var(--color-bg); }
@@ -1088,7 +1088,7 @@
       .wiz-domain-item { background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:8px 10px; }
       .wiz-domain-header { display:flex;gap:6px;align-items:baseline;margin-bottom:4px; }
       .wiz-domain-text { font-size:11px;color:var(--color-text-secondary);line-height:1.4; }
-      .wiz-sub-toggle { background:none;border:none;padding:0;font-size:11px;color:var(--teal-text,#0d9488);cursor:pointer;font-family:inherit;margin-top:2px;text-align:left; }
+      .wiz-sub-toggle { background:none;border:none;padding:0;font-size:11px;color:var(--teal-text,#8ce3c6);cursor:pointer;font-family:inherit;margin-top:2px;text-align:left; }
       .wiz-sub-toggle:hover { text-decoration:underline; }
       .wiz-sub-collapse { display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--color-border); }
       .wiz-sub-collapse.open { display:block; }

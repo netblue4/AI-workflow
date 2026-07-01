@@ -8,40 +8,62 @@
   --font-body: 'DM Sans', system-ui, sans-serif;
   --font-mono: 'DM Mono', monospace;
 
-  --color-bg:         #f7f6f3;
-  --color-surface:    #ffffff;
-  --color-border:     rgba(0,0,0,0.08);
-  --color-border-mid: rgba(0,0,0,0.14);
+  /* Dark-gold theme -------------------------------------------- */
+  --color-bg:         #17150f;   /* warm near-black canvas */
+  --color-surface:    #201d15;   /* lifted panel / card      */
+  --color-bg-subtle:  #1c1a12;   /* inset / secondary panel  */
+  --color-bg-hover:   #272319;   /* hover wash               */
+  --color-border:     rgba(240,232,208,0.10);
+  --color-border-mid: rgba(240,232,208,0.18);
 
-  --color-text-primary:   #1a1916;
-  --color-text-secondary: #6b6960;
-  --color-text-tertiary:  #9b9890;
+  --color-text-primary:   #f3efe3;
+  --color-text-secondary: #b1a992;
+  --color-text-tertiary:  #7d755f;
+  --color-text: #f3efe3;
 
-  /* Phase / tier color ramps — light fill / border / text */
-  --teal-fill:   #e1f5ee; --teal-border:  #5dcaa5; --teal-text:   #085041;
-  --purple-fill: #eeedfe; --purple-border: #7f77dd; --purple-text: #3c3489;
-  --amber-fill:  #faeeda; --amber-border:  #ef9f27; --amber-text:  #633806;
-  --blue-fill:   #e6f1fb; --blue-border:   #378add; --blue-text:   #0c447c;
-  --coral-fill:  #faece7; --coral-border:  #d85a30; --coral-text:  #712b13;
+  /* Signature champagne-gold accent */
+  --gold:        #d4b860;
+  --gold-bright: #ecd489;
+  --gold-deep:   #b2933c;
+  --gold-soft:   rgba(212,184,96,0.14);
+
+  /* Legacy teal/status aliases remapped onto the dark-gold system
+     (many wizard sub-UIs reference these) */
+  --teal-50:  #1c1a12;
+  --teal-100: #272319;
+  --teal-400: var(--gold);
+  --teal-500: var(--gold);
+  --teal-600: var(--gold);
+  --teal-700: var(--gold-deep);
+  --success-600: #6ee79f;
+  --danger-600:  #ec6a68;
+  --warning-600: #e0b94a;
+
+  /* Phase / tier color ramps — dark fill / bright border / light text */
+  --teal-fill:   rgba(93,202,165,0.12);  --teal-border:  #5dcaa5; --teal-text:   #8ce3c6;
+  --purple-fill: rgba(138,130,235,0.15); --purple-border: #9a92f0; --purple-text: #bfb8ff;
+  --amber-fill:  rgba(212,184,96,0.15);  --amber-border:  #e0b94a; --amber-text:  #ecd489;
+  --blue-fill:   rgba(80,150,225,0.15);  --blue-border:   #5b9fe3; --blue-text:   #a4ccf6;
+  --coral-fill:  rgba(224,120,80,0.16);  --coral-border:  #e58a5f; --coral-text:  #f3ab8a;
 
   /* Gate / status colors */
-  --info-fill:    #e6f1fb; --info-border:    #378add; --info-text:    #0c447c;
-  --success-fill: #e1f5ee; --success-border: #5dcaa5; --success-text: #085041;
-  --warning-fill: #faeeda; --warning-border: #ef9f27; --warning-text: #633806;
-  --danger-fill:  #fcebeb; --danger-border:  #e24b4a; --danger-text:  #791f1f;
+  --info-fill:    rgba(80,150,225,0.15); --info-border:    #5b9fe3; --info-text:    #a4ccf6;
+  --success-fill: rgba(52,199,120,0.14); --success-border: #46c17f; --success-text: #8cebb0;
+  --warning-fill: rgba(212,184,96,0.15); --warning-border: #e0b94a; --warning-text: #ecd489;
+  --danger-fill:  rgba(226,90,88,0.16);  --danger-border:  #ec6a68; --danger-text:  #fba4a3;
 
   /* Applicability badge */
-  --all-fill:    #e1f5ee; --all-text:    #085041;
-  --tier2-fill:  #faeeda; --tier2-text:  #633806;
-  --ops-fill:    #faece7; --ops-text:    #712b13;
-  --pdata-fill:  #eeedfe; --pdata-text:  #3c3489;
+  --all-fill:    rgba(52,199,120,0.14); --all-text:    #8cebb0;
+  --tier2-fill:  rgba(212,184,96,0.15); --tier2-text:  #ecd489;
+  --ops-fill:    rgba(224,120,80,0.16); --ops-text:    #f3ab8a;
+  --pdata-fill:  rgba(138,130,235,0.15); --pdata-text:  #bfb8ff;
 
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.45);
+  --shadow-md: 0 6px 22px rgba(0,0,0,0.55);
 
   --nav-width: 280px;
   --transition: 150ms ease;
@@ -98,6 +120,8 @@ body {
   color: var(--color-text-primary);
   line-height: 1.4;
 }
+
+.nav-header-title { color: var(--gold); }
 
 .nav-scroll {
   flex: 1;
@@ -219,7 +243,8 @@ body {
 /* Summary rendered in the deliverables visual style */
 .step-summary-box {
   padding: 10px 14px;
-  background: var(--color-bg);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 13px;
   color: var(--color-text-secondary);

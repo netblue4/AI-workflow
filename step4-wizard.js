@@ -510,14 +510,14 @@
   function _injectStyles() {
     WizUtils.injectStyles('wiz4-styles', `
 /* ---- DPIA info note ---- */
-.dpia-info-note{background:var(--info-50,#f0f9ff);border:1px solid var(--info-200,#bae6fd);border-left:3px solid var(--info-400,#38bdf8);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--info-800,#075985);line-height:1.6;margin-bottom:20px}
+.dpia-info-note{background:var(--info-50,rgba(80,150,225,0.12));border:1px solid var(--info-200,rgba(80,150,225,0.40));border-left:3px solid var(--info-400,#38bdf8);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--info-800,#a4ccf6);line-height:1.6;margin-bottom:20px}
 
 /* ---- Section accordion ---- */
 .dpia-section{border:1px solid var(--color-border);border-radius:8px;margin-bottom:10px;overflow:hidden}
-.dpia-section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#f8fafc);cursor:pointer;user-select:none;gap:10px}
-.dpia-section-header:hover{background:var(--color-bg-hover,#f1f5f9)}
+.dpia-section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--color-bg-subtle,#211d15);cursor:pointer;user-select:none;gap:10px}
+.dpia-section-header:hover{background:var(--color-bg-hover,#262219)}
 .dpia-section-header-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.dpia-section-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--purple-100,#ede9fe);color:var(--purple-700,#6d28d9);padding:2px 7px;border-radius:4px;flex-shrink:0;font-family:var(--font-mono,monospace)}
+.dpia-section-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--purple-100,rgba(138,130,235,0.16));color:var(--purple-700,#bfb8ff);padding:2px 7px;border-radius:4px;flex-shrink:0;font-family:var(--font-mono,monospace)}
 .dpia-section-title{font-size:13px;font-weight:700;color:var(--color-text-primary)}
 .dpia-gdpr-ref{font-size:11px;color:var(--color-text-tertiary);font-style:italic;white-space:nowrap;flex-shrink:0}
 .dpia-section-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -528,7 +528,7 @@
 
 /* ---- Conditional sections ---- */
 .dpia-section--disabled .dpia-section-header{opacity:.5}
-.dpia-na-notice{display:none;font-size:12px;color:var(--color-text-tertiary);background:var(--color-bg-subtle,#f8fafc);border:1px dashed var(--color-border);border-radius:5px;padding:10px 12px;line-height:1.55}
+.dpia-na-notice{display:none;font-size:12px;color:var(--color-text-tertiary);background:var(--color-bg-subtle,#211d15);border:1px dashed var(--color-border);border-radius:5px;padding:10px 12px;line-height:1.55}
 .dpia-section--disabled .dpia-na-notice{display:block}
 .dpia-section--disabled .dpia-section-body > :not(.dpia-na-notice){display:none!important}
 .dpia-field--hidden{display:none!important}
@@ -540,17 +540,17 @@
 /* ---- Fields ---- */
 .dpia-field-wrap{display:flex;flex-direction:column;gap:6px}
 .dpia-label{font-size:13px;font-weight:600;color:var(--color-text-primary);cursor:default}
-.dpia-required{color:var(--danger-500,#ef4444)}
+.dpia-required{color:var(--danger-500,#ec6a68)}
 .dpia-hint{font-size:11px;color:var(--color-text-tertiary);margin:0;line-height:1.55;padding:6px 10px;background:var(--color-bg);border-radius:4px;border:1px solid var(--color-border)}
-.dpia-text-input,.dpia-textarea,.dpia-select{width:100%;padding:8px 11px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:#fff;outline:none;box-sizing:border-box}
+.dpia-text-input,.dpia-textarea,.dpia-select{width:100%;padding:8px 11px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface);outline:none;box-sizing:border-box}
 .dpia-textarea{resize:vertical;line-height:1.6}
-.dpia-text-input:focus,.dpia-textarea:focus,.dpia-select:focus{border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,#ccfbf1)}
+.dpia-text-input:focus,.dpia-textarea:focus,.dpia-select:focus{border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16))}
 .dpia-select{cursor:pointer}
 .dpia-cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
-.dpia-cb-wrap{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border:1px solid var(--color-border);border-radius:5px;font-size:13px;color:var(--color-text-primary);background:#fff;cursor:pointer;line-height:1.45}
-.dpia-cb-wrap:hover{background:var(--color-bg-subtle,#f8fafc)}
-.dpia-cb{margin-top:2px;flex-shrink:0;accent-color:var(--teal-600,#0d9488);width:14px;height:14px;cursor:pointer}
-.dpia-warn{font-size:13px;color:var(--danger-600,#dc2626);padding:16px 0}
+.dpia-cb-wrap{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border:1px solid var(--color-border);border-radius:5px;font-size:13px;color:var(--color-text-primary);background:var(--color-surface);cursor:pointer;line-height:1.45}
+.dpia-cb-wrap:hover{background:var(--color-bg-subtle,#211d15)}
+.dpia-cb{margin-top:2px;flex-shrink:0;accent-color:var(--teal-600,#8ce3c6);width:14px;height:14px;cursor:pointer}
+.dpia-warn{font-size:13px;color:var(--danger-600,#ec6a68);padding:16px 0}
 
 /* ---- Action row ---- */
 .dpia-action-right{display:flex;gap:8px}
@@ -558,11 +558,11 @@
 
 /* ---- Results ---- */
 .dpia-results{margin-top:16px}
-.dpia-result-card{background:var(--success-50,#f0fdf4);border:1px solid var(--success-200,#bbf7d0);border-radius:8px;padding:20px}
-.dpia-result-title{font-size:14px;font-weight:700;color:var(--success-700,#15803d);margin:0 0 14px}
+.dpia-result-card{background:var(--success-50,rgba(52,199,120,0.10));border:1px solid var(--success-200,rgba(52,199,120,0.40));border-radius:8px;padding:20px}
+.dpia-result-title{font-size:14px;font-weight:700;color:var(--success-700,#8cebb0);margin:0 0 14px}
 .dpia-result-stats{display:flex;gap:28px;margin-bottom:14px;flex-wrap:wrap}
 .dpia-stat{display:flex;flex-direction:column;gap:2px}
-.dpia-stat-num{font-size:26px;font-weight:700;color:var(--success-700,#15803d);line-height:1}
+.dpia-stat-num{font-size:26px;font-weight:700;color:var(--success-700,#8cebb0);line-height:1}
 .dpia-stat-lbl{font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em}
 .dpia-result-note{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0}
 

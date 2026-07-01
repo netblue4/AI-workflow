@@ -56,16 +56,16 @@
 /* ---- Central Use Case Identity panel ---- */
 .uc-panel { padding: 10px 14px 10px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-subtle, #f8fafc); }
 .uc-panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-tertiary); margin: 0 0 7px; display: flex; align-items: center; gap: 5px; }
-.uc-input { display: block; width: 100%; padding: 5px 8px; border: 1px solid var(--color-border); border-radius: 4px; font-size: 11px; font-family: inherit; color: var(--color-text-primary); background: #fff; margin-bottom: 5px; box-sizing: border-box; outline: none; }
-.uc-input:focus { border-color: var(--teal-400, #2dd4bf); box-shadow: 0 0 0 2px var(--teal-100, #ccfbf1); }
+.uc-input { display: block; width: 100%; padding: 5px 8px; border: 1px solid var(--color-border); border-radius: 4px; font-size: 11px; font-family: inherit; color: var(--color-text-primary); background: var(--color-bg); margin-bottom: 5px; box-sizing: border-box; outline: none; }
+.uc-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-soft); }
 .uc-input::placeholder { color: var(--color-text-tertiary); }
 .uc-btn-row { display: flex; gap: 5px; margin-top: 2px; }
 .uc-btn { flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; border-radius: 4px; cursor: pointer; font-family: inherit; transition: background .15s; }
 .uc-btn-load { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); }
 .uc-btn-load:hover { background: var(--color-bg-hover, #f1f5f9); }
-.uc-btn-save { background: var(--teal-600, #0d9488); border: none; color: #fff; }
-.uc-btn-save:hover { background: var(--teal-700, #0f766e); }
-.uc-status { font-size: 10px; color: var(--success-600, #16a34a); margin-top: 5px; min-height: 14px; transition: opacity .6s; opacity: 0; }
+.uc-btn-save { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); border: none; color: #241d08; }
+.uc-btn-save:hover { background: linear-gradient(180deg, var(--gold), var(--gold-deep)); }
+.uc-status { font-size: 10px; color: var(--success-text); margin-top: 5px; min-height: 14px; transition: opacity .6s; opacity: 0; }
 </style>
 
 <script>
