@@ -125,7 +125,8 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
     }
 
     Promise.all([
-        cachedFetch('tbl_AI_Articles.json',        '_fwArticles'),
+        // Articles were inlined into WizUtils.ARTICLES (tbl_AI_Articles.json was removed)
+        Promise.resolve((window.WizUtils && WizUtils.ARTICLES) || []),
         cachedFetch('tbl_Harmonised_Standards.json','_fwHS'),
         cachedFetch('tbl_Risk_Controls.json',       '_fwRC'),
         cachedFetch('tbl_Test_Controls.json',       '_fwTC'),
