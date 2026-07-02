@@ -52,18 +52,17 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    const [risks, controls, tasks, hs, testControls] = await WizUtils.fetchAll([
+    const [risks, controls, hs, testControls] = await WizUtils.fetchAll([
       'tbl_Risks.json',
       'tbl_Risk_Controls.json',
-      'tbl_Control_Task_Code.json',
       'tbl_Harmonised_Standards.json',
       'tbl_Test_Controls.json',
     ]);
-    if (!risks || !controls || !tasks || !hs || !testControls) {
+    if (!risks || !controls || !hs || !testControls) {
       pw.innerHTML = `<p style="padding:24px;color:#ec6a68">Could not load risk data files.</p>`;
       return;
     }
-    _tblData = { risks, controls, tasks, hs, testControls };
+    _tblData = { risks, controls, hs, testControls };
     _tcByRC  = new Map(testControls.filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
 
     _record = WizUtils.loadRecord();
@@ -128,14 +127,6 @@
       ctrlsByRisk.get(ctrl.fk_Risk_ID).push(ctrl);
     }
 
-    // Build tasks-by-control map, sorted by task_number
-    const tasksByCtrl = new Map(); // fk_Risk_Control_ID → [task, ...]
-    for (const task of _tblData.tasks) {
-      if (!tasksByCtrl.has(task.fk_Risk_Control_ID)) tasksByCtrl.set(task.fk_Risk_Control_ID, []);
-      tasksByCtrl.get(task.fk_Risk_Control_ID).push(task);
-    }
-    tasksByCtrl.forEach(ts => ts.sort((a, b) => a.task_number - b.task_number));
-
     const seenRiskIds = new Set();
     const result = [];
 
@@ -145,10 +136,7 @@
       if (!tblRisk) return;
       if (seenRiskIds.has(tblRisk.pk_Risk_ID)) return;
       seenRiskIds.add(tblRisk.pk_Risk_ID);
-      const controls = (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || []).map(ctrl => ({
-        ...ctrl,
-        tasks: tasksByCtrl.get(ctrl.pk_Risk_Control_ID) || []
-      }));
+      const controls = (ctrlsByRisk.get(tblRisk.pk_Risk_ID) || []).map(ctrl => ({ ...ctrl }));
       result.push({
         risk_id:           tblRisk.pk_Risk_ID,
         display_name:      tblRisk.risk_name,
@@ -700,70 +688,6 @@
     };
   }
 
-  // ---- Task + Code Sample section -----------------------------
-  function _buildTaskCodeSection(tasks) {
-    const count = tasks.length;
-
-    const wrap = _el('div', 'wiz9-tasks-wrap');
-    const hdr  = _el('div', 'wiz9-tasks-hdr');
-
-    const icon = _el('span', 'wiz9-tasks-icon');
-    icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
-    hdr.appendChild(icon);
-
-    const lbl = _el('span', 'wiz9-tasks-lbl');
-    lbl.textContent = `Implementation Tasks (${count})`;
-    hdr.appendChild(lbl);
-
-    const chv = _el('span', 'wiz9-tasks-chv');
-    chv.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chv.style.transform = 'rotate(-90deg)';
-    hdr.appendChild(chv);
-    wrap.appendChild(hdr);
-
-    const body = _el('div', 'wiz9-tasks-body wiz9-collapsed');
-
-    tasks.forEach(taskObj => {
-      const pair = _el('div', 'wiz9-pair');
-
-      // Task
-      const taskWrap = _el('div', 'wiz9-task-wrap');
-      const taskNumBadge = _el('span', 'wiz9-task-num');
-      taskNumBadge.textContent = `Task ${taskObj.task_number}`;
-      taskWrap.appendChild(taskNumBadge);
-      const taskBody = _el('p', 'wiz9-task-text');
-      taskBody.textContent = _stripLeadingNum(taskObj.task);
-      taskWrap.appendChild(taskBody);
-      pair.appendChild(taskWrap);
-
-      // Code sample
-      if (taskObj.sample) {
-        const codeWrap  = _el('div', 'wiz9-code-wrap');
-        const codeBadge = _el('span', 'wiz9-code-badge');
-        codeBadge.textContent = `Code Sample ${taskObj.task_number}`;
-        codeWrap.appendChild(codeBadge);
-        const pre  = document.createElement('pre');
-        pre.className = 'wiz9-code-block';
-        const code = document.createElement('code');
-        code.textContent = _extractCode(taskObj.sample);
-        pre.appendChild(code);
-        codeWrap.appendChild(pre);
-        pair.appendChild(codeWrap);
-      }
-
-      body.appendChild(pair);
-    });
-
-    wrap.appendChild(body);
-
-    hdr.addEventListener('click', () => {
-      const col = body.classList.toggle('wiz9-collapsed');
-      chv.style.transform = col ? 'rotate(-90deg)' : '';
-    });
-
-    return wrap;
-  }
-
   // ---- Text helpers -------------------------------------------
   function _stripLeadingNum(text) {
     // "1. Some text" → "Some text"
@@ -1077,9 +1001,10 @@
             const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective; cc.appendChild(obj);
           }
           (ctrl.tasks || []).forEach(taskObj => {
+            if (!taskObj.task && !taskObj.sample) return;   // architecture-specific detail removed
             const pair = _el('div', 'wiz9-ref-pair');
             const tn = _el('span', 'wiz9-task-num'); tn.textContent = `Task ${taskObj.task_number}`; pair.appendChild(tn);
-            const tt = _el('p', 'wiz9-task-text'); tt.textContent = _stripLeadingNum(taskObj.task); pair.appendChild(tt);
+            if (taskObj.task) { const tt = _el('p', 'wiz9-task-text'); tt.textContent = _stripLeadingNum(taskObj.task); pair.appendChild(tt); }
             if (taskObj.sample) {
               const cb2 = _el('span', 'wiz9-code-badge'); cb2.textContent = `Code ${taskObj.task_number}`; pair.appendChild(cb2);
               const pre = document.createElement('pre'); pre.className = 'wiz9-code-block';
