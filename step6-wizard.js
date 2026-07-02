@@ -406,10 +406,36 @@
     const selCtrls = risk.controls.filter(c => c.control_source !== 'Framework_Statement');
 
     if (selCtrls.length > 0) {
+      // Group each risk's controls by the harmonised standard requirement(s)
+      // they satisfy, so the tab reads "risk → HS control → implementing control(s)"
+      // — the same HS items shown under articles in the AI Act Compliance tab.
+      const hsByRef = new Map((_tblData.hs || []).map(h => [h.standard_ref, h]));
+      const order   = [];
+      const groups  = new Map(); // standard_ref → [control, ...]
+      selCtrls.forEach(ctrl => {
+        const refs = (ctrl.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean);
+        (refs.length ? refs : ['—']).forEach(ref => {
+          if (!groups.has(ref)) { groups.set(ref, []); order.push(ref); }
+          groups.get(ref).push(ctrl);
+        });
+      });
+
       const ctrlLbl = _el('p', 'wiz9-ctrl-section-label');
-      ctrlLbl.textContent = `Controls (${selCtrls.length})`;
+      ctrlLbl.textContent = `Harmonised Standard Controls (${order.filter(r => r !== '—').length})`;
       body.appendChild(ctrlLbl);
-      selCtrls.forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
+
+      order.forEach(ref => {
+        const hsHdr = _el('div', 'wiz9-hs-group-hdr');
+        if (ref !== '—') {
+          hsHdr.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(ref) }));
+          const h = hsByRef.get(ref);
+          hsHdr.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: h?.standard_name || '' }));
+        } else {
+          hsHdr.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: 'Other controls' }));
+        }
+        body.appendChild(hsHdr);
+        groups.get(ref).forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
+      });
     } else if (fsCtrls.length === 0) {
       const none = _el('p', 'wiz9-intro');
       none.textContent = 'No controls available for this risk.';
@@ -487,9 +513,10 @@
     cb.addEventListener('change', e => {
       _state.riskSelected[ctrl.pk_Risk_Control_ID] = e.target.checked;
       const sec = _container.querySelector(`.wiz9-risk-sec[data-risk-id="${CSS.escape(risk.risk_id)}"]`);
-      if (sec) _updateRiskBadge(sec, risk);
-      _updateValidationBanner();
-      _updateCountBadge();
+      // _syncRisk re-checks every checkbox from state, so duplicate cards
+      // (a control shown under more than one HS group) stay in sync.
+      if (sec) _syncRisk(sec, risk);
+      else { _updateValidationBanner(); _updateCountBadge(); }
     });
     hdr.appendChild(cb);
 
@@ -1659,6 +1686,8 @@
 /* Risk body */
 .wiz9-risk-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0;padding:10px 12px;background:#211d15;border-radius:5px;border-left:3px solid var(--color-border)}
 .wiz9-ctrl-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0}
+.wiz9-hs-group-hdr{display:flex;align-items:center;gap:8px;margin:12px 0 6px;padding-left:2px}
+.wiz9-hs-group-name{font-size:12.5px;font-weight:600;color:var(--color-text-primary)}
 .wiz9-ctrl-section-label--eu{color:#a4ccf6}
 
 /* EU AI Act risk descriptions */
