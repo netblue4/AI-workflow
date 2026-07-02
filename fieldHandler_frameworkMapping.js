@@ -176,15 +176,21 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             const artHS = hs.filter(h => h.fk_AI_Article_ID === art.pk_AI_Article_ID);
             if (artHS.length === 0) continue;
 
+            // Standard family derived from the ref (standard_group field was
+            // removed from tbl_Harmonised_Standards.json): [18229-1.1] -> 18229-1,
+            // [18286.2] -> 18286.
+            const stdFamily = ref => String(ref || '').replace(/[\[\]]/g, '').replace(/\.\d+$/, '');
+
             const groupOrder = [];
             const groupMap   = new Map();
             for (const h of artHS) {
-                if (!groupMap.has(h.standard_group)) {
-                    groupMap.set(h.standard_group, []);
-                    groupOrder.push(h.standard_group);
+                const grp = stdFamily(h.standard_ref);
+                if (!groupMap.has(grp)) {
+                    groupMap.set(grp, []);
+                    groupOrder.push(grp);
                 }
                 const rcs = rcByRef.get(h.standard_ref) || [];
-                groupMap.get(h.standard_group).push({
+                groupMap.get(grp).push({
                     hsRef:          h.standard_ref,
                     hsName:         h.standard_name,
                     defineControls: rcs.filter(r => r.control_source === 'Framework_Statement'),
@@ -292,7 +298,9 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     grpCell.style.cssText = cellBase + (isFirstGroupRow
                         ? 'color:#7eb3c8;border-right:1px solid #2a2a2a;'
                         : 'color:#2a3040;border-right:1px solid #2a2a2a;');
-                    grpCell.textContent = isFirstGroupRow ? groupName : '';
+                    grpCell.textContent = isFirstGroupRow
+                        ? (window.WizUtils ? WizUtils.fmtStdRef('[' + groupName + ']') : groupName)
+                        : '';
                     row.appendChild(grpCell);
 
                     // Requirement cell
