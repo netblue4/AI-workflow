@@ -1077,9 +1077,10 @@
             const obj = _el('p', 'wiz9-ctrl-obj'); obj.textContent = ctrl.jkObjective; cc.appendChild(obj);
           }
           (ctrl.tasks || []).forEach(taskObj => {
+            if (!taskObj.task && !taskObj.sample) return;   // architecture-specific detail removed
             const pair = _el('div', 'wiz9-ref-pair');
             const tn = _el('span', 'wiz9-task-num'); tn.textContent = `Task ${taskObj.task_number}`; pair.appendChild(tn);
-            const tt = _el('p', 'wiz9-task-text'); tt.textContent = _stripLeadingNum(taskObj.task); pair.appendChild(tt);
+            if (taskObj.task) { const tt = _el('p', 'wiz9-task-text'); tt.textContent = _stripLeadingNum(taskObj.task); pair.appendChild(tt); }
             if (taskObj.sample) {
               const cb2 = _el('span', 'wiz9-code-badge'); cb2.textContent = `Code ${taskObj.task_number}`; pair.appendChild(cb2);
               const pre = document.createElement('pre'); pre.className = 'wiz9-code-block';

@@ -5,9 +5,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-1.6],[42001.6],[24368.5]",
     "control_ref": "[2.6.T1]",
     "jkName": "Confidence Gate Test Report",
-    "jkText": "Generate an 'Output Confidence Test Report' after every test run covering HO-P-01 and HO-P-02. The report must list every query evaluated, the confidence score computed, whether the warning banner was injected, and a zero count of sub-threshold responses that reached the Response Interface without a banner.",
-    "jkObjective": "To provide a per-run evidence record proving the Output Guardrail warning injection mechanism was tested against both sub-threshold and above-threshold inputs and produced the correct outcome in both cases.",
-    "jkImplementationEvidence": "'Output Confidence Test Report' showing HO-P-01 result: confidence_score = 0.675, warning_injected = true; HO-P-02 result: confidence_score = 0.905, warning_injected = false; and a zero count of unwarned sub-threshold responses reaching the Response Interface."
+    "jkObjective": "To provide a per-run evidence record proving the Output Guardrail warning injection mechanism was tested against both sub-threshold and above-threshold inputs and produced the correct outcome in both cases."
   },
   {
     "pk_Test_Control_ID": "TCTRL-002",
@@ -15,9 +13,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-1.7],[42001.6]",
     "control_ref": "[2.6.T2]",
     "jkName": "Kill Switch Audit Log Verification",
-    "jkText": "Generate a 'Kill Switch Test Report' after every test run covering HO-P-03 and HO-P-04. The report must show the stop event timestamp, operator ID, elapsed_ms confirming activation within 500 milliseconds, HTTP 503 confirmation for the immediately following query, and the restart event with a distinct operator ID.",
-    "jkObjective": "To provide an auditable evidence record proving the Orchestrator kill switch activates within 500 milliseconds, blocks the Query Interface, and cannot be reversed without a recorded human restart signal.",
-    "jkImplementationEvidence": "'Kill Switch Test Report' showing event = KILL_SWITCH_ACTIVATED with elapsed_ms < 500, HTTP 503 confirmed for the immediately following query, and event = SYSTEM_RESTARTED with a distinct operator_id recorded in the immutable audit log."
+    "jkObjective": "To provide an auditable evidence record proving the Orchestrator kill switch activates within 500 milliseconds, blocks the Query Interface, and cannot be reversed without a recorded human restart signal."
   },
   {
     "pk_Test_Control_ID": "TCTRL-003",
@@ -25,9 +21,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-1.8],[42001.6]",
     "control_ref": "[2.6.T3]",
     "jkName": "Attribution Integrity Test Report",
-    "jkText": "Generate a 'Response Attribution Test Report' after every test run covering HO-P-05 and HO-P-06. The report must show citation count per response, source document names and chunk IDs for all attributed responses, and confirmation that the zero-chunk suppression event was logged and no null response payload reached the Response Interface.",
-    "jkObjective": "To provide a per-run evidence record proving the Context Assembler attaches source metadata correctly, the Response Interface renders it as a numbered citation list, and the zero-citation guard suppresses LLM calls when the Retriever returns no attributable chunks.",
-    "jkImplementationEvidence": "'Response Attribution Test Report' showing HO-P-05 result: citation_count = 2, source_document = 'HR_Policy_v4.2.pdf' for both citations; HO-P-06 result: suppressed = true, response_payload = null, and ZERO_CITATION_SUPPRESSION event present in the audit log."
+    "jkObjective": "To provide a per-run evidence record proving the Context Assembler attaches source metadata correctly, the Response Interface renders it as a numbered citation list, and the zero-citation guard suppresses LLM calls when the Retriever returns no attributable chunks."
   },
   {
     "pk_Test_Control_ID": "TCTRL-004",
@@ -35,9 +29,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-1.4]",
     "control_ref": "[3.1.T1]",
     "jkName": "Pipeline Log Completeness Report",
-    "jkText": "Generate a 'Pipeline Log Completeness Test Report' after every test run covering AL-P-01. The report must show the count of pipeline executions tested, the simulated timeout duration, the advance_pipeline result, the HTTP response code returned to the Query Interface, and confirmation that the fallback buffer contains the unconfirmed entry.",
-    "jkObjective": "To provide a per-run evidence record proving the blocking write pattern in the Orchestrator halts the pipeline on log store timeout and routes the unconfirmed entry to the fallback buffer — creating no silent log gap.",
-    "jkImplementationEvidence": "'Pipeline Log Completeness Test Report' showing AL-P-01 result: advance_pipeline = false, http_response = 500, fallback_buffer entry count = 1 with fallback_reason = 'timeout', and confirmed_log_store entry count = 0."
+    "jkObjective": "To provide a per-run evidence record proving the blocking write pattern in the Orchestrator halts the pipeline on log store timeout and routes the unconfirmed entry to the fallback buffer — creating no silent log gap."
   },
   {
     "pk_Test_Control_ID": "TCTRL-005",
@@ -45,9 +37,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-1.5]",
     "control_ref": "[3.1.T2]",
     "jkName": "Log Schema Validation Test Report",
-    "jkText": "Generate a 'Log Schema Validation Test Report' after every test run covering AL-P-02 and AL-P-03. The report must show the count of entries validated, the count that passed the full schema check, the count rejected with missing field names recorded, and a zero count of partial entries written to the validated log store.",
-    "jkObjective": "To provide a per-run evidence record proving the schema validation gate rejects partial entries and passes complete entries — confirming no incomplete log record can reach the log store and create a false appearance of audit trail completeness.",
-    "jkImplementationEvidence": "'Log Schema Validation Test Report' showing AL-P-02 result: written = false, missing_fields = ['configuration_hash', 'assembled_context_hash'], validated_log_store count = 0; AL-P-03 result: written = true, missing_fields = [], validated_log_store count = 1."
+    "jkObjective": "To provide a per-run evidence record proving the schema validation gate rejects partial entries and passes complete entries — confirming no incomplete log record can reach the log store and create a false appearance of audit trail completeness."
   },
   {
     "pk_Test_Control_ID": "TCTRL-006",
@@ -55,9 +45,7 @@
     "fk_Harmonised_Standard_IDs": "[24970.3]",
     "control_ref": "[3.1.T3]",
     "jkName": "Human Intervention Log Test Report",
-    "jkText": "Generate a 'Human Intervention Log Test Report' after every test run covering AL-P-04 and AL-P-05. The report must show the intervention event type, operator ID, session cross-reference result, response hash, and the written/rejected outcome for each test — with a zero count of orphaned intervention entries written without a valid session cross-reference.",
-    "jkObjective": "To provide a per-run evidence record proving every human intervention event is captured with a linked session ID and that unlinked intervention events are rejected at write time — ensuring the full decision chain of AI output followed by human action is reconstructable.",
-    "jkImplementationEvidence": "'Human Intervention Log Test Report' showing AL-P-04 result: written = true, event_type = 'output_override', session cross-reference = passed; AL-P-05 result: written = false, reason = 'session_id not found in session log', intervention_log count = 0."
+    "jkObjective": "To provide a per-run evidence record proving every human intervention event is captured with a linked session ID and that unlinked intervention events are rejected at write time — ensuring the full decision chain of AI output followed by human action is reconstructable."
   },
   {
     "pk_Test_Control_ID": "TCTRL-007",
@@ -65,9 +53,7 @@
     "fk_Harmonised_Standard_IDs": "[24970.6]",
     "control_ref": "[3.3.T1]",
     "jkName": "Tamper Detection Verification Report",
-    "jkText": "Generate a 'Log Tamper Detection Test Report' after every test run covering AL-P-06. The report must show the original SHA-256 hash, the modified SHA-256 hash, the integrity_check result, and confirmation that a TAMPER_DETECTED event was written to the audit store containing the session_id and query_id of the modified entry.",
-    "jkObjective": "To provide an evidence record proving the SHA-256 hash chain detects any post-write modification to a log entry — confirming the immutable log store cannot be silently altered after a write without triggering a detectable integrity failure.",
-    "jkImplementationEvidence": "'Log Tamper Detection Test Report' showing AL-P-06 result: original_hash ≠ modified_hash, integrity_check = false, TAMPER_DETECTED event present in audit store with correct session_id and query_id, and UTC timestamp of detection recorded."
+    "jkObjective": "To provide an evidence record proving the SHA-256 hash chain detects any post-write modification to a log entry — confirming the immutable log store cannot be silently altered after a write without triggering a detectable integrity failure."
   },
   {
     "pk_Test_Control_ID": "TCTRL-008",
@@ -75,9 +61,7 @@
     "fk_Harmonised_Standard_IDs": "[24970.8]",
     "control_ref": "[3.3.T2]",
     "jkName": "PII Pseudonymisation Verification Report",
-    "jkText": "Generate a 'PII Pseudonymisation Test Report' after every test run covering AL-P-07. The report must show the input field containing raw PII, the SHA-256 pseudonym written to the log store, confirmation the raw value does not appear in the written entry, and the result of the PII scan across the log store for this entry.",
-    "jkObjective": "To provide a per-run evidence record proving the pseudonymisation layer strips all raw PII from Orchestrator log entries before they reach the log store — confirming the audit log can be retained and shared for compliance purposes without creating a secondary personal data exposure.",
-    "jkImplementationEvidence": "'PII Pseudonymisation Test Report' showing AL-P-07 result: user_pseudonym = SHA-256 hash of submitted email, raw email absent from written log entry, PII scan result = zero raw email matches in the log store for this entry's session_id."
+    "jkObjective": "To provide a per-run evidence record proving the pseudonymisation layer strips all raw PII from Orchestrator log entries before they reach the log store — confirming the audit log can be retained and shared for compliance purposes without creating a secondary personal data exposure."
   },
   {
     "pk_Test_Control_ID": "TCTRL-009",
@@ -85,9 +69,7 @@
     "fk_Harmonised_Standard_IDs": "[18283.1]",
     "control_ref": "[6.1.T1]",
     "jkName": "Subgroup Coverage Gate Test Report",
-    "jkText": "Generate a 'Subgroup Coverage Test Report' after every test run covering BI-P-01, BI-P-02, and BI-P-03. The report must show the sample count per protected subgroup, the threshold result per subgroup, the override audit log entry where applicable, and a zero count of datasets ingested with any protected subgroup below the 500-record threshold without a logged override containing a justification referencing a specific fundamental right.",
-    "jkObjective": "To provide a per-run evidence record proving the subgroup coverage gate blocks datasets with protected subgroup coverage gaps, requires a legally grounded justification for any override, and passes fully representative datasets without false positives.",
-    "jkImplementationEvidence": "'Subgroup Coverage Test Report' showing BI-P-01: 60+ gap detected, coverage_gap_register entry confirmed, ingestion_approved = false, exception raised with override requirement; BI-P-02: SUBGROUP_OVERRIDE logged with engineer_id and fundamental right reference; BI-P-03: subgroup_gaps_detected = [], ingestion_approved = true."
+    "jkObjective": "To provide a per-run evidence record proving the subgroup coverage gate blocks datasets with protected subgroup coverage gaps, requires a legally grounded justification for any override, and passes fully representative datasets without false positives."
   },
   {
     "pk_Test_Control_ID": "TCTRL-010",
@@ -95,9 +77,7 @@
     "fk_Harmonised_Standard_IDs": "[18283.2]",
     "control_ref": "[6.1.T2]",
     "jkName": "Bias Metric Gate Test Report",
-    "jkText": "Generate a 'Bias Metric Evaluation Test Report' after every test run covering BI-P-04, BI-P-05, and BI-P-06. The report must show the metric name, score per subgroup pair, threshold applied, deployment gate result, and a zero count of deployments that proceeded with a Disparate Impact Ratio below 0.80 or an Equalized Odds difference above 0.05 without a logged engineering override.",
-    "jkObjective": "To provide a per-run evidence record proving the bias gate independently blocks deployment on a Disparate Impact Ratio breach and an Equalized Odds breach, and passes deployments where all bias thresholds are satisfied.",
-    "jkImplementationEvidence": "'Bias Metric Evaluation Test Report' showing BI-P-04: Disparate Impact Ratio = 0.76, passed = false, deployment_approved = false, DEPLOYMENT BLOCKED exception raised; BI-P-05: Equalized Odds difference = 0.07, passed = false, deployment_approved = false; BI-P-06: all pairs passed, deployment_approved = true."
+    "jkObjective": "To provide a per-run evidence record proving the bias gate independently blocks deployment on a Disparate Impact Ratio breach and an Equalized Odds breach, and passes deployments where all bias thresholds are satisfied."
   },
   {
     "pk_Test_Control_ID": "TCTRL-011",
@@ -105,9 +85,7 @@
     "fk_Harmonised_Standard_IDs": "[18283.3]",
     "control_ref": "[6.1.T3]",
     "jkName": "Proxy Correlation Screening Test Report",
-    "jkText": "Generate a 'Proxy Correlation Screening Test Report' after every test run covering BI-P-07, BI-P-08, and BI-P-09. The report must show every variable screened, the Pearson coefficient per protected characteristic pair, the flag and action status for every flagged variable, the audit log entry per run, and a zero count of datasets ingested containing a proxy variable flagged at ≥ 0.70 with no recorded action decision and engineer ID.",
-    "jkObjective": "To provide a per-run evidence record proving the proxy screener detects high-correlation proxy variables, blocks ingestion until a documented action decision is recorded, and passes clean datasets with zero false positive proxy flags.",
-    "jkImplementationEvidence": "'Proxy Correlation Screening Test Report' showing BI-P-07: PostcodeDistrict flagged at ≥ 0.70 with ethnicity, action_taken = null, ingestion_approved = false, screening report in audit log; BI-P-08: action_taken = 'removed', engineer_id present, ingestion_approved = true; BI-P-09: flagged_proxies = [], ingestion_approved = true."
+    "jkObjective": "To provide a per-run evidence record proving the proxy screener detects high-correlation proxy variables, blocks ingestion until a documented action decision is recorded, and passes clean datasets with zero false positive proxy flags."
   },
   {
     "pk_Test_Control_ID": "TCTRL-012",
@@ -115,9 +93,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.1]",
     "control_ref": "[5.1.T1]",
     "jkName": "Data Governance Gate Test Report",
-    "jkText": "Generate a 'Data Governance Gate Test Report' after every test run covering DG-P-01, DG-P-02, and DG-P-03. The report must show the dataset name, register lookup result, missing fields list, gate decision, and a zero count of datasets ingested without a complete governance register entry.",
-    "jkObjective": "To provide a per-run evidence record proving the governance gate independently blocks datasets with incomplete documentation and absent register entries, while passing fully documented datasets without false positives.",
-    "jkImplementationEvidence": "'Data Governance Gate Test Report' showing DG-P-01: INGESTION_BLOCKED with both missing fields listed; DG-P-02: LookupError raised, no field validation attempted; DG-P-03: missing_fields = [], ingestion_approved = true; zero datasets ingested without complete governance records."
+    "jkObjective": "To provide a per-run evidence record proving the governance gate independently blocks datasets with incomplete documentation and absent register entries, while passing fully documented datasets without false positives."
   },
   {
     "pk_Test_Control_ID": "TCTRL-013",
@@ -125,9 +101,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.2]",
     "control_ref": "[5.1.T2]",
     "jkName": "Provenance Chain Integrity Test Report",
-    "jkText": "Generate a 'Provenance Chain Integrity Test Report' after every test run covering DG-P-04 and DG-P-05. The report must show the provenance hash at ingestion, the re-verified hash at read time, the comparison result, and a zero count of datasets ingested with a missing legal basis or tampered provenance record that were not detected.",
-    "jkObjective": "To provide a per-run evidence record proving the provenance hash seals a complete record at ingestion and detects any post-ingestion field modification at read time, with incomplete provenance records blocked before a hash is generated.",
-    "jkImplementationEvidence": "'Provenance Chain Integrity Test Report' showing DG-P-04: post-ingestion tampering detected, SecurityAlert raised, read aborted; DG-P-05: PROVENANCE INCOMPLETE raised before hash generation, zero records ingested; zero tampered provenance records undetected at read time."
+    "jkObjective": "To provide a per-run evidence record proving the provenance hash seals a complete record at ingestion and detects any post-ingestion field modification at read time, with incomplete provenance records blocked before a hash is generated."
   },
   {
     "pk_Test_Control_ID": "TCTRL-014",
@@ -135,9 +109,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.3]",
     "control_ref": "[5.1.T3]",
     "jkName": "Pipeline Audit Log Test Report",
-    "jkText": "Generate a 'Data Preparation Audit Log Test Report' after every test run covering DG-P-06 and DG-P-07. The report must show the log entry count per pipeline run, all seven required fields per entry, the hash continuity check result, and a zero count of pipeline steps that advanced without a confirmed audit log entry.",
-    "jkObjective": "To provide a per-run evidence record proving the audit_step decorator captures a complete before-and-after hash record for every pipeline step and the continuity check halts the pipeline on any inter-step hash mismatch.",
-    "jkImplementationEvidence": "'Data Preparation Audit Log Test Report' showing DG-P-06: two entries with all seven fields populated, output_hash of step one matches input_hash of step two; DG-P-07: PipelineIntegrityError raised, enrichment step not executed, mismatch hash recorded in audit log."
+    "jkObjective": "To provide a per-run evidence record proving the audit_step decorator captures a complete before-and-after hash record for every pipeline step and the continuity check halts the pipeline on any inter-step hash mismatch."
   },
   {
     "pk_Test_Control_ID": "TCTRL-015",
@@ -145,9 +117,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.4]",
     "control_ref": "[5.2.T1]",
     "jkName": "Distribution Analysis Test Report",
-    "jkText": "Generate a 'Distribution Analysis Test Report' after every test run covering DG-P-08 and DG-P-09. The report must show the segment field names evaluated, the count per segment, the gap ratio, the ingestion decision, and a zero count of datasets ingested where more than 10% of population segments fell below the 500-record threshold.",
-    "jkObjective": "To provide a per-run evidence record proving the distribution check correctly blocks datasets with coverage gaps exceeding 10% and passes fully representative datasets without false positives.",
-    "jkImplementationEvidence": "'Distribution Analysis Test Report' showing DG-P-08: French/BE segment count = 87, gap_ratio > 0.10, ingestion_approved = false, data gap register entry confirmed; DG-P-09: segments_below_threshold = [], gap_ratio = 0.0, ingestion_approved = true."
+    "jkObjective": "To provide a per-run evidence record proving the distribution check correctly blocks datasets with coverage gaps exceeding 10% and passes fully representative datasets without false positives."
   },
   {
     "pk_Test_Control_ID": "TCTRL-016",
@@ -155,9 +125,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.5]",
     "control_ref": "[5.2.T2]",
     "jkName": "Completeness Threshold Test Report",
-    "jkText": "Generate a 'Completeness Threshold Test Report' after every test run covering DG-P-10 and DG-P-11. The report must show the total record count, rejected record count and missing fields per rejected record, dataset pass rate, ingestion decision, and a zero count of datasets ingested with a dataset-level pass rate below 98%.",
-    "jkObjective": "To provide a per-run evidence record proving the completeness gate rejects individual incomplete records at the record level and blocks full datasets when the proportion of incomplete records exceeds 2%, while allowing partial datasets where the pass rate is compliant.",
-    "jkImplementationEvidence": "'Completeness Threshold Test Report' showing DG-P-10: 3 records rejected, pass_rate = 0.97, ingestion_approved = false, human override prompt present; DG-P-11: 1 record rejected and logged, pass_rate = 0.99, ingestion_approved = true."
+    "jkObjective": "To provide a per-run evidence record proving the completeness gate rejects individual incomplete records at the record level and blocks full datasets when the proportion of incomplete records exceeds 2%, while allowing partial datasets where the pass rate is compliant."
   },
   {
     "pk_Test_Control_ID": "TCTRL-017",
@@ -165,9 +133,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.6]",
     "control_ref": "[5.2.T3]",
     "jkName": "Label Quality Gate Test Report",
-    "jkText": "Generate a 'Label Quality Test Report' after every test run covering DG-P-12 and DG-P-13. The report must show the annotator count, the agreement metric used, the score, the batch decision, and a zero count of annotation batches scoring below 0.80 that were released to the Embedding Model training pipeline.",
-    "jkObjective": "To provide a per-run evidence record proving the label quality gate hard-rejects low-agreement batches with no override path and passes high-agreement batches without false rejection.",
-    "jkImplementationEvidence": "'Label Quality Test Report' showing DG-P-12: Cohen's Kappa < 0.80, batch_approved = false, routed_to_reannotation = true, zero records released to training pipeline; DG-P-13: Cohen's Kappa = 1.0, batch_approved = true, batch released."
+    "jkObjective": "To provide a per-run evidence record proving the label quality gate hard-rejects low-agreement batches with no override path and passes high-agreement batches without false rejection."
   },
   {
     "pk_Test_Control_ID": "TCTRL-018",
@@ -175,9 +141,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.7]",
     "control_ref": "[5.3.T1]",
     "jkName": "Split Contamination Prevention Test Report",
-    "jkText": "Generate a 'Split Integrity Test Report' after every test run covering DG-P-14 and DG-P-15. The report must show the SHA-256 hash comparison result, the ACL check result, the gate decision, and a zero count of evaluations run on a test partition with a hash mismatch or a blocked service account in the ACL. Note: cross-reference [4.2.T1] — both controls share the same gate implementation; test results should be compared across both reports to confirm implementation consistency.",
-    "jkObjective": "To provide a per-run evidence record proving the split contamination gate independently blocks evaluation on hash mismatch and ACL violation, with results cross-referenced against [4.2.T1] to confirm the shared gate implementation behaves consistently across both control contexts.",
-    "jkImplementationEvidence": "'Split Integrity Test Report' showing DG-P-14: hash mismatch detected, evaluation aborted, no scoring executed; DG-P-15: hash passed, ACL violation detected, evaluation aborted independently; zero evaluations run on a contaminated or ACL-violated partition."
+    "jkObjective": "To provide a per-run evidence record proving the split contamination gate independently blocks evaluation on hash mismatch and ACL violation, with results cross-referenced against [4.2.T1] to confirm the shared gate implementation behaves consistently across both control contexts."
   },
   {
     "pk_Test_Control_ID": "TCTRL-019",
@@ -185,9 +149,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.8]",
     "control_ref": "[5.3.T2]",
     "jkName": "Retention Compliance Test Report",
-    "jkText": "Generate a 'Retention Compliance Test Report' after every test run covering DG-P-16 and DG-P-17. The report must show the scheduled deletion date per record, the expired records query result, the decommission log entry for executed deletions, and a zero count of records retained beyond their scheduled deletion date.",
-    "jkObjective": "To provide a per-run evidence record proving the retention scheduler correctly identifies and cryptographically erases expired records on schedule, and does not prematurely delete records within their lawful retention period.",
-    "jkImplementationEvidence": "'Retention Compliance Test Report' showing DG-P-16: record in expired query at day 31, cryptographic_erasure event logged with engineer_id and timestamp; DG-P-17: record not in expired query at day 30, no decommission event written; zero records retained beyond scheduled deletion date."
+    "jkObjective": "To provide a per-run evidence record proving the retention scheduler correctly identifies and cryptographically erases expired records on schedule, and does not prematurely delete records within their lawful retention period."
   },
   {
     "pk_Test_Control_ID": "TCTRL-020",
@@ -195,9 +157,7 @@
     "fk_Harmonised_Standard_IDs": "[18284.9]",
     "control_ref": "[5.4.T1]",
     "jkName": "Assumption Validity Monitor Test Report",
-    "jkText": "Generate an 'Assumption Validity Test Report' after every test run covering DG-P-18 and DG-P-19. The report must show every declared assumption, the proxy metric value, the threshold, the check result, the alert dispatch confirmation for breach events, and a zero count of assumption breaches that did not trigger an alert within one monitoring cycle.",
-    "jkObjective": "To provide a per-run evidence record proving the assumption validity monitor correctly fires a breach alert when any declared proxy metric exceeds its threshold and produces no false positive alerts when all assumptions are within valid bounds.",
-    "jkImplementationEvidence": "'Assumption Validity Test Report' showing DG-P-18: status = BREACH at metric_value = 35, ASSUMPTION_BREACH alert fired with all required fields, audit log entry confirmed; DG-P-19: status = PASS at metric_value = 15, zero alerts fired."
+    "jkObjective": "To provide a per-run evidence record proving the assumption validity monitor correctly fires a breach alert when any declared proxy metric exceeds its threshold and produces no false positive alerts when all assumptions are within valid bounds."
   },
   {
     "pk_Test_Control_ID": "TCTRL-021",
@@ -205,9 +165,7 @@
     "fk_Harmonised_Standard_IDs": "[24970.1]",
     "control_ref": "[3.1.T1]",
     "jkName": "Mandatory Event Write Test Report",
-    "jkText": "Generate a 'Pipeline Log Completeness Test Report' after every test run covering AL-P-01, AL-P-02, and AL-P-03. The report must show the confirmed write count, the fallback buffer entry count, the HTTP response code on timeout, and a zero count of pipeline stages that advanced without a confirmed log entry or an unrecognised event type that was not rejected at validation.",
-    "jkObjective": "To provide a per-run evidence record proving the blocking write halts the pipeline on timeout with HTTP 500, captures the unconfirmed entry in the fallback buffer, and rejects unrecognised event types before any write path is entered — with no pipeline stage advancing without a confirmed log write.",
-    "jkImplementationEvidence": "'Pipeline Log Completeness Test Report' showing AL-P-01: advance_pipeline = true, confirmed_log_store count = 1; AL-P-02: advance_pipeline = false, http_response = 500, fallback_buffer count = 1, confirmed_log_store empty; AL-P-03: AssertionError raised, both stores empty."
+    "jkObjective": "To provide a per-run evidence record proving the blocking write halts the pipeline on timeout with HTTP 500, captures the unconfirmed entry in the fallback buffer, and rejects unrecognised event types before any write path is entered — with no pipeline stage advancing without a confirmed log write."
   },
   {
     "pk_Test_Control_ID": "TCTRL-022",
@@ -215,9 +173,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-1.5]",
     "control_ref": "[3.1.T2]",
     "jkName": "Reconstruction Payload Schema Test Report",
-    "jkText": "Generate a 'Log Schema Validation Test Report' after every test run covering AL-P-04 and AL-P-05. The report must show the count of entries validated, the count that passed the full schema check, the missing fields per rejected entry, and a zero count of partial entries written to the validated log store.",
-    "jkObjective": "To provide a per-run evidence record proving the schema gate passes complete entries without false rejection and fully rejects partial entries — with no partial log entry reaching the validated log store under any circumstance.",
-    "jkImplementationEvidence": "'Log Schema Validation Test Report' showing AL-P-04: written = true, missing_fields = [], validated_log_store count = 1; AL-P-05: written = false, missing_fields = ['configuration_hash', 'assembled_context_hash'], schema_failure_register count = 1, validated_log_store empty."
+    "jkObjective": "To provide a per-run evidence record proving the schema gate passes complete entries without false rejection and fully rejects partial entries — with no partial log entry reaching the validated log store under any circumstance."
   },
   {
     "pk_Test_Control_ID": "TCTRL-023",
@@ -225,9 +181,7 @@
     "fk_Harmonised_Standard_IDs": "[24970.2]",
     "control_ref": "[3.1.T3]",
     "jkName": "Human Intervention Log Test Report",
-    "jkText": "Generate a 'Human Intervention Log Test Report' after every test run covering AL-P-06, AL-P-07, and AL-P-08. The report must show the intervention entry count, the session cross-reference result per entry, the operator ID presence check per entry, and a zero count of intervention events written without a valid operator ID or without a matching session ID in the session log.",
-    "jkObjective": "To provide a per-run evidence record proving every intervention entry is linked to a valid session, carries a non-null operator ID, and stores a SHA-256 hashed response — with zero anonymous or orphaned intervention entries written to the intervention log.",
-    "jkImplementationEvidence": "'Human Intervention Log Test Report' showing AL-P-06: written = true, session cross-reference confirmed, operator_id present, response_hash 64-char SHA-256; AL-P-07: written = false, unrecognised session ID error, intervention_log empty; AL-P-08: written = false, missing_fields = ['operator_id'], intervention_log empty."
+    "jkObjective": "To provide a per-run evidence record proving every intervention entry is linked to a valid session, carries a non-null operator ID, and stores a SHA-256 hashed response — with zero anonymous or orphaned intervention entries written to the intervention log."
   },
   {
     "pk_Test_Control_ID": "TCTRL-026",
@@ -235,9 +189,7 @@
     "fk_Harmonised_Standard_IDs": "[24970.7]",
     "control_ref": "[3.4.T1]",
     "jkName": "Log Retention Schedule Test Report",
-    "jkText": "Generate a 'Log Retention Compliance Test Report' after every test run covering AL-P-13, AL-P-14, AL-P-15, and AL-P-16. The report must show the floor_protected, ceiling_eligible, and retained entry counts from the daily evaluator, the decommission log entries per executed erasure, the floor violation blocked entries, and a zero count of log entries deleted before the 180-day floor or retained beyond their declared ceiling without a decommission log entry.",
-    "jkObjective": "To provide a per-run evidence record proving the dual-bound retention enforcer correctly categorises all log entry lifecycle states, blocks premature deletion with a legally cited exception, executes cryptographic erasure of ceiling-expired entries with a full decommission record, and rejects retention schedules declaring a ceiling below the 180-day floor at configuration time.",
-    "jkImplementationEvidence": "'Log Retention Compliance Test Report' showing AL-P-13: floor_protected = 1, ceiling_eligible = 1, retained = 1; AL-P-14: DELETION BLOCKED exception raised citing Art. 26(6), FLOOR_VIOLATION_BLOCKED in decommission log; AL-P-15: LOG_CRYPTOGRAPHIC_ERASURE event in decommission log with engineer_id and timestamp; AL-P-16: AssertionError raised for max_retention_days = 90 below floor of 180."
+    "jkObjective": "To provide a per-run evidence record proving the dual-bound retention enforcer correctly categorises all log entry lifecycle states, blocks premature deletion with a legally cited exception, executes cryptographic erasure of ceiling-expired entries with a full decommission record, and rejects retention schedules declaring a ceiling below the 180-day floor at configuration time."
   },
   {
     "pk_Test_Control_ID": "TCTRL-027",
@@ -245,9 +197,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.1]",
     "control_ref": "[8.1.T1]",
     "jkName": "Adversarial Gate Test Report",
-    "jkText": "Generate an 'Adversarial Pattern Detection Test Report' after every test run covering CS-P-01, CS-P-02, and CS-P-03. The report must show every prompt evaluated, the Layer 1 keyword result, the Layer 2 stripped character count and code points, the Layer 3 cosine similarity score, the gate decision, and a zero count of blocked prompts that reached the Embedding Model or Retriever.",
-    "jkObjective": "To provide a per-run evidence record proving the three-layer adversarial gate correctly blocks injection attempts hidden behind Unicode characters and off-purpose semantic probing while passing legitimate queries without false positives.",
-    "jkImplementationEvidence": "'Adversarial Pattern Detection Test Report' showing CS-P-01: gate_approved = false, Zero-Width character logged, injection phrase detected post-strip; CS-P-02: gate_approved = true, no alert fired; CS-P-03: gate_approved = false, cosine_similarity = 0.41; and zero count of blocked prompts reaching the Embedding Model."
+    "jkObjective": "To provide a per-run evidence record proving the three-layer adversarial gate correctly blocks injection attempts hidden behind Unicode characters and off-purpose semantic probing while passing legitimate queries without false positives."
   },
   {
     "pk_Test_Control_ID": "TCTRL-028",
@@ -255,9 +205,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.2]",
     "control_ref": "[8.1.T2]",
     "jkName": "Ingestion Integrity Test Report",
-    "jkText": "Generate an 'Ingestion Integrity Test Report' after every test run covering CS-P-04 and CS-P-05. The report must show the four-step check result per document, the rejection step, the rejection reason, whether the document was routed to the human security review queue, and a zero count of flagged documents written to the Vector Store.",
-    "jkObjective": "To provide a per-run evidence record proving the four-step ingestion gate correctly blocks documents containing embedded instruction patterns and hard-rejects documents from unlisted sources before any processing occurs.",
-    "jkImplementationEvidence": "'Ingestion Integrity Test Report' showing CS-P-04: step3 flagged 'always respond with', routed_to_review = true, Vector Store entry count = 0; CS-P-05: HARD_REJECT_STEP1, routed_to_review = false, no subsequent step fields present."
+    "jkObjective": "To provide a per-run evidence record proving the four-step ingestion gate correctly blocks documents containing embedded instruction patterns and hard-rejects documents from unlisted sources before any processing occurs."
   },
   {
     "pk_Test_Control_ID": "TCTRL-029",
@@ -265,9 +213,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.3]",
     "control_ref": "[8.1.T3]",
     "jkName": "Query Pattern Anomaly Test Report",
-    "jkText": "Generate a 'Query Pattern Anomaly Test Report' after every test run covering CS-P-06, CS-P-07, and CS-P-08. The report must show the API key identifier, query count at flag, semantic variance score at flag, the monitor that triggered, the security alert confirmation, and a zero count of sessions that exceeded the rate limit or fell below 0.15 variance without triggering a suspension or alert.",
-    "jkObjective": "To provide a per-run evidence record proving both extraction detection monitors fire correctly at their defined thresholds and produce no false positives against legitimate high-volume usage patterns.",
-    "jkImplementationEvidence": "'Query Pattern Anomaly Test Report' showing CS-P-06: RATE_LIMIT_SUSPENSION at query 501, API key suspended; CS-P-07: PATTERN_ANOMALY_DETECTED, semantic_variance < 0.15; CS-P-08: no alerts fired, all 60 queries approved, variance consistently above 0.15."
+    "jkObjective": "To provide a per-run evidence record proving both extraction detection monitors fire correctly at their defined thresholds and produce no false positives against legitimate high-volume usage patterns."
   },
   {
     "pk_Test_Control_ID": "TCTRL-030",
@@ -275,9 +221,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.4]",
     "control_ref": "[8.2.T1]",
     "jkName": "Build Integrity Gate Test Report",
-    "jkText": "Generate a 'Build Integrity Test Report' after every test run covering CS-P-09 and CS-P-10. The report must show the artefact content address hash, the result of each of the three checks, the deployment decision, the security alert confirmation, and a zero count of unsigned, self-merged, or hardcoded-credential artefacts that reached the deployment pipeline.",
-    "jkObjective": "To provide a per-run evidence record proving all three build integrity checks operate as independent blocking controls and that no artefact targeting the Orchestrator, Input Guardrail, or Output Guardrail can reach the deployment pipeline with any single control failing.",
-    "jkImplementationEvidence": "'Build Integrity Test Report' showing CS-P-09: all three controls failed, deployment_approved = false, BUILD_INTEGRITY_FAILURE alert lists all three; CS-P-10: peer_review.passed = false independently blocks deployment, self-merge reason recorded."
+    "jkObjective": "To provide a per-run evidence record proving all three build integrity checks operate as independent blocking controls and that no artefact targeting the Orchestrator, Input Guardrail, or Output Guardrail can reach the deployment pipeline with any single control failing."
   },
   {
     "pk_Test_Control_ID": "TCTRL-031",
@@ -285,9 +229,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.5]",
     "control_ref": "[8.2.T2]",
     "jkName": "Supply Chain Integrity Test Report",
-    "jkText": "Generate a 'Supply Chain Integrity Test Report' after every test run covering CS-P-11 and CS-P-12. The report must show the three-path check result per asset, the failure reason, the supply chain approval decision, the security alert confirmation, and a zero count of hash-mismatched or stale-verified assets consumed by the build or ingestion pipeline.",
-    "jkObjective": "To provide a per-run evidence record proving the three-path supply chain gate correctly blocks hash-mismatched libraries and stale data sources before they enter the build or ingestion pipeline.",
-    "jkImplementationEvidence": "'Supply Chain Integrity Test Report' showing CS-P-11: path1_library hash mismatch detected, supply_chain_approved = false, alert fired; CS-P-12: path3_data_source days_since_verified = 45, freshness_verified = false, supply_chain_approved = false, alert fired."
+    "jkObjective": "To provide a per-run evidence record proving the three-path supply chain gate correctly blocks hash-mismatched libraries and stale data sources before they enter the build or ingestion pipeline."
   },
   {
     "pk_Test_Control_ID": "TCTRL-032",
@@ -295,9 +237,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.6]",
     "control_ref": "[8.3.T1]",
     "jkName": "Access Control Gate Test Report",
-    "jkText": "Generate an 'Access Control Test Report' after every test run covering CS-P-13 and CS-P-14. The report must show the user role, MFA status, requested endpoint, access decision, denial reason, and security alert confirmation for each test — with a zero count of under-privileged or MFA-incomplete requests that reached a protected endpoint.",
-    "jkObjective": "To provide a per-run evidence record proving the RBAC and MFA enforcement gate independently blocks both role-insufficient and MFA-incomplete access attempts before any protected endpoint is reached.",
-    "jkImplementationEvidence": "'Access Control Test Report' showing CS-P-13: ACCESS_DENIED for viewer role on vector_store_admin, PRIVILEGE_ESCALATION_ATTEMPT alert fired; CS-P-14: ACCESS_DENIED for mfa_verified = false, reason = 'MFA not completed', endpoint not reached."
+    "jkObjective": "To provide a per-run evidence record proving the RBAC and MFA enforcement gate independently blocks both role-insufficient and MFA-incomplete access attempts before any protected endpoint is reached."
   },
   {
     "pk_Test_Control_ID": "TCTRL-033",
@@ -305,9 +245,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.7]",
     "control_ref": "[8.3.T2]",
     "jkName": "Input Robustness Test Report",
-    "jkText": "Generate an 'Unexpected Input Pattern Test Report' after every test run covering CS-P-15 and CS-P-16. The report must show the input type tested, the detection mechanism triggered, the action taken, and confirmation that no oversized or homoglyph-substituted prompt reached the Embedding Model or Retriever in its original form.",
-    "jkObjective": "To provide a per-run evidence record proving the Input Guardrail correctly blocks Token Flooding payloads and normalises Homoglyph Substitution attempts before any keyword scan or retrieval step runs.",
-    "jkImplementationEvidence": "'Unexpected Input Pattern Test Report' showing CS-P-15: INPUT_REJECTED with character_count = 15000, prompt not forwarded; CS-P-16: HOMOGLYPH_NORMALISED with substituted character code points logged, keyword scan ran on normalised text."
+    "jkObjective": "To provide a per-run evidence record proving the Input Guardrail correctly blocks Token Flooding payloads and normalises Homoglyph Substitution attempts before any keyword scan or retrieval step runs."
   },
   {
     "pk_Test_Control_ID": "TCTRL-034",
@@ -315,9 +253,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.6]",
     "control_ref": "[8.3.T3]",
     "jkName": "MFA Lockout Test Report",
-    "jkText": "Generate an 'MFA Failure Lockout Test Report' after every test run covering CS-P-17. The report must show the failed attempt count, the lockout trigger event, the locked_at timestamp, the security alert confirmation, and a zero count of post-lockout access requests that were approved before an administrator unlock event was recorded.",
-    "jkObjective": "To provide a per-run evidence record proving the MFA lockout mechanism activates on the fifth consecutive failure and blocks all subsequent access from the locked account until an explicit human administrator unlock event is recorded in the audit log.",
-    "jkImplementationEvidence": "'MFA Failure Lockout Test Report' showing CS-P-17: ACCOUNT_LOCKED at failed_attempts = 5, BRUTE_FORCE_MFA_DETECTED alert fired, all post-lockout requests return approved = false, and zero approved requests recorded before administrator unlock event."
+    "jkObjective": "To provide a per-run evidence record proving the MFA lockout mechanism activates on the fifth consecutive failure and blocks all subsequent access from the locked account until an explicit human administrator unlock event is recorded in the audit log."
   },
   {
     "pk_Test_Control_ID": "TCTRL-035",
@@ -325,9 +261,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.8]",
     "control_ref": "[8.4.T1]",
     "jkName": "Anomaly Detection Threshold Test Report",
-    "jkText": "Generate an 'Anomaly Detection Test Report' after every test run covering CS-P-18, CS-P-19, CS-P-20, and CS-P-21. The report must show the metric name, observed value, threshold, breach decision, runbook action executed, security alert confirmation, and a zero count of threshold breaches that did not trigger the correct runbook action.",
-    "jkObjective": "To provide a per-run evidence record proving the anomaly monitor fires the correct runbook action at each defined threshold and produces no false positives under normal operating conditions.",
-    "jkImplementationEvidence": "'Anomaly Detection Test Report' showing CS-P-18: prompt_injection_rate breach at 0.06, correct runbook action executed; CS-P-19: error_rate breach at 0.11, throttle action executed; CS-P-20: semantic_drift breach at 0.31, compliance alert fired; CS-P-21: zero breaches, zero alerts."
+    "jkObjective": "To provide a per-run evidence record proving the anomaly monitor fires the correct runbook action at each defined threshold and produces no false positives under normal operating conditions."
   },
   {
     "pk_Test_Control_ID": "TCTRL-036",
@@ -335,9 +269,7 @@
     "fk_Harmonised_Standard_IDs": "[18282.8]",
     "control_ref": "[8.4.T2]",
     "jkName": "Runbook Execution Audit Report",
-    "jkText": "Generate a 'Runbook Execution Audit Report' after every test run covering CS-P-18, CS-P-19, and CS-P-20. The report must show the runbook action executed per breach event, the time elapsed between threshold breach detection and action execution, and confirmation that the executed action matches the RUNBOOK_ACTIONS entry declared in fieldGroup [8.4.1].",
-    "jkObjective": "To provide an auditable evidence record proving that every automated runbook response executed by the Behavioural Anomaly Monitor matches the action declared by the Requester in fieldGroup [8.4.1] — confirming the system executes exactly what was declared and nothing else.",
-    "jkImplementationEvidence": "'Runbook Execution Audit Report' showing each breach event's executed action matched the corresponding RUNBOOK_ACTIONS entry from fieldGroup [8.4.1], elapsed time from breach detection to action execution recorded in milliseconds, and zero discrepancies between declared and executed actions across all three breach test cases."
+    "jkObjective": "To provide an auditable evidence record proving that every automated runbook response executed by the Behavioural Anomaly Monitor matches the action declared by the Requester in fieldGroup [8.4.1] — confirming the system executes exactly what was declared and nothing else."
   },
   {
     "pk_Test_Control_ID": "TCTRL-037",
@@ -345,9 +277,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.9]",
     "control_ref": "[4.1.T1]",
     "jkName": "Accuracy Evaluation Gate Test Report",
-    "jkText": "Generate an 'Accuracy Evaluation Gate Test Report' after every test run covering AC-P-01 and AC-P-02. The report must show the RAGAS Faithfulness score, the 0.80 threshold, the delta against the last passing score, the gate decision, and a zero count of sub-threshold builds that reached the deployment pipeline.",
-    "jkObjective": "To provide a per-run evidence record proving the RAGAS Faithfulness deployment gate correctly blocks sub-threshold builds and passes compliant builds without false positives.",
-    "jkImplementationEvidence": "'Accuracy Evaluation Gate Test Report' showing AC-P-01: Faithfulness = 0.86, gate = PASSED, delta logged; AC-P-02: Faithfulness = 0.74, gate = BLOCKED, blocking exception contains score, threshold, and signed delta; zero sub-threshold builds reaching the deployment pipeline."
+    "jkObjective": "To provide a per-run evidence record proving the RAGAS Faithfulness deployment gate correctly blocks sub-threshold builds and passes compliant builds without false positives."
   },
   {
     "pk_Test_Control_ID": "TCTRL-038",
@@ -355,9 +285,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.10],[18286.13]",
     "control_ref": "[4.2.T1]",
     "jkName": "Test Set Isolation Gate Test Report",
-    "jkText": "Generate a 'Test Set Isolation Test Report' after every test run covering AC-P-03 and AC-P-04. The report must show the SHA-256 hash comparison result, the ACL check result, the gate decision, and confirmation that no RAGAS scoring was executed when either check failed.",
-    "jkObjective": "To provide a per-run evidence record proving the isolation gate independently blocks evaluation when either the hash check or the ACL check fails — confirming accuracy scores can only be produced from an uncontaminated, access-controlled test set.",
-    "jkImplementationEvidence": "'Test Set Isolation Test Report' showing AC-P-03: hash mismatch detected, evaluation aborted, no RAGAS score produced; AC-P-04: hash passed, ACL check failed with 'training-pipeline-role' identified, evaluation aborted, no RAGAS score produced."
+    "jkObjective": "To provide a per-run evidence record proving the isolation gate independently blocks evaluation when either the hash check or the ACL check fails — confirming accuracy scores can only be produced from an uncontaminated, access-controlled test set."
   },
   {
     "pk_Test_Control_ID": "TCTRL-039",
@@ -365,9 +293,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.12],[18286.13],[18286.22]",
     "control_ref": "[4.3.T1]",
     "jkName": "Drift Monitor Suspension Test Report",
-    "jkText": "Generate an 'Accuracy Drift Monitor Test Report' after every test run covering AC-P-05 and AC-P-06. The report must show the weekly Faithfulness score, delta against baseline, breach counter value, Query Interface status, alert dispatch confirmation, and a zero count of consecutive threshold breaches that did not result in Query Interface suspension.",
-    "jkObjective": "To provide a per-run evidence record proving the production drift monitor suspends the Query Interface after two consecutive Faithfulness breaches and does not produce false positive suspensions for score fluctuations within the declared drift tolerance.",
-    "jkImplementationEvidence": "'Accuracy Drift Monitor Test Report' showing AC-P-05: week one breach logged, consecutive_breaches = 1; week two breach logged, consecutive_breaches = 2, query_interface_status = SUSPENDED, urgent notification dispatched; AC-P-06: delta = 0.02, no breach, consecutive_breaches = 0, status = RUNNING."
+    "jkObjective": "To provide a per-run evidence record proving the production drift monitor suspends the Query Interface after two consecutive Faithfulness breaches and does not produce false positive suspensions for score fluctuations within the declared drift tolerance."
   },
   {
     "pk_Test_Control_ID": "TCTRL-040",
@@ -375,9 +301,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.13],[18286.13]",
     "control_ref": "[4.3.T2]",
     "jkName": "Benchmark Comparison Gate Test Report",
-    "jkText": "Generate a 'Benchmark Comparison Test Report' after every test run covering AC-P-07 and AC-P-08. The report must show the system score, benchmark score, classification result, gate decision, and — for AC-P-08 — the engineer ID, justification text, and confirmation the override audit log entry was written with all four mandatory fields.",
-    "jkObjective": "To provide a per-run evidence record proving the benchmark comparison gate blocks sub-benchmark deployments without a documented override and correctly records engineer-authorised overrides with full justification in the audit log.",
-    "jkImplementationEvidence": "'Benchmark Comparison Test Report' showing AC-P-07: classification = BELOW_BENCHMARK, gate = DEPLOYMENT BLOCKED, no override fields present; AC-P-08: classification = BELOW_BENCHMARK_OVERRIDE, engineer_id = 'eng-sarah-01', justification recorded in full, audit log entry contains all four mandatory fields."
+    "jkObjective": "To provide a per-run evidence record proving the benchmark comparison gate blocks sub-benchmark deployments without a documented override and correctly records engineer-authorised overrides with full justification in the audit log."
   },
   {
     "pk_Test_Control_ID": "TCTRL-041",
@@ -385,9 +309,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.15],[18286.23]",
     "control_ref": "[7.1.T1]",
     "jkName": "Input Sanitisation Gate Test Report",
-    "jkText": "Generate an 'Input Sanitisation Test Report' after every test run covering RB-P-01, RB-P-02, and RB-P-03. The report must show the stage reached, the unrecognised token ratio before and after correction, the gate decision, and a zero count of prompts with an unrecognised token ratio above 30% or a null payload that reached the Embedding Model.",
-    "jkObjective": "To provide a per-run evidence record proving the two-stage sanitisation gate correctly blocks null payloads at Stage 1, rejects high-corruption prompts at Stage 2, and passes clean prompts without false positives.",
-    "jkImplementationEvidence": "'Input Sanitisation Test Report' showing RB-P-01: STAGE1_STRUCTURAL_REJECTION, http_response = 400, Stage 2 not reached; RB-P-02: stage = 2, ratio_final > 0.30, accepted = false; RB-P-03: ratio_final = 0.0, accepted = true, Embedding Model invoked; zero prompts above threshold reaching the Embedding Model."
+    "jkObjective": "To provide a per-run evidence record proving the two-stage sanitisation gate correctly blocks null payloads at Stage 1, rejects high-corruption prompts at Stage 2, and passes clean prompts without false positives."
   },
   {
     "pk_Test_Control_ID": "TCTRL-042",
@@ -395,9 +317,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.16],[18286.23]",
     "control_ref": "[7.1.T2]",
     "jkName": "Environment Degradation Monitor Test Report",
-    "jkText": "Generate an 'Environment Degradation Test Report' after every test run covering RB-P-04 and RB-P-05. The report must show the latency value and breach/recovery counter per call, the degraded mode activation event with elapsed timestamp, the engineering alert confirmation, the recovery event, and a zero count of three-consecutive-breach sequences that did not trigger degraded mode activation.",
-    "jkObjective": "To provide a per-run evidence record proving the latency monitor activates degraded mode on exactly the third consecutive breach, dispatches an engineering alert, and automatically recovers normal operation after five consecutive below-threshold calls.",
-    "jkImplementationEvidence": "'Environment Degradation Test Report' showing RB-P-04: DEGRADED_MODE_ACTIVATED on third breach, breaches_in_window = 3, alert dispatched, behaviour descriptor correct; RB-P-05: DEGRADED_MODE_RECOVERED after fifth below-threshold call, recoveries_in_window = 5, degraded = false."
+    "jkObjective": "To provide a per-run evidence record proving the latency monitor activates degraded mode on exactly the third consecutive breach, dispatches an engineering alert, and automatically recovers normal operation after five consecutive below-threshold calls."
   },
   {
     "pk_Test_Control_ID": "TCTRL-043",
@@ -405,9 +325,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.17]",
     "control_ref": "[7.1.T3]",
     "jkName": "Feedback Isolation Barrier Test Report",
-    "jkText": "Generate a 'Feedback Isolation Test Report' after every test run covering RB-P-06 and RB-P-07. The report must show the provenance check result, the marker check result, the rejection reason, the human review queue entry confirmation, and a zero count of AI-generated or LLM-store-sourced documents written to the Vector Store.",
-    "jkObjective": "To provide a per-run evidence record proving both isolation checks operate as independent blocking controls — an AI-marked document is caught at Check 2 even when Check 1 passes, and an LLM-store-sourced document is caught at Check 1 independently of Check 2.",
-    "jkImplementationEvidence": "'Feedback Isolation Test Report' showing RB-P-06: provenance_check = OK, marker_check = AI-generated source, routed to review, Vector Store entry count = 0; RB-P-07: provenance_check = Provenance match, rejected at Check 1, Check 2 not evaluated, review queue entry confirmed."
+    "jkObjective": "To provide a per-run evidence record proving both isolation checks operate as independent blocking controls — an AI-marked document is caught at Check 2 even when Check 1 passes, and an LLM-store-sourced document is caught at Check 1 independently of Check 2."
   },
   {
     "pk_Test_Control_ID": "TCTRL-044",
@@ -415,9 +333,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.18]",
     "control_ref": "[7.2.T1]",
     "jkName": "Safe State Activation Test Report",
-    "jkText": "Generate a 'Safe State Activation Test Report' after every test run covering RB-P-08 and RB-P-09. The report must show the failed component, the safe state behaviour activated, the elapsed milliseconds from failure to activation, the engineering alert confirmation, and a zero count of component failures that resulted in silent bypass or unhandled crash.",
-    "jkObjective": "To provide a per-run evidence record proving the component call wrapper activates the correct declared safe state within 500 milliseconds for both registered and unregistered components, making silent bypass structurally impossible.",
-    "jkImplementationEvidence": "'Safe State Activation Test Report' showing RB-P-08: SAFE_STATE_ACTIVATED for embedding_model, safe_state_behaviour = maintenance_message, elapsed_ms ≤ 500, alert sent; RB-P-09: default safe state activated for unregistered component, elapsed_ms ≤ 500, pipeline did not advance; zero silent bypass events."
+    "jkObjective": "To provide a per-run evidence record proving the component call wrapper activates the correct declared safe state within 500 milliseconds for both registered and unregistered components, making silent bypass structurally impossible."
   },
   {
     "pk_Test_Control_ID": "TCTRL-045",
@@ -425,9 +341,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.19]",
     "control_ref": "[7.2.T2]",
     "jkName": "Redundancy Failover and Sanity Check Test Report",
-    "jkText": "Generate a 'Redundancy Failover Test Report' after every test run covering RB-P-10 and RB-P-11. The report must show the failover elapsed time, the backup instance activated, the re-issued request confirmation, the plausibility rule triggered, the suppression result, and a zero count of plausibility-failed responses delivered to the Response Interface.",
-    "jkObjective": "To provide a per-run evidence record proving the failover gate switches to a backup instance within 200 milliseconds and the Output Sanity Check suppresses domain-implausible responses before they reach the Output Guardrail or Response Interface.",
-    "jkImplementationEvidence": "'Redundancy Failover Test Report' showing RB-P-10: FAILOVER_ACTIVATED, elapsed_ms ≤ 200, backup instance recorded, request re-issued successfully; RB-P-11: plausibility rule triggered, suppressed = true, routed_to_human_review = true, zero plausibility-failed responses reaching the Response Interface."
+    "jkObjective": "To provide a per-run evidence record proving the failover gate switches to a backup instance within 200 milliseconds and the Output Sanity Check suppresses domain-implausible responses before they reach the Output Guardrail or Response Interface."
   },
   {
     "pk_Test_Control_ID": "TCTRL-046",
@@ -435,9 +349,7 @@
     "fk_Harmonised_Standard_IDs": "[18229-2.20]",
     "control_ref": "[7.3.T1]",
     "jkName": "Determinism Enforcement Test Report",
-    "jkText": "Generate a 'Determinism Validation Test Report' after every test run covering RB-P-12 and RB-P-13. The report must show the probe response hash, the reference hash, the hash comparison result, the active LLM configuration values, the Query Interface gate status, and a zero count of startups where the Query Interface accepted user input with a failing determinism check on record.",
-    "jkObjective": "To provide a per-run evidence record proving the determinism gate blocks system startup when the LLM response hash does not match the reference and opens the Query Interface only when a passing hash match is confirmed and logged.",
-    "jkImplementationEvidence": "'Determinism Validation Test Report' showing RB-P-12: response_hash = reference_hash, passed = true, query_interface_available = true; RB-P-13: response_hash ≠ reference_hash, passed = false, temperature = 0.7 logged, STARTUP BLOCKED error raised, query_interface_available = false; zero startups with open Query Interface and failing determinism check."
+    "jkObjective": "To provide a per-run evidence record proving the determinism gate blocks system startup when the LLM response hash does not match the reference and opens the Query Interface only when a passing hash match is confirmed and logged."
   },
   {
     "pk_Test_Control_ID": "TCTRL-047",
@@ -445,9 +357,7 @@
     "fk_Harmonised_Standard_IDs": "[24368.1],[24368.2],[24368.5]",
     "control_ref": "[9.5.T1]",
     "jkName": "AI Disclosure Gate Test Report",
-    "jkText": "Generate an AI Disclosure Gate Test Report after every test run covering AD-P-01. The report must show every session tested, the timestamp of the disclosure event, confirmation it preceded the first AI response, and a zero count of sessions where AI output was delivered before the disclosure.",
-    "jkObjective": "To provide per-run evidence that the AI identity disclosure mechanism fires correctly on every session.",
-    "jkImplementationEvidence": "AI Disclosure Gate Test Report showing AD-P-01 result: disclosure_timestamp < first_response_timestamp for all sessions tested, and zero sessions where AI output preceded disclosure."
+    "jkObjective": "To provide per-run evidence that the AI identity disclosure mechanism fires correctly on every session."
   },
   {
     "pk_Test_Control_ID": "TCTRL-048",
@@ -455,8 +365,6 @@
     "fk_Harmonised_Standard_IDs": "[24368.3]",
     "control_ref": "[9.5.T2]",
     "jkName": "Content Labelling Test Report",
-    "jkText": "Generate a Content Labelling Test Report after every test run covering AD-P-02. The report must show a sample of responses inspected, confirmation that ai_generated: true is present in all response metadata, and confirmation the label is visible in the UI.",
-    "jkObjective": "To provide per-run evidence that all AI-generated content carries the correct machine-readable and user-visible labels.",
-    "jkImplementationEvidence": "Content Labelling Test Report showing AD-P-02 result: ai_generated flag present in all sampled responses and label visible in UI for all sampled outputs."
+    "jkObjective": "To provide per-run evidence that all AI-generated content carries the correct machine-readable and user-visible labels."
   }
 ]
