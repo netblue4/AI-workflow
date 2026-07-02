@@ -505,6 +505,7 @@ function _ucShowStatus(msg) {
 (async () => {
   try {
     _workflow = await loadWorkflow();
+    await WizUtils.loadArticles();   // hydrate the article table before any render
     _stepIndex = indexSteps(_workflow);
     _phaseIndex = indexPhases(_workflow);
     renderNav(_workflow, _stepIndex, _phaseIndex, null);
