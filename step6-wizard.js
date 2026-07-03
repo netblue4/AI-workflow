@@ -17,7 +17,8 @@
   let _tcByRC   = null; // fk_Risk_Control_ID → test control (R→T pairing)
 
   const _state = {
-    riskSelected: {},       // risk team picks (Step Wizard tab)
+    riskSelected: {},       // derived: pk_Risk_Control_ID → bool (bridge for Step 7 / report)
+    hsSelected: {},         // source of truth (legal tab): `${riskId}::${standard_ref}` → bool
     complianceSelected: {}, // compliance team additions (Compliance View tab)
     hsNotApplicable: {},    // standard_ref → { reason, date } — N/A decisions
     gsSelected: {}          // Group Standard control picks (pk_Risk_Control_ID → bool)
@@ -34,6 +35,7 @@
     _riskData   = [];
     _tcByRC     = null;
     _state.riskSelected = {};
+    _state.hsSelected = {};
     _state.complianceSelected = {};
     _state.hsNotApplicable = {};
     _state.gsSelected = {};
@@ -70,25 +72,26 @@
     _riskData = _buildRiskControlData();
     _gsRiskData = _buildGroupStandardControlData();
 
-    // Restore prior control selections
+    // Restore / default the HS-level selection (the HS requirement is the
+    // selectable unit; control selection is derived from it as a bridge).
     const saved9 = _record?.['step-6'];
-    if (saved9?.risk_controls) {
-      saved9.risk_controls.forEach(c => {
-        if (c.selected) _state.riskSelected[c.control_id] = true;
+    if (saved9?.selected_hs) {
+      Object.entries(saved9.selected_hs).forEach(([riskId, refs]) => {
+        (refs || []).forEach(ref => { _state.hsSelected[_hsKey(riskId, ref)] = true; });
       });
+    } else if (saved9?.risk_controls) {
+      // Legacy record (pre-HS): derive HS selection from selected controls
+      const selById = new Set(saved9.risk_controls.filter(c => c.selected).map(c => c.control_id));
+      _riskData.forEach(risk => risk.controls.forEach(c => {
+        if (selById.has(c.pk_Risk_Control_ID)) {
+          (_ctrlRefs(c).length ? _ctrlRefs(c) : ['—']).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = true; });
+        }
+      }));
     } else {
-      // Default: select all controls
-      _riskData.forEach(r =>
-        r.controls.forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = true; })
-      );
+      // Default: all HS requirements selected
+      _riskData.forEach(risk => _riskHsRefs(risk).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = true; }));
     }
-    // Framework_Statement controls are always applicable — the assessor cannot
-    // mark them N/A, so force-select them regardless of any prior saved state.
-    _riskData.forEach(r =>
-      r.controls.forEach(c => {
-        if (c.control_source === 'Framework_Statement') _state.riskSelected[c.pk_Risk_Control_ID] = true;
-      })
-    );
+    _deriveRiskSelected(); // populate _state.riskSelected (incl. always-on Framework_Statement)
     if (saved9?.compliance_additions) {
       saved9.compliance_additions.forEach(c => {
         if (c.selected) _state.complianceSelected[c.control_id] = true;
@@ -335,8 +338,36 @@
     }
   }
 
+  // ---- HS-level selection (the HS requirement is the selectable unit) ------
+  const _hsKey = (riskId, ref) => `${riskId}::${ref}`;
+  const _ctrlRefs = ctrl => (ctrl.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean);
+
+  // Ordered distinct HS refs a risk addresses (via its non-FS controls).
+  function _riskHsRefs(risk) {
+    const seen = new Set(); const order = [];
+    risk.controls.filter(c => c.control_source !== 'Framework_Statement').forEach(c => {
+      (_ctrlRefs(c).length ? _ctrlRefs(c) : ['—']).forEach(ref => {
+        if (!seen.has(ref)) { seen.add(ref); order.push(ref); }
+      });
+    });
+    return order;
+  }
+
+  // Derive control selection from the HS selection: a control is selected when
+  // any HS requirement it satisfies is selected. Framework_Statement is always on.
+  function _deriveRiskSelectedForRisk(risk) {
+    risk.controls.forEach(c => {
+      if (c.control_source === 'Framework_Statement') { _state.riskSelected[c.pk_Risk_Control_ID] = true; return; }
+      const keys = (_ctrlRefs(c).length ? _ctrlRefs(c) : ['—']).map(r => _hsKey(risk.risk_id, r));
+      _state.riskSelected[c.pk_Risk_Control_ID] = keys.some(k => !!_state.hsSelected[k]);
+    });
+  }
+  function _deriveRiskSelected() { _riskData.forEach(_deriveRiskSelectedForRisk); }
+
   function _selectedCountForRisk(risk) {
-    return risk.controls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]).length;
+    const hsSel = _riskHsRefs(risk).filter(ref => _state.hsSelected[_hsKey(risk.risk_id, ref)]).length;
+    const hasFS = risk.controls.some(c => c.control_source === 'Framework_Statement');
+    return hsSel + (hasFS ? 1 : 0);
   }
 
   // ---- Risk accordion (individual risk) -----------------------
@@ -370,12 +401,14 @@
     const deselAll = document.createElement('button'); deselAll.className = 'wiz9-sel-btn'; deselAll.textContent = 'Deselect all';
     selAll.addEventListener('click', e => {
       e.stopPropagation();
-      risk.controls.filter(c => c.control_source !== 'Framework_Statement').forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = true; });
+      _riskHsRefs(risk).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = true; });
+      _deriveRiskSelectedForRisk(risk);
       _syncRisk(sec, risk);
     });
     deselAll.addEventListener('click', e => {
       e.stopPropagation();
-      risk.controls.filter(c => c.control_source !== 'Framework_Statement').forEach(c => { _state.riskSelected[c.pk_Risk_Control_ID] = false; });
+      _riskHsRefs(risk).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = false; });
+      _deriveRiskSelectedForRisk(risk);
       _syncRisk(sec, risk);
     });
     right.appendChild(selAll); right.appendChild(deselAll);
@@ -425,7 +458,16 @@
       body.appendChild(ctrlLbl);
 
       order.forEach(ref => {
-        const hsHdr = _el('div', 'wiz9-hs-group-hdr');
+        const hsHdr = _el('label', 'wiz9-hs-group-hdr');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'wiz9-hs-cb'; cb.dataset.ref = ref;
+        cb.checked = !!_state.hsSelected[_hsKey(risk.risk_id, ref)];
+        cb.addEventListener('change', e => {
+          _state.hsSelected[_hsKey(risk.risk_id, ref)] = e.target.checked;
+          _deriveRiskSelectedForRisk(risk);
+          _syncRisk(sec, risk);
+        });
+        hsHdr.appendChild(cb);
         if (ref !== '—') {
           hsHdr.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(ref) }));
           const h = hsByRef.get(ref);
@@ -477,8 +519,8 @@
   }
 
   function _syncRisk(secEl, risk) {
-    secEl.querySelectorAll('.wiz9-ctrl-cb[data-key]').forEach(cb => {
-      cb.checked = !!_state.riskSelected[cb.dataset.key];
+    secEl.querySelectorAll('.wiz9-hs-cb[data-ref]').forEach(cb => {
+      cb.checked = !!_state.hsSelected[_hsKey(risk.risk_id, cb.dataset.ref)];
     });
     _updateRiskBadge(secEl, risk);
     _updateValidationBanner();
@@ -486,39 +528,27 @@
   }
 
   function _updateRiskBadge(secEl, risk) {
-    // Count all controls including Framework_Statement self-certifications —
-    // FS controls are always selected, so they should be reflected in the tally.
-    const total = risk.controls.length;
-    const sel   = risk.controls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]).length;
+    // The HS requirement is the selectable unit — tally selected HS.
+    const refs  = _riskHsRefs(risk);
+    const total = refs.length;
+    const sel   = refs.filter(ref => _state.hsSelected[_hsKey(risk.risk_id, ref)]).length;
     const badge = secEl.querySelector(`#wiz9-rb-${_safeId(risk.risk_id)}`);
     if (!badge) return;
-    badge.textContent = `${sel} / ${total}`;
-    badge.className = sel === 0
-      ? 'wiz-item-badge wiz-item-badge--none'
-      : sel === total
-        ? 'wiz-item-badge wiz-item-badge--ok'
+    badge.textContent = total ? `${sel} / ${total}` : 'self-cert';
+    badge.className = (total === 0 || sel === total)
+      ? 'wiz-item-badge wiz-item-badge--ok'
+      : sel === 0
+        ? 'wiz-item-badge wiz-item-badge--none'
         : 'wiz-item-badge wiz-item-badge--partial';
   }
 
   // ---- Control card -------------------------------------------
   function _buildControlCard(risk, ctrl) {
-    const card = _el('div', 'wiz9-ctrl-card');
+    const card = _el('div', 'wiz9-ctrl-card wiz9-ctrl-card--nested');
 
-    // Header: checkbox + source badge + name + standard_ref + maturity
+    // Header: implementing control (read-only) — the HS requirement above is
+    // the selectable unit. Source badge + name + standard_ref + maturity.
     const hdr = _el('div', 'wiz9-ctrl-hdr');
-    const cb  = document.createElement('input');
-    cb.type = 'checkbox'; cb.className = 'wiz9-ctrl-cb';
-    cb.dataset.key = ctrl.pk_Risk_Control_ID;
-    cb.checked = !!_state.riskSelected[ctrl.pk_Risk_Control_ID];
-    cb.addEventListener('change', e => {
-      _state.riskSelected[ctrl.pk_Risk_Control_ID] = e.target.checked;
-      const sec = _container.querySelector(`.wiz9-risk-sec[data-risk-id="${CSS.escape(risk.risk_id)}"]`);
-      // _syncRisk re-checks every checkbox from state, so duplicate cards
-      // (a control shown under more than one HS group) stay in sync.
-      if (sec) _syncRisk(sec, risk);
-      else { _updateValidationBanner(); _updateCountBadge(); }
-    });
-    hdr.appendChild(cb);
 
     const ctrlIcon = _el('span', 'wiz9-ctrl-icon');
     ctrlIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
@@ -896,6 +926,13 @@
     const dpiaControls = (_record?.['step-4']?.data_types_identified?.security_measures || [])
       .map(m => ({ control_name: m, source: 'DPIA_Step4' }));
 
+    // HS-level selection per risk — the selectable unit in the legal tab
+    const selected_hs = {};
+    _riskData.forEach(r => {
+      const refs = _riskHsRefs(r).filter(ref => ref !== '—' && _state.hsSelected[_hsKey(r.risk_id, ref)]);
+      if (refs.length) selected_hs[r.risk_id] = refs;
+    });
+
     // counts
     const selectedCount   = risk_controls.filter(c => c.selected).length;
     const complianceCount = complianceAdditions.length;
@@ -913,6 +950,7 @@
       compliance_additions_count: complianceCount,
       dpia_controls_count:      dpiaCount,
       risk_controls,
+      selected_hs,
       compliance_additions: complianceAdditions,
       dpia_controls:        dpiaControls,
       // Preserve the Group Standards selections so this save does not wipe them
@@ -1686,8 +1724,10 @@
 /* Risk body */
 .wiz9-risk-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0;padding:10px 12px;background:#211d15;border-radius:5px;border-left:3px solid var(--color-border)}
 .wiz9-ctrl-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0}
-.wiz9-hs-group-hdr{display:flex;align-items:center;gap:8px;margin:12px 0 6px;padding-left:2px}
+.wiz9-hs-group-hdr{display:flex;align-items:center;gap:8px;margin:12px 0 6px;padding-left:2px;cursor:pointer}
+.wiz9-hs-cb{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--gold,#0d9488)}
 .wiz9-hs-group-name{font-size:12.5px;font-weight:600;color:var(--color-text-primary)}
+.wiz9-ctrl-card--nested{margin-left:23px}
 .wiz9-ctrl-section-label--eu{color:#a4ccf6}
 
 /* EU AI Act risk descriptions */
