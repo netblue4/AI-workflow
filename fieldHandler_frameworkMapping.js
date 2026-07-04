@@ -322,16 +322,17 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     }
                     row.appendChild(defCell);
 
-                    // Build cell — Harmonised_Standard risk controls
+                    // Build cell — the harmonised-standard requirement is itself
+                    // the build unit (implemented directly). Any remaining
+                    // non-Framework controls (e.g. Group Standard) are shown too.
                     const bldCell = document.createElement('td');
                     bldCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
-                    if (buildControls.length === 0) {
-                        bldCell.style.color = '#303030';
-                        bldCell.textContent = '—';
-                    } else {
+                    if (buildControls.length) {
                         buildControls.forEach(rc => {
                             bldCell.appendChild(fwBadge(rc.pk_Risk_Control_ID, rc.jkName, '#a78bfa', '#1e1a35', '#2e2850'));
                         });
+                    } else {
+                        bldCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), 'Implement HS requirement', '#a78bfa', '#1e1a35', '#2e2850'));
                     }
                     row.appendChild(bldCell);
 
