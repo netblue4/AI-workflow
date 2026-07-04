@@ -154,13 +154,7 @@
     for (const risk of _tblRisks) {
       const controls = _controlsByRisk.get(risk.pk_Risk_ID) || [];
 
-      // Apply the Step-3 RCN applicability filter using the risk's own HS link
-      // (risk↔HS), so risk inclusion no longer depends on the risk controls.
-      const riskRefs = (risk.fk_Harmonised_Standard_IDs || '')
-        .split(',').map(s => s.trim()).filter(Boolean);
-      if (applicable && !riskRefs.some(r => applicable.has(r))) continue;
-
-      // Attack vectors are still drawn from whatever controls the risk carries.
+      // Apply RCN applicability filter from Step 3 using tbl_Risk_Controls.standard_ref
       const matchedControls = applicable
         ? controls.filter(ctrl => {
             const rcns = (ctrl.fk_Harmonised_Standard_IDs || '')
@@ -168,6 +162,8 @@
             return rcns.some(r => applicable.has(r));
           })
         : controls;
+
+      if (applicable && matchedControls.length === 0) continue;
 
       const articleName = WizUtils.ARTICLES_BY_ID.get(risk.fk_AI_Article_ID)?.article_name
         || risk.fk_AI_Article_ID;

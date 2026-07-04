@@ -57,10 +57,6 @@
   // Tab 3 — residual risk
   const _residualState = {}; // risk_id → { likelihood, impact, justification }
 
-  // Legal/Regulatory tab — the HS requirement is the activated treatment unit
-  let _hsByRef = new Map();   // standard_ref → HS row
-  const _hsActState = {};     // `${riskId}::${standard_ref}` → { status, notes }
-
   const STATUS_LEGACY_MAP = { pending: 'not_started', completed: 'evidence_provided', not_applicable: 'waived' };
 
   // ---- Public API ---------------------------------------------
@@ -78,8 +74,6 @@
     _testState.notes  = {};
     Object.keys(_actState).forEach(k => delete _actState[k]);
     Object.keys(_residualState).forEach(k => delete _residualState[k]);
-    Object.keys(_hsActState).forEach(k => delete _hsActState[k]);
-    _hsByRef = new Map();
 
     _injectStyles();
 
@@ -96,18 +90,16 @@
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
     pw.innerHTML = '<p style="padding:32px;color:var(--color-text-secondary)">Loading…</p>';
-    const [risks, riskControls, testControls, hs] = await WizUtils.fetchAll([
+    const [risks, riskControls, testControls] = await WizUtils.fetchAll([
       'tbl_Risks.json',
       'tbl_Risk_Controls.json',
       'tbl_Test_Controls.json',
-      'tbl_Harmonised_Standards.json',
     ]);
     if (!risks || !riskControls || !testControls) {
       pw.innerHTML = `<p style="padding:24px;color:#ec6a68">Could not load data files.</p>`;
       return;
     }
-    _tblData = { risks, riskControls, testControls, hs: hs || [] };
-    _hsByRef = new Map((hs || []).map(h => [h.standard_ref, h]));
+    _tblData = { risks, riskControls, testControls };
 
     _record = WizUtils.loadRecord();
 
@@ -193,7 +185,6 @@
         domain,
         risk_id:                riskId || '',
         risk_name:              riskNameById.get(riskId) || '',
-        hs_ids:                 tbl?.fk_Harmonised_Standard_IDs || '',
         implementationEvidence: tbl?.jkImplementationEvidence || ''
       });
     };
@@ -255,66 +246,6 @@
       if (_residualState[riskId]) {
         _residualState[riskId] = { likelihood: rr.likelihood || '', impact: rr.impact || '', justification: rr.justification || '' };
       }
-    });
-
-    // --- Legal HS-requirement activation (the treatment unit for legal risks) ---
-    const legalRiskIds = _legalRiskIds();
-    legalRiskIds.forEach(riskId => {
-      _legalRiskHsRefs(riskId).forEach(ref => { _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: '' }; });
-    });
-    const savedHsAct = saved7?.hs_activation || {};
-    Object.entries(savedHsAct).forEach(([riskId, byRef]) => {
-      Object.entries(byRef || {}).forEach(([ref, st]) => {
-        _hsActState[_hsActKey(riskId, ref)] = { status: st.status || 'not_started', notes: st.notes || '' };
-      });
-    });
-    _deriveActFromHs(); // bridge HS activation → control activation for the report
-  }
-
-  // ---- Legal HS-requirement activation helpers ---------------
-  const _hsActKey = (riskId, ref) => `${riskId}::${ref}`;
-  // Legal risks in Step 7 are those treated via HS requirements in Step 6
-  // (selected_hs keys) — a durable signal independent of the risk controls.
-  // Legacy records that predate selected_hs fall back to the legal control map.
-  function _legalRiskIds() {
-    const ids = new Set(Object.keys(_record?.['step-6']?.selected_hs || {}));
-    _controls.filter(c => c.domain === 'legal' && c.risk_id).forEach(c => ids.add(c.risk_id));
-    return ids;
-  }
-  function _isLegalRisk(riskId) {
-    return _legalRiskIds().has(riskId);
-  }
-  // HS requirements a legal risk addresses = those ticked in Step 6, else the
-  // risk's direct risk↔HS link (tbl_Risks.fk_Harmonised_Standard_IDs), else the
-  // union of its legal controls' HS refs.
-  function _legalRiskHsRefs(riskId) {
-    const sel = _record?.['step-6']?.selected_hs?.[riskId];
-    if (sel && sel.length) return sel.slice();
-    const tblRisk = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId);
-    if (tblRisk?.fk_Harmonised_Standard_IDs) {
-      return tblRisk.fk_Harmonised_Standard_IDs.split(',').map(s => s.trim()).filter(Boolean);
-    }
-    const set = new Set();
-    _controls.filter(c => c.domain === 'legal' && c.risk_id === riskId).forEach(c => {
-      (c.hs_ids || '').split(',').map(s => s.trim()).filter(Boolean).forEach(r => set.add(r));
-    });
-    return [...set];
-  }
-  // Bridge: derive control activation status from HS activation so the report's
-  // control schedule keeps working until it is repointed to HS activation.
-  function _deriveActFromHs() {
-    _controls.filter(c => c.domain === 'legal').forEach(c => {
-      const refs = (c.hs_ids || '').split(',').map(s => s.trim()).filter(Boolean)
-        .filter(r => _hsActState[_hsActKey(c.risk_id, r)] !== undefined);
-      const statuses = refs.map(r => _hsActState[_hsActKey(c.risk_id, r)].status);
-      let st = 'not_started';
-      if (statuses.length) {
-        if (statuses.every(s => s === 'evidence_provided')) st = 'evidence_provided';
-        else if (statuses.every(s => s === 'evidence_provided' || s === 'waived')) st = 'waived';
-        else if (statuses.some(s => s !== 'not_started')) st = 'in_progress';
-      }
-      if (!_actState[c.key]) _actState[c.key] = { notes: '', status: 'not_started' };
-      _actState[c.key].status = st;
     });
   }
 
@@ -401,7 +332,7 @@
     return wrap;
   }
 
-  function _buildRiskBlock(riskId, riskName, domain) {
+  function _buildRiskBlock(riskId, riskName) {
     const sec = _el('div', 's9-risk-acc');
 
     const hdr  = _el('div', 's9-risk-acc-hdr');
@@ -422,36 +353,25 @@
 
     const body = _el('div', 's9-risk-acc-body s9-collapsed');
 
-    if (domain === 'legal') {
-      // Legal/Regulatory: the HS requirement is the activated treatment — no test section.
-      body.appendChild(_sectionLabel('1 · Harmonised Standard Activation'));
-      const refs = _legalRiskHsRefs(riskId);
-      if (refs.length) refs.forEach(ref => body.appendChild(_buildHsActCard(riskId, ref)));
-      else body.appendChild(_domainMuted('No harmonised standard requirements selected for this risk in Step 6.'));
+    // 1 · Control Activation
+    body.appendChild(_sectionLabel('1 · Control Activation'));
+    const actCtrls = _controls.filter(c => c.risk_id === riskId);
+    if (actCtrls.length) actCtrls.forEach(c => body.appendChild(_buildActControlCard(c, 'eu')));
+    else body.appendChild(_domainMuted('No activation controls for this risk.'));
 
-      body.appendChild(_sectionLabel('2 · Residual Risk'));
-      body.appendChild(_buildResidualPanel(riskId));
+    // 2 · Control Testing
+    body.appendChild(_sectionLabel('2 · Control Testing'));
+    const plan = _planData.find(p => p.risk_id === riskId);
+    if (plan && plan.test_controls.length) {
+      const planIdx = _planData.indexOf(plan);
+      plan.test_controls.forEach(tc => body.appendChild(_buildTestControlCard(tc, plan, planIdx)));
     } else {
-      // 1 · Control Activation
-      body.appendChild(_sectionLabel('1 · Control Activation'));
-      const actCtrls = _controls.filter(c => c.risk_id === riskId);
-      if (actCtrls.length) actCtrls.forEach(c => body.appendChild(_buildActControlCard(c, 'eu')));
-      else body.appendChild(_domainMuted('No activation controls for this risk.'));
-
-      // 2 · Control Testing
-      body.appendChild(_sectionLabel('2 · Control Testing'));
-      const plan = _planData.find(p => p.risk_id === riskId);
-      if (plan && plan.test_controls.length) {
-        const planIdx = _planData.indexOf(plan);
-        plan.test_controls.forEach(tc => body.appendChild(_buildTestControlCard(tc, plan, planIdx)));
-      } else {
-        body.appendChild(_domainMuted('No test controls defined for this risk.'));
-      }
-
-      // 3 · Residual Risk
-      body.appendChild(_sectionLabel('3 · Residual Risk'));
-      body.appendChild(_buildResidualPanel(riskId));
+      body.appendChild(_domainMuted('No test controls defined for this risk.'));
     }
+
+    // 3 · Residual Risk
+    body.appendChild(_sectionLabel('3 · Residual Risk'));
+    body.appendChild(_buildResidualPanel(riskId));
 
     sec.appendChild(body);
     hdr.addEventListener('click', () => {
@@ -466,9 +386,7 @@
     card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + title }));
     card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk: confirm control activation, record control testing, then assess residual risk. Residual unlocks once that risk’s activation and testing are evidenced or waived.' }));
 
-    const riskIds = domain === 'legal'
-      ? Array.from(_legalRiskIds())
-      : Array.from(new Set(_controls.filter(c => c.domain === domain && c.risk_id).map(c => c.risk_id)));
+    const riskIds = Array.from(new Set(_controls.filter(c => c.domain === domain && c.risk_id).map(c => c.risk_id)));
     if (!riskIds.length) {
       const warn = _el('div', 's9-warn');
       warn.innerHTML = `<strong>No ${title} risk controls found.</strong> Select controls for ${title} risks in Steps 5 and 6 first.`;
@@ -479,7 +397,7 @@
 
     card.appendChild(_buildDomainRollup(riskIds));
     const list = _el('div', '');
-    riskIds.forEach(id => list.appendChild(_buildRiskBlock(id, riskNameById.get(id) || id, domain)));
+    riskIds.forEach(id => list.appendChild(_buildRiskBlock(id, riskNameById.get(id) || id)));
     card.appendChild(list);
     card.appendChild(_buildSaveRow('Save Residual Risk', _handleSave));
     return card;
@@ -731,66 +649,6 @@
     if (sel) sel.value = status;
   }
 
-  // ---- HS-requirement activation card (Legal/Regulatory tab) --
-  function _buildHsActCard(riskId, ref) {
-    const key = _hsActKey(riskId, ref);
-    if (!_hsActState[key]) _hsActState[key] = { status: 'not_started', notes: '' };
-    const st = _hsActState[key];
-    const h  = _hsByRef.get(ref);
-
-    const card = _el('div', 's9-ctrl-card');
-    const hdr  = _el('div', 's9-ctrl-hdr');
-    hdr.appendChild(_el('span', 's9-src-badge s9-src-badge--eu', { textContent: WizUtils.fmtStdRef(ref) }));
-    hdr.appendChild(_el('span', 's9-ctrl-name', { textContent: h?.standard_name || ref }));
-    card.appendChild(hdr);
-
-    if (h?.standard_text) {
-      const objWrap = _el('div', 's9-obj-wrap');
-      objWrap.appendChild(_el('span', 's9-field-label', { textContent: 'Requirement' }));
-      objWrap.appendChild(_el('p', 's9-ctrl-obj', { textContent: h.standard_text }));
-      card.appendChild(objWrap);
-    }
-
-    const notesWrap = _el('div', 's9-notes-wrap');
-    notesWrap.appendChild(_el('label', 's9-field-label', { textContent: 'Evidence / Notes' }));
-    const ta = document.createElement('textarea');
-    ta.className = 's9-ctrl-notes'; ta.rows = 3; ta.value = st.notes;
-    ta.placeholder = 'Describe how this requirement is implemented and evidenced…';
-    ta.addEventListener('input', () => {
-      _hsActState[key].notes = ta.value;
-      if (ta.value.trim() && _hsActState[key].status === 'not_started') {
-        _hsActState[key].status = 'in_progress';
-        _syncHsCard(card, 'in_progress');
-        _deriveActFromHs(); _updateActProgress();
-      }
-    });
-    notesWrap.appendChild(ta);
-    card.appendChild(notesWrap);
-
-    const statusWrap = _el('div', 's9-status-wrap');
-    statusWrap.appendChild(_el('label', 's9-field-label', { textContent: 'Status' }));
-    const select = document.createElement('select'); select.className = 's9-status-select';
-    _config.status_options.forEach(opt => {
-      const o = document.createElement('option'); o.value = opt.value; o.textContent = opt.label;
-      if (opt.value === st.status) o.selected = true; select.appendChild(o);
-    });
-    select.addEventListener('change', () => {
-      _hsActState[key].status = select.value;
-      _syncHsCard(card, select.value);
-      _deriveActFromHs(); _updateActProgress();
-      _syncResidualPanel(riskId);
-    });
-    const pill = _el('span', 's9-status-pill'); _applyActPillStyle(pill, st.status);
-    statusWrap.appendChild(select); statusWrap.appendChild(pill);
-    card.appendChild(statusWrap);
-    return card;
-  }
-
-  function _syncHsCard(cardEl, status) {
-    const pill = cardEl.querySelector('.s9-status-pill'); if (pill) _applyActPillStyle(pill, status);
-    const sel = cardEl.querySelector('.s9-status-select'); if (sel) sel.value = status;
-  }
-
   function _applyActPillStyle(el, status) {
     const opt = _config.status_options.find(o => o.value === status);
     const col = _config.status_colors[status] || _config.status_colors.not_started;
@@ -803,15 +661,6 @@
   // TAB 3 — RESIDUAL RISK
   // ---- Shared: residual risk complete check ------------------
   function _isRiskGroupComplete(riskId) {
-    // Legal/Regulatory risks: residual unlocks once the risk's HS requirements
-    // are activated (evidenced or waived) — there is no test section.
-    if (_isLegalRisk(riskId)) {
-      const refs = _legalRiskHsRefs(riskId);
-      return refs.length === 0 || refs.every(ref => {
-        const s = _hsActState[_hsActKey(riskId, ref)]?.status;
-        return s === 'evidence_provided' || s === 'waived';
-      });
-    }
     // Tests: all test controls for this risk must be evidenced/waived
     const plan = _planData.find(p => p.risk_id === riskId);
     const testsDone = !plan || plan.test_controls.length === 0 || plan.test_controls.every(tc =>
@@ -847,7 +696,7 @@
     const hdr  = _el('div', 's9-residual-hdr');
     const ttl  = _el('span', 's9-residual-title'); ttl.textContent = 'Residual Risk Assessment';
     const note = _el('span', 's9-residual-lock-note');
-    note.textContent   = 'Unlocks once this risk’s requirements are evidenced or waived';
+    note.textContent   = 'Unlocks when all controls (tests + activation) are evidenced or waived';
     note.style.display = complete ? 'none' : '';
     hdr.appendChild(ttl); hdr.appendChild(note);
     panel.appendChild(hdr);
@@ -976,17 +825,6 @@
     }));
     const { evidenced, total } = _actProgressCounts();
 
-    // Legal HS-requirement activation — the treatment unit for legal risks
-    const hs_activation = {};
-    Object.keys(_hsActState).forEach(k => {
-      const i = k.indexOf('::'); if (i < 0) return;
-      const riskId = k.slice(0, i), ref = k.slice(i + 2);
-      const st = _hsActState[k];
-      if (st && (st.status !== 'not_started' || st.notes)) {
-        (hs_activation[riskId] = hs_activation[riskId] || {})[ref] = { status: st.status, notes: st.notes || '' };
-      }
-    });
-
     // Residual risk (Tab 3)
     const residual_risks = {};
     Object.entries(_residualState).forEach(([riskId, rr]) => {
@@ -1021,8 +859,6 @@
       total_controls:          total,
       evidenced_count:         evidenced,
       controls,
-      // Legal HS-requirement activation
-      hs_activation,
       // Residual
       residual_risks
     };
