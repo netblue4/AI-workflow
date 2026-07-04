@@ -140,14 +140,16 @@
     "fk_AI_Article_ID": "ART-001",
     "risk_name": "Deployer Instructions and Intended Use Failure",
     "risk_description": "The AI system provider has not produced complete, accurate instructions for deployers covering the system's intended purpose, operating conditions, known limitations, and oversight requirements. Without this documentation, deployers cannot determine whether the system is fit for their specific use case, cannot configure it appropriately, cannot implement the human oversight measures Art.14 requires, and cannot demonstrate to regulators that the system was deployed within its intended scope. This is not a paperwork failure — it is the root cause of unsafe or out-of-scope deployment: a deployer who cannot read the instructions cannot know they are using the system wrong until an incident occurs.",
-    "risk_role": "Engineer"
+    "risk_role": "Engineer",
+    "fk_Harmonised_Standard_IDs": "[42001.5]"
   },
   {
     "pk_Risk_ID": "RISK-026",
     "fk_AI_Article_ID": "ART-006",
     "risk_name": "Quality Management System Conformity Failure",
     "risk_description": "The organisation has not established and maintained a documented Quality Management System (QMS) for the AI system as required by Art.17. Without a QMS, there is no systematic process for controlling design changes, no accountable owner for AI safety, no mechanism to detect performance degradation in production, and no structured process for incident reporting. The absence of a QMS does not cause a single failure event — it is a silent governance gap that allows compliance to erode over time as the model is updated, data drifts, deployment context changes, and responsible persons change, with no organisational system to detect or respond to any of it.",
-    "risk_role": "Engineer"
+    "risk_role": "Engineer",
+    "fk_Harmonised_Standard_IDs": "[18286.1],[18286.9],[18286.2],[18286.8],[18286.3],[18286.4],[18286.5],[18286.6],[18286.7]"
   },
   {
     "pk_Risk_ID": "GSR-001",

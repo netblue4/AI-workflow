@@ -539,59 +539,6 @@
         : 'wiz-item-badge wiz-item-badge--partial';
   }
 
-  // ---- Control card -------------------------------------------
-  function _buildControlCard(risk, ctrl) {
-    const card = _el('div', 'wiz9-ctrl-card wiz9-ctrl-card--nested');
-
-    // Header: implementing control (read-only) — the HS requirement above is
-    // the selectable unit. Source badge + name + standard_ref + maturity.
-    const hdr = _el('div', 'wiz9-ctrl-hdr');
-
-    const ctrlIcon = _el('span', 'wiz9-ctrl-icon');
-    ctrlIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-    hdr.appendChild(ctrlIcon);
-
-    // Source badge
-    const src = ctrl.control_source || ctrl._source || '';
-    const srcBadge = _el('span', 'wiz9-src-badge wiz9-src-badge--eu');
-    srcBadge.textContent = src || 'EU AI Act';
-    hdr.appendChild(srcBadge);
-
-    const cName = _el('span', 'wiz9-ctrl-name'); cName.textContent = ctrl.jkName; hdr.appendChild(cName);
-
-    if (ctrl.fk_Harmonised_Standard_IDs) {
-      const stdRef = _el('span', 'wiz9-standard-ref');
-      stdRef.textContent = WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs);
-      hdr.appendChild(stdRef);
-    }
-
-    if (ctrl.jkMaturity) {
-      const mat = _el('span', 'wiz9-maturity-badge');
-      mat.textContent = ctrl.jkMaturity;
-      hdr.appendChild(mat);
-    }
-
-    // R→T pairing chip
-    const tc = _tcByRC?.get(ctrl.pk_Risk_Control_ID);
-    if (tc) {
-      const tcBadge = _el('span', 'wiz9-test-pair-badge');
-      tcBadge.textContent = `🧪 ${tc.control_ref}`;
-      tcBadge.title = tc.jkName || '';
-      hdr.appendChild(tcBadge);
-    }
-
-    card.appendChild(hdr);
-
-    // Control objective
-    if (ctrl.jkObjective) {
-      const obj = _el('p', 'wiz9-ctrl-obj');
-      obj.textContent = ctrl.jkObjective;
-      card.appendChild(obj);
-    }
-
-    return card;
-  }
-
   // ================================================================
   // ---- Group Standards Compliance — controls for GS risks --------
   // ================================================================
