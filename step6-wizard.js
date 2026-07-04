@@ -144,6 +144,7 @@
         risk_id:           tblRisk.pk_Risk_ID,
         display_name:      tblRisk.risk_name,
         fk_AI_Article_ID:  tblRisk.fk_AI_Article_ID || '',
+        fk_Harmonised_Standard_IDs: tblRisk.fk_Harmonised_Standard_IDs || '',
         risk_type:         'legal',
         risk_source:       'EU_AI_Act',
         risk_description:  tblRisk.risk_description || '',
@@ -342,8 +343,13 @@
   const _hsKey = (riskId, ref) => `${riskId}::${ref}`;
   const _ctrlRefs = ctrl => (ctrl.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean);
 
-  // Ordered distinct HS refs a risk addresses (via its non-FS controls).
+  // Ordered distinct HS refs a risk addresses. Sourced from the direct
+  // risk↔HS link (tbl_Risks.fk_Harmonised_Standard_IDs); falls back to
+  // deriving from the risk's non-FS controls for any risk without it.
   function _riskHsRefs(risk) {
+    if (risk.fk_Harmonised_Standard_IDs) {
+      return risk.fk_Harmonised_Standard_IDs.split(',').map(s => s.trim()).filter(Boolean);
+    }
     const seen = new Set(); const order = [];
     risk.controls.filter(c => c.control_source !== 'Framework_Statement').forEach(c => {
       (_ctrlRefs(c).length ? _ctrlRefs(c) : ['—']).forEach(ref => {
@@ -434,31 +440,18 @@
       body.appendChild(desc);
     }
 
-    // Controls label + list
-    const fsCtrls  = risk.controls.filter(c => c.control_source === 'Framework_Statement');
-    const selCtrls = risk.controls.filter(c => c.control_source !== 'Framework_Statement');
+    // Harmonised standard requirements this risk addresses — the selectable
+    // treatment units, sourced from the direct risk↔HS link (no controls shown).
+    const fsCtrls = risk.controls.filter(c => c.control_source === 'Framework_Statement');
+    const hsRefs  = _riskHsRefs(risk).filter(r => r !== '—');
 
-    if (selCtrls.length > 0) {
-      // Group each risk's controls by the harmonised standard requirement(s)
-      // they satisfy, so the tab reads "risk → HS control → implementing control(s)"
-      // — the same HS items shown under articles in the AI Act Compliance tab.
+    if (hsRefs.length > 0) {
       const hsByRef = new Map((_tblData.hs || []).map(h => [h.standard_ref, h]));
-      const order   = [];
-      const groups  = new Map(); // standard_ref → [control, ...]
-      selCtrls.forEach(ctrl => {
-        const refs = (ctrl.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean);
-        (refs.length ? refs : ['—']).forEach(ref => {
-          if (!groups.has(ref)) { groups.set(ref, []); order.push(ref); }
-          groups.get(ref).push(ctrl);
-        });
-      });
+      body.appendChild(_el('p', 'wiz9-ctrl-section-label', { textContent: `Harmonised Standard Controls (${hsRefs.length})` }));
 
-      const ctrlLbl = _el('p', 'wiz9-ctrl-section-label');
-      ctrlLbl.textContent = `Harmonised Standard Controls (${order.filter(r => r !== '—').length})`;
-      body.appendChild(ctrlLbl);
-
-      order.forEach(ref => {
-        const hsHdr = _el('label', 'wiz9-hs-group-hdr');
+      hsRefs.forEach(ref => {
+        const h = hsByRef.get(ref);
+        const item = _el('label', 'wiz9-hs-item');
         const cb = document.createElement('input');
         cb.type = 'checkbox'; cb.className = 'wiz9-hs-cb'; cb.dataset.ref = ref;
         cb.checked = !!_state.hsSelected[_hsKey(risk.risk_id, ref)];
@@ -467,21 +460,18 @@
           _deriveRiskSelectedForRisk(risk);
           _syncRisk(sec, risk);
         });
-        hsHdr.appendChild(cb);
-        if (ref !== '—') {
-          hsHdr.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(ref) }));
-          const h = hsByRef.get(ref);
-          hsHdr.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: h?.standard_name || '' }));
-        } else {
-          hsHdr.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: 'Other controls' }));
-        }
-        body.appendChild(hsHdr);
-        groups.get(ref).forEach(ctrl => body.appendChild(_buildControlCard(risk, ctrl)));
+        item.appendChild(cb);
+        const txt = _el('div', 'wiz9-hs-item-txt');
+        const hdrRow = _el('div', 'wiz9-hs-item-hdr');
+        hdrRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(ref) }));
+        hdrRow.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: h?.standard_name || ref }));
+        txt.appendChild(hdrRow);
+        if (h?.standard_text) txt.appendChild(_el('p', 'wiz9-hs-item-desc', { textContent: h.standard_text }));
+        item.appendChild(txt);
+        body.appendChild(item);
       });
     } else if (fsCtrls.length === 0) {
-      const none = _el('p', 'wiz9-intro');
-      none.textContent = 'No controls available for this risk.';
-      body.appendChild(none);
+      body.appendChild(_el('p', 'wiz9-intro', { textContent: 'No harmonised standard requirements mapped to this risk.' }));
     }
 
     if (fsCtrls.length > 0) {
@@ -1728,6 +1718,11 @@
 .wiz9-hs-cb{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--gold,#0d9488)}
 .wiz9-hs-group-name{font-size:12.5px;font-weight:600;color:var(--color-text-primary)}
 .wiz9-ctrl-card--nested{margin-left:23px}
+.wiz9-hs-item{display:flex;align-items:flex-start;gap:10px;padding:9px 4px;cursor:pointer;border-top:1px solid var(--color-border)}
+.wiz9-hs-item:first-of-type{border-top:none}
+.wiz9-hs-item-txt{min-width:0}
+.wiz9-hs-item-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wiz9-hs-item-desc{margin:3px 0 0;font-size:12px;line-height:1.5;color:var(--color-text-secondary)}
 .wiz9-ctrl-section-label--eu{color:#a4ccf6}
 
 /* EU AI Act risk descriptions */
