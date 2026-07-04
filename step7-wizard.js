@@ -258,7 +258,7 @@
     });
 
     // --- Legal HS-requirement activation (the treatment unit for legal risks) ---
-    const legalRiskIds = new Set(_controls.filter(c => c.domain === 'legal' && c.risk_id).map(c => c.risk_id));
+    const legalRiskIds = _legalRiskIds();
     legalRiskIds.forEach(riskId => {
       _legalRiskHsRefs(riskId).forEach(ref => { _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: '' }; });
     });
@@ -273,8 +273,16 @@
 
   // ---- Legal HS-requirement activation helpers ---------------
   const _hsActKey = (riskId, ref) => `${riskId}::${ref}`;
+  // Legal risks in Step 7 are those treated via HS requirements in Step 6
+  // (selected_hs keys) — a durable signal independent of the risk controls.
+  // Legacy records that predate selected_hs fall back to the legal control map.
+  function _legalRiskIds() {
+    const ids = new Set(Object.keys(_record?.['step-6']?.selected_hs || {}));
+    _controls.filter(c => c.domain === 'legal' && c.risk_id).forEach(c => ids.add(c.risk_id));
+    return ids;
+  }
   function _isLegalRisk(riskId) {
-    return _controls.some(c => c.domain === 'legal' && c.risk_id === riskId);
+    return _legalRiskIds().has(riskId);
   }
   // HS requirements a legal risk addresses = those ticked in Step 6, else the
   // risk's direct risk↔HS link (tbl_Risks.fk_Harmonised_Standard_IDs), else the
@@ -458,7 +466,9 @@
     card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + title }));
     card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk: confirm control activation, record control testing, then assess residual risk. Residual unlocks once that risk’s activation and testing are evidenced or waived.' }));
 
-    const riskIds = Array.from(new Set(_controls.filter(c => c.domain === domain && c.risk_id).map(c => c.risk_id)));
+    const riskIds = domain === 'legal'
+      ? Array.from(_legalRiskIds())
+      : Array.from(new Set(_controls.filter(c => c.domain === domain && c.risk_id).map(c => c.risk_id)));
     if (!riskIds.length) {
       const warn = _el('div', 's9-warn');
       warn.innerHTML = `<strong>No ${title} risk controls found.</strong> Select controls for ${title} risks in Steps 5 and 6 first.`;
