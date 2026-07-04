@@ -132,7 +132,7 @@
 ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_ragSummaryPage(s9, s10)}
 ${_section(1, 'System Classification', _classificationSection(s3))}
-${_section(2, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9))}
+${_section(2, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9, s10))}
 ${_section(3, 'Risk Identification', _riskAssessmentSection(s8, s10))}
 ${_section(4, 'Control Schedule', _controlScheduleSection(s9, s10))}
 ${_section(5, 'Verification Evidence', _verificationSection(s10))}
@@ -141,6 +141,95 @@ ${_section(7, 'Conformity Assessment Declaration', _conformityDeclarationSection
 ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
 </body>
 </html>`;
+  }
+
+  // ============================================================
+  // ---- Legal domain: HS requirements as the treatment unit ---
+  // Legal/regulatory risks are treated by activating harmonised-standard (HS)
+  // requirements, not by the legacy `control_source: "Harmonised_Standard"`
+  // controls. These helpers reconstruct the legal treatment picture from the
+  // durable step-6 (`selected_hs`) and step-7 (`hs_activation`) records so the
+  // report renders identically whether or not those controls still exist.
+  // ============================================================
+  function _hsByRef() {
+    return new Map((_tbl.hs || []).map(h => [h.standard_ref, h]));
+  }
+
+  // pk_Risk_Control_ID set for the legacy Harmonised_Standard controls, so they
+  // can be excluded wherever HS requirements now stand in for them.
+  function _legalHsControlIds() {
+    return new Set((_tbl.riskControls || [])
+      .filter(rc => rc.control_source === 'Harmonised_Standard')
+      .map(rc => rc.pk_Risk_Control_ID));
+  }
+
+  function _hsActStatus(s10, riskId, ref) {
+    return s10?.hs_activation?.[riskId]?.[ref]?.status || 'not_started';
+  }
+
+  // Per-risk selected HS refs, preferring step-6 `selected_hs`; falls back to the
+  // selected Harmonised_Standard controls for legacy records saved before that
+  // field existed (yields nothing once those controls are removed — by which
+  // point every record carries `selected_hs`).
+  function _selectedHsByRisk(s9) {
+    const sel = s9?.selected_hs;
+    if (sel && Object.keys(sel).length) return sel;
+    const derived = {};
+    (s9?.risk_controls || [])
+      .filter(c => c.selected && c.control_source === 'Harmonised_Standard')
+      .forEach(c => {
+        (c.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
+          (derived[c.risk_id] = derived[c.risk_id] || []);
+          if (!derived[c.risk_id].includes(ref)) derived[c.risk_id].push(ref);
+        });
+      });
+    return derived;
+  }
+
+  // Synthetic treatment rows for the legal domain, shaped like `risk_controls`
+  // so they drop into the existing schedule / RAG / outstanding rendering.
+  // control_id is a stable "riskId::ref" key; status comes from HS activation.
+  function _legalHsTreatments(s9, s10) {
+    const hsByRef = _hsByRef();
+    const rows = [];
+    const statusByKey = new Map();
+    Object.entries(_selectedHsByRisk(s9)).forEach(([riskId, refs]) => {
+      (Array.isArray(refs) ? refs : []).forEach(ref => {
+        const h   = hsByRef.get(ref);
+        const key = riskId + '::' + ref;
+        rows.push({
+          control_id:   key,
+          control_name: h?.standard_name || ref,
+          fk_Harmonised_Standard_IDs: ref,
+          risk_id:      riskId,
+          control_source: 'Harmonised_Standard_Req',
+          selected:     true
+        });
+        statusByKey.set(key, _hsActStatus(s10, riskId, ref));
+      });
+    });
+    return { rows, statusByKey };
+  }
+
+  // Is an HS requirement selected as a treatment for any legal risk (step-6)?
+  function _hsSelectedAnywhere(s9, ref) {
+    return Object.values(_selectedHsByRisk(s9)).some(refs => Array.isArray(refs) && refs.includes(ref));
+  }
+
+  // Risks that selected a given HS ref, each with its step-7 activation status.
+  function _hsRisksForRef(s9, s10, ref) {
+    const out = [];
+    Object.entries(_selectedHsByRisk(s9)).forEach(([riskId, refs]) => {
+      if (Array.isArray(refs) && refs.includes(ref)) out.push({ riskId, status: _hsActStatus(s10, riskId, ref) });
+    });
+    return out;
+  }
+
+  function _hsStatusShort(s) {
+    if (s === 'evidence_provided') return '✓ Activated';
+    if (s === 'waived')            return '— Waived';
+    if (s === 'in_progress')       return '◑ In progress';
+    return '○ Not started';
   }
 
   // ---- RAG Summary Page (CAB Sign-off) ----------------------
@@ -155,6 +244,11 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const ctrlStatus = new Map();
     (s10?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
 
+    // Legal risks are treated via HS-requirement activation, not controls.
+    const legal        = _legalHsTreatments(s9, s10);
+    const legalCtrlIds = _legalHsControlIds();
+    legal.statusByKey.forEach((v, k) => ctrlStatus.set(k, v));
+
     // Test plans by risk
     const testByRisk = new Map();
     (s10?.plans || []).forEach(plan => {
@@ -162,9 +256,11 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       if (riskId) testByRisk.set(riskId, plan.test_controls || []);
     });
 
-    // Group selected risk controls by risk_id
+    // Group treatment units by risk_id: real (non-legal) selected controls plus
+    // the legal HS requirements standing in for the removed HS controls.
     const byRisk = new Map();
-    (s9.risk_controls || []).filter(c => c.selected).forEach(c => {
+    [...(s9.risk_controls || []).filter(c => c.selected && c.control_source !== 'Harmonised_Standard'),
+     ...legal.rows].forEach(c => {
       const key = c.risk_id || 'unknown';
       if (!byRisk.has(key)) byRisk.set(key, []);
       byRisk.get(key).push(c);
@@ -179,10 +275,17 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const dpiaAdds  = s9.dpia_controls || [];
     const addlCount = compAdds.length + dpiaAdds.length;
 
-    // Count all activation controls from s10
+    // Count activation controls from s10 (excluding legacy legal HS controls,
+    // which are represented by the HS requirements below).
     (s10?.controls || []).forEach(c => {
+      if (legalCtrlIds.has(c.key)) return;
       totalCtrls++;
       if (c.status === 'evidence_provided' || c.status === 'waived') doneCtrls++;
+    });
+    legal.rows.forEach(c => {
+      totalCtrls++;
+      const st = ctrlStatus.get(c.control_id);
+      if (st === 'evidence_provided' || st === 'waived') doneCtrls++;
     });
 
     // Count all tests
@@ -278,9 +381,11 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     // Outstanding controls
     const outstandingCtrls = [];
+    const legal        = _legalHsTreatments(s9, s10);
+    const legalCtrlIds = _legalHsControlIds();
     if (!s9) {
       html += `<div class="outstanding-warn">Step 6 (Control Identification) not yet completed.</div>`;
-    } else if (!s10?.controls?.length) {
+    } else if (!s10 || (!s10.controls?.length && !s10.hs_activation)) {
       html += `<div class="outstanding-warn">Step 7 (Residual Risk) — Control Activation tab not yet completed.</div>`;
     } else {
       const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
@@ -292,10 +397,19 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         ...((s9.group_standard_controls && s9.group_standard_controls.controls) || []).filter(c => c.selected).map(c => c.control_id)
       ]);
 
+      // Real (non-legal) activation controls
       (s10.controls || []).forEach(c => {
+        if (legalCtrlIds.has(c.key)) return;
         if (!selectedKeys.has(c.key)) return;
         if (c.status === 'evidence_provided' || c.status === 'waived') return;
         outstandingCtrls.push(c);
+      });
+
+      // Legal HS requirements not yet activated
+      legal.rows.forEach(c => {
+        const st = legal.statusByKey.get(c.control_id);
+        if (st === 'evidence_provided' || st === 'waived') return;
+        outstandingCtrls.push({ key: c.control_id, name: c.control_name, risk_id: c.risk_id, status: st });
       });
     }
 
@@ -366,7 +480,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const legalSel   = s8?.legal_assessment?.selected_count ?? '—';
     const legalTotal = s8?.legal_assessment?.total_risks    ?? '—';
 
-    const riskCtrls = (s9?.risk_controls || []).filter(c => c.selected).length;
+    // Legal risks are treated via HS requirements, not the legacy HS controls.
+    const legalHsCount = _legalHsTreatments(s9, s10).rows.length;
+    const riskCtrls = (s9?.risk_controls || []).filter(c => c.selected && c.control_source !== 'Harmonised_Standard').length + legalHsCount;
     const compAdds  = (s9?.compliance_additions || []).length;
     const dpiaAdds  = (s9?.dpia_controls || []).length;
 
@@ -607,8 +723,11 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 
     // Build lookup: control ID → HS standard refs
     const hsRefByCtrl = new Map((_tbl.riskControls || []).map(rc => [rc.pk_Risk_Control_ID, rc.fk_Harmonised_Standard_IDs || '']));
-    const _hsCell = id => {
-      const refs = (hsRefByCtrl.get(id) || '').split(',').map(s => s.trim()).filter(Boolean);
+    // Standards cell: prefer the row's own HS refs (present on risk controls,
+    // compliance additions and synthetic HS-requirement rows), else look up.
+    const _hsCell = c => {
+      const raw  = c.fk_Harmonised_Standard_IDs || hsRefByCtrl.get(c.control_id) || '';
+      const refs = raw.split(',').map(s => s.trim()).filter(Boolean);
       return refs.length ? refs.map(r => `<span class="hs-ref-chip">${_esc(WizUtils.fmtStdRef(r))}</span>`).join(' ') : '<span class="ctrl-src src-eu">EU AI Act</span>';
     };
 
@@ -617,8 +736,14 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     // still reflected in the Compliance Traceability section.
     const _isFS = c => (c.control_source || '').includes('Framework');
 
+    // Legal risks are treated by activating HS requirements; their status comes
+    // from step-7 HS activation, and they replace the legacy HS controls here.
+    const legal = _legalHsTreatments(s9, s10);
+    legal.statusByKey.forEach((v, k) => ctrlStatus.set(k, v));
+
     const byRisk = new Map();
-    riskCtrls.filter(c => !_isFS(c)).forEach(c => {
+    [...riskCtrls.filter(c => !_isFS(c) && c.control_source !== 'Harmonised_Standard'),
+     ...legal.rows].forEach(c => {
       const key = c.risk_id || 'unknown';
       if (!byRisk.has(key)) byRisk.set(key, []);
       byRisk.get(key).push(c);
@@ -647,13 +772,13 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             ${selected.map(c => `<tr>
               <td class="mono">${_esc(c.control_id)}</td>
               <td>${_esc(c.control_name || '—')}</td>
-              <td>${_hsCell(c.control_id)}</td>
+              <td>${_hsCell(c)}</td>
               <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
             </tr>`).join('')}
             ${deselected.map(c => `<tr class="ctrl-row--dim">
               <td class="mono">${_esc(c.control_id)}</td>
               <td>${_esc(c.control_name || '—')}</td>
-              <td>${_hsCell(c.control_id)}</td>
+              <td>${_hsCell(c)}</td>
               <td><span class="status-pill status-pill--excl">✗ Not selected</span></td>
             </tr>`).join('')}
             </tbody>
@@ -671,7 +796,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         ${regularAdds.map(c => `<tr>
           <td class="mono">${_esc(c.control_id)}</td>
           <td>${_esc(c.control_name || '—')}</td>
-          <td>${_hsCell(c.control_id)}</td>
+          <td>${_hsCell(c)}</td>
           <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
         </tr>`).join('')}
         </tbody>
@@ -715,7 +840,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             ${ctrls.map(c => `<tr>
               <td class="mono">${_esc(c.control_id)}</td>
               <td>${_esc(c.control_name || '—')}</td>
-              <td>${_hsCell(c.control_id)}</td>
+              <td>${_hsCell(c)}</td>
               <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
             </tr>`).join('')}
             </tbody>
@@ -728,7 +853,10 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- Section 4: Compliance Traceability --------------------
-  function _complianceTraceabilitySection(s3, s9) {
+  // Coverage is driven by the HS model: an HS requirement is covered when it is
+  // selected/activated as a treatment for a legal risk (step-6/7), self-certified
+  // by a Framework_Statement control, or picked up by a compliance addition.
+  function _complianceTraceabilitySection(s3, s9, s10) {
     if (!s3 || !s9) return _notComplete('Steps 3 and 6 must be completed before compliance traceability can be generated.');
 
     const applicableNums = new Set(
@@ -736,12 +864,13 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     );
     if (applicableNums.size === 0) return '<p class="empty-note">No articles applicable — classification returned no EU AI Act obligations.</p>';
 
-    const selectedCtrlIds = new Set([
-      ...(s9.risk_controls || []).filter(c => c.selected).map(c => c.control_id),
-      ...(s9.compliance_additions || []).map(c => c.control_id)
-    ]);
-
     const hsNA = s9.hs_not_applicable || {};
+
+    // Compliance additions that satisfy a given HS ref
+    const compAddRefs = new Set();
+    (s9.compliance_additions || []).forEach(c => {
+      (c.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean).forEach(r => compAddRefs.add(r));
+    });
 
     // Build article number → ART-xxx lookup
     const artByNum = new Map();
@@ -750,18 +879,15 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       if (m) artByNum.set(m[1], a);
     });
 
-    // Build standard_ref → controls lookup
-    const ctrlsByRef = new Map();
+    // Framework_Statement controls per HS ref → self-certification coverage.
+    const fsByRef = new Map();
     (_tbl.riskControls || []).forEach(rc => {
-      if (!rc.fk_Harmonised_Standard_IDs) return;
+      if (rc.control_source !== 'Framework_Statement' || !rc.fk_Harmonised_Standard_IDs) return;
       rc.fk_Harmonised_Standard_IDs.split(',').map(s => s.trim()).filter(Boolean).forEach(ref => {
-        if (!ctrlsByRef.has(ref)) ctrlsByRef.set(ref, []);
-        ctrlsByRef.get(ref).push(rc);
+        if (!fsByRef.has(ref)) fsByRef.set(ref, []);
+        fsByRef.get(ref).push(rc);
       });
     });
-
-    // Build risk control → test control lookup (direct FK)
-    const tcByRC = new Map((_tbl.testControls || []).filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
 
     let html = '';
     let gapCount = 0;
@@ -782,40 +908,38 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
         html += '<p class="trace-no-hs">No harmonised standard requirements mapped to this article.</p>';
       } else {
         html += `<table class="data-table data-table--trace">
-          <thead><tr><th style="width:35%">HS Standard</th><th>Risks, Controls &amp; Tests</th><th style="width:16%">Status</th></tr></thead>
+          <thead><tr><th style="width:35%">HS Standard</th><th>Treatment (Risk &middot; Activation)</th><th style="width:16%">Status</th></tr></thead>
           <tbody>`;
         hsReqs.forEach(h => {
-          const ctrls = (ctrlsByRef.get(h.standard_ref) || [])
+          const ref       = h.standard_ref;
+          const hsRisks   = _hsRisksForRef(s9, s10, ref);   // legal selection + activation
+          const fsCtrls   = (fsByRef.get(ref) || [])
             .filter((c, i, a) => a.findIndex(x => x.pk_Risk_Control_ID === c.pk_Risk_Control_ID) === i);
-          const fsCtrls   = ctrls.filter(c => c.control_source === 'Framework_Statement');
-          const selCtrls  = ctrls.filter(c => selectedCtrlIds.has(c.pk_Risk_Control_ID) && c.control_source !== 'Framework_Statement');
-          const covered   = selCtrls.length > 0 || fsCtrls.length > 0;
-          const isNA      = !covered && !!hsNA[h.standard_ref];
+          const hasCompAdd = compAddRefs.has(ref);
+          const selfCert   = fsCtrls.length > 0 || hasCompAdd;
+          const covered    = hsRisks.length > 0 || selfCert;
+          const isNA       = !covered && !!hsNA[ref];
 
           if (covered) coveredCount++; else if (!isNA) gapCount++;
 
-          let testRef = null, testRiskId = null;
-          for (const c of selCtrls) {
-            const tc = tcByRC.get(c.pk_Risk_Control_ID);
-            if (tc) { testRef = tc.control_ref; testRiskId = c.fk_Risk_ID; break; }
-          }
-
-          const badgeKey = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? 'fs' : 'ok') : (isNA ? 'na' : 'gap');
-          const badgeTxt = covered ? (fsCtrls.length > 0 && selCtrls.length === 0 ? '✓ Self-certified' : '✓ Covered') : (isNA ? '⊘ N/A' : '⚠ Gap');
-          const naReason = isNA ? hsNA[h.standard_ref].reason : '';
+          const badgeKey = covered ? (hsRisks.length > 0 ? 'ok' : 'fs') : (isNA ? 'na' : 'gap');
+          const badgeTxt = covered ? (hsRisks.length > 0 ? '✓ Activated' : '✓ Self-certified') : (isNA ? '⊘ N/A' : '⚠ Gap');
+          const naReason = isNA ? hsNA[ref].reason : '';
           const rowCls   = covered ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
 
-          // Controls & tests cell
+          // Treatment cell: the legal risk(s) activating this HS requirement,
+          // else the self-certifying framework control / compliance addition.
           let ctrlCell = '';
-          if (selCtrls.length > 0) {
-            ctrlCell += selCtrls.map(c =>
-              `<span class="trace-ctrl-chip"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`
+          if (hsRisks.length > 0) {
+            ctrlCell += hsRisks.map(r =>
+              `<span class="trace-ctrl-chip"><span class="trace-risk-tag">${_esc(r.riskId)}</span> ${_hsStatusShort(r.status)}</span>`
             ).join('');
-            if (testRef) ctrlCell += `<span class="trace-test-chip"><span class="trace-risk-tag">${_esc(testRiskId)}</span> 🧪 ${_esc(testRef)}</span>`;
           } else if (fsCtrls.length > 0) {
             ctrlCell += fsCtrls.map(c =>
               `<span class="trace-ctrl-chip trace-ctrl-chip--fs"><span class="trace-risk-tag">${_esc(c.fk_Risk_ID)}</span> ${_esc(c.pk_Risk_Control_ID)}</span>`
             ).join('');
+          } else if (hasCompAdd) {
+            ctrlCell += `<span class="trace-ctrl-chip">Compliance addition</span>`;
           }
 
           html += `<tr class="${rowCls}">
