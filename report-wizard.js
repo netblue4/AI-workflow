@@ -1037,7 +1037,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   // ---- Section 6: Conformity Declaration ---------------------
   function _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy) {
     const artCount   = s3?.axis_b?.applicable_articles?.length ?? 0;
-    const riskCtrlSel = (s9?.risk_controls || []).filter(c => c.selected).length;
+    // Legal risks are treated via HS requirements, not the legacy HS controls.
+    const legalHsCount = _legalHsTreatments(s9, s10).rows.length;
+    const riskCtrlSel = (s9?.risk_controls || []).filter(c => c.selected && c.control_source !== 'Harmonised_Standard').length + legalHsCount;
     const compAdds    = (s9?.compliance_additions || []).length;
     const dpiaAdds    = (s9?.dpia_controls || []).length;
     const doneTests   = s10?.evidence_provided_tests ?? s10?.completed_tests ?? '—';
@@ -1067,7 +1069,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     <tr>
       <td class="mono">[18286.18]</td>
       <td>No Critical Gaps Declaration</td>
-      <td>Compliance Traceability section — all applicable HS requirements must show ✓ Covered</td>
+      <td>Compliance Traceability section — all applicable HS requirements must show ✓ Activated or ✓ Self-certified</td>
       <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 2' : '○ Pending'}</span></td>
     </tr>
     <tr>
@@ -1089,7 +1091,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 <table class="data-table">
   <tr><td class="dt-label">Use Case / System ID</td><td>${_esc(useCase)}</td></tr>
   <tr><td class="dt-label">Applicable EU AI Act Articles</td><td>${artCount}</td></tr>
-  <tr><td class="dt-label">Controls Selected (Risk Team)</td><td>${riskCtrlSel}</td></tr>
+  <tr><td class="dt-label">Risk-Team Treatments (HS requirements + controls)</td><td>${riskCtrlSel}</td></tr>
   <tr><td class="dt-label">Controls Added (Compliance Team)</td><td>${compAdds}</td></tr>
   <tr><td class="dt-label">Controls Committed (DPIA)</td><td>${dpiaAdds}</td></tr>
   <tr><td class="dt-label">Total Controls</td><td>${riskCtrlSel + compAdds + dpiaAdds}</td></tr>
@@ -1100,6 +1102,27 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
 </table>
 
 ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pendTests !== 1 ? 's' : ''} remain pending. All tests must be resolved (completed or marked not applicable) before this report can be used as the conformity assessment submission.</div>` : ''}
+
+<h3 class="sub-heading">Basis of Conformity</h3>
+<div class="declaration-block">
+  <p>This assessment establishes conformity through two complementary routes:</p>
+  <ul class="basis-list">
+    <li><strong>EU AI Act requirements</strong> are evidenced against <strong>harmonised standard (HS)
+    requirements</strong>. For each applicable Article, the corresponding HS requirements are activated as the
+    risk-treatment measures and traced in Section 2 (Compliance Traceability). This report records each
+    requirement, its activation status and its implementing evidence; the technical implementation of each HS
+    requirement is carried out by the development team.</li>
+    <li><strong>Group standard requirements</strong> are evidenced by the organisation's workflow controls,
+    scheduled with their operational status in Sections 3–4.</li>
+  </ul>
+  <p><strong>Presumption of conformity.</strong> Under <strong>Article 40</strong> of Regulation (EU) 2024/1689,
+  an AI system that conforms to harmonised standards — or parts thereof — whose references are published in the
+  <em>Official Journal of the European Union</em> is presumed to conform to the corresponding requirements of the
+  Regulation. The harmonised standards referenced in this assessment are currently under development. Once their
+  references are cited in the Official Journal, the HS-requirement activation records in this report map directly
+  to those citations, allowing this AI system to claim presumption of conformity for the covered requirements
+  without re-assessment.</p>
+</div>
 
 <h3 class="sub-heading">Declaration of Conformity</h3>
 <div class="declaration-block">
@@ -1490,6 +1513,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .declaration-block{background:#f8fafc;border-left:3px solid #0d9488;padding:14px 16px;margin:14px 0;font-size:9.5pt;line-height:1.65}
 .declaration-block p{margin-bottom:10px}
 .declaration-block p:last-child{margin-bottom:0}
+.basis-list{margin:0 0 10px 0;padding-left:18px;list-style:disc}
+.basis-list li{margin-bottom:7px}
 .sig-table{width:100%;border-collapse:collapse;margin-top:32px}
 .sig-cell{padding:8px 16px 0 0;vertical-align:bottom;width:33%}
 .sig-line{border-bottom:1px solid #333;height:40px;margin-bottom:4px}
