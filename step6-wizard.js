@@ -359,6 +359,13 @@
     return order;
   }
 
+  // An HS requirement is "covered" when it is selected as a treatment for any
+  // risk in the legal tab — the new model, independent of the underlying controls.
+  function _hsSelectedForAnyRisk(ref) {
+    const suffix = '::' + ref;
+    return Object.keys(_state.hsSelected).some(k => k.endsWith(suffix) && _state.hsSelected[k]);
+  }
+
   // Derive control selection from the HS selection: a control is selected when
   // any HS requirement it satisfies is selected. Framework_Statement is always on.
   function _deriveRiskSelectedForRisk(risk) {
@@ -1459,7 +1466,8 @@
         const riskCtrls      = actionCtrls.filter(c => !!_state.riskSelected[c.pk_Risk_Control_ID]);
         const compCtrls      = actionCtrls.filter(c => !!_state.complianceSelected[c.pk_Risk_Control_ID]);
         const availableCtrls = actionCtrls.filter(c => !_state.riskSelected[c.pk_Risk_Control_ID] && !_state.complianceSelected[c.pk_Risk_Control_ID]);
-        const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0 || fsCtrls.length > 0;
+        const hsSelected     = _hsSelectedForAnyRisk(h.standard_ref);
+        const isCovered      = riskCtrls.length > 0 || compCtrls.length > 0 || fsCtrls.length > 0 || hsSelected;
 
         // Gap / N/A / Self-certified badge
         if (!isCovered) {
@@ -1482,6 +1490,9 @@
         } else if (fsCtrls.length > 0 && riskCtrls.length === 0 && compCtrls.length === 0) {
           const certBadge = _el('span', 'wiz9-cmp-self-cert-badge'); certBadge.textContent = '✓ Self-certified';
           refRow.appendChild(certBadge);
+        } else if (hsSelected && riskCtrls.length === 0 && compCtrls.length === 0 && fsCtrls.length === 0) {
+          const selBadge = _el('span', 'wiz9-cmp-self-cert-badge'); selBadge.textContent = '✓ Selected as treatment';
+          refRow.appendChild(selBadge);
         }
 
         // Coverage area
