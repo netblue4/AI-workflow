@@ -277,10 +277,15 @@
     return _controls.some(c => c.domain === 'legal' && c.risk_id === riskId);
   }
   // HS requirements a legal risk addresses = those ticked in Step 6, else the
-  // union of the risk's legal controls' HS refs.
+  // risk's direct risk↔HS link (tbl_Risks.fk_Harmonised_Standard_IDs), else the
+  // union of its legal controls' HS refs.
   function _legalRiskHsRefs(riskId) {
     const sel = _record?.['step-6']?.selected_hs?.[riskId];
     if (sel && sel.length) return sel.slice();
+    const tblRisk = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId);
+    if (tblRisk?.fk_Harmonised_Standard_IDs) {
+      return tblRisk.fk_Harmonised_Standard_IDs.split(',').map(s => s.trim()).filter(Boolean);
+    }
     const set = new Set();
     _controls.filter(c => c.domain === 'legal' && c.risk_id === riskId).forEach(c => {
       (c.hs_ids || '').split(',').map(s => s.trim()).filter(Boolean).forEach(r => set.add(r));
