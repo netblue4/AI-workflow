@@ -191,8 +191,7 @@
       ['dpia', 'DPIA Controls'],
       ['groupstd', 'Group Standards Controls'],
       ['compliance', 'AI Act Compliance Controls'],
-      ['reference', 'Reference'],
-      ['framework', 'Framework Mapping']
+      ['reference', 'Reference']
     ], _switchTab);
   }
 
@@ -218,13 +217,6 @@
       const dpPane = _container.querySelector('[data-pane="dpia"]');
       if (dpPane) { dpPane.innerHTML = ''; dpPane.appendChild(_buildDpiaControlsPane()); }
     }
-    if (id === 'framework') {
-      const fwPane = _container.querySelector('[data-pane="framework"]');
-      if (fwPane && typeof createFrameworkMapping === 'function') {
-        fwPane.innerHTML = '';
-        fwPane.appendChild(createFrameworkMapping(null, null, null));
-      }
-    }
   }
 
   // ---- Panes --------------------------------------------------
@@ -235,14 +227,12 @@
     const cmp = _el('div', 'wiz-pane wiz-pane--hidden'); cmp.dataset.pane = 'compliance';
     const gs  = _el('div', 'wiz-pane wiz-pane--hidden'); gs.dataset.pane  = 'groupstd';
     const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
-    const fw  = _el('div', 'wiz-pane wiz-pane--hidden'); fw.dataset.pane  = 'framework';
     wz.appendChild(_buildWizardPane());
     dp.appendChild(_buildDpiaControlsPane());
     cmp.appendChild(_buildCompliancePane());
     gs.appendChild(_buildGroupStandardsCompliancePane());
     ref.appendChild(_buildReferencePane());
-    if (typeof createFrameworkMapping === 'function') fw.appendChild(createFrameworkMapping(null, null, null));
-    pw.appendChild(wz); pw.appendChild(dp); pw.appendChild(cmp); pw.appendChild(gs); pw.appendChild(ref); pw.appendChild(fw);
+    pw.appendChild(wz); pw.appendChild(dp); pw.appendChild(cmp); pw.appendChild(gs); pw.appendChild(ref);
   }
 
   // ---- Wizard pane --------------------------------------------
