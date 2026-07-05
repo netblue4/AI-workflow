@@ -709,7 +709,7 @@
     "standard_ref": "[12792.4]",
     "standard_name": "Deep Fake Detection Support",
     "standard_text": "Where the system generates synthetic audio, image, or video content depicting real persons or events, technical measures are in place to embed provenance metadata or watermarking to support downstream detection.",
-    "coverage_type": "Test"
+    "coverage_type": "Not_Applicable"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-090",

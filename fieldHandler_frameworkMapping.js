@@ -300,6 +300,8 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                         tstCell.appendChild(fwBadge('Workflow', 'Evidenced by the governance workflow', '#a9b4ff', '#14152e', '#2c2e5a'));
                     } else if (coverageType === 'Document') {
                         tstCell.appendChild(fwBadge('Document', 'Evidenced by an external document', '#e0b060', '#241a06', '#4a3810'));
+                    } else if (coverageType === 'Not_Applicable') {
+                        tstCell.appendChild(fwBadge('N/A', 'Not applicable to this system type', '#8a94a6', '#1a1e26', '#333a47'));
                     } else if (tcs.length === 0) {
                         // Test-type with no test control yet — a genuine coverage gap.
                         tstCell.appendChild(fwBadge('Gap', 'No test control yet', '#f0857a', '#2a1210', '#4a201c'));

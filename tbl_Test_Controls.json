@@ -358,5 +358,61 @@
     "control_ref": "[9.5.T2]",
     "jkName": "Content Labelling Test Report",
     "jkObjective": "To provide per-run evidence that all AI-generated content carries the correct machine-readable and user-visible labels."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-049",
+    "fk_Risk_Control_ID": "",
+    "fk_Harmonised_Standard_IDs": "[24970.3]",
+    "control_ref": "[3.5.T1]",
+    "jkName": "System State Snapshot Test Report",
+    "jkObjective": "To provide a per-run evidence record proving every decision-making output is stored with a snapshot of the active model identifier, version tag, and configuration hash captured at generation time, and that an output written without a complete state snapshot is rejected."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-050",
+    "fk_Risk_Control_ID": "",
+    "fk_Harmonised_Standard_IDs": "[24970.4]",
+    "control_ref": "[3.5.T2]",
+    "jkName": "Decision Input/Output Capture Test Report",
+    "jkObjective": "To provide a per-run evidence record proving that for every high-risk or decision-making output the originating user prompt and the exact retrieved knowledge chunks are recorded and linked to the output, with no decision output persisted without its input context."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-051",
+    "fk_Risk_Control_ID": "",
+    "fk_Harmonised_Standard_IDs": "[24970.5]",
+    "control_ref": "[3.5.T3]",
+    "jkName": "Failure Diagnostics Log Test Report",
+    "jkObjective": "To provide a per-run evidence record proving every handled error and fallback activation writes a diagnostic entry containing the error code, message, severity level, and the fallback mechanism invoked, and that a failure cannot resolve without a corresponding diagnostic record."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-052",
+    "fk_Risk_Control_ID": "",
+    "fk_Harmonised_Standard_IDs": "[12792.1]",
+    "control_ref": "[10.1.T1]",
+    "jkName": "AI Identity Disclosure Test Report",
+    "jkObjective": "To provide a per-run evidence record proving the interface presents a clear, unambiguous notice that the user is interacting with an AI system at the start of every non-exempt interaction, and that the notice cannot be suppressed."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-053",
+    "fk_Risk_Control_ID": "",
+    "fk_Harmonised_Standard_IDs": "[12792.2]",
+    "control_ref": "[10.1.T2]",
+    "jkName": "Disclosure Timing Test Report",
+    "jkObjective": "To provide a per-run evidence record proving the AI disclosure is rendered before the first consequential output is returned and is expressed in the plain-language string configured for the deployment, verified against both a first-interaction and a mid-session path."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-054",
+    "fk_Risk_Control_ID": "",
+    "fk_Harmonised_Standard_IDs": "[12792.3]",
+    "control_ref": "[10.1.T3]",
+    "jkName": "AI Content Labelling Test Report",
+    "jkObjective": "To provide a per-run evidence record proving a machine-readable AI-generated marker is attached to synthesised content and that content emitted without the marker is blocked at the response boundary."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-055",
+    "fk_Risk_Control_ID": "",
+    "fk_Harmonised_Standard_IDs": "[12792.5]",
+    "control_ref": "[10.1.T4]",
+    "jkName": "Deployer Disclosure Activation Test Report",
+    "jkObjective": "To provide a per-run evidence record proving the provider transparency disclosure is active in the production configuration and passes an automated visibility and accessibility check, with deployment blocked when the disclosure component is disabled or unreachable."
   }
 ]

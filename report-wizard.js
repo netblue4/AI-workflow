@@ -920,7 +920,9 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           const hasCompAdd = compAddRefs.has(ref);
           const selfCert   = fsCtrls.length > 0 || hasCompAdd;
           const activated  = hsRisks.length > 0 || selfCert;
-          const isNA       = !activated && !!hsNA[ref];
+          // Not Applicable: either a per-deployment N/A decision, or a requirement
+          // marked structurally out of scope for this system type (coverage_type).
+          const isNA       = !activated && (!!hsNA[ref] || ctype === 'Not_Applicable');
           // Workflow- and Document-type requirements are evidenced by their own
           // mechanism (the report's own output, or an external artefact), so they
           // are covered even without a legal-risk activation — not gaps.
@@ -936,7 +938,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           else if (ctype === 'Workflow') { badgeKey = 'wf';  badgeTxt = '⚙ Workflow'; }
           else if (ctype === 'Document') { badgeKey = 'doc'; badgeTxt = '▤ Document'; }
           else                      { badgeKey = 'gap'; badgeTxt = '⚠ Gap'; }
-          const naReason = isNA ? hsNA[ref].reason : '';
+          const naReason = isNA ? (hsNA[ref] ? hsNA[ref].reason : 'Not applicable to this system type') : '';
           const rowCls   = covered ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
 
           // Treatment cell: the legal risk(s) activating this HS requirement,
