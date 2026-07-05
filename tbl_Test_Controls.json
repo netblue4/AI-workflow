@@ -160,14 +160,6 @@
     "jkObjective": "To provide a per-run evidence record proving the blocking write halts the pipeline on timeout with HTTP 500, captures the unconfirmed entry in the fallback buffer, and rejects unrecognised event types before any write path is entered — with no pipeline stage advancing without a confirmed log write."
   },
   {
-    "pk_Test_Control_ID": "TCTRL-022",
-    "fk_Risk_Control_ID": "[3.1.R2]",
-    "fk_Harmonised_Standard_IDs": "[18229-1.5]",
-    "control_ref": "[3.1.T2]",
-    "jkName": "Reconstruction Payload Schema Test Report",
-    "jkObjective": "To provide a per-run evidence record proving the schema gate passes complete entries without false rejection and fully rejects partial entries — with no partial log entry reaching the validated log store under any circumstance."
-  },
-  {
     "pk_Test_Control_ID": "TCTRL-023",
     "fk_Risk_Control_ID": "[3.1.R3]",
     "fk_Harmonised_Standard_IDs": "[24970.2]",
