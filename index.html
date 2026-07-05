@@ -219,7 +219,7 @@ function renderDetail(step, phaseColor, phaseTitle) {
 
       ${gatesHtml ? `<p class="section-label" style="margin-top:${step.accountability ? '16px' : '0'}">Gates and notes</p>${gatesHtml}` : ''}
 
-      ${reqHtml ? `<p class="section-label" style="margin-top:24px">Requirements addressed</p><div class="req-list">${reqHtml}</div>` : ''}
+      <div class="req-list">${reqHtml}</div>
 
       ${detailHint}
 
@@ -330,7 +330,7 @@ function renderStep3Detail(step, detail, color, phaseTitle) {
 
       <div class="gate-note info" style="margin-bottom:8px"><strong>AI SR9 clarification:</strong> ${detail.standard_note}</div>
 
-      ${reqHtml ? `<p class="section-label" style="margin-top:24px">Requirements addressed</p><div class="req-list">${reqHtml}</div>` : ''}
+      <div class="req-list">${reqHtml}</div>
 
     </div>`;
 }
@@ -505,6 +505,7 @@ function _ucShowStatus(msg) {
 (async () => {
   try {
     _workflow = await loadWorkflow();
+    await WizUtils.loadArticles();   // hydrate the article table before any render
     _stepIndex = indexSteps(_workflow);
     _phaseIndex = indexPhases(_workflow);
     renderNav(_workflow, _stepIndex, _phaseIndex, null);

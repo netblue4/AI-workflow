@@ -242,10 +242,10 @@ body {
 }
 /* Summary rendered in the deliverables visual style */
 .step-summary-box {
-  padding: 14px 16px;
-  background: var(--color-surface);
+  padding: 10px 14px;
+  background: var(--color-bg-subtle);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   font-size: 13px;
   color: var(--color-text-secondary);
   line-height: 1.6;
@@ -336,52 +336,32 @@ body {
 
 /* --- Shared section label ---------------------------------- */
 .section-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .07em;
+  font-weight: 500;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--color-text-secondary);
-  margin-bottom: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 10px;
 }
-.section-label::before {
-  content: "";
-  width: 3px;
-  height: 12px;
-  border-radius: 2px;
-  background: var(--gold);
-  flex-shrink: 0;
-}
-/* Don't apply the section tick/flex when .section-label is reused as a
-   collapsible header title — let it render as a plain inline heading. */
-.wiz-collapsible-header .section-label { display: block; margin-bottom: 0; }
-.wiz-collapsible-header .section-label::before { content: none; }
 
-/* --- Deliverables list — one neat divided card ------------- */
+/* --- Deliverables list ------------------------------------- */
 .deliverables-list {
   list-style: none;
   margin-bottom: 24px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
 }
 
 .deliverable-item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 11px 16px;
-  background: transparent;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: 0;
+  padding: 9px 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
   font-size: 13px;
   color: var(--color-text-secondary);
   line-height: 1.5;
 }
-.deliverable-item:last-child { border-bottom: none; }
 
 .deliverable-icon {
   width: 16px;
@@ -411,7 +391,9 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 0;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
 }
 
 .req-pill {
@@ -419,7 +401,7 @@ body {
   font-weight: 500;
   padding: 3px 9px;
   border-radius: 999px;
-  background: transparent;
+  background: var(--color-bg);
   border: 1px solid var(--color-border-mid);
   color: var(--color-text-secondary);
 }
@@ -485,7 +467,7 @@ body {
 .badge.new    { background: var(--warning-fill); color: var(--warning-text); }
 
 .badge.sr {
-  background: transparent;
+  background: var(--color-bg);
   border: 1px solid var(--color-border-mid);
   color: var(--color-text-secondary);
   border-radius: var(--radius-sm);

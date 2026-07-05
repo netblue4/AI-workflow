@@ -122,26 +122,24 @@ window.WizUtils = (function () {
     return { section, bodyEl };
   }
 
-  // ---- EU AI Act articles (replaces tbl_AI_Articles.json) -----------
-  const ARTICLES = [
-    { pk_AI_Article_ID: 'ART-001', article_name: 'Article 13: Transparency and Provision of Information to Deployers', short_name: 'Transparency' },
-    { pk_AI_Article_ID: 'ART-002', article_name: 'Article 14: Human Oversight', short_name: 'Human Oversight' },
-    { pk_AI_Article_ID: 'ART-003', article_name: 'Article 15: Accuracy, Robustness and Cybersecurity', short_name: 'Accuracy & Robustness' },
-    { pk_AI_Article_ID: 'ART-004', article_name: 'Article 10: Data and Data Governance', short_name: 'Data Governance' },
-    { pk_AI_Article_ID: 'ART-005', article_name: 'Article 12: Record-Keeping', short_name: 'Record-Keeping' },
-    { pk_AI_Article_ID: 'ART-006', article_name: 'Article 17: Quality Management System', short_name: 'Quality Management' },
-    { pk_AI_Article_ID: 'ART-007', article_name: 'Article 9: Risk Management System', short_name: 'Risk Management' },
-    { pk_AI_Article_ID: 'ART-008', article_name: 'Article 11: Technical Documentation', short_name: 'Technical Documentation' },
-    { pk_AI_Article_ID: 'ART-009', article_name: 'Article 25: Substantial Modification', short_name: 'Substantial Modification' },
-    { pk_AI_Article_ID: 'ART-010', article_name: 'Article 26: Deployer Obligations', short_name: 'Deployer Obligations' },
-    { pk_AI_Article_ID: 'ART-011', article_name: 'Article 43: Conformity Assessment', short_name: 'Conformity Assessment' },
-    { pk_AI_Article_ID: 'ART-012', article_name: 'Article 50: Transparency Obligations for Certain AI Systems', short_name: 'AI Transparency' },
-    { pk_AI_Article_ID: 'ART-013', article_name: 'Article 72: Post-Market Monitoring', short_name: 'Post-Market Monitoring' },
-    { pk_AI_Article_ID: 'ART-014', article_name: 'Article 5: Prohibited AI Practices', short_name: 'Prohibited Practices' },
-    { pk_AI_Article_ID: 'ART-015', article_name: 'Article 6: Classification of High-Risk AI Systems', short_name: 'High-Risk Classification' },
-    { pk_AI_Article_ID: 'ART-016', article_name: 'Article 16: Obligations for Providers of High-Risk AI Systems', short_name: 'Provider Obligations' },
-  ];
-  const ARTICLES_BY_ID = new Map(ARTICLES.map(a => [a.pk_AI_Article_ID, a]));
+  // ---- EU AI Act articles (tbl_AI_Articles.json) --------------------
+  // The article table is the source of truth. ARTICLES / ARTICLES_BY_ID are
+  // kept as a mutable array + map, hydrated once at startup via loadArticles(),
+  // so the many synchronous consumers (artLabel, buildStepHeader, the step
+  // wizards, the report, the framework mapping) keep working unchanged.
+  const ARTICLES = [];
+  const ARTICLES_BY_ID = new Map();
+
+  function loadArticles() {
+    return fetch('tbl_AI_Articles.json')
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}: tbl_AI_Articles.json`); return r.json(); })
+      .then(list => {
+        ARTICLES.length = 0;
+        ARTICLES_BY_ID.clear();
+        (list || []).forEach(a => { ARTICLES.push(a); ARTICLES_BY_ID.set(a.pk_AI_Article_ID, a); });
+        return ARTICLES;
+      });
+  }
 
   function artLabel(artId) {
     const art = ARTICLES_BY_ID.get(artId);
@@ -227,8 +225,7 @@ window.WizUtils = (function () {
     }
 
     if (step.requirementLabels && step.requirementLabels.length) {
-      sec.appendChild(sectionLabel('Requirements addressed'));
-      const rl = el('div', 'req-list');
+      const rl = el('div', 'req-list', { style: 'margin-top:14px' });
       step.requirementLabels.forEach(r => rl.appendChild(el('span', 'req-pill', { textContent: r })));
       sec.appendChild(rl);
     }
@@ -361,5 +358,5 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, artLabel, fmtStdRef, STD_REF_PREFIX };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX };
 })();
