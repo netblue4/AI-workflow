@@ -59,6 +59,7 @@
 
   // Legal/Regulatory tab — the HS requirement is the activated treatment unit
   let _hsByRef = new Map();   // standard_ref → HS row
+  let _tcByHsRef = new Map(); // standard_ref → TestControl[]
   const _hsActState = {};     // `${riskId}::${standard_ref}` → { status, notes }
 
   const STATUS_LEGACY_MAP = { pending: 'not_started', completed: 'evidence_provided', not_applicable: 'waived' };
@@ -80,6 +81,7 @@
     Object.keys(_residualState).forEach(k => delete _residualState[k]);
     Object.keys(_hsActState).forEach(k => delete _hsActState[k]);
     _hsByRef = new Map();
+    _tcByHsRef = new Map();
 
     _injectStyles();
 
@@ -108,6 +110,13 @@
     }
     _tblData = { risks, riskControls, testControls, hs: hs || [] };
     _hsByRef = new Map((hs || []).map(h => [h.standard_ref, h]));
+    // Test controls indexed by each HS requirement they verify — used to ask the
+    // assessor for the test result (operating effectiveness) on Test-type reqs.
+    _tcByHsRef = new Map();
+    (testControls || []).forEach(tc => {
+      (tc.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean)
+        .forEach(ref => { if (!_tcByHsRef.has(ref)) _tcByHsRef.set(ref, []); _tcByHsRef.get(ref).push(tc); });
+    });
 
     _record = WizUtils.loadRecord();
 
@@ -423,8 +432,10 @@
     const body = _el('div', 's9-risk-acc-body s9-collapsed');
 
     if (domain === 'legal') {
-      // Legal/Regulatory: the HS requirement is the activated treatment — no test section.
-      body.appendChild(_sectionLabel('1 · Harmonised Standard Activation'));
+      // Legal/Regulatory: verify each HS requirement — for Test-type requirements
+      // the evidence is the test result; for Document/Workflow it is the artefact
+      // or workflow record. No separate risk-control test section.
+      body.appendChild(_sectionLabel('1 · Harmonised Standard Verification'));
       const refs = _legalRiskHsRefs(riskId);
       if (refs.length) refs.forEach(ref => body.appendChild(_buildHsActCard(riskId, ref)));
       else body.appendChild(_domainMuted('No harmonised standard requirements selected for this risk in Step 6.'));
@@ -751,11 +762,40 @@
       card.appendChild(objWrap);
     }
 
+    // What evidence to ask for depends on how the requirement is verified.
+    const ctype = h?.coverage_type || 'Test';
+    const tests = _tcByHsRef.get(ref) || [];
+    let evLabel = 'Evidence / Notes';
+    let evPlaceholder = 'Describe how this requirement is implemented and evidenced…';
+
+    if (ctype === 'Test' && tests.length) {
+      // The test proves the requirement operates as expected — ask for its result.
+      const tWrap = _el('div', 's9-obj-wrap');
+      tWrap.appendChild(_el('span', 's9-field-label', { textContent: tests.length > 1 ? 'Verification tests' : 'Verification test' }));
+      tests.forEach(tc => {
+        const line = _el('div', ''); line.style.margin = '6px 0';
+        line.appendChild(_el('span', 's9-src-badge s9-src-badge--framework', { textContent: WizUtils.fmtStdRef(tc.control_ref) }));
+        line.appendChild(_el('span', 's9-ctrl-name', { textContent: ' ' + (tc.jkName || '') }));
+        if (tc.jkObjective) line.appendChild(_el('p', 's9-ctrl-obj', { textContent: tc.jkObjective }));
+        tWrap.appendChild(line);
+      });
+      card.appendChild(tWrap);
+      evLabel = 'Test result';
+      evPlaceholder = 'Record the outcome and attach the test report or link proving the test passed…';
+    } else if (ctype === 'Document') {
+      evLabel = 'Document reference';
+      evPlaceholder = 'Reference the external document that evidences this requirement (title, version, link)…';
+    } else if (ctype === 'Workflow') {
+      card.appendChild(_domainMuted('Evidenced by the governance workflow. Add a pointer to the relevant step or record if needed.'));
+      evLabel = 'Evidence pointer';
+      evPlaceholder = 'Optional — point to the workflow step or record that evidences this requirement…';
+    }
+
     const notesWrap = _el('div', 's9-notes-wrap');
-    notesWrap.appendChild(_el('label', 's9-field-label', { textContent: 'Evidence / Notes' }));
+    notesWrap.appendChild(_el('label', 's9-field-label', { textContent: evLabel }));
     const ta = document.createElement('textarea');
     ta.className = 's9-ctrl-notes'; ta.rows = 3; ta.value = st.notes;
-    ta.placeholder = 'Describe how this requirement is implemented and evidenced…';
+    ta.placeholder = evPlaceholder;
     ta.addEventListener('input', () => {
       _hsActState[key].notes = ta.value;
       if (ta.value.trim() && _hsActState[key].status === 'not_started') {
