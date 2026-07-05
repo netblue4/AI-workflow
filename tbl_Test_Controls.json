@@ -40,14 +40,6 @@
     "jkObjective": "To provide a per-run evidence record proving the schema validation gate rejects partial entries and passes complete entries — confirming no incomplete log record can reach the log store and create a false appearance of audit trail completeness."
   },
   {
-    "pk_Test_Control_ID": "TCTRL-006",
-    "fk_Risk_Control_ID": "[3.1.R3]",
-    "fk_Harmonised_Standard_IDs": "[24970.3]",
-    "control_ref": "[3.1.T3]",
-    "jkName": "Human Intervention Log Test Report",
-    "jkObjective": "To provide a per-run evidence record proving every human intervention event is captured with a linked session ID and that unlinked intervention events are rejected at write time — ensuring the full decision chain of AI output followed by human action is reconstructable."
-  },
-  {
     "pk_Test_Control_ID": "TCTRL-007",
     "fk_Risk_Control_ID": "[3.3.R1]",
     "fk_Harmonised_Standard_IDs": "[24970.6]",
@@ -290,7 +282,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-039",
     "fk_Risk_Control_ID": "[4.3.R1]",
-    "fk_Harmonised_Standard_IDs": "[18229-2.12],[18286.13],[18286.22]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.12],[18286.13],[18286.22],[18286.23]",
     "control_ref": "[4.3.T1]",
     "jkName": "Drift Monitor Suspension Test Report",
     "jkObjective": "To provide a per-run evidence record proving the production drift monitor suspends the Query Interface after two consecutive Faithfulness breaches and does not produce false positive suspensions for score fluctuations within the declared drift tolerance."
@@ -306,7 +298,7 @@
   {
     "pk_Test_Control_ID": "TCTRL-041",
     "fk_Risk_Control_ID": "[7.1.R1]",
-    "fk_Harmonised_Standard_IDs": "[18229-2.15],[18286.23]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.15]",
     "control_ref": "[7.1.T1]",
     "jkName": "Input Sanitisation Gate Test Report",
     "jkObjective": "To provide a per-run evidence record proving the two-stage sanitisation gate correctly blocks null payloads at Stage 1, rejects high-corruption prompts at Stage 2, and passes clean prompts without false positives."
