@@ -1,11 +1,9 @@
 /**
  * Framework Mapping Handler — loads tbl_ JSON files and renders a read-only
  * compliance reference table.
- * Columns: AI Act Article | Standard | Requirement | Define | Build | Test
+ * Columns: AI Act Article | Standard | Requirement | Test
  *
- * Define  → Framework_Statement controls (FS-*)
- * Build   → Harmonised_Standard risk controls
- * Test    → tbl_Test_Controls entries
+ * Test    → tbl_Test_Controls entries covering each HS requirement
  *
  * Rows are clickable (toggle gold highlight). Article / standard groups are
  * visually separated by heavier top borders.
@@ -128,12 +126,11 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         // Articles were inlined into WizUtils.ARTICLES (tbl_AI_Articles.json was removed)
         Promise.resolve((window.WizUtils && WizUtils.ARTICLES) || []),
         cachedFetch('tbl_Harmonised_Standards.json','_fwHS'),
-        cachedFetch('tbl_Risk_Controls.json',       '_fwRC'),
         cachedFetch('tbl_Test_Controls.json',       '_fwTC'),
-    ]).then(([articles, hs, riskControls, testControls]) => {
+    ]).then(([articles, hs, testControls]) => {
         tableContainer.innerHTML = '';
         tableContainer.appendChild(
-            buildFWTable(articles, hs, riskControls, testControls)
+            buildFWTable(articles, hs, testControls)
         );
     }).catch(err => {
         tableContainer.innerHTML = '';
@@ -146,19 +143,10 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
     return wrapper;
 
     // ── Table builder (runs after data loads) ──────────────────────────────────
-    function buildFWTable(articles, hs, riskControls, testControls) {
+    function buildFWTable(articles, hs, testControls) {
 
-        // Index risk controls by each HS standard_ref they cover
-        const rcByRef  = new Map(); // standard_ref → RiskControl[]
+        // Index test controls by each HS standard_ref they cover
         const tcByRef  = new Map(); // standard_ref → TestControl[]
-
-        for (const rc of riskControls) {
-            const refs = splitRefs(rc.fk_Harmonised_Standard_IDs);
-            for (const ref of refs) {
-                if (!rcByRef.has(ref)) rcByRef.set(ref, []);
-                rcByRef.get(ref).push(rc);
-            }
-        }
 
         for (const tc of testControls) {
             const refs = splitRefs(tc.fk_Harmonised_Standard_IDs);
@@ -189,12 +177,9 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     groupMap.set(grp, []);
                     groupOrder.push(grp);
                 }
-                const rcs = rcByRef.get(h.standard_ref) || [];
                 groupMap.get(grp).push({
                     hsRef:          h.standard_ref,
                     hsName:         h.standard_name,
-                    defineControls: rcs.filter(r => r.control_source === 'Framework_Statement'),
-                    buildControls:  rcs.filter(r => r.control_source !== 'Framework_Statement'),
                     testControls:   tcByRef.get(h.standard_ref) || [],
                 });
             }
@@ -213,12 +198,10 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         const thead     = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const columns   = [
-            { label: 'AI Act Article', width: '15%' },
-            { label: 'Standard',       width: '18%' },
-            { label: 'Requirement',    width: '17%' },
-            { label: 'Define',         width: '16%' },
-            { label: 'Build',          width: '17%' },
-            { label: 'Test',           width: '17%' },
+            { label: 'AI Act Article', width: '20%' },
+            { label: 'Standard',       width: '22%' },
+            { label: 'Requirement',    width: '33%' },
+            { label: 'Test',           width: '25%' },
         ];
         columns.forEach(col => {
             const th = document.createElement('th');
@@ -245,7 +228,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             groups.forEach(({ groupName, reqs }) => {
                 let isFirstGroupRow = true;
 
-                reqs.forEach(({ hsRef, hsName, defineControls, buildControls, testControls: tcs }) => {
+                reqs.forEach(({ hsRef, hsName, testControls: tcs }) => {
                     const isEven  = rowIndex % 2 === 0;
                     const baseBg  = isEven ? '#1a1a1a' : '#161616';
 
@@ -308,33 +291,6 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     reqCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
                     reqCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
                     row.appendChild(reqCell);
-
-                    // Define cell — Framework_Statement controls
-                    const defCell = document.createElement('td');
-                    defCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
-                    if (defineControls.length === 0) {
-                        defCell.style.color = '#303030';
-                        defCell.textContent = '—';
-                    } else {
-                        defineControls.forEach(rc => {
-                            defCell.appendChild(fwBadge(rc.pk_Risk_Control_ID, rc.jkName, '#b8963e', '#1a1500', '#3d2e00'));
-                        });
-                    }
-                    row.appendChild(defCell);
-
-                    // Build cell — the harmonised-standard requirement is itself
-                    // the build unit (implemented directly). Any remaining
-                    // non-Framework controls (e.g. Group Standard) are shown too.
-                    const bldCell = document.createElement('td');
-                    bldCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
-                    if (buildControls.length) {
-                        buildControls.forEach(rc => {
-                            bldCell.appendChild(fwBadge(rc.pk_Risk_Control_ID, rc.jkName, '#a78bfa', '#1e1a35', '#2e2850'));
-                        });
-                    } else {
-                        bldCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), 'Implement HS requirement', '#a78bfa', '#1e1a35', '#2e2850'));
-                    }
-                    row.appendChild(bldCell);
 
                     // Test cell
                     const tstCell = document.createElement('td');
