@@ -180,6 +180,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                 groupMap.get(grp).push({
                     hsRef:          h.standard_ref,
                     hsName:         h.standard_name,
+                    coverageType:   h.coverage_type || 'Test',
                     testControls:   tcByRef.get(h.standard_ref) || [],
                 });
             }
@@ -201,7 +202,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             { label: 'AI Act Article', width: '20%' },
             { label: 'Standard',       width: '22%' },
             { label: 'Requirement',    width: '33%' },
-            { label: 'Test',           width: '25%' },
+            { label: 'Verification',   width: '25%' },
         ];
         columns.forEach(col => {
             const th = document.createElement('th');
@@ -228,7 +229,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             groups.forEach(({ groupName, reqs }) => {
                 let isFirstGroupRow = true;
 
-                reqs.forEach(({ hsRef, hsName, testControls: tcs }) => {
+                reqs.forEach(({ hsRef, hsName, coverageType, testControls: tcs }) => {
                     const isEven  = rowIndex % 2 === 0;
                     const baseBg  = isEven ? '#1a1a1a' : '#161616';
 
@@ -292,12 +293,16 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     reqCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
                     row.appendChild(reqCell);
 
-                    // Test cell
+                    // Verification cell — depends on how the requirement is evidenced.
                     const tstCell = document.createElement('td');
                     tstCell.style.cssText = cellBase;
-                    if (tcs.length === 0) {
-                        tstCell.style.color = '#303030';
-                        tstCell.textContent = '—';
+                    if (coverageType === 'Workflow') {
+                        tstCell.appendChild(fwBadge('Workflow', 'Evidenced by the governance workflow', '#a9b4ff', '#14152e', '#2c2e5a'));
+                    } else if (coverageType === 'Document') {
+                        tstCell.appendChild(fwBadge('Document', 'Evidenced by an external document', '#e0b060', '#241a06', '#4a3810'));
+                    } else if (tcs.length === 0) {
+                        // Test-type with no test control yet — a genuine coverage gap.
+                        tstCell.appendChild(fwBadge('Gap', 'No test control yet', '#f0857a', '#2a1210', '#4a201c'));
                     } else {
                         tcs.forEach(tc => {
                             tstCell.appendChild(fwBadge(tc.control_ref, tc.jkName, '#34d399', '#0f2520', '#1a3830'));

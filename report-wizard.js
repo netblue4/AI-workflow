@@ -892,6 +892,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     let html = '';
     let gapCount = 0;
     let coveredCount = 0;
+    let byTypeCount = 0;
 
     applicableNums.forEach(artNum => {
       const artDef = artByNum.get(artNum);
@@ -912,23 +913,35 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
           <tbody>`;
         hsReqs.forEach(h => {
           const ref       = h.standard_ref;
+          const ctype     = h.coverage_type || 'Test';
           const hsRisks   = _hsRisksForRef(s9, s10, ref);   // legal selection + activation
           const fsCtrls   = (fsByRef.get(ref) || [])
             .filter((c, i, a) => a.findIndex(x => x.pk_Risk_Control_ID === c.pk_Risk_Control_ID) === i);
           const hasCompAdd = compAddRefs.has(ref);
           const selfCert   = fsCtrls.length > 0 || hasCompAdd;
-          const covered    = hsRisks.length > 0 || selfCert;
-          const isNA       = !covered && !!hsNA[ref];
+          const activated  = hsRisks.length > 0 || selfCert;
+          const isNA       = !activated && !!hsNA[ref];
+          // Workflow- and Document-type requirements are evidenced by their own
+          // mechanism (the report's own output, or an external artefact), so they
+          // are covered even without a legal-risk activation — not gaps.
+          const byType     = !activated && !isNA && (ctype === 'Workflow' || ctype === 'Document');
+          const covered    = activated || byType;
 
           if (covered) coveredCount++; else if (!isNA) gapCount++;
+          if (byType) byTypeCount++;
 
-          const badgeKey = covered ? (hsRisks.length > 0 ? 'ok' : 'fs') : (isNA ? 'na' : 'gap');
-          const badgeTxt = covered ? (hsRisks.length > 0 ? '✓ Activated' : '✓ Self-certified') : (isNA ? '⊘ N/A' : '⚠ Gap');
+          let badgeKey, badgeTxt;
+          if (activated)            { badgeKey = hsRisks.length > 0 ? 'ok' : 'fs'; badgeTxt = hsRisks.length > 0 ? '✓ Activated' : '✓ Self-certified'; }
+          else if (isNA)            { badgeKey = 'na';  badgeTxt = '⊘ N/A'; }
+          else if (ctype === 'Workflow') { badgeKey = 'wf';  badgeTxt = '⚙ Workflow'; }
+          else if (ctype === 'Document') { badgeKey = 'doc'; badgeTxt = '▤ Document'; }
+          else                      { badgeKey = 'gap'; badgeTxt = '⚠ Gap'; }
           const naReason = isNA ? hsNA[ref].reason : '';
           const rowCls   = covered ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
 
           // Treatment cell: the legal risk(s) activating this HS requirement,
-          // else the self-certifying framework control / compliance addition.
+          // else the self-certifying control / compliance addition, else the
+          // evidence route implied by the requirement's coverage type.
           let ctrlCell = '';
           if (hsRisks.length > 0) {
             ctrlCell += hsRisks.map(r =>
@@ -940,6 +953,10 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
             ).join('');
           } else if (hasCompAdd) {
             ctrlCell += `<span class="trace-ctrl-chip">Compliance addition</span>`;
+          } else if (ctype === 'Workflow') {
+            ctrlCell += `<span class="trace-ctrl-chip">Evidenced by the governance workflow</span>`;
+          } else if (ctype === 'Document') {
+            ctrlCell += `<span class="trace-ctrl-chip">Evidenced by an external document</span>`;
           }
 
           html += `<tr class="${rowCls}">
@@ -956,9 +973,10 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     const naCount      = Object.keys(hsNA).length;
     const totalHS      = coveredCount + gapCount + naCount;
     const summaryClass = gapCount === 0 ? 'trace-summary--ok' : 'trace-summary--warn';
+    const byTypeNote = byTypeCount > 0 ? ` (${byTypeCount} evidenced by workflow or document)` : '';
     const summaryText  = gapCount === 0
-      ? `✓ ${coveredCount} HS requirement${coveredCount !== 1 ? 's' : ''} covered${naCount > 0 ? `, ${naCount} marked Not Applicable` : ''}. No unresolved gaps.`
-      : `⚠ ${gapCount} gap${gapCount !== 1 ? 's' : ''} identified across ${totalHS} HS requirements. Gaps must be resolved before conformity sign-off.${naCount > 0 ? ` (${naCount} marked Not Applicable)` : ''}`;
+      ? `✓ ${coveredCount} HS requirement${coveredCount !== 1 ? 's' : ''} covered${byTypeNote}${naCount > 0 ? `, ${naCount} marked Not Applicable` : ''}. No unresolved gaps.`
+      : `⚠ ${gapCount} gap${gapCount !== 1 ? 's' : ''} identified across ${totalHS} HS requirements${byTypeNote}. Gaps must be resolved before conformity sign-off.${naCount > 0 ? ` (${naCount} marked Not Applicable)` : ''}`;
 
     return `<div class="trace-summary ${summaryClass}">${summaryText}</div>` + html;
   }
@@ -1490,6 +1508,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-cov-badge--fs{background:#ede9fe;color:#7c3aed}
 .trace-cov-badge--gap{background:#fee2e2;color:#991b1b}
 .trace-cov-badge--na{background:#f1f5f9;color:#475569}
+.trace-cov-badge--wf{background:#e0e7ff;color:#3730a3}
+.trace-cov-badge--doc{background:#fef3c7;color:#92620e}
 .trace-na-reason{font-size:8.5pt;color:#64748b;font-style:italic;padding:3px 4px 5px;border-left:2px solid #cbd5e1;margin-top:4px}
 .trace-ctrl-list{display:flex;gap:4px;flex-wrap:wrap;padding-top:4px}
 .trace-ctrl-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#e0e7ff;color:#3730a3;font-family:monospace}
