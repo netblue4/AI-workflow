@@ -1,9 +1,11 @@
 /**
  * Framework Mapping Handler — loads tbl_ JSON files and renders a read-only
- * compliance reference table.
- * Columns: AI Act Article | Standard | Requirement | Test
+ * compliance reference table across both compliance dimensions.
+ * Columns: AI Act Article | Standard | Requirement | Verification | Internal Std (SR) | Framework Statement
  *
- * Test    → tbl_Test_Controls entries covering each HS requirement
+ * Verification        → how the HS requirement is evidenced (test / document / workflow / N-A)
+ * Internal Std (SR)   → the internal AI Acceptable Use Standard clause(s) that map to it
+ * Framework Statement → governance self-certification by the workflow (FS-*)
  *
  * Rows are clickable (toggle gold highlight). Article / standard groups are
  * visually separated by heavier top borders.
@@ -127,10 +129,12 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         Promise.resolve((window.WizUtils && WizUtils.ARTICLES) || []),
         cachedFetch('tbl_Harmonised_Standards.json','_fwHS'),
         cachedFetch('tbl_Test_Controls.json',       '_fwTC'),
-    ]).then(([articles, hs, testControls]) => {
+        cachedFetch('tbl_AI_SR_Controls.json',      '_fwSR'),
+        cachedFetch('tbl_Risk_Controls.json',       '_fwRC'),
+    ]).then(([articles, hs, testControls, srControls, riskControls]) => {
         tableContainer.innerHTML = '';
         tableContainer.appendChild(
-            buildFWTable(articles, hs, testControls)
+            buildFWTable(articles, hs, testControls, srControls, riskControls)
         );
     }).catch(err => {
         tableContainer.innerHTML = '';
@@ -143,18 +147,23 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
     return wrapper;
 
     // ── Table builder (runs after data loads) ──────────────────────────────────
-    function buildFWTable(articles, hs, testControls) {
+    function buildFWTable(articles, hs, testControls, srControls, riskControls) {
 
-        // Index test controls by each HS standard_ref they cover
-        const tcByRef  = new Map(); // standard_ref → TestControl[]
-
-        for (const tc of testControls) {
-            const refs = splitRefs(tc.fk_Harmonised_Standard_IDs);
-            for (const ref of refs) {
-                if (!tcByRef.has(ref)) tcByRef.set(ref, []);
-                tcByRef.get(ref).push(tc);
+        // Index each contributor by the HS standard_ref it covers.
+        const indexByRef = (rows, refField, keep) => {
+            const m = new Map();
+            for (const r of (rows || [])) {
+                if (keep && !keep(r)) continue;
+                for (const ref of splitRefs(r[refField])) {
+                    if (!m.has(ref)) m.set(ref, []);
+                    m.get(ref).push(r);
+                }
             }
-        }
+            return m;
+        };
+        const tcByRef = indexByRef(testControls, 'fk_Harmonised_Standard_IDs');
+        const srByRef = indexByRef(srControls,   'fk_Harmonised_Standard_IDs');  // internal AI Acceptable Use Standard
+        const fsByRef = indexByRef(riskControls, 'fk_Harmonised_Standard_IDs', rc => rc.control_source === 'Framework_Statement');
 
         // Build nested structure: article → standard_group → HS entries
         // Preserves ordering from tbl_AI_Articles and tbl_Harmonised_Standards
@@ -182,6 +191,8 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     hsName:         h.standard_name,
                     coverageType:   h.coverage_type || 'Test',
                     testControls:   tcByRef.get(h.standard_ref) || [],
+                    srControls:     srByRef.get(h.standard_ref) || [],
+                    fsControls:     fsByRef.get(h.standard_ref) || [],
                 });
             }
 
@@ -199,10 +210,12 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         const thead     = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const columns   = [
-            { label: 'AI Act Article', width: '20%' },
-            { label: 'Standard',       width: '22%' },
-            { label: 'Requirement',    width: '33%' },
-            { label: 'Verification',   width: '25%' },
+            { label: 'AI Act Article',      width: '13%' },
+            { label: 'Standard',            width: '11%' },
+            { label: 'Requirement',         width: '26%' },
+            { label: 'Verification',        width: '18%' },
+            { label: 'Internal Std (SR)',   width: '16%' },
+            { label: 'Framework Statement', width: '16%' },
         ];
         columns.forEach(col => {
             const th = document.createElement('th');
@@ -229,7 +242,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             groups.forEach(({ groupName, reqs }) => {
                 let isFirstGroupRow = true;
 
-                reqs.forEach(({ hsRef, hsName, coverageType, testControls: tcs }) => {
+                reqs.forEach(({ hsRef, hsName, coverageType, testControls: tcs, srControls: srs, fsControls: fss }) => {
                     const isEven  = rowIndex % 2 === 0;
                     const baseBg  = isEven ? '#1a1a1a' : '#161616';
 
@@ -295,7 +308,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
 
                     // Verification cell — depends on how the requirement is evidenced.
                     const tstCell = document.createElement('td');
-                    tstCell.style.cssText = cellBase;
+                    tstCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
                     if (coverageType === 'Workflow') {
                         tstCell.appendChild(fwBadge('Workflow', 'Evidenced by the governance workflow', '#a9b4ff', '#14152e', '#2c2e5a'));
                     } else if (coverageType === 'Document') {
@@ -311,6 +324,22 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                         });
                     }
                     row.appendChild(tstCell);
+
+                    // Internal Standard (SR) cell — the AI Acceptable Use Standard clause(s).
+                    const srCell = document.createElement('td');
+                    srCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
+                    if (srs.length) {
+                        srs.forEach(sr => srCell.appendChild(fwBadge(sr.groupstandard_ref, sr.control_name, '#5ec8c0', '#0c2321', '#1a3a37')));
+                    } else { srCell.style.color = '#303030'; srCell.textContent = '—'; }
+                    row.appendChild(srCell);
+
+                    // Framework Statement cell — governance self-certification by the workflow.
+                    const fsCell = document.createElement('td');
+                    fsCell.style.cssText = cellBase;
+                    if (fss.length) {
+                        fss.forEach(fs => fsCell.appendChild(fwBadge(fs.pk_Risk_Control_ID, fs.jkName, '#b79cff', '#181433', '#312a56')));
+                    } else { fsCell.style.color = '#303030'; fsCell.textContent = '—'; }
+                    row.appendChild(fsCell);
 
                     tbody.appendChild(row);
 

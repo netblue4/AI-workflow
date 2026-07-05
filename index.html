@@ -35,6 +35,11 @@
       <div id="uc-status" class="uc-status"></div>
     </div>
 
+    <button class="nav-about" id="nav-about" onclick="selectAbout()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>About the framework</span>
+    </button>
+
     <div class="nav-scroll" id="nav-scroll">
       <!-- Rendered by JS from workflow.json -->
     </div>
@@ -341,6 +346,16 @@ let _stepIndex = null;
 let _phaseIndex = null;
 let _activeStepId = null;
 
+function selectAbout() {
+  _activeStepId = null;
+  // Clear step highlighting; mark the About item active.
+  if (_workflow) renderNav(_workflow, _stepIndex, _phaseIndex, null);
+  document.getElementById('nav-about')?.classList.add('active');
+  const panel = document.getElementById('detail-panel');
+  panel.scrollTop = 0;
+  if (typeof mountAboutFramework === 'function') mountAboutFramework(panel);
+}
+
 async function selectStep(stepId) {
   if (!_workflow || !_stepIndex) return;
   _activeStepId = stepId;
@@ -352,6 +367,7 @@ async function selectStep(stepId) {
 
   // Update nav active state
   renderNav(_workflow, _stepIndex, _phaseIndex, stepId);
+  document.getElementById('nav-about')?.classList.remove('active');
 
   // Scroll detail to top
   const panel = document.getElementById('detail-panel');
@@ -527,6 +543,7 @@ function _ucShowStatus(msg) {
 </script>
 
 <script src="fieldHandler_frameworkMapping.js"></script>
+<script src="about-framework.js"></script>
 <script src="wizard-utils.js"></script>
 <script src="step2-wizard.js"></script>
 <script src="step3-wizard.js"></script>
