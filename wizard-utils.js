@@ -88,16 +88,23 @@ window.WizUtils = (function () {
 
     const hLeft = document.createElement('div');
     hLeft.className = 'wiz-collapsible-header-left';
+    if (opts.number) {
+      hLeft.appendChild(el('span', 'wiz-item-num', { textContent: opts.number }));
+    }
     if (opts.icon) {
       const iconEl = el('span', 'wiz-item-icon');
       iconEl.innerHTML = opts.icon === true ? _RISK_ICON : opts.icon;
       hLeft.appendChild(iconEl);
     }
     hLeft.appendChild(el('span', 'wiz-item-name', { textContent: opts.title }));
+    // Article tag can sit inline next to the name (left) or on the right.
+    if (opts.artId && opts.artInline) {
+      hLeft.appendChild(el('span', 'wiz-art-tag', { textContent: artLabel(opts.artId) }));
+    }
 
     const hRight = document.createElement('div');
     hRight.className = 'wiz-collapsible-header-right';
-    if (opts.artId) {
+    if (opts.artId && !opts.artInline) {
       hRight.appendChild(el('span', 'wiz-art-tag', { textContent: artLabel(opts.artId) }));
     }
     const chevron = document.createElement('span');
@@ -347,6 +354,7 @@ window.WizUtils = (function () {
 .wiz-collapsible-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .wiz-collapsible-body{padding:14px 16px;border-top:1px solid var(--color-border)}
 .wiz-item-icon{display:flex;color:#ec6a68;flex-shrink:0}
+.wiz-item-num{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--color-text-secondary);background:var(--color-bg-subtle);border:1px solid var(--color-border);border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0}
 .wiz-item-name{font-size:13px;font-weight:700;color:var(--color-text-primary);min-width:0}
 .wiz-art-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:rgba(80,150,225,0.16);color:#a4ccf6;white-space:nowrap;flex-shrink:0;letter-spacing:.02em}
 .wiz-item-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;min-width:40px;text-align:center;flex-shrink:0}

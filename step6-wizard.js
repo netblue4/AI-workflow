@@ -383,9 +383,7 @@
     // Left: risk heading
     const left = _el('div', 'wiz9-risk-hdr-left');
 
-    const riskIcon = _el('span', 'wiz-item-icon');
-    riskIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
-    left.appendChild(riskIcon);
+    left.appendChild(_el('span', 'wiz-item-num', { textContent: risk.risk_id }));
 
     const rName = _el('span', 'wiz-item-name');
     rName.textContent = risk.display_name;

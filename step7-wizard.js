@@ -417,6 +417,8 @@
     const left = _el('div', 's9-risk-acc-left');
     left.appendChild(_el('span', 's9-risk-acc-id',   { textContent: riskId }));
     left.appendChild(_el('span', 's9-risk-acc-name', { textContent: riskName }));
+    const artId = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId)?.fk_AI_Article_ID;
+    if (artId) left.appendChild(_el('span', 'wiz-art-tag', { textContent: WizUtils.artLabel(artId) }));
     hdr.appendChild(left);
     const rr = _residualState[riskId] || {};
     const lvlPill = _el('span', 's9-risk-acc-id');
