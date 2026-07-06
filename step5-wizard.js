@@ -19,6 +19,7 @@
   let _tblRisks    = [];   // all rows from tbl_Risks.json
   let _tblControls = [];   // all rows from tbl_Risk_Controls.json
   let _controlsByRisk = new Map(); // pk_Risk_ID → [control, ...]
+  let _riskIdByName   = new Map(); // risk_name → pk_Risk_ID
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
@@ -80,6 +81,7 @@
       return;
     }
     _tblRisks = risks;
+    _riskIdByName = new Map((risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
 
     if (controls) {
       _tblControls = controls;
@@ -494,13 +496,8 @@
       body.appendChild(ta);
 
       const artId = article?.pk_AI_Article_ID || null;
-      const { section } = WizUtils.buildCollapsible({ title: wq.risk_name, icon: true, artId, body });
-      if (category) {
-        const catTag = _el('span', 'wiz8-cat-tag');
-        catTag.textContent = category;
-        catTag.style.background = catColors.bg; catTag.style.color = catColors.text;
-        section.querySelector('.wiz-collapsible-header-right').prepend(catTag);
-      }
+      const riskNum = _riskIdByName.get(wq.risk_name) || '';
+      const { section } = WizUtils.buildCollapsible({ title: wq.risk_name, number: riskNum, icon: false, artId, artInline: true, body });
       section.querySelector('.wiz-collapsible-header-right').prepend(badge);
       list.appendChild(section);
     });
@@ -640,7 +637,7 @@
     });
     body.appendChild(btnRow);
 
-    const { section } = WizUtils.buildCollapsible({ title: risk.risk_name, icon: true, body });
+    const { section } = WizUtils.buildCollapsible({ title: risk.risk_name, number: risk.pk_Risk_ID, icon: false, body });
     section.querySelector('.wiz-collapsible-header-right').prepend(badge);
     return section;
   }
