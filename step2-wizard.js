@@ -258,20 +258,43 @@
     return Object.keys(o).some(k => /_f\d/.test(k));
   }
 
+  // Normalise for tolerant matching: trim + collapse whitespace.
+  function _norm(s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' '); }
+
+  // Match a single select value to an option (exact, then whitespace/case-tolerant).
+  function _matchSelect(val, options) {
+    const t = String(val == null ? '' : val).trim();
+    if (!options) return t;
+    return options.find(o => o === t)
+        || options.find(o => _norm(o).toLowerCase() === _norm(t).toLowerCase())
+        || null;
+  }
+
+  // Tolerant checkbox matching. JAKE may emit an array, or a comma/semicolon/
+  // newline-joined string, sometimes with stray whitespace or case differences.
+  // Several options themselves contain commas, so we can't split on comma —
+  // instead we match by normalised containment against the whole provided value.
+  function _matchCheckbox(val, options) {
+    const elements = Array.isArray(val) ? val : (val == null ? [] : [val]);
+    if (!options) return elements.map(e => String(e));
+    const blob = elements.map(e => _norm(e).toLowerCase()).join(' ~ ');
+    return options.filter(o => blob.includes(_norm(o).toLowerCase()));
+  }
+
   function _validateDpia(answers) {
     const clean = {}; const warnings = []; let matched = 0;
     Object.entries(answers).forEach(([id, val]) => {
       const f = _dpiaFields[id];
       if (!f) { warnings.push(`Unknown field <code>${_esc(id)}</code> — skipped.`); return; }
       if (f.type === 'checkbox_group') {
-        const arr = Array.isArray(val) ? val : (val ? [val] : []);
-        const ok = arr.filter(v => !f.options || f.options.includes(v));
-        const bad = arr.filter(v => f.options && !f.options.includes(v));
-        bad.forEach(v => warnings.push(`<code>${_esc(id)}</code>: "${_esc(v)}" is not a valid option — dropped.`));
+        const ok = _matchCheckbox(val, f.options);
+        const provided = Array.isArray(val) ? val.length : (val ? 1 : 0);
+        if (provided && ok.length === 0) { warnings.push(`<code>${_esc(id)}</code>: could not match any option from "${_esc(String(val)).slice(0, 60)}" — skipped.`); return; }
         clean[id] = ok; matched++;
       } else if (f.type === 'select') {
-        if (f.options && !f.options.includes(val)) { warnings.push(`<code>${_esc(id)}</code>: "${_esc(String(val))}" is not a valid option — skipped.`); return; }
-        clean[id] = String(val); matched++;
+        const m = _matchSelect(val, f.options);
+        if (f.options && !m) { warnings.push(`<code>${_esc(id)}</code>: "${_esc(String(val))}" doesn’t match an option — skipped.`); return; }
+        clean[id] = m; matched++;
       } else {
         clean[id] = String(val == null ? '' : val); matched++;
       }
