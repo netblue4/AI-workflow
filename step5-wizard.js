@@ -305,7 +305,7 @@
     title.style.marginBottom = '2px';
     const sub = _el('p', '');
     sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
-    sub.textContent = 'Stage 2 prompt — covers Steps 5 (Risk Assessment) and 6 (Control Identification). Paste the Stage 1 report then this prompt into JAKE.';
+    sub.textContent = 'Stage 2 prompt — covers Steps 5 (Risk Assessment) and 6 (Control Identification). Your Step 3 classification and Step 4 DPIA are filled in automatically.';
     hLeft.append(title, sub);
     const hRight  = _el('div', 's5-jake-header-right');
     const chevron = _el('span', 's5-jake-chevron');
@@ -321,10 +321,9 @@
     instruct.innerHTML = `
       <strong>How to use this prompt</strong>
       <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
-        <li>Complete the Step 3 and Step 4 wizards first — confirm the classification and DPIA before proceeding.</li>
-        <li>Copy the prompt below.</li>
-        <li>In JAKE, paste the full Stage 1 narrative report from Step 2, then paste this prompt after it.</li>
-        <li>Save the JAKE risk assessment report as a PDF alongside this system record.</li>
+        <li>Complete the Step 3 and Step 4 wizards first — their classification and DPIA are inserted into the prompt automatically.</li>
+        <li>Copy the prompt below and paste it into JAKE — no need to paste the Stage 1 report separately.</li>
+        <li>Run it, then save the JAKE risk assessment report as a PDF alongside this system record.</li>
         <li>Use the report to answer the questions in the Step 5 and Step 6 wizards.</li>
       </ol>`;
     body.appendChild(instruct);
@@ -354,7 +353,63 @@
   }
 
   function _buildStep5Prompt() {
-    return _detail?.jake_prompt || '';
+    let prompt = _detail?.jake_prompt || '';
+    const ctx = _buildStage1Context();
+    if (ctx) {
+      prompt = prompt
+        .replace('CONTEXT — paste the full Stage 1 report (classification and DPIA) below this line, then run the prompt:',
+                 'CONTEXT — the Step 3 classification and Step 4 DPIA below are filled in automatically from this system record:')
+        .replace('[PASTE STAGE 1 REPORT HERE]', ctx);
+    }
+    return prompt;
+  }
+
+  // Build a readable classification + DPIA summary from the saved Step 3 / Step 4
+  // records, so the assessor no longer has to paste the Stage 1 report by hand.
+  // Returns '' when neither step is complete (prompt keeps its manual-paste slot).
+  function _buildStage1Context() {
+    const s3 = _record?.['step-3'];
+    const s4 = _record?.['step-4'];
+    if (!s3 && !s4) return '';
+    const list = a => (Array.isArray(a) && a.length) ? a.join(', ') : '—';
+    const yn   = v => v ? 'yes' : 'no';
+    const lines = [];
+
+    if (s3) {
+      const b  = s3.axis_b || {};
+      const co = s3.combined_outcome || {};
+      const arts = (b.applicable_articles || []).map(a => a.article_number || a).filter(Boolean);
+      lines.push('=== SYSTEM CLASSIFICATION (Step 3) ===',
+        'Tier: ' + (s3.axis_a?.tier_label || '—'),
+        'EU AI Act outcome: ' + (b.ai_act_outcome || '—'),
+        'Organisation role: ' + (b.organisation_role || '—'),
+        'Applicable EU AI Act articles: ' + (arts.length ? arts.join(', ') : 'none'),
+        'Transparency obligations apply: ' + yn(b.transparency_obligations_apply),
+        'Human oversight (Article 14) required: ' + yn(co.article_14_human_oversight),
+        'Requires conformity assessment: ' + yn(co.requires_conformity_assessment),
+        '');
+    } else {
+      lines.push('=== SYSTEM CLASSIFICATION (Step 3) — not yet completed ===', '');
+    }
+
+    if (s4) {
+      const d = s4.data_types_identified || {};
+      lines.push('=== DPIA (Step 4) ===',
+        'Data subjects: ' + list(d.data_subjects),
+        'Standard personal data: ' + list(d.standard_personal_data),
+        'Special category data: ' + ((d.special_category_data && d.special_category_data.length) ? d.special_category_data.join(', ') : 'none'),
+        'Automated decision-making: ' + (d.automated_decision_making || '—'),
+        'Lawful basis: ' + (s4.lawful_basis || '—'),
+        'Security measures: ' + list(d.security_measures),
+        'Privacy risks identified: ' + list(d.privacy_risks),
+        'Inherent risk rating: ' + (s4.inherent_risk_rating || '—'),
+        'Residual risk rating: ' + (s4.residual_risk_rating || '—'),
+        'DPO consulted: ' + (s4.dpo_consulted || '—'));
+    } else {
+      lines.push('=== DPIA (Step 4) — not yet completed ===');
+    }
+
+    return lines.join('\n');
   }
 
   // ---- Panes --------------------------------------------------
