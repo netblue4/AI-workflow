@@ -59,7 +59,7 @@
           if (typeof o.id === 'string' && o.id.indexOf('_f') > -1) {
             const opts = Array.isArray(o.options)
               ? o.options.map(x => (x && typeof x === 'object') ? x.value : x) : null;
-            map[o.id] = { type: o.type, options: opts, label: o.label || o.question || o.id };
+            map[o.id] = { type: o.type, options: opts, label: o.label || o.question || o.id, condition: o.conditional_show_if || null };
           }
           Object.values(o).forEach(walk);
         }
@@ -217,9 +217,9 @@
       const answers = _extractDpiaAnswers(ta.value);
       if (!answers) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>dpia_answers</code> JSON block in the pasted text.</span>'; return; }
       if (!_dpiaFields) { preview.innerHTML = '<span style="color:#ecd489">Step 4 field definitions still loading — try again in a moment.</span>'; return; }
-      const { clean, warnings, matched } = _validateDpia(answers);
+      const { clean, warnings, matched, skipped } = _validateDpia(answers);
       _clean = clean;
-      preview.innerHTML = _renderPreview(matched, warnings);
+      preview.innerHTML = _renderPreview(matched, warnings, skipped);
       if (matched > 0) applyBtn.style.display = '';
     });
     applyBtn.addEventListener('click', () => {
@@ -288,11 +288,27 @@
     return options.filter(o => { const co = _canon(o); return co && blob.includes(co); });
   }
 
+  // Evaluate a field's conditional_show_if against the answer set — mirrors the
+  // Step 4 wizard's own conditional logic.
+  function _condMet(key, a) {
+    if (key === 's5_f1_is_automated') return /^\s*(partially|yes)/i.test(String(a.s5_f1 || ''));
+    if (key === 's4_f1_is_LIA')       return _canon(a.s4_f1).includes('legitimateinterests');
+    if (key === 's3_f1_not_none') {
+      const v = a.s3_f1; const arr = Array.isArray(v) ? v : (v ? [v] : []);
+      return arr.some(x => !_canon(x).includes('nospecialcategory'));
+    }
+    return true; // unknown condition — don't filter
+  }
+
   function _validateDpia(answers) {
-    const clean = {}; const warnings = []; let matched = 0;
+    const clean = {}; const warnings = []; let matched = 0; let skipped = 0;
     Object.entries(answers).forEach(([id, val]) => {
       const f = _dpiaFields[id];
       if (!f) { warnings.push(`Unknown field <code>${_esc(id)}</code> — skipped.`); return; }
+      // Conditional field whose show-condition isn't met is not shown in Step 4,
+      // so ignore whatever JAKE put here — it often slides a neighbouring answer
+      // into the hidden slot (e.g. explainability into s5_f2 when not automated).
+      if (f.condition && !_condMet(f.condition, answers)) { if (!_isEmpty(val)) skipped++; return; }
       if (_isEmpty(val)) { return; } // JAKE left it blank — skip quietly, no warning
       if (f.type === 'checkbox_group') {
         const ok = _matchCheckbox(val, f.options);
@@ -306,12 +322,15 @@
         clean[id] = String(val); matched++;
       }
     });
-    return { clean, warnings, matched };
+    return { clean, warnings, matched, skipped };
   }
 
-  function _renderPreview(matched, warnings) {
+  function _renderPreview(matched, warnings, skipped) {
     const total = Object.keys(_dpiaFields || {}).length;
     let html = `<div style="color:#8cebb0;font-weight:600;margin-bottom:6px">✓ ${matched} of ${total} DPIA fields recognised.</div>`;
+    if (skipped) {
+      html += `<div style="color:var(--color-text-tertiary);margin-bottom:6px">${skipped} conditional field${skipped !== 1 ? 's' : ''} not applicable to this system — skipped.</div>`;
+    }
     if (warnings.length) {
       html += `<div style="color:#ecd489;margin-bottom:4px">${warnings.length} item${warnings.length !== 1 ? 's' : ''} need attention:</div>`;
       html += '<ul style="margin:0 0 0 16px;padding:0;color:var(--color-text-secondary)">' +
