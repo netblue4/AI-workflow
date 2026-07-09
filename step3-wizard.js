@@ -74,7 +74,11 @@
 
     _updateGateVisibility();
 
-    if (_state.result) {
+    // Only render the results panel for a completed classification (one with a
+    // computed outcome). A draft loaded from JAKE has gate answers + tier but no
+    // outcome yet — show the gates with those answers restored so the assessor
+    // reviews and runs the classification.
+    if (_state.result && _state.result.axis_b && _state.result.axis_b.ai_act_outcome) {
       const rc = wizardPane.querySelector('#wiz-results');
       if (rc) _renderResults(rc, _state.result);
     }
