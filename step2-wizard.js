@@ -258,27 +258,34 @@
     return Object.keys(o).some(k => /_f\d/.test(k));
   }
 
-  // Normalise for tolerant matching: trim + collapse whitespace.
-  function _norm(s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' '); }
+  // Canonical form for tolerant matching: JAKE reformats option text (drops the
+  // spaces around a "/", swaps "—" for a space, changes case). Strip everything
+  // except letters and digits so "Employees / staff" == "Employees/staff" and
+  // "Art.6(1)(f) — Legitimate interests" == "Art.6(1)(f) Legitimate interests".
+  function _canon(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+  function _isEmpty(v) { return v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === ''); }
 
-  // Match a single select value to an option (exact, then whitespace/case-tolerant).
+  // Match a single select value to an option: canonical-exact, then containment
+  // either way (handles JAKE truncating or padding the option text).
   function _matchSelect(val, options) {
-    const t = String(val == null ? '' : val).trim();
-    if (!options) return t;
-    return options.find(o => o === t)
-        || options.find(o => _norm(o).toLowerCase() === _norm(t).toLowerCase())
-        || null;
+    if (!options) return String(val == null ? '' : val).trim();
+    const c = _canon(val);
+    if (!c) return null;
+    let hit = options.find(o => _canon(o) === c);
+    if (hit) return hit;
+    // Prefer the longest option whose canonical form overlaps the value.
+    const cands = options.filter(o => { const co = _canon(o); return co && (c.includes(co) || co.includes(c)); });
+    cands.sort((a, b) => _canon(b).length - _canon(a).length);
+    return cands[0] || null;
   }
 
-  // Tolerant checkbox matching. JAKE may emit an array, or a comma/semicolon/
-  // newline-joined string, sometimes with stray whitespace or case differences.
-  // Several options themselves contain commas, so we can't split on comma —
-  // instead we match by normalised containment against the whole provided value.
+  // Tolerant checkbox matching against a canonical "blob" of the whole value,
+  // so an array, a comma-joined string, or reformatted option text all resolve.
   function _matchCheckbox(val, options) {
     const elements = Array.isArray(val) ? val : (val == null ? [] : [val]);
     if (!options) return elements.map(e => String(e));
-    const blob = elements.map(e => _norm(e).toLowerCase()).join(' ~ ');
-    return options.filter(o => blob.includes(_norm(o).toLowerCase()));
+    const blob = _canon(elements.join(' '));
+    return options.filter(o => { const co = _canon(o); return co && blob.includes(co); });
   }
 
   function _validateDpia(answers) {
@@ -286,17 +293,17 @@
     Object.entries(answers).forEach(([id, val]) => {
       const f = _dpiaFields[id];
       if (!f) { warnings.push(`Unknown field <code>${_esc(id)}</code> — skipped.`); return; }
+      if (_isEmpty(val)) { return; } // JAKE left it blank — skip quietly, no warning
       if (f.type === 'checkbox_group') {
         const ok = _matchCheckbox(val, f.options);
-        const provided = Array.isArray(val) ? val.length : (val ? 1 : 0);
-        if (provided && ok.length === 0) { warnings.push(`<code>${_esc(id)}</code>: could not match any option from "${_esc(String(val)).slice(0, 60)}" — skipped.`); return; }
+        if (ok.length === 0) { warnings.push(`<code>${_esc(id)}</code>: couldn’t match "${_esc(String(val)).slice(0, 60)}" to any option — skipped.`); return; }
         clean[id] = ok; matched++;
       } else if (f.type === 'select') {
         const m = _matchSelect(val, f.options);
-        if (f.options && !m) { warnings.push(`<code>${_esc(id)}</code>: "${_esc(String(val))}" doesn’t match an option — skipped.`); return; }
+        if (f.options && !m) { warnings.push(`<code>${_esc(id)}</code>: "${_esc(String(val)).slice(0, 60)}" doesn’t match an option — skipped.`); return; }
         clean[id] = m; matched++;
       } else {
-        clean[id] = String(val == null ? '' : val); matched++;
+        clean[id] = String(val); matched++;
       }
     });
     return { clean, warnings, matched };
