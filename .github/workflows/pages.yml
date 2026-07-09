@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+# Explicit Pages deployment. Replaces GitHub's auto-generated "pages build and
+# deployment" (source: Deploy from a branch), whose cancel-in-progress
+# concurrency was cancelling/jamming deploys. Here concurrency does NOT cancel
+# in-progress runs, so production deploys always finish instead of wedging.
+#
+# One-time setup after merging: Settings -> Pages -> Build and deployment ->
+# Source -> "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; queue (do not cancel) so a running
+# production deploy is never interrupted.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Static site served from the repository root.
+          path: .
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
