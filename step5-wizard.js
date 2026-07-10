@@ -434,8 +434,168 @@
   function _buildLegalCard() {
     const card = _el('div', 'step-detail-card');
     card.appendChild(_buildAskJakeCollapsible());
+    card.appendChild(_buildLoadRaSection());
     card.appendChild(_buildLegalPane());
     return card;
+  }
+
+  // ── Load JAKE risk assessment into Steps 5 & 6 ─────────────────────────────
+  const _rEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const _rCanon = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const _rEmpty = v => v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === '');
+  const _rYPN = v => { const w = String(v == null ? '' : v).trim().toLowerCase(); if (/^y(es)?\b/.test(w)) return 'yes'; if (/^p(art)/.test(w)) return 'partially'; if (/^no?\b/.test(w)) return 'no'; return null; };
+
+  // Risk catalog: pk_Risk_ID → { name, kind, refs(valid HS refs) }
+  function _riskCatalog() {
+    const cat = {};
+    (_tblRisks || []).forEach(r => {
+      cat[r.pk_Risk_ID] = {
+        name: r.risk_name,
+        kind: r.pk_Risk_ID.indexOf('GSR') === 0 ? 'gsr' : 'legal',
+        refs: (r.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean)
+      };
+    });
+    return cat;
+  }
+
+  function _buildLoadRaSection() {
+    const section = _el('div', 's5-jake-section');
+    const header  = _el('div', 's5-jake-header');
+    const hLeft   = _el('div', 's5-jake-header-left');
+    const title   = _sectionLabel('Load JAKE output into Steps 5 & 6');
+    title.style.marginBottom = '2px';
+    const sub = _el('p', ''); sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
+    sub.textContent = 'Loads risk applicability and control selection as a draft — review and save in Steps 5 and 6.';
+    hLeft.append(title, sub);
+    const hRight = _el('div', 's5-jake-header-right');
+    const chevron = _el('span', 's5-jake-chevron');
+    chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    hRight.appendChild(chevron);
+    header.append(hLeft, hRight);
+    section.appendChild(header);
+
+    const body = _el('div', 's5-jake-body'); body.style.display = 'none';
+    const ta = _el('textarea', 's5-prompt-area'); ta.rows = 8; ta.placeholder = 'Paste JAKE’s full reply (or just its ```json block) here…';
+    const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;margin:10px 0';
+    const checkBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Validate & preview' });
+    const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Steps 5 & 6' });
+    applyBtn.style.display = 'none';
+    btnRow.append(checkBtn, applyBtn);
+    const preview = _el('div', 's5-load-preview'); preview.style.cssText = 'font-size:12.5px;line-height:1.6';
+
+    let _res = null;
+    checkBtn.addEventListener('click', () => {
+      applyBtn.style.display = 'none'; _res = null;
+      const ra = _extractRiskAssessment(ta.value);
+      if (!ra) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>risk_assessment</code> JSON block in the pasted text.</span>'; return; }
+      _res = _validateRa(ra);
+      preview.innerHTML = _renderRaPreview(_res);
+      if (_res.riskCount + _res.ctrlCount > 0) applyBtn.style.display = '';
+    });
+    applyBtn.addEventListener('click', () => {
+      if (!_res) return;
+      _applyRa(_res);
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and controls for ${_res.ctrlCount} risk${_res.ctrlCount !== 1 ? 's' : ''} as a draft. Review in <strong>Step 5</strong> (risks) and <strong>Step 6</strong> (controls), then save each.</span>`;
+      applyBtn.style.display = 'none';
+      _renderLegalPane();
+    });
+
+    body.append(ta, btnRow, preview);
+    section.appendChild(body);
+    header.addEventListener('click', () => {
+      const hidden = body.style.display === 'none';
+      body.style.display = hidden ? '' : 'none';
+      chevron.style.transform = hidden ? 'rotate(180deg)' : '';
+    });
+    return section;
+  }
+
+  function _extractRiskAssessment(text) {
+    const tryParse = s => { try { return JSON.parse(s); } catch (_) { return null; } };
+    const pick = o => (o && o.risk_assessment && typeof o.risk_assessment === 'object') ? o.risk_assessment
+                    : (o && typeof o === 'object' && (o.risks || o.selected_controls)) ? o : null;
+    for (const f of [...(text || '').matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map(m => m[1])) {
+      const a = pick(tryParse(f.trim())); if (a) return a;
+    }
+    const objs = (text || '').match(/\{[\s\S]*\}/g) || [];
+    objs.sort((a, b) => b.length - a.length);
+    for (const c of objs) { const a = pick(tryParse(c)); if (a) return a; }
+    return null;
+  }
+
+  function _validateRa(ra) {
+    const cat = _riskCatalog();
+    const legalAnswers = {}; const gsr = {}; const controls = {}; const warnings = [];
+    let riskCount = 0; let ctrlCount = 0;
+    Object.entries(ra.risks || {}).forEach(([id, v]) => {
+      const r = cat[id];
+      if (!r) { warnings.push(`Unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
+      if (_rEmpty(v)) return;
+      const a = _rYPN(v);
+      if (!a) { warnings.push(`<code>${_rEsc(id)}</code>: "${_rEsc(String(v)).slice(0, 30)}" is not yes/partially/no — skipped.`); return; }
+      if (r.kind === 'gsr') gsr[id] = (a === 'yes' || a === 'partially');
+      else legalAnswers[r.name] = a;
+      riskCount++;
+    });
+    Object.entries(ra.selected_controls || {}).forEach(([id, refs]) => {
+      const r = cat[id];
+      if (!r) { warnings.push(`Controls for unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
+      const arr = Array.isArray(refs) ? refs : (refs ? [refs] : []);
+      const valid = [];
+      arr.forEach(ref => {
+        const hit = r.refs.find(x => _rCanon(x) === _rCanon(ref));
+        if (hit) valid.push(hit);
+        else warnings.push(`<code>${_rEsc(id)}</code>: control "${_rEsc(String(ref)).slice(0, 24)}" is not a valid HS ref for this risk — skipped.`);
+      });
+      if (valid.length) { controls[id] = valid; ctrlCount++; }
+    });
+    return { legalAnswers, gsr, controls, warnings, riskCount, ctrlCount };
+  }
+
+  function _renderRaPreview(res) {
+    let html = `<div style="color:#8cebb0;font-weight:600;margin-bottom:6px">✓ ${res.riskCount} risk answer${res.riskCount !== 1 ? 's' : ''} and control selections for ${res.ctrlCount} risk${res.ctrlCount !== 1 ? 's' : ''} recognised.</div>`;
+    if (res.warnings.length) {
+      html += `<div style="color:#ecd489;margin-bottom:4px">${res.warnings.length} item${res.warnings.length !== 1 ? 's' : ''} need attention:</div>`;
+      html += '<ul style="margin:0 0 0 16px;padding:0;color:var(--color-text-secondary)">' +
+        res.warnings.slice(0, 12).map(w => `<li>${w}</li>`).join('') +
+        (res.warnings.length > 12 ? `<li>…and ${res.warnings.length - 12} more</li>` : '') + '</ul>';
+    }
+    html += '<div style="color:var(--color-text-tertiary);margin-top:8px">This loads a <strong>draft</strong> — review and <strong>Save</strong> in Steps 5 and 6. Nothing is written until you click Apply.</div>';
+    return html;
+  }
+
+  function _applyRa(res) {
+    _record = WizUtils.loadRecord() || {};
+    if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString() };
+    _record._meta.last_modified = new Date().toISOString();
+    // Step 5 legal risk applicability
+    if (Object.keys(res.legalAnswers).length) {
+      const s5 = _record['step-5'] || {};
+      const la = s5.legal_assessment || {};
+      la.wizard_answers = Object.assign({}, la.wizard_answers || {}, res.legalAnswers);
+      s5.legal_assessment = la;
+      _record['step-5'] = s5;
+      // reflect in live state so the pane shows them immediately
+      Object.assign(_wizState.answers, res.legalAnswers);
+    }
+    // Step 5 group-standard risk applicability
+    if (Object.keys(res.gsr).length) {
+      const s5 = _record['step-5'] || {};
+      const gsa = s5.group_standard_assessment || {};
+      const existing = new Map((gsa.risks || []).map(r => [r.risk_id, r]));
+      Object.entries(res.gsr).forEach(([id, sel]) => existing.set(id, { risk_id: id, selected: sel }));
+      gsa.risks = [...existing.values()];
+      s5.group_standard_assessment = gsa;
+      _record['step-5'] = s5;
+      Object.entries(res.gsr).forEach(([id, sel]) => { _state.group_standard_risks[id] = sel; });
+    }
+    // Step 6 control selection
+    if (Object.keys(res.controls).length) {
+      const s6 = _record['step-6'] || {};
+      s6.selected_hs = Object.assign({}, s6.selected_hs || {}, res.controls);
+      _record['step-6'] = s6;
+    }
+    WizUtils.saveRecord(_record);
   }
 
   // ---- Re-render legal pane in place --------------------------
