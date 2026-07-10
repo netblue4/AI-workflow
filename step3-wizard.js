@@ -23,6 +23,7 @@
     gate_answers: {},          // { G1_Q1: 'yes'|'no', G5_Q0: 'provider'|'deployer', … }
     organisation_role: null,   // 'provider' | 'deployer'
     art25_override: false,     // true if user acknowledged Art.25 warning and elected to continue as Deployer
+    rationale: '',             // free-text assessment rationale (holds JAKE's reasoning)
     result: null
   };
 
@@ -114,6 +115,7 @@
 
     pane.appendChild(_buildAxisASection(detail.axis_a_classification));
     pane.appendChild(_buildAxisBSection(detail.axis_b_classification));
+    pane.appendChild(_buildRationaleSection());
 
     // Action row
     const actionRow = _el('div', 'wiz-action-row');
@@ -139,9 +141,27 @@
     _state.gate_answers     = {};
     _state.organisation_role = null;
     _state.art25_override   = false;
+    _state.rationale        = '';
     _state.result           = null;
     if (_wizardPane) _populateWizardPane(_wizardPane, _detail);
     _updateGateVisibility();
+  }
+
+  // Assessment-rationale textbox — holds the reasoning JAKE returns (or the
+  // assessor's own notes) so the "why" is saved in the record, not separately.
+  function _buildRationaleSection() {
+    const wrap = _el('div', 's3-rationale-wrap');
+    wrap.appendChild(_sectionLabel('Assessment rationale'));
+    const hint = _el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin:0 0 8px' });
+    hint.textContent = 'Why this classification was reached. Loaded from JAKE’s reasoning, or add your own notes. Saved with the classification.';
+    wrap.appendChild(hint);
+    const ta = _el('textarea', 's3-rationale-ta');
+    ta.rows = 5;
+    ta.placeholder = 'Rationale for the tier and EU AI Act gate answers…';
+    ta.value = _state.rationale || '';
+    ta.addEventListener('input', () => { _state.rationale = ta.value; });
+    wrap.appendChild(ta);
+    return wrap;
   }
 
   // ── Reference pane ────────────────────────────────────────────────────────────
@@ -867,6 +887,7 @@
       classification_date: new Date().toISOString().split('T')[0],
       classified_by: (_record._meta && _record._meta.assessed_by) || '',
       use_case_id:   (_record._meta && _record._meta.use_case_id) || '',
+      rationale: _state.rationale || '',
       axis_a: { tier: _state.axis_a_tier, tier_label: tierDef ? tierDef.label : '', content_types_identified: [], escalation_applied: false },
       axis_b: {
         ai_act_outcome: axisBResult.classification,
@@ -1041,6 +1062,7 @@
     _state.gate_answers      = step3Data.axis_b?.gate_answers || {};
     _state.organisation_role = step3Data.axis_b?.organisation_role || null;
     _state.art25_override    = step3Data.axis_b?.art25_override || false;
+    _state.rationale         = step3Data.rationale || '';
     _state.result            = step3Data;
   }
 
@@ -1089,6 +1111,11 @@
       .wiz-pill { padding:5px 18px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--color-border-mid);background:var(--color-surface);color:var(--color-text-secondary);transition:all var(--transition);user-select:none;font-family:inherit; }
       .wiz-pill.active-yes { border-color:var(--danger-border);background:var(--danger-fill);color:var(--danger-text); }
       .wiz-pill.active-no  { border-color:var(--success-border);background:var(--success-fill);color:var(--success-text); }
+
+      /* Assessment rationale */
+      .s3-rationale-wrap { margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border); }
+      .s3-rationale-ta { width:100%;box-sizing:border-box;font-size:13px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:10px 12px;line-height:1.5;resize:vertical;background:var(--color-bg-subtle,#211d15); }
+      .s3-rationale-ta:focus { outline:none;border-color:var(--teal-border);background:var(--color-surface); }
 
       /* Actions */
       .wiz-action-row { display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border); }
