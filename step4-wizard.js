@@ -12,6 +12,7 @@
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _detail = null, _record = null;
   const _answers = {}; // fieldId → string | string[]
+  let _rationale = ''; // free-text DPIA rationale (holds JAKE's reasoning)
 
   // ---- Public API ---------------------------------------------
   window.mountStep4Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -23,6 +24,7 @@
     _record    = null;
     // Clear answers
     Object.keys(_answers).forEach(k => delete _answers[k]);
+    _rationale = '';
 
     _injectStyles();
 
@@ -41,6 +43,7 @@
     _record = WizUtils.loadRecord();
     const s7 = _record?.['step-4'];
     if (s7?.answers) Object.assign(_answers, s7.answers);
+    if (s7?.rationale) _rationale = s7.rationale;
     _renderPanes(pw);
     _evalConditions();
   }
@@ -166,9 +169,28 @@
       card.appendChild(warn);
     }
 
+    card.appendChild(_buildRationaleSection());
     card.appendChild(_buildActionRow());
     card.appendChild(_el('div', 'dpia-results'));
     return card;
+  }
+
+  // Rationale textbox — holds the reasoning JAKE returns (or the assessor's own
+  // notes) so the "why" behind the DPIA answers is saved in the record.
+  function _buildRationaleSection() {
+    const wrap = _el('div', 'dpia-rationale-wrap');
+    wrap.appendChild(_sectionLabel('DPIA rationale'));
+    const hint = _el('p', 'dpia-rationale-hint');
+    hint.textContent = 'Reasoning behind the DPIA answers. Loaded from JAKE’s reasoning, or add your own notes. Saved with the DPIA.';
+    wrap.appendChild(hint);
+    const ta = document.createElement('textarea');
+    ta.className = 'dpia-rationale-ta';
+    ta.rows = 5;
+    ta.placeholder = 'Rationale for the data-protection assessment…';
+    ta.value = _rationale || '';
+    ta.addEventListener('input', () => { _rationale = ta.value; });
+    wrap.appendChild(ta);
+    return wrap;
   }
 
   // ---- Section accordion --------------------------------------
@@ -399,6 +421,7 @@
   // the saved record is untouched until the user saves the DPIA again.
   function _clearAll() {
     Object.keys(_answers).forEach(k => delete _answers[k]);
+    _rationale = '';
     const pw = _container.querySelector('.wiz-pane-wrap');
     if (pw) _renderPanes(pw);
     _evalConditions();
@@ -449,6 +472,7 @@
       residual_risk_rating:     getStr('s10_f3'),
       dpo_consulted:            getStr('s11_f1'),
       art36_consultation_required: getStr('s11_f3'),
+      rationale: _rationale || '',
       answers: Object.assign({}, _answers)
     };
   }
@@ -524,6 +548,12 @@
     WizUtils.injectStyles('wiz4-styles', `
 /* ---- DPIA info note ---- */
 .dpia-info-note{background:var(--info-50,rgba(80,150,225,0.12));border:1px solid var(--info-200,rgba(80,150,225,0.40));border-left:3px solid var(--info-400,#38bdf8);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--info-800,#a4ccf6);line-height:1.6;margin-bottom:20px}
+
+/* ---- DPIA rationale ---- */
+.dpia-rationale-wrap{margin-top:22px}
+.dpia-rationale-hint{font-size:12px;color:var(--color-text-secondary);margin:0 0 8px}
+.dpia-rationale-ta{width:100%;box-sizing:border-box;font-size:13px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:10px 12px;line-height:1.5;resize:vertical;background:var(--color-bg-subtle,#211d15)}
+.dpia-rationale-ta:focus{outline:none;border-color:var(--info-400,#38bdf8);background:var(--color-surface)}
 
 /* ---- Section accordion ---- */
 .dpia-section{border:1px solid var(--color-border);border-radius:8px;margin-bottom:10px;overflow:hidden}

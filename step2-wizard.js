@@ -242,8 +242,9 @@
     });
     applyBtn.addEventListener('click', () => {
       if (!_res) return;
-      const n = _applyClf(_res.tier, _res.gate);
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} classification answer${n !== 1 ? 's' : ''} as a draft. Open <strong>Step 3 — System classification</strong>, review the gates, then run the classification to finalise the outcome and articles.</span>`;
+      const n = _applyClf(_res.tier, _res.gate, _res.reasoning);
+      const rNote = _res.reasoning ? ' Its rationale was loaded into the Assessment rationale box.' : '';
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} classification answer${n !== 1 ? 's' : ''} as a draft.${rNote} Open <strong>Step 3 — System classification</strong>, review the gates, then run the classification to finalise the outcome and articles.</span>`;
       applyBtn.style.display = 'none';
     });
 
@@ -289,6 +290,7 @@
 
   function _validateClf(clf) {
     const warnings = []; const gate = {}; let tier = null; let matched = 0;
+    const reasoning = _isEmpty(clf.reasoning) ? '' : String(clf.reasoning).trim();
     if (!_isEmpty(clf.tier)) {
       const t = _matchEnumCanon(clf.tier, _clfKeys.tier);
       if (t) { tier = t; matched++; } else warnings.push(`tier "${_esc(String(clf.tier))}" not recognised — skipped.`);
@@ -302,7 +304,7 @@
       if (!m) { warnings.push(`<code>${_esc(k)}</code>: "${_esc(String(v)).slice(0, 40)}" not one of ${enums.join(' / ')} — skipped.`); return; }
       gate[k] = m; matched++;
     });
-    return { tier, gate, warnings, matched };
+    return { tier, gate, reasoning, warnings, matched };
   }
 
   function _renderClfPreview(res) {
@@ -317,7 +319,7 @@
     return html;
   }
 
-  function _applyClf(tier, gate) {
+  function _applyClf(tier, gate, reasoning) {
     _record = WizUtils.loadRecord() || {};
     const prev = _record['step-3'] || {};
     const axisA = Object.assign({}, prev.axis_a || {});
@@ -328,6 +330,7 @@
     _record['step-3'] = Object.assign({}, prev, {
       step_id: 'step-3', step_title: 'System classification',
       loaded_from_jake: true, loaded_at: new Date().toISOString(),
+      rationale: reasoning || prev.rationale || '',
       axis_a: axisA, axis_b: axisB
     });
     if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString() };
@@ -366,21 +369,22 @@
 
     const preview = _el('div', 's2-load-preview'); preview.style.cssText = 'font-size:12.5px;line-height:1.6';
 
-    let _clean = null;
+    let _clean = null; let _reasoning = '';
     checkBtn.addEventListener('click', () => {
-      applyBtn.style.display = 'none'; _clean = null;
-      const answers = _extractDpiaAnswers(ta.value);
-      if (!answers) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>dpia_answers</code> JSON block in the pasted text.</span>'; return; }
+      applyBtn.style.display = 'none'; _clean = null; _reasoning = '';
+      const extracted = _extractDpiaAnswers(ta.value);
+      if (!extracted) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>dpia_answers</code> JSON block in the pasted text.</span>'; return; }
       if (!_dpiaFields) { preview.innerHTML = '<span style="color:#ecd489">Step 4 field definitions still loading — try again in a moment.</span>'; return; }
-      const { clean, warnings, matched, skipped } = _validateDpia(answers);
-      _clean = clean;
+      const { clean, warnings, matched, skipped } = _validateDpia(extracted.answers);
+      _clean = clean; _reasoning = extracted.reasoning || '';
       preview.innerHTML = _renderPreview(matched, warnings, skipped);
-      if (matched > 0) applyBtn.style.display = '';
+      if (matched > 0 || _reasoning) applyBtn.style.display = '';
     });
     applyBtn.addEventListener('click', () => {
       if (!_clean) return;
-      const n = _applyDpia(_clean);
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} DPIA field${n !== 1 ? 's' : ''} into Step 4. Open <strong>Step 4 — Data identification and DPIA</strong> to review and save.</span>`;
+      const n = _applyDpia(_clean, _reasoning);
+      const rNote = _reasoning ? ' Its rationale was loaded into the DPIA rationale box.' : '';
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} DPIA field${n !== 1 ? 's' : ''} into Step 4.${rNote} Open <strong>Step 4 — Data identification and DPIA</strong> to review and save.</span>`;
       applyBtn.style.display = 'none';
     });
 
@@ -398,15 +402,24 @@
   // bare JSON object, or a JSON object embedded in a wider reply.
   function _extractDpiaAnswers(text) {
     const tryParse = s => { try { return JSON.parse(s); } catch (_) { return null; } };
-    const pick = o => (o && o.dpia_answers && typeof o.dpia_answers === 'object') ? o.dpia_answers
-                    : (o && typeof o === 'object' && !Array.isArray(o) && _looksLikeAnswers(o)) ? o : null;
+    // Returns { answers, reasoning } — reasoning is the sibling of dpia_answers
+    // when JAKE emits { "dpia_answers": {...}, "reasoning": "..." }.
+    const pick = o => {
+      if (o && o.dpia_answers && typeof o.dpia_answers === 'object') {
+        return { answers: o.dpia_answers, reasoning: _isEmpty(o.reasoning) ? '' : String(o.reasoning).trim() };
+      }
+      if (o && typeof o === 'object' && !Array.isArray(o) && _looksLikeAnswers(o)) {
+        return { answers: o, reasoning: '' };
+      }
+      return null;
+    };
     // 1) fenced code blocks
     const fences = [...(text || '').matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map(m => m[1]);
-    for (const f of fences) { const o = tryParse(f.trim()); const a = pick(o); if (a) return a; }
+    for (const f of fences) { const a = pick(tryParse(f.trim())); if (a) return a; }
     // 2) every {...} candidate, largest first
     const objs = (text || '').match(/\{[\s\S]*\}/g) || [];
     objs.sort((a, b) => b.length - a.length);
-    for (const c of objs) { const o = tryParse(c); const a = pick(o); if (a) return a; }
+    for (const c of objs) { const a = pick(tryParse(c)); if (a) return a; }
     return null;
   }
   function _looksLikeAnswers(o) {
@@ -496,7 +509,7 @@
     return html;
   }
 
-  function _applyDpia(clean) {
+  function _applyDpia(clean, reasoning) {
     _record = WizUtils.loadRecord() || {};
     const prev = _record['step-4'] || {};
     const answers = Object.assign({}, prev.answers || {}, clean);
@@ -505,6 +518,7 @@
       step_title: 'Data identification and DPIA',
       loaded_from_jake: true,
       loaded_at: new Date().toISOString(),
+      rationale: reasoning || prev.rationale || '',
       answers
     });
     if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString() };
