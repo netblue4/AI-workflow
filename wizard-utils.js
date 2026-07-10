@@ -204,37 +204,62 @@ window.WizUtils = (function () {
     if (phaseTitle) sec.appendChild(el('p', 'step-detail-phase-label', { textContent: phaseTitle }));
     sec.appendChild(el('h1', 'step-detail-title step-title-lg', { textContent: `${step.number} — ${step.title}` }));
 
+    // Everything else (meta, summary, deliverables, gates, requirement labels)
+    // lives in a details block that is collapsed by default, so each step reads
+    // as just its title until the assessor chooses to expand the context.
+    const body = el('div', 'step-header-body');
+    body.style.display = 'none';
+
     const meta = el('div', 'step-detail-meta');
     const owner = el('span', 'owner-tag');
     owner.innerHTML = `${icons[step.ownerIcon] || ''}&nbsp;${(step.owners || []).join(', ')}`;
     meta.appendChild(owner);
     (step.requirements || []).forEach(r => meta.appendChild(el('span', 'badge sr', { textContent: r })));
     if (step.applicability) meta.appendChild(el('span', `badge ${step.applicabilityKey || 'all'}`, { textContent: step.applicability }));
-    sec.appendChild(meta);
+    body.appendChild(meta);
 
     if (step.summary) {
-      sec.appendChild(sectionLabel('Summary'));
-      sec.appendChild(el('div', 'step-summary-box', { textContent: step.summary }));
+      body.appendChild(sectionLabel('Summary'));
+      body.appendChild(el('div', 'step-summary-box', { textContent: step.summary }));
     }
 
     if (step.deliverables && step.deliverables.length) {
-      sec.appendChild(sectionLabel('Deliverables'));
-      sec.appendChild(buildDeliverablesList(step.deliverables));
+      body.appendChild(sectionLabel('Deliverables'));
+      body.appendChild(buildDeliverablesList(step.deliverables));
     }
 
     if (step.gates && step.gates.length) {
-      sec.appendChild(sectionLabel('Gates and Notes'));
+      body.appendChild(sectionLabel('Gates and Notes'));
       step.gates.forEach(g => {
         const n = el('div', `gate-note ${g.type || 'info'}`);
         n.innerHTML = g.text;
-        sec.appendChild(n);
+        body.appendChild(n);
       });
     }
 
     if (step.requirementLabels && step.requirementLabels.length) {
       const rl = el('div', 'req-list', { style: 'margin-top:14px' });
       step.requirementLabels.forEach(r => rl.appendChild(el('span', 'req-pill', { textContent: r })));
-      sec.appendChild(rl);
+      body.appendChild(rl);
+    }
+
+    // Only add the toggle when there is something to reveal.
+    if (body.childElementCount > 1 || (meta.childElementCount > 0)) {
+      const toggle = el('button', 'step-header-toggle', { type: 'button' });
+      toggle.setAttribute('aria-expanded', 'false');
+      const label   = el('span', 'step-header-toggle-label', { textContent: 'Show summary, deliverables & gates' });
+      const chevron = el('span', 'step-header-chevron');
+      chevron.innerHTML = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      toggle.append(label, chevron);
+      toggle.addEventListener('click', () => {
+        const open = body.style.display === 'none';
+        body.style.display = open ? '' : 'none';
+        chevron.style.transform = open ? 'rotate(180deg)' : '';
+        label.textContent = open ? 'Hide summary, deliverables & gates' : 'Show summary, deliverables & gates';
+        toggle.setAttribute('aria-expanded', String(open));
+      });
+      sec.appendChild(toggle);
+      sec.appendChild(body);
     }
 
     return sec;
@@ -322,6 +347,11 @@ window.WizUtils = (function () {
 
   injectStyles('wiz-shared-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
+.step-header-toggle{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:5px 0;background:none;border:none;cursor:pointer;color:var(--color-text-tertiary);font-family:inherit;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.step-header-toggle:hover{color:var(--color-text-secondary)}
+.step-header-chevron{display:flex;align-items:center;transition:transform .2s}
+.step-header-body{margin-top:14px}
+.step-header-body>.step-summary-box:last-child,.step-header-body>.req-list:last-child,.step-header-body>.gate-note:last-child{margin-bottom:0}
 .wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
 .wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
 .wiz-tab--active{color:var(--teal-600,#8ce3c6);border-bottom-color:var(--teal-600,#8ce3c6)}
