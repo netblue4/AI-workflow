@@ -525,7 +525,7 @@
 
   function _validateRa(ra) {
     const cat = _riskCatalog();
-    const legalAnswers = {}; const gsr = {}; const controls = {}; const warnings = [];
+    const legalAnswers = {}; const gsr = {}; const controls = {}; const rationales = {}; const warnings = [];
     let riskCount = 0; let ctrlCount = 0;
     Object.entries(ra.risks || {}).forEach(([id, v]) => {
       const r = cat[id];
@@ -536,6 +536,12 @@
       if (r.kind === 'gsr') gsr[id] = (a === 'yes' || a === 'partially');
       else legalAnswers[r.name] = a;
       riskCount++;
+    });
+    // Reasoning → per-risk rationale (legal risks only — that's where the box lives)
+    Object.entries(ra.reasoning || {}).forEach(([id, txt]) => {
+      const r = cat[id];
+      if (!r || r.kind !== 'legal' || _rEmpty(txt)) return;
+      rationales[r.name] = String(txt).trim();
     });
     Object.entries(ra.selected_controls || {}).forEach(([id, refs]) => {
       const r = cat[id];
@@ -549,7 +555,7 @@
       });
       if (valid.length) { controls[id] = valid; ctrlCount++; }
     });
-    return { legalAnswers, gsr, controls, warnings, riskCount, ctrlCount };
+    return { legalAnswers, gsr, controls, rationales, warnings, riskCount, ctrlCount };
   }
 
   function _renderRaPreview(res) {
@@ -568,15 +574,17 @@
     _record = WizUtils.loadRecord() || {};
     if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString() };
     _record._meta.last_modified = new Date().toISOString();
-    // Step 5 legal risk applicability
-    if (Object.keys(res.legalAnswers).length) {
+    // Step 5 legal risk applicability + reasoning → rationale
+    if (Object.keys(res.legalAnswers).length || Object.keys(res.rationales).length) {
       const s5 = _record['step-5'] || {};
       const la = s5.legal_assessment || {};
-      la.wizard_answers = Object.assign({}, la.wizard_answers || {}, res.legalAnswers);
+      la.wizard_answers    = Object.assign({}, la.wizard_answers || {}, res.legalAnswers);
+      la.wizard_rationales = Object.assign({}, la.wizard_rationales || {}, res.rationales);
       s5.legal_assessment = la;
       _record['step-5'] = s5;
       // reflect in live state so the pane shows them immediately
       Object.assign(_wizState.answers, res.legalAnswers);
+      Object.assign(_wizState.rationales, res.rationales);
     }
     // Step 5 group-standard risk applicability
     if (Object.keys(res.gsr).length) {
