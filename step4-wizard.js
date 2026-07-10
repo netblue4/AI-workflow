@@ -387,8 +387,21 @@
     btn.className = 'wiz-btn-primary'; btn.textContent = 'Save DPIA';
     btn.addEventListener('click', _handleSave);
     right.appendChild(btn);
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'wiz-btn-secondary'; clearBtn.textContent = '↺ Clear all answers';
+    clearBtn.addEventListener('click', _clearAll);
+    right.appendChild(clearBtn);
     row.appendChild(right);
     return row;
+  }
+
+  // Reset in-memory answers and re-render the panes. Matches Step 5's behaviour:
+  // the saved record is untouched until the user saves the DPIA again.
+  function _clearAll() {
+    Object.keys(_answers).forEach(k => delete _answers[k]);
+    const pw = _container.querySelector('.wiz-pane-wrap');
+    if (pw) _renderPanes(pw);
+    _evalConditions();
   }
 
   // ---- Save ---------------------------------------------------

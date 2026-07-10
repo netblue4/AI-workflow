@@ -16,6 +16,7 @@
   const _sectionLabel = WizUtils.sectionLabel;
 
   let _detail = null;
+  let _wizardPane = null;
 
   let _state = {
     axis_a_tier: null,         // 'tier_1' | 'tier_2'
@@ -100,6 +101,16 @@
 
   function _buildWizardPane(detail) {
     const pane = _el('div', '');
+    _wizardPane = pane;
+    _populateWizardPane(pane, detail);
+    return pane;
+  }
+
+  // Fill (or refill) the wizard pane from current _state. Kept separate from the
+  // element creation so "Clear all answers" can repopulate the same element in
+  // place — preserving the tab listeners bound to it at mount.
+  function _populateWizardPane(pane, detail) {
+    pane.innerHTML = '';
 
     pane.appendChild(_buildAxisASection(detail.axis_a_classification));
     pane.appendChild(_buildAxisBSection(detail.axis_b_classification));
@@ -110,14 +121,27 @@
     const classifyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Classify System' });
     classifyBtn.addEventListener('click', () => _handleClassify(pane, detail));
 
-    actionRow.append(classifyBtn);
+    const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear all answers' });
+    clearBtn.addEventListener('click', _clearAll);
+
+    actionRow.append(classifyBtn, clearBtn);
     pane.appendChild(actionRow);
 
     const resultsContainer = _el('div', '');
     resultsContainer.id = 'wiz-results';
     pane.appendChild(resultsContainer);
+  }
 
-    return pane;
+  // Reset in-memory answers and re-render the wizard pane. Matches Step 5's
+  // behaviour: the saved record is untouched until the user re-classifies.
+  function _clearAll() {
+    _state.axis_a_tier      = null;
+    _state.gate_answers     = {};
+    _state.organisation_role = null;
+    _state.art25_override   = false;
+    _state.result           = null;
+    if (_wizardPane) _populateWizardPane(_wizardPane, _detail);
+    _updateGateVisibility();
   }
 
   // ── Reference pane ────────────────────────────────────────────────────────────
