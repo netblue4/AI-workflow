@@ -60,7 +60,12 @@
   // Legal/Regulatory tab — the HS requirement is the activated treatment unit
   let _hsByRef = new Map();   // standard_ref → HS row
   let _tcByHsRef = new Map(); // standard_ref → TestControl[]
+  let _fsByRef = new Map();   // canonical HS ref → framework self-certification statement
   const _hsActState = {};     // `${riskId}::${standard_ref}` → { status, notes }
+
+  // HS refs appear with/without brackets and stray spaces across tables — compare
+  // on a canonical form so "[18286.1]" and "18286.1" resolve to the same key.
+  const _canonRef = r => String(r == null ? '' : r).replace(/[[\]\s]/g, '');
 
   const STATUS_LEGACY_MAP = { pending: 'not_started', completed: 'evidence_provided', not_applicable: 'waived' };
 
@@ -110,6 +115,17 @@
     }
     _tblData = { risks, riskControls, testControls, hs: hs || [] };
     _hsByRef = new Map((hs || []).map(h => [h.standard_ref, h]));
+    // Framework self-certifications, indexed by the HS requirement they certify.
+    // Used to pre-fill the evidence box in Step 7 with the framework statement the
+    // assessor already saw in Step 6, so they don't have to copy it across.
+    _fsByRef = new Map();
+    (riskControls || []).forEach(rc => {
+      if (!/Framework/i.test(rc.control_source || '')) return;
+      const stmt = [rc.jkName, rc.jkObjective].filter(Boolean).join('\n');
+      if (!stmt) return;
+      (rc.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean)
+        .forEach(ref => { const k = _canonRef(ref); if (!_fsByRef.has(k)) _fsByRef.set(k, stmt); });
+    });
     // Test controls indexed by each HS requirement they verify — used to ask the
     // assessor for the test result (operating effectiveness) on Test-type reqs.
     _tcByHsRef = new Map();
@@ -269,12 +285,20 @@
     // --- Legal HS-requirement activation (the treatment unit for legal risks) ---
     const legalRiskIds = _legalRiskIds();
     legalRiskIds.forEach(riskId => {
-      _legalRiskHsRefs(riskId).forEach(ref => { _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: '' }; });
+      _legalRiskHsRefs(riskId).forEach(ref => {
+        // Default the evidence note to the framework self-certification for this HS
+        // requirement (shown in Step 6). Saved notes below override this default.
+        const fs = _fsByRef.get(_canonRef(ref)) || '';
+        _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: fs };
+      });
     });
     const savedHsAct = saved7?.hs_activation || {};
     Object.entries(savedHsAct).forEach(([riskId, byRef]) => {
       Object.entries(byRef || {}).forEach(([ref, st]) => {
-        _hsActState[_hsActKey(riskId, ref)] = { status: st.status || 'not_started', notes: st.notes || '' };
+        // A saved record wins — but if it predates this feature and has no note,
+        // fall back to the framework statement so existing assessments benefit too.
+        const fs = _fsByRef.get(_canonRef(ref)) || '';
+        _hsActState[_hsActKey(riskId, ref)] = { status: st.status || 'not_started', notes: st.notes || fs };
       });
     });
     _deriveActFromHs(); // bridge HS activation → control activation for the report
@@ -747,9 +771,13 @@
   // ---- HS-requirement activation card (Legal/Regulatory tab) --
   function _buildHsActCard(riskId, ref) {
     const key = _hsActKey(riskId, ref);
-    if (!_hsActState[key]) _hsActState[key] = { status: 'not_started', notes: '' };
+    const fsStmt = _fsByRef.get(_canonRef(ref)) || '';
+    if (!_hsActState[key]) _hsActState[key] = { status: 'not_started', notes: fsStmt };
     const st = _hsActState[key];
     const h  = _hsByRef.get(ref);
+    // True when the current note is exactly the framework statement (i.e. the
+    // assessor hasn't edited it yet) — drives the "pre-filled" hint below.
+    const prefilledFromFs = !!fsStmt && String(st.notes || '').trim() === fsStmt.trim();
 
     const card = _el('div', 's9-ctrl-card');
     const hdr  = _el('div', 's9-ctrl-hdr');
@@ -795,8 +823,13 @@
 
     const notesWrap = _el('div', 's9-notes-wrap');
     notesWrap.appendChild(_el('label', 's9-field-label', { textContent: evLabel }));
+    if (prefilledFromFs) {
+      notesWrap.appendChild(_el('p', 's9-fs-prefill-hint', {
+        textContent: 'Pre-filled from the framework self-certification shown in Step 6 — edit or confirm.'
+      }));
+    }
     const ta = document.createElement('textarea');
-    ta.className = 's9-ctrl-notes'; ta.rows = 3; ta.value = st.notes;
+    ta.className = 's9-ctrl-notes'; ta.rows = prefilledFromFs ? 4 : 3; ta.value = st.notes;
     ta.placeholder = evPlaceholder;
     ta.addEventListener('input', () => {
       _hsActState[key].notes = ta.value;
@@ -1200,6 +1233,7 @@
 .s9-field-label{display:block;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
 .s9-ctrl-obj{font-size:12px;color:var(--color-text-secondary);margin:0;line-height:1.5}
 .s9-notes-wrap{margin-bottom:10px}
+.s9-fs-prefill-hint{font-size:11px;color:#ecd489;margin:0 0 6px;line-height:1.4}
 .s9-ctrl-notes{width:100%;padding:8px 10px;border:1px solid var(--color-border-mid,rgba(240,232,208,0.30));border-radius:6px;font-size:12px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.5}
 .s9-ctrl-notes:focus{outline:none;border-color:#8ce3c6;box-shadow:0 0 0 2px rgba(13,148,136,.15)}
 .s9-status-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
