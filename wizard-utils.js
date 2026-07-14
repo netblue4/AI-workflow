@@ -155,6 +155,38 @@ window.WizUtils = (function () {
     return m ? `${m[1]} · ${art.short_name}` : art.short_name;
   }
 
+  // ---- Group Standard (SR) controls (tbl_AI_SR_Controls.json) -------
+  // Hydrated once at startup like the article table, and indexed by the steps
+  // each control applies to (its workflow_steps array). buildStepHeader reads
+  // SR_BY_STEP synchronously to render the per-step "Group standard checklist".
+  const SR_CONTROLS = [];
+  const SR_BY_STEP = new Map(); // step-id → SR control rows
+
+  function loadSrControls() {
+    return fetch('tbl_AI_SR_Controls.json')
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}: tbl_AI_SR_Controls.json`); return r.json(); })
+      .then(list => {
+        SR_CONTROLS.length = 0;
+        SR_BY_STEP.clear();
+        (list || []).forEach(c => {
+          SR_CONTROLS.push(c);
+          (c.workflow_steps || []).forEach(sid => {
+            if (!SR_BY_STEP.has(sid)) SR_BY_STEP.set(sid, []);
+            SR_BY_STEP.get(sid).push(c);
+          });
+        });
+        return SR_CONTROLS;
+      })
+      .catch(() => SR_CONTROLS); // header degrades gracefully if the table is unavailable
+  }
+
+  // Applicable SR controls for a step, ordered by control number.
+  function srControlsForStep(stepId) {
+    return (SR_BY_STEP.get(stepId) || [])
+      .slice()
+      .sort((a, b) => (a.control_number || 0) - (b.control_number || 0));
+  }
+
   // ---- Harmonised standard reference formatting ---------------------
   // These standards are not yet confirmed, so refs are displayed with a
   // provisional "PRN" prefix to avoid implying they are accepted ISO
@@ -218,14 +250,34 @@ window.WizUtils = (function () {
     if (step.applicability) meta.appendChild(el('span', `badge ${step.applicabilityKey || 'all'}`, { textContent: step.applicability }));
     body.appendChild(meta);
 
-    if (step.summary) {
-      body.appendChild(sectionLabel('Summary'));
-      body.appendChild(el('div', 'step-summary-box', { textContent: step.summary }));
-    }
-
-    if (step.deliverables && step.deliverables.length) {
-      body.appendChild(sectionLabel('Deliverables'));
-      body.appendChild(buildDeliverablesList(step.deliverables));
+    // Group standard checklist — the SR controls this step discharges, sourced
+    // from tbl_AI_SR_Controls.json (workflow_steps). Ref + name per row; the
+    // csa_checklist_item is revealed on click (and shown as a hover tooltip).
+    const srControls = srControlsForStep(step.id);
+    if (srControls.length) {
+      body.appendChild(sectionLabel('Group standard checklist'));
+      const list = el('ul', 'sr-todo-list');
+      srControls.forEach(c => {
+        const li = el('li', 'sr-todo-item');
+        const row = el('button', 'sr-todo-row', { type: 'button' });
+        row.title = c.csa_checklist_item || '';
+        const ref = el('span', 'sr-todo-ref', { textContent: `${c.groupstandard_ref || c.pk_SR_Control_ID}` });
+        const name = el('span', 'sr-todo-name', { textContent: c.control_name || '' });
+        const chev = el('span', 'sr-todo-chev');
+        chev.innerHTML = '<svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        row.append(ref, name, chev);
+        const csa = el('p', 'sr-todo-csa');
+        csa.textContent = c.csa_checklist_item || 'No checklist item defined.';
+        csa.style.display = 'none';
+        row.addEventListener('click', () => {
+          const open = csa.style.display === 'none';
+          csa.style.display = open ? '' : 'none';
+          chev.style.transform = open ? 'rotate(180deg)' : '';
+        });
+        li.append(row, csa);
+        list.appendChild(li);
+      });
+      body.appendChild(list);
     }
 
     if (step.gates && step.gates.length) {
@@ -237,17 +289,11 @@ window.WizUtils = (function () {
       });
     }
 
-    if (step.requirementLabels && step.requirementLabels.length) {
-      const rl = el('div', 'req-list', { style: 'margin-top:14px' });
-      step.requirementLabels.forEach(r => rl.appendChild(el('span', 'req-pill', { textContent: r })));
-      body.appendChild(rl);
-    }
-
     // Only add the toggle when there is something to reveal.
     if (body.childElementCount > 1 || (meta.childElementCount > 0)) {
       const toggle = el('button', 'step-header-toggle', { type: 'button' });
       toggle.setAttribute('aria-expanded', 'false');
-      const label   = el('span', 'step-header-toggle-label', { textContent: 'Show summary, deliverables & gates' });
+      const label   = el('span', 'step-header-toggle-label', { textContent: 'Show group standard checklist' });
       const chevron = el('span', 'step-header-chevron');
       chevron.innerHTML = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       toggle.append(label, chevron);
@@ -255,7 +301,7 @@ window.WizUtils = (function () {
         const open = body.style.display === 'none';
         body.style.display = open ? '' : 'none';
         chevron.style.transform = open ? 'rotate(180deg)' : '';
-        label.textContent = open ? 'Hide summary, deliverables & gates' : 'Show summary, deliverables & gates';
+        label.textContent = open ? 'Hide group standard checklist' : 'Show group standard checklist';
         toggle.setAttribute('aria-expanded', String(open));
       });
       sec.appendChild(toggle);
@@ -351,6 +397,14 @@ window.WizUtils = (function () {
 .step-header-toggle:hover{color:var(--color-text-secondary)}
 .step-header-chevron{display:flex;align-items:center;transition:transform .2s}
 .step-header-body{margin-top:14px}
+.sr-todo-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sr-todo-item{border:1px solid var(--color-border);border-radius:var(--radius-md,6px);overflow:hidden;background:var(--color-bg-subtle,#211d15)}
+.sr-todo-row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit;color:var(--color-text-primary)}
+.sr-todo-row:hover{background:var(--color-bg-hover,#262219)}
+.sr-todo-ref{flex-shrink:0;font-family:var(--font-mono);font-size:11px;font-weight:600;color:#ecd489;background:rgba(212,184,96,0.16);border-radius:4px;padding:2px 8px;white-space:nowrap}
+.sr-todo-name{flex:1;min-width:0;font-size:13px;font-weight:500}
+.sr-todo-chev{flex-shrink:0;display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
+.sr-todo-csa{margin:0;padding:0 12px 11px 12px;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)}
 .step-header-body>.step-summary-box:last-child,.step-header-body>.req-list:last-child,.step-header-body>.gate-note:last-child{margin-bottom:0}
 .wiz-tab-strip{display:flex;gap:4px;padding:16px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-bg);flex-shrink:0}
 .wiz-tab{padding:8px 16px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary);margin-bottom:-1px;transition:color .15s,border-color .15s}
@@ -396,5 +450,5 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
 })();
