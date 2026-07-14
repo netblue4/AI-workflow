@@ -112,9 +112,6 @@
           "text": "Gate: If training is not current, complete it before proceeding. The ISG team maintains training records."
         }
       ],
-      "requirementLabels": [
-        "AI SR7 — Awareness and Training"
-      ],
       "detailFile": "step-1.json"
     },
     {
@@ -131,10 +128,6 @@
       "applicability": "All tiers",
       "applicabilityKey": "all",
       "gates": [],
-      "requirementLabels": [
-        "AI SR2 — Authorisation",
-        "AI SR6 — Record Keeping"
-      ],
       "detailFile": "step-2.json"
     },
     {
@@ -154,9 +147,6 @@
           "type": "warning",
           "text": "Tier 2 gate: Any use case producing marketing, legal, compliance, financial, code, or translation content must follow the full due diligence phase and requires AI Change Board approval."
         }
-      ],
-      "requirementLabels": [
-        "AI SR2 — Tiered authorisation"
       ],
       "detailFile": "step-3.json"
     },
@@ -189,11 +179,6 @@
           "text": "Art.22 gate: Where the AI system makes automated decisions with legal or significant effects on data subjects, explicit consent or another Art.22(2) ground must be confirmed before proceeding."
         }
       ],
-      "requirementLabels": [
-        "AI SR3 — Data Protection",
-        "AI SR9 — EU AI Act / DPIAs",
-        "AI SR6 — DPIA retention"
-      ],
       "detailFile": "step-4.json"
     },
     {
@@ -209,11 +194,6 @@
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
       "gates": [],
-      "requirementLabels": [
-        "AI SR2 — Risk Assessment",
-        "AI SR9 — EU AI Act",
-        "AI SR6 — TRA retention"
-      ],
       "detailFile": "step-5.json"
     },
     {
@@ -229,11 +209,6 @@
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
       "gates": [],
-      "requirementLabels": [
-        "AI SR9 — Human oversight",
-        "AI SR8 — Disclosure",
-        "AI SR3 — Encryption and access"
-      ],
       "detailFile": "step-6.json"
     },
     {
@@ -254,11 +229,6 @@
           "type": "danger",
           "text": "Gate: Residual risk assessment panels are locked until both test and activation evidence is complete for each risk group."
         }
-      ],
-      "requirementLabels": [
-        "AI SR4 — Control Verification",
-        "AI SR1 — Governance controls",
-        "AI SR8 — Disclosure active"
       ],
       "detailFile": "step-7.json"
     },
@@ -284,11 +254,6 @@
           "text": "On rejection: Requestor notified with documented reasons. Resubmission requires material redesign."
         }
       ],
-      "requirementLabels": [
-        "AI SR2 — AI Change Board",
-        "AI SR9 — High-risk AI",
-        "AI SR6 — Authorisation records"
-      ],
       "detailFile": "step-8.json"
     },
     {
@@ -309,8 +274,8 @@
           "Accuracy and hallucination risk evaluation (Steps 5 and 7)",
           "Bias detection and domain suitability (Steps 5 and 7)",
           "IP and copyright exposure (vendor terms, Step 5)",
-          "Output logging and anomaly flagging (Step 9)",
-          "Disclosure labelling on published content (Step 9)"
+          "Output logging and anomaly flagging (Step 6)",
+          "Disclosure labelling on published content (Step 6)"
         ],
         "user": [
           "Not inputting data known to be personal, confidential, or classified",
@@ -325,10 +290,6 @@
           "type": "info",
           "text": "Key principle: Users are held to obligations they can actually discharge. Accuracy, bias, and IP verification are organisational controls — not individual responsibilities."
         }
-      ],
-      "requirementLabels": [
-        "AI SR4 — Revised user obligations",
-        "AI SR7 — Awareness"
       ],
       "detailFile": "step-10.json"
     },
@@ -346,10 +307,6 @@
       "applicability": "All approved use cases",
       "applicabilityKey": "all",
       "gates": [],
-      "requirementLabels": [
-        "AI SR6 — Record Keeping",
-        "AI SR1 — Governance / RCSA"
-      ],
       "detailFile": "step-11.json"
     },
     {
@@ -374,11 +331,6 @@
           "type": "info",
           "text": "Training feedback loop: Trends from reviews must be escalated to ISG for targeted training programmes under AI SR7."
         }
-      ],
-      "requirementLabels": [
-        "AI SR5 — Periodic Review",
-        "AI SR7 — Training feedback",
-        "AI SR1 — SteerCo oversight"
       ],
       "detailFile": "step-12.json"
     }

@@ -46,6 +46,14 @@
     if (s7?.rationale) _rationale = s7.rationale;
     _renderPanes(pw);
     _evalConditions();
+    // Persist the saved DPIA summary across navigation, the way Step 3 shows a
+    // saved classification result. A completed save carries completion_date +
+    // data_types_identified; a JAKE-loaded draft (answers only) does not.
+    if (s7 && s7.completion_date && s7.data_types_identified) {
+      _renderResults(s7);
+      const prog = _container.querySelector('#dpia-progress');
+      if (prog) prog.textContent = _computeProgress();
+    }
   }
 
   // ---- Condition helpers --------------------------------------
