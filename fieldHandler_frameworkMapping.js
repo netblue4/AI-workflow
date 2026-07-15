@@ -131,10 +131,11 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         cachedFetch('tbl_Test_Controls.json',       '_fwTC'),
         cachedFetch('tbl_AI_SR_Controls.json',      '_fwSR'),
         cachedFetch('tbl_Risk_Controls.json',       '_fwRC'),
-    ]).then(([articles, hs, testControls, srControls, riskControls]) => {
+        cachedFetch('tbl_Risks.json',               '_fwRisks'),
+    ]).then(([articles, hs, testControls, srControls, riskControls, risks]) => {
         tableContainer.innerHTML = '';
         tableContainer.appendChild(
-            buildFWTable(articles, hs, testControls, srControls, riskControls)
+            buildFWTable(articles, hs, testControls, srControls, riskControls, risks)
         );
     }).catch(err => {
         tableContainer.innerHTML = '';
@@ -147,7 +148,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
     return wrapper;
 
     // ── Table builder (runs after data loads) ──────────────────────────────────
-    function buildFWTable(articles, hs, testControls, srControls, riskControls) {
+    function buildFWTable(articles, hs, testControls, srControls, riskControls, risks) {
 
         // Index each contributor by the HS standard_ref it covers.
         const indexByRef = (rows, refField, keep) => {
@@ -164,6 +165,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         const tcByRef = indexByRef(testControls, 'fk_Harmonised_Standard_IDs');
         const srByRef = indexByRef(srControls,   'fk_Harmonised_Standard_IDs');  // internal AI Acceptable Use Standard
         const fsByRef = indexByRef(riskControls, 'fk_Harmonised_Standard_IDs', rc => rc.control_source === 'Framework_Statement');
+        const riskByRef = indexByRef(risks,      'fk_Harmonised_Standard_IDs');  // risks that threaten each HS requirement
 
         // Build nested structure: article → standard_group → HS entries
         // Preserves ordering from tbl_AI_Articles and tbl_Harmonised_Standards
@@ -193,6 +195,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     testControls:   tcByRef.get(h.standard_ref) || [],
                     srControls:     srByRef.get(h.standard_ref) || [],
                     fsControls:     fsByRef.get(h.standard_ref) || [],
+                    risks:          riskByRef.get(h.standard_ref) || [],
                 });
             }
 
@@ -210,12 +213,13 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         const thead     = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const columns   = [
-            { label: 'AI Act Article',      width: '12%' },
-            { label: 'Standard',            width: '19%' },
-            { label: 'Requirement',         width: '22%' },
-            { label: 'Verification',        width: '16%' },
-            { label: 'Internal Std (SR)',   width: '16%' },
-            { label: 'Framework Statement', width: '15%' },
+            { label: 'AI Act Article',        width: '11%' },
+            { label: 'Harmonised Standard',   width: '17%' },
+            { label: 'Harmonised Requirement',width: '18%' },
+            { label: 'Risk',                  width: '15%' },
+            { label: 'Verification',          width: '13%' },
+            { label: 'Internal Std (SR)',     width: '13%' },
+            { label: 'Framework Statement',   width: '13%' },
         ];
         columns.forEach(col => {
             const th = document.createElement('th');
@@ -242,7 +246,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             groups.forEach(({ groupName, reqs }) => {
                 let isFirstGroupRow = true;
 
-                reqs.forEach(({ hsRef, hsName, coverageType, testControls: tcs, srControls: srs, fsControls: fss }) => {
+                reqs.forEach(({ hsRef, hsName, coverageType, testControls: tcs, srControls: srs, fsControls: fss, risks: rks }) => {
                     const isEven  = rowIndex % 2 === 0;
                     const baseBg  = isEven ? '#1a1a1a' : '#161616';
 
@@ -308,6 +312,14 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     reqCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
                     reqCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
                     row.appendChild(reqCell);
+
+                    // Risk cell — the risk(s) that threaten this requirement.
+                    const riskCell = document.createElement('td');
+                    riskCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
+                    if (rks.length) {
+                        rks.forEach(r => riskCell.appendChild(fwBadge(r.pk_Risk_ID, r.risk_name, '#f0a07a', '#2a1810', '#4a2c1c')));
+                    } else { riskCell.style.color = '#303030'; riskCell.textContent = '—'; }
+                    row.appendChild(riskCell);
 
                     // Verification cell — depends on how the requirement is evidenced.
                     const tstCell = document.createElement('td');
