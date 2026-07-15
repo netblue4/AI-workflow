@@ -23,16 +23,13 @@
     hdr.appendChild(el('p', 'abt-eyebrow', { textContent: 'Reference' }));
     hdr.appendChild(el('h1', 'abt-title', { textContent: 'About the framework' }));
     hdr.appendChild(el('p', 'abt-lede', {
-      textContent: 'How the EU AI Act, harmonised standards, risks, tests and your internal AI Acceptable Use Standard fit together — evidenced end to end by this workflow.'
+      textContent: 'This framework shows the EU AI Act articles, the risks that threaten each article’s objective, the harmonised-standard requirements that treat those risks, and the evidence required to prove they are treated.'
     }));
     shell.appendChild(hdr);
 
-    // ---- Section 1: two dimensions, one hub ----
-    shell.appendChild(_sectionTitle('Two dimensions, one hub'));
-    const intro = el('p', 'abt-body');
-    intro.innerHTML = 'Everything pivots on the <strong>harmonised-standard (HS) requirement</strong> — a concrete, checkable clause. Read it <em>up</em> to the EU law, <em>across</em> to your internal standard, and <em>down</em> to the risks it addresses and the evidence that proves it.';
-    shell.appendChild(intro);
-    shell.appendChild(_hubDiagram());
+    // ---- Section 1: how it fits together (infographic) ----
+    shell.appendChild(_sectionTitle('How it fits together'));
+    shell.appendChild(_flowDiagram());
 
     // ---- Section 2: the building blocks ----
     shell.appendChild(_sectionTitle('The building blocks'));
@@ -48,14 +45,10 @@
     shell.appendChild(ev);
     shell.appendChild(_evidenceLegend());
 
-    // ---- Section 4: worked example ----
-    shell.appendChild(_sectionTitle('A worked example'));
-    shell.appendChild(_example());
-
-    // ---- Section 5: live reference grid ----
+    // ---- Section 4: live reference grid ----
     shell.appendChild(_sectionTitle('Live framework reference'));
     const gridNote = el('p', 'abt-body');
-    gridNote.textContent = 'Every requirement, both dimensions, in one grid: its EU AI Act article and verification, plus the internal-standard clause and any governance self-certification that map to it.';
+    gridNote.textContent = 'Every requirement in one grid: the EU AI Act article, the risk that threatens it, the harmonised standard and requirement that treat it, the verification that proves it, and the internal-standard clause that maps to it.';
     shell.appendChild(gridNote);
     const gridHost = el('div', 'abt-grid-host');
     if (typeof createFrameworkMapping === 'function') {
@@ -83,24 +76,23 @@
     return s;
   }
 
-  // Central-hub diagram: HS requirement in the middle, four relationships out.
-  function _hubDiagram() {
-    const d = el('div', 'abt-hub');
-    const mk = (cls, kicker, label) => {
-      const b = el('div', 'abt-node ' + cls);
-      b.appendChild(el('span', 'abt-node-kicker', { textContent: kicker }));
-      b.appendChild(el('span', 'abt-node-label', { textContent: label }));
-      return b;
-    };
-    d.appendChild(mk('abt-node--act',  'EU LAW ↑',        'AI Act Article'));
-    d.appendChild(mk('abt-node--sr',   'INTERNAL STD →',  'AI SR control'));
-    const hub = el('div', 'abt-node abt-node--hub');
-    hub.appendChild(el('span', 'abt-node-kicker', { textContent: 'THE HUB' }));
-    hub.appendChild(el('span', 'abt-node-label', { textContent: 'HS requirement' }));
-    d.appendChild(hub);
-    d.appendChild(mk('abt-node--risk', 'ADDRESSES ↓',     'Risk'));
-    d.appendChild(mk('abt-node--ev',   'PROVEN BY ↓',     'Test · Document · Workflow · Self-cert'));
-    return d;
+  // Flow infographic: the framework read left to right as a single chain.
+  function _flowDiagram() {
+    const flow = el('div', 'abt-flow');
+    const nodes = [
+      ['act',  'AI Act Article',         'sets the objective'],
+      ['risk', 'Risk',                   'threatens the objective'],
+      ['hs',   'Harmonised Requirement', 'treats the risk'],
+      ['ev',   'Evidence',               'proves it is treated'],
+    ];
+    nodes.forEach(([cls, title, sub], i) => {
+      const node = el('div', 'abt-flow-node abt-flow-node--' + cls);
+      node.appendChild(el('span', 'abt-flow-title', { textContent: title }));
+      node.appendChild(el('span', 'abt-flow-sub', { textContent: sub }));
+      flow.appendChild(node);
+      if (i < nodes.length - 1) flow.appendChild(el('span', 'abt-flow-arrow', { textContent: '→' }));
+    });
+    return flow;
   }
 
   const EVIDENCE = [
@@ -121,26 +113,6 @@
     return wrap;
   }
 
-  function _example() {
-    const steps = [
-      ['AI Act Article', 'ART-002 · Article 14 — Human Oversight', 'act'],
-      ['HS requirements', '[18229-1.6] Automation Confidence Warning · [18229-1.7] Intervention Tools · [18229-1.8] Interpretability', 'hs'],
-      ['Risk that threatens them', 'RISK-001 Human Oversight Bypass Failure', 'risk'],
-      ['Proven by', 'TCTRL-001 Confidence Gate Test → verifies [18229-1.6]', 'ev'],
-    ];
-    const wrap = el('div', 'abt-thread');
-    steps.forEach(([k, v, cls], i) => {
-      const row = el('div', 'abt-thread-row');
-      row.appendChild(el('span', 'abt-thread-dot abt-thread-dot--' + cls));
-      const txt = el('div', 'abt-thread-txt');
-      txt.appendChild(el('span', 'abt-thread-k', { textContent: k }));
-      txt.appendChild(el('span', 'abt-thread-v', { textContent: v }));
-      row.appendChild(txt);
-      wrap.appendChild(row);
-      if (i < steps.length - 1) wrap.appendChild(el('div', 'abt-thread-link'));
-    });
-    return wrap;
-  }
 
   // Live counts from the data tables.
   function _loadCounts() {
@@ -156,10 +128,11 @@
       const byType = {};
       hs.forEach(h => { const t = h.coverage_type || 'Test'; byType[t] = (byType[t] || 0) + 1; });
       const fs = rc.filter(c => c.control_source === 'Framework_Statement');
+      // Ordered to match the chain: article → risk → requirement → evidence.
       const cards = [
-        ['16', arts.length || 16, 'AI Act Articles', 'The EU law', 'act'],
-        [null, hs.length, 'HS requirements', `Test ${byType.Test || 0} · Doc ${byType.Document || 0} · Workflow ${byType.Workflow || 0} · N/A ${byType.Not_Applicable || 0}`, 'hs'],
-        [null, risks.length, 'Risks', 'What can go wrong', 'risk'],
+        ['16', arts.length || 16, 'AI Act Articles', 'Set the objectives', 'act'],
+        [null, risks.length, 'Risks', 'Threaten the article objectives', 'risk'],
+        [null, hs.length, 'HS requirements', `Treat the risks · Test ${byType.Test || 0} · Doc ${byType.Document || 0} · Workflow ${byType.Workflow || 0} · N/A ${byType.Not_Applicable || 0}`, 'hs'],
         [null, tc.length, 'Test controls', 'Prove HS requirements operate', 'test'],
         [null, sr.length, 'Internal Std (SR)', 'AI Acceptable Use Standard clauses', 'sr'],
         [null, fs.length, 'Framework Statements', 'Workflow governance self-certifications', 'fs'],
@@ -191,18 +164,17 @@
     .abt-sec-title h2{font-size:19px;font-weight:600;margin:0}
     .abt-body{font-size:14.5px;line-height:1.65;color:var(--color-text-secondary);max-width:78ch;margin:0 0 14px}
     .abt-body strong{color:var(--color-text-primary)}
-    /* hub diagram */
-    .abt-hub{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:8px 0 8px;align-items:stretch}
-    .abt-node{background:var(--color-surface);border:1px solid var(--color-border-mid);border-radius:var(--radius-lg);
-      padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:66px;justify-content:center}
-    .abt-node-kicker{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600}
-    .abt-node-label{font-size:14px;font-weight:600}
-    .abt-node--hub{grid-column:2;grid-row:1 / span 2;border-color:#5ec8c0;background:linear-gradient(180deg,rgba(94,200,192,.12),rgba(94,200,192,.03));align-items:center;text-align:center}
-    .abt-node--hub .abt-node-label{font-size:17px}
-    .abt-node--act{grid-column:1;grid-row:1;border-left:3px solid #7eb3ff}
-    .abt-node--sr{grid-column:3;grid-row:1;border-left:3px solid #5ec8c0}
-    .abt-node--risk{grid-column:1;grid-row:2;border-left:3px solid #f0a07a}
-    .abt-node--ev{grid-column:3;grid-row:2;border-left:3px solid #8fd6a8}
+    /* flow infographic */
+    .abt-flow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:10px 0 6px}
+    .abt-flow-node{flex:1 1 0;min-width:150px;background:var(--color-surface);border:1px solid var(--color-border-mid);
+      border-left:3px solid var(--color-border-mid);border-radius:var(--radius-lg);padding:14px 16px;display:flex;flex-direction:column;gap:5px;justify-content:center}
+    .abt-flow-title{font-size:14.5px;font-weight:700;color:var(--color-text-primary);line-height:1.25}
+    .abt-flow-sub{font-size:12px;color:var(--color-text-tertiary);line-height:1.35}
+    .abt-flow-node--act{border-left-color:#7eb3ff}
+    .abt-flow-node--risk{border-left-color:#f0a07a}
+    .abt-flow-node--hs{border-left-color:#5ec8c0}
+    .abt-flow-node--ev{border-left-color:#8fd6a8}
+    .abt-flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--color-text-tertiary);font-size:20px;flex:none}
     /* building blocks */
     .abt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     .abt-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);
@@ -224,16 +196,6 @@
     .abt-chip--fs{color:#b79cff;background:rgba(150,120,255,.12);border-color:rgba(150,120,255,.3)}
     .abt-chip--na{color:#9aa3b2;background:rgba(140,150,170,.1);border-color:rgba(140,150,170,.28)}
     .abt-ev-desc{font-size:13.5px;color:var(--color-text-secondary)}
-    /* worked example thread */
-    .abt-thread{margin:4px 0;max-width:80ch}
-    .abt-thread-row{display:flex;align-items:flex-start;gap:12px}
-    .abt-thread-dot{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none}
-    .abt-thread-dot--act{background:#7eb3ff}.abt-thread-dot--hs{background:#5ec8c0}
-    .abt-thread-dot--risk{background:#f0a07a}.abt-thread-dot--ev{background:#8fd6a8}
-    .abt-thread-txt{display:flex;flex-direction:column;gap:1px;padding-bottom:2px}
-    .abt-thread-k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:600}
-    .abt-thread-v{font-size:14px;color:var(--color-text-primary)}
-    .abt-thread-link{width:2px;height:14px;background:var(--color-border-mid);margin:1px 0 1px 5px}
     /* grid host */
     .abt-grid-host{margin-top:6px;border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;background:#141414}
     .abt-note{margin-top:28px;background:var(--color-bg-subtle);border:1px solid var(--color-border-mid);
@@ -241,8 +203,8 @@
     .abt-note strong{color:var(--color-text-primary)}
     @media (max-width:820px){
       .abt-shell{padding:24px 18px 56px}
-      .abt-hub{grid-template-columns:1fr}
-      .abt-node--hub,.abt-node--act,.abt-node--sr,.abt-node--risk,.abt-node--ev{grid-column:1;grid-row:auto}
+      .abt-flow{flex-direction:column}
+      .abt-flow-arrow{transform:rotate(90deg)}
       .abt-cards{grid-template-columns:1fr 1fr}
       .abt-chip{min-width:120px}
     }`;
