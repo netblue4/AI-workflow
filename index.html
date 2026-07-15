@@ -118,6 +118,28 @@ function indexPhases(workflow) {
 }
 
 // ---- Render nav panel from data ----------------------------
+// A step counts as complete when its own record slice holds a real, saved
+// result — not merely a JAKE-loaded draft. Drives the green nav icons.
+function isStepComplete(stepId) {
+  const rec = (window.WizUtils && WizUtils.loadRecord && WizUtils.loadRecord()) || {};
+  const s = rec[stepId];
+  if (!s) return false;
+  switch (stepId) {
+    case 'step-2':  return !!(s.business_case && s.business_case.trim());
+    case 'step-3':  return !!s.axis_b?.ai_act_outcome;                 // classified, not a draft
+    case 'step-4':  return !!s.completion_date;                        // DPIA saved, not a draft
+    case 'step-5':  return !!(s.legal_assessment?.completed || s.group_standard_assessment?.completed);
+    case 'step-6':  return !!s.assessment_date;                        // controls saved, not the selected_hs draft
+    case 'step-7':  return !!s.assessment_date;
+    case 'step-1':
+    case 'step-8':
+    case 'step-10':
+    case 'step-11':
+    case 'step-12': return !!s.attested;
+    default:        return true;
+  }
+}
+
 function renderNav(workflow, stepIndex, phaseIndex, activeStepId) {
   const container = document.getElementById('nav-scroll');
   let html = '';
@@ -136,9 +158,12 @@ function renderNav(workflow, stepIndex, phaseIndex, activeStepId) {
       if (!step) return;
       const isActive = stepId === activeStepId;
       const activeClass = isActive ? `active active-${colorKey}` : '';
+      // Step icons are gold until the step is completed, then green — a quick
+      // scan of the nav shows what's done.
+      const doneClass = isStepComplete(step.id) ? 'nav-step-num--done' : 'nav-step-num--todo';
       html += `
         <button class="nav-step ${activeClass}" data-step-id="${step.id}" onclick="selectStep('${step.id}')">
-          <span class="nav-step-num color-${colorKey}">${step.number}</span>
+          <span class="nav-step-num ${doneClass}">${step.number}</span>
           <span class="nav-step-title">${step.title}</span>
           ${step.isNew ? '<span class="nav-step-new">new</span>' : ''}
         </button>`;
@@ -365,6 +390,10 @@ function _ucShowStatus(msg) {
     _stepIndex = indexSteps(_workflow);
     _phaseIndex = indexPhases(_workflow);
     renderNav(_workflow, _stepIndex, _phaseIndex, null);
+    // Refresh the nav's completion colours whenever any step saves its record.
+    window.addEventListener('record-saved', () => {
+      if (_workflow && _stepIndex) renderNav(_workflow, _stepIndex, _phaseIndex, _activeStepId);
+    });
     // Restore UC identity from any previously saved record in this session
     try {
       const saved = sessionStorage.getItem(UC_RECORD_KEY);

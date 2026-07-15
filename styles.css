@@ -222,6 +222,17 @@ body {
   justify-content: center;
   flex-shrink: 0;
 }
+/* Step icons: gold while outstanding, green once the step is completed. */
+.nav-step-num--todo {
+  background: var(--gold-soft, rgba(212,184,96,0.16));
+  color: var(--gold-bright, #ecd489);
+  border: 1px solid rgba(212,184,96,0.45);
+}
+.nav-step-num--done {
+  background: rgba(52,199,120,0.18);
+  color: #8cebb0;
+  border: 1px solid rgba(52,199,120,0.55);
+}
 
 .nav-step-title {
   font-size: 12px;
