@@ -1,14 +1,17 @@
 /**
  * Framework Mapping Handler — loads tbl_ JSON files and renders a read-only
  * compliance reference table across both compliance dimensions.
- * Columns: AI Act Article | Standard | Requirement | Verification | Internal Std (SR) | Framework Statement
+ * Columns: AI Act Article | Risk | Harmonised Standard | Harmonised Requirement | Verification | Internal Std (SR)
  *
- * Verification        → how the HS requirement is evidenced (test / document / workflow / N-A)
- * Internal Std (SR)   → the internal AI Acceptable Use Standard clause(s) that map to it
- * Framework Statement → governance self-certification by the workflow (FS-*)
+ * Reads as a chain: the article's objective is threatened by the Risk, treated by
+ * the Harmonised Standard / Requirement, and proven by the Verification.
+ * Risk          → risk(s) that threaten the article's objective (tbl_Risks)
+ * Verification  → how the requirement is evidenced (test / document / workflow /
+ *                 framework self-certification (FS-*) / N-A)
+ * Internal Std (SR) → the internal AI Acceptable Use Standard clause(s) that map to it
  *
- * Rows are clickable (toggle gold highlight). Article / standard groups are
- * visually separated by heavier top borders.
+ * Rows are flattened (every column populated on every row). Article / standard
+ * groups are visually separated by heavier top borders.
  */
 
 function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = null) {
@@ -213,13 +216,12 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         const thead     = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const columns   = [
-            { label: 'AI Act Article',        width: '11%' },
-            { label: 'Harmonised Standard',   width: '17%' },
-            { label: 'Harmonised Requirement',width: '18%' },
-            { label: 'Risk',                  width: '15%' },
-            { label: 'Verification',          width: '13%' },
-            { label: 'Internal Std (SR)',     width: '13%' },
-            { label: 'Framework Statement',   width: '13%' },
+            { label: 'AI Act Article',         width: '14%' },
+            { label: 'Risk',                   width: '17%' },
+            { label: 'Harmonised Standard',    width: '18%' },
+            { label: 'Harmonised Requirement', width: '19%' },
+            { label: 'Verification',           width: '18%' },
+            { label: 'Internal Std (SR)',      width: '14%' },
         ];
         columns.forEach(col => {
             const th = document.createElement('th');
@@ -277,6 +279,10 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                         }
                     });
 
+                    // Flattened rows: every column is populated on every row so the
+                    // Article → Risk → Harmonised Standard → Requirement → Verification
+                    // story reads on each line. Heavier top borders still mark where an
+                    // article (and its standard group) changes.
                     const topBorder = isFirstArticleRow
                         ? '2px solid #3d3d3d'
                         : isFirstGroupRow
@@ -286,34 +292,13 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     const cellBase = `padding:10px 14px;vertical-align:top;line-height:1.5;
                         border-top:${topBorder};border-bottom:1px solid #1f1f1f;border-right:1px solid #252525;`;
 
-                    // Article cell
+                    // 1. AI Act Article
                     const artCell = document.createElement('td');
-                    artCell.style.cssText = cellBase + (isFirstArticleRow
-                        ? 'font-weight:600;color:#e0d9ce;border-right:1px solid #2a2a2a;'
-                        : 'color:#303030;border-right:1px solid #2a2a2a;');
-                    artCell.textContent = isFirstArticleRow ? articleName : '';
+                    artCell.style.cssText = cellBase + 'font-weight:500;color:#d8d2c8;border-right:1px solid #2a2a2a;';
+                    artCell.textContent = articleName;
                     row.appendChild(artCell);
 
-                    // Standard group cell
-                    const grpCell = document.createElement('td');
-                    grpCell.style.cssText = cellBase + (isFirstGroupRow
-                        ? 'color:#7eb3c8;border-right:1px solid #2a2a2a;'
-                        : 'color:#2a3040;border-right:1px solid #2a2a2a;');
-                    // groupName is the descriptive standard_group label; render as-is.
-                    // Legacy family keys (e.g. "18229-1") still get the PRN prefix.
-                    grpCell.textContent = isFirstGroupRow
-                        ? (/^\[/.test(groupName) ? groupName
-                           : (window.WizUtils ? WizUtils.fmtStdRef('[' + groupName + ']') : groupName))
-                        : '';
-                    row.appendChild(grpCell);
-
-                    // Requirement cell
-                    const reqCell = document.createElement('td');
-                    reqCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
-                    reqCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
-                    row.appendChild(reqCell);
-
-                    // Risk cell — the risk(s) that threaten this requirement.
+                    // 2. Risk — the risk(s) that threaten this article's objective.
                     const riskCell = document.createElement('td');
                     riskCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
                     if (rks.length) {
@@ -321,7 +306,21 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     } else { riskCell.style.color = '#303030'; riskCell.textContent = '—'; }
                     row.appendChild(riskCell);
 
-                    // Verification cell — depends on how the requirement is evidenced.
+                    // 3. Harmonised Standard — the descriptive standard_group label.
+                    const grpCell = document.createElement('td');
+                    grpCell.style.cssText = cellBase + 'color:#7eb3c8;border-right:1px solid #2a2a2a;';
+                    grpCell.textContent = /^\[/.test(groupName) ? groupName
+                        : (window.WizUtils ? WizUtils.fmtStdRef('[' + groupName + ']') : groupName);
+                    row.appendChild(grpCell);
+
+                    // 4. Harmonised Requirement
+                    const reqCell = document.createElement('td');
+                    reqCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
+                    reqCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
+                    row.appendChild(reqCell);
+
+                    // 5. Verification — how the requirement is proven, INCLUDING the
+                    // framework self-certification (FS), which is one of the evidence routes.
                     const tstCell = document.createElement('td');
                     tstCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
                     if (coverageType === 'Workflow') {
@@ -338,23 +337,17 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                             tstCell.appendChild(fwBadge(tc.control_ref, tc.jkName, '#34d399', '#0f2520', '#1a3830'));
                         });
                     }
+                    // Framework self-certification badge(s), merged in from the old FS column.
+                    fss.forEach(fs => tstCell.appendChild(fwBadge(fs.pk_Risk_Control_ID, fs.jkName, '#b79cff', '#181433', '#312a56')));
                     row.appendChild(tstCell);
 
-                    // Internal Standard (SR) cell — the AI Acceptable Use Standard clause(s).
+                    // 6. Internal Standard (SR) — the AI Acceptable Use Standard clause(s).
                     const srCell = document.createElement('td');
-                    srCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
+                    srCell.style.cssText = cellBase;
                     if (srs.length) {
                         srs.forEach(sr => srCell.appendChild(fwBadge(sr.groupstandard_ref, sr.control_name, '#5ec8c0', '#0c2321', '#1a3a37')));
                     } else { srCell.style.color = '#303030'; srCell.textContent = '—'; }
                     row.appendChild(srCell);
-
-                    // Framework Statement cell — governance self-certification by the workflow.
-                    const fsCell = document.createElement('td');
-                    fsCell.style.cssText = cellBase;
-                    if (fss.length) {
-                        fss.forEach(fs => fsCell.appendChild(fwBadge(fs.pk_Risk_Control_ID, fs.jkName, '#b79cff', '#181433', '#312a56')));
-                    } else { fsCell.style.color = '#303030'; fsCell.textContent = '—'; }
-                    row.appendChild(fsCell);
 
                     tbody.appendChild(row);
 
