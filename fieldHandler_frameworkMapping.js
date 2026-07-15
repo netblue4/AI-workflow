@@ -173,15 +173,15 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             const artHS = hs.filter(h => h.fk_AI_Article_ID === art.pk_AI_Article_ID);
             if (artHS.length === 0) continue;
 
-            // Standard family derived from the ref (standard_group field was
-            // removed from tbl_Harmonised_Standards.json): [18229-1.1] -> 18229-1,
-            // [18286.2] -> 18286.
+            // Standard column groups by the descriptive standard_group label
+            // (e.g. "[18229-1: Trustworthiness] - Transparency"). Falls back to the
+            // family derived from the ref ([18229-1.1] -> 18229-1) if unset.
             const stdFamily = ref => String(ref || '').replace(/[\[\]]/g, '').replace(/\.\d+$/, '');
 
             const groupOrder = [];
             const groupMap   = new Map();
             for (const h of artHS) {
-                const grp = stdFamily(h.standard_ref);
+                const grp = h.standard_group || stdFamily(h.standard_ref);
                 if (!groupMap.has(grp)) {
                     groupMap.set(grp, []);
                     groupOrder.push(grp);
@@ -210,12 +210,12 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         const thead     = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const columns   = [
-            { label: 'AI Act Article',      width: '13%' },
-            { label: 'Standard',            width: '11%' },
-            { label: 'Requirement',         width: '26%' },
-            { label: 'Verification',        width: '18%' },
+            { label: 'AI Act Article',      width: '12%' },
+            { label: 'Standard',            width: '19%' },
+            { label: 'Requirement',         width: '22%' },
+            { label: 'Verification',        width: '16%' },
             { label: 'Internal Std (SR)',   width: '16%' },
-            { label: 'Framework Statement', width: '16%' },
+            { label: 'Framework Statement', width: '15%' },
         ];
         columns.forEach(col => {
             const th = document.createElement('th');
@@ -295,8 +295,11 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     grpCell.style.cssText = cellBase + (isFirstGroupRow
                         ? 'color:#7eb3c8;border-right:1px solid #2a2a2a;'
                         : 'color:#2a3040;border-right:1px solid #2a2a2a;');
+                    // groupName is the descriptive standard_group label; render as-is.
+                    // Legacy family keys (e.g. "18229-1") still get the PRN prefix.
                     grpCell.textContent = isFirstGroupRow
-                        ? (window.WizUtils ? WizUtils.fmtStdRef('[' + groupName + ']') : groupName)
+                        ? (/^\[/.test(groupName) ? groupName
+                           : (window.WizUtils ? WizUtils.fmtStdRef('[' + groupName + ']') : groupName))
                         : '';
                     row.appendChild(grpCell);
 
