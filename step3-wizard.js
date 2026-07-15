@@ -43,35 +43,13 @@
     // Standard full-width title section (from workflow.json)
     container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
 
-    // ── Tab strip (above the content, matching other steps) ──────────────────
-    const tabStrip = _buildTabStrip();
-    container.appendChild(tabStrip);
-
-    // White content section — classification wizard
+    // White content section — classification wizard. The reference/methodology
+    // content now lives in the About the framework training area, so the step
+    // itself is a single wizard pane (no tab strip).
     const card = _el('div', 'step-content-section');
-
-    // ── Wizard tab (default) ─────────────────────────────────────────────────
     const wizardPane = _buildWizardPane(detail);
     wizardPane.id = 'wiz-pane-wizard';
-
-    // ── Reference tab ────────────────────────────────────────────────────────
-    const referencePane = _buildReferencePane(detail);
-    referencePane.id = 'wiz-pane-reference';
-    referencePane.style.display = 'none';
-
-    card.append(wizardPane, referencePane);
-
-    // Tab switching
-    tabStrip.querySelectorAll('.wiz-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        tabStrip.querySelectorAll('.wiz-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const showWizard = btn.dataset.tab === 'wizard';
-        wizardPane.style.display   = showWizard ? 'block' : 'none';
-        referencePane.style.display = showWizard ? 'none' : 'block';
-      });
-    });
-
+    card.append(wizardPane);
     container.appendChild(card);
 
     _updateGateVisibility();
@@ -86,17 +64,14 @@
     }
   };
 
-  // ── Tab strip ─────────────────────────────────────────────────────────────────
-
-  function _buildTabStrip() {
-    const strip = _el('div', 'wiz-tab-strip');
-    [['wizard', 'Step Wizard'], ['reference', 'Reference']].forEach(([key, label], i) => {
-      const btn = _el('button', 'wiz-tab' + (i === 0 ? ' active' : ''), { textContent: label });
-      btn.dataset.tab = key;
-      strip.appendChild(btn);
-    });
-    return strip;
-  }
+  // Expose the reference/methodology content for the About the framework
+  // training area. Self-loads step-3.json so it works outside a step mount.
+  window.buildStep3Reference = async function () {
+    _injectStyles();
+    const [detail] = await WizUtils.fetchAll(['step-3.json']);
+    if (!detail) return _el('p', 'abt-body', { textContent: 'Classification reference unavailable.' });
+    return _buildReferencePane(detail);
+  };
 
   // ── Wizard pane ───────────────────────────────────────────────────────────────
 
