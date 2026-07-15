@@ -27,6 +27,9 @@ window.WizUtils = (function () {
 
   function saveRecord(record) {
     try { sessionStorage.setItem('ai_workflow_system_record', JSON.stringify(record)); } catch (_) {}
+    // Let the shell refresh anything that reflects completion state (e.g. the
+    // nav step icons that turn green once a step is complete).
+    try { window.dispatchEvent(new CustomEvent('record-saved')); } catch (_) {}
   }
 
   // ---- Clipboard ------------------------------------------------------
