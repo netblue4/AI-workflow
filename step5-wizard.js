@@ -305,7 +305,7 @@
     title.style.marginBottom = '2px';
     const sub = _el('p', '');
     sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
-    sub.textContent = 'Stage 2 prompt — covers Steps 5 (Risk Assessment) and 6 (Control Identification). Your Step 3 classification and Step 4 DPIA are filled in automatically.';
+    sub.textContent = 'Stage 2 prompt — covers Steps 5 (Risk Assessment) and 6 (Control Identification). Your Step 2 business case, Step 3 classification and Step 4 DPIA are filled in automatically.';
     hLeft.append(title, sub);
     const hRight  = _el('div', 's5-jake-header-right');
     const chevron = _el('span', 's5-jake-chevron');
@@ -321,8 +321,8 @@
     instruct.innerHTML = `
       <strong>How to use this prompt</strong>
       <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
-        <li>Complete the Step 3 and Step 4 wizards first — their classification and DPIA are inserted into the prompt automatically.</li>
-        <li>Copy the prompt below and paste it into JAKE — no need to paste the Stage 1 report separately.</li>
+        <li>Complete the Step 2, Step 3 and Step 4 wizards first — the business case, classification and DPIA are inserted into the prompt automatically.</li>
+        <li>Copy the prompt below and paste it into JAKE — no need to paste the business case or Stage 1 report separately.</li>
         <li>Run it, then save the JAKE risk assessment report as a PDF alongside this system record.</li>
         <li>Use the report to answer the questions in the Step 5 and Step 6 wizards.</li>
       </ol>`;
@@ -358,7 +358,7 @@
     if (ctx) {
       prompt = prompt
         .replace('CONTEXT — paste the full Stage 1 report (classification and DPIA) below this line, then run the prompt:',
-                 'CONTEXT — the Step 3 classification and Step 4 DPIA below are filled in automatically from this system record:')
+                 'CONTEXT — the Step 2 business case, Step 3 classification and Step 4 DPIA below are filled in automatically from this system record. Use the business case as background scenario context; treat the classification and DPIA as authoritative:')
         .replace('[PASTE STAGE 1 REPORT HERE]', ctx);
     }
     return prompt;
@@ -368,12 +368,27 @@
   // records, so the assessor no longer has to paste the Stage 1 report by hand.
   // Returns '' when neither step is complete (prompt keeps its manual-paste slot).
   function _buildStage1Context() {
+    const s2 = _record?.['step-2'];
     const s3 = _record?.['step-3'];
     const s4 = _record?.['step-4'];
-    if (!s3 && !s4) return '';
+    if (!s2 && !s3 && !s4) return '';
     const list = a => (Array.isArray(a) && a.length) ? a.join(', ') : '—';
     const yn   = v => v ? 'yes' : 'no';
     const lines = [];
+
+    // Business case first — it describes what the system actually does and how it
+    // is used (the scenario detail risk/attack-vector reasoning needs). It is raw
+    // and unreviewed, so it is framed as background; the classification and DPIA
+    // below remain the authoritative inputs.
+    const bc = (s2?.business_case || '').trim();
+    if (bc) {
+      lines.push('=== BUSINESS CASE (Step 2) — background scenario context ===',
+        'Use this to understand what the AI system does and how it is deployed. It is supporting context only; the classification and DPIA below are the authoritative, reviewed inputs.',
+        bc);
+      const url = (s2?.business_case_url || '').trim();
+      if (url) lines.push('Reference: ' + url);
+      lines.push('');
+    }
 
     if (s3) {
       const b  = s3.axis_b || {};
