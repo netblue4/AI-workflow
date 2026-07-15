@@ -30,7 +30,8 @@
 
     const shell = _el('div', 'wiz-shell');
     shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
-    shell.appendChild(_buildTabStrip());
+    // Reference/methodology moved to the About the framework training area; the
+    // step is a single wizard pane now (no tab strip).
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
     container.innerHTML = '';
@@ -123,27 +124,20 @@
     if (el) el.classList.toggle('dpia-field--hidden', hide);
   }
 
-  // ---- Tabs ---------------------------------------------------
-  function _buildTabStrip() {
-    return WizUtils.buildTabStrip([['wizard', 'Step Wizard'], ['reference', 'Reference']], _switchTab);
-  }
-
-  function _switchTab(id) {
-    _container.querySelectorAll('.wiz-tab').forEach(t =>
-      t.classList.toggle('wiz-tab--active', t.dataset.tab === id));
-    _container.querySelectorAll('.wiz-pane').forEach(p =>
-      p.classList.toggle('wiz-pane--hidden', p.dataset.pane !== id));
-  }
+  // Expose the DPIA reference/methodology for the About the framework training
+  // area. Self-loads step-4.json so it works outside a step mount.
+  window.buildStep4Reference = async function () {
+    _injectStyles();
+    const [detail] = await WizUtils.fetchAll(['step-4.json']);
+    return _buildReferencePane(detail || _detail);
+  };
 
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const wz  = _el('div', 'wiz-pane');  wz.dataset.pane  = 'wizard';
-    const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
     wz.appendChild(_buildWizardPane());
-    ref.appendChild(_buildReferencePane());
     pw.appendChild(wz);
-    pw.appendChild(ref);
   }
 
   // ---- Wizard pane --------------------------------------------
@@ -517,7 +511,8 @@
   }
 
   // ---- Reference pane -----------------------------------------
-  function _buildReferencePane() {
+  function _buildReferencePane(detail) {
+    detail = detail || _detail;
     const card = _el('div', 'step-detail-card');
 
     const title = _el('h2', 'step-detail-title');
@@ -528,7 +523,7 @@
     sub.textContent = 'A Data Protection Impact Assessment is mandatory where processing is likely to result in a high risk to individuals. The sections below summarise the key legal obligations.';
     card.appendChild(sub);
 
-    const sections = _detail?.reference_sections || [];
+    const sections = detail?.reference_sections || [];
 
     sections.forEach(sec => {
       const h = _el('p', 'section-label'); h.textContent = sec.heading; card.appendChild(h);
@@ -539,10 +534,10 @@
       card.appendChild(ul);
     });
 
-    if (_detail?.requirement_labels) {
+    if (detail?.requirement_labels) {
       card.appendChild(_sectionLabel('Requirement mapping'));
       const rw = _el('div', 'req-list');
-      _detail.requirement_labels.forEach(r => {
+      detail.requirement_labels.forEach(r => {
         const pill = _el('span', 'req-pill'); pill.textContent = r; rw.appendChild(pill);
       });
       card.appendChild(rw);

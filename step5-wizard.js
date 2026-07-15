@@ -269,10 +269,23 @@
       ['legal', 'Legal/Regulatory Risks'],
       ['dpia', 'DPIA Risks'],
       ['groupstd', 'Group Standards Risks'],
-      ['review', 'Review'],
-      ['reference', 'Reference']
+      ['review', 'Review']
     ], _switchTab);
   }
+
+  // Expose the risk-catalogue reference/methodology for the About the framework
+  // training area. Self-loads its data so it works outside a step mount.
+  window.buildStep5Reference = async function () {
+    _injectStyles();
+    if (!_legalGuidance || !(_tblRisks && _tblRisks.length)) {
+      const [risks, , guidance] = await WizUtils.fetchAll([
+        'tbl_Risks.json', 'tbl_Risk_Controls.json', 'step5-legal-risk-guidance.json',
+      ]);
+      _tblRisks = risks || [];
+      _legalGuidance = guidance || _legalGuidance;
+    }
+    return _buildReferencePane();
+  };
 
   function _switchTab(id) {
     _container.querySelectorAll('.wiz-tab').forEach(t =>
@@ -434,13 +447,11 @@
     const dpia   = _el('div', 'wiz-pane wiz-pane--hidden'); dpia.dataset.pane   = 'dpia';
     const gstd   = _el('div', 'wiz-pane wiz-pane--hidden'); gstd.dataset.pane   = 'groupstd';
     const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
-    const ref    = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane    = 'reference';
     legal.appendChild(_buildLegalCard());
     dpia.appendChild(_buildDpiaRisksPane());
     gstd.appendChild(_buildGroupStandardsPane());
     review.appendChild(_buildCombinedReviewPane());
-    ref.appendChild(_buildReferencePane());
-    pw.appendChild(legal); pw.appendChild(dpia); pw.appendChild(gstd); pw.appendChild(review); pw.appendChild(ref);
+    pw.appendChild(legal); pw.appendChild(dpia); pw.appendChild(gstd); pw.appendChild(review);
   }
 
 
