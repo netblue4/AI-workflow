@@ -307,36 +307,36 @@
     }
   }
 
-  // ── Ask JAKE collapsible (Stage 2) ────────────────────────────────────────
+  // ── Ask your AI tool collapsible (Stage 2) ────────────────────────────────────────
 
-  function _buildAskJakeCollapsible() {
-    const section = _el('div', 's5-jake-section');
+  function _buildAskAiCollapsible() {
+    const section = _el('div', 's5-ai-section');
 
-    const header = _el('div', 's5-jake-header');
-    const hLeft  = _el('div', 's5-jake-header-left');
-    const title  = _sectionLabel('Ask JAKE to draft a risk assessment and control identification');
+    const header = _el('div', 's5-ai-header');
+    const hLeft  = _el('div', 's5-ai-header-left');
+    const title  = _sectionLabel('Ask your AI tool to draft a risk assessment and control identification');
     title.style.marginBottom = '2px';
     const sub = _el('p', '');
     sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
     sub.textContent = 'Stage 2 prompt — covers Steps 5 (Risk Assessment) and 6 (Control Identification). Your Step 2 business case, Step 3 classification and Step 4 DPIA are filled in automatically.';
     hLeft.append(title, sub);
-    const hRight  = _el('div', 's5-jake-header-right');
-    const chevron = _el('span', 's5-jake-chevron');
+    const hRight  = _el('div', 's5-ai-header-right');
+    const chevron = _el('span', 's5-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     hRight.appendChild(chevron);
     header.append(hLeft, hRight);
     section.appendChild(header);
 
-    const body = _el('div', 's5-jake-body');
+    const body = _el('div', 's5-ai-body');
     body.style.display = 'none';
 
-    const instruct = _el('div', 's5-jake-instructions');
+    const instruct = _el('div', 's5-ai-instructions');
     instruct.innerHTML = `
       <strong>How to use this prompt</strong>
       <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
         <li>Complete the Step 2, Step 3 and Step 4 wizards first — the business case, classification and DPIA are inserted into the prompt automatically.</li>
-        <li>Copy the prompt below and paste it into JAKE — no need to paste the business case or Stage 1 report separately.</li>
-        <li>Run it, then save the JAKE risk assessment report as a PDF alongside this system record.</li>
+        <li>Copy the prompt below and paste it into your AI tool — no need to paste the business case or Stage 1 report separately.</li>
+        <li>Run it, then save the risk assessment report as a PDF alongside this system record.</li>
         <li>Use the report to answer the questions in the Step 5 and Step 6 wizards.</li>
       </ol>`;
     body.appendChild(instruct);
@@ -366,7 +366,7 @@
   }
 
   function _buildStep5Prompt() {
-    let prompt = _detail?.jake_prompt || '';
+    let prompt = _detail?.ai_prompt || '';
     const ctx = _buildStage1Context();
     if (ctx) {
       prompt = prompt
@@ -455,17 +455,17 @@
   }
 
 
-  // White content card for the legal tab (Ask JAKE + risk list), matching
+  // White content card for the legal tab (Ask your AI tool + risk list), matching
   // the other Step 5 panes.
   function _buildLegalCard() {
     const card = _el('div', 'step-detail-card');
-    card.appendChild(_buildAskJakeCollapsible());
+    card.appendChild(_buildAskAiCollapsible());
     card.appendChild(_buildLoadRaSection());
     card.appendChild(_buildLegalPane());
     return card;
   }
 
-  // ── Load JAKE risk assessment into Steps 5 & 6 ─────────────────────────────
+  // ── Load your AI tool risk assessment into Steps 5 & 6 ─────────────────────────────
   const _rEsc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const _rCanon = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '');
   const _rEmpty = v => v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === '');
@@ -485,23 +485,23 @@
   }
 
   function _buildLoadRaSection() {
-    const section = _el('div', 's5-jake-section');
-    const header  = _el('div', 's5-jake-header');
-    const hLeft   = _el('div', 's5-jake-header-left');
-    const title   = _sectionLabel('Load JAKE output into Steps 5 & 6');
+    const section = _el('div', 's5-ai-section');
+    const header  = _el('div', 's5-ai-header');
+    const hLeft   = _el('div', 's5-ai-header-left');
+    const title   = _sectionLabel('Load your AI tool output into Steps 5 & 6');
     title.style.marginBottom = '2px';
     const sub = _el('p', ''); sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
     sub.textContent = 'Loads risk applicability and control selection as a draft — review and save in Steps 5 and 6.';
     hLeft.append(title, sub);
-    const hRight = _el('div', 's5-jake-header-right');
-    const chevron = _el('span', 's5-jake-chevron');
+    const hRight = _el('div', 's5-ai-header-right');
+    const chevron = _el('span', 's5-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     hRight.appendChild(chevron);
     header.append(hLeft, hRight);
     section.appendChild(header);
 
-    const body = _el('div', 's5-jake-body'); body.style.display = 'none';
-    const ta = _el('textarea', 's5-prompt-area'); ta.rows = 8; ta.placeholder = 'Paste JAKE’s full reply (or just its ```json block) here…';
+    const body = _el('div', 's5-ai-body'); body.style.display = 'none';
+    const ta = _el('textarea', 's5-prompt-area'); ta.rows = 8; ta.placeholder = 'Paste your AI tool’s full reply (or just its ```json block) here…';
     const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;margin:10px 0';
     const checkBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Validate & preview' });
     const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Steps 5 & 6' });
@@ -1303,16 +1303,16 @@
 .wiz8-prefilter-risk-name{font-size:12px;font-weight:600;color:var(--color-text-primary);flex:1;min-width:0}
 .wiz8-prefilter-art-tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:rgba(224,120,80,0.16);color:#f3ab8a;white-space:nowrap}
 
-/* Ask JAKE collapsible */
-.s5-jake-section{margin:16px 24px;border:1px solid var(--color-border);border-radius:8px;overflow:hidden}
-.s5-jake-header{padding:12px 16px;background:var(--teal-50,rgba(93,202,165,0.10));cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.s5-jake-header:hover{background:var(--teal-100,rgba(93,202,165,0.16))}
-.s5-jake-header-left{flex:1}
-.s5-jake-header-left .section-label{margin-bottom:0}
-.s5-jake-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.s5-jake-body{padding:14px 16px;border-top:1px solid var(--color-border)}
-.s5-jake-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
-.s5-jake-instructions{font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border);border-radius:4px;padding:12px 14px;margin-bottom:14px;line-height:1.6}
+/* Ask your AI tool collapsible */
+.s5-ai-section{margin:16px 24px;border:1px solid var(--color-border);border-radius:8px;overflow:hidden}
+.s5-ai-header{padding:12px 16px;background:var(--teal-50,rgba(93,202,165,0.10));cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.s5-ai-header:hover{background:var(--teal-100,rgba(93,202,165,0.16))}
+.s5-ai-header-left{flex:1}
+.s5-ai-header-left .section-label{margin-bottom:0}
+.s5-ai-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.s5-ai-body{padding:14px 16px;border-top:1px solid var(--color-border)}
+.s5-ai-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
+.s5-ai-instructions{font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border);border-radius:4px;padding:12px 14px;margin-bottom:14px;line-height:1.6}
 .s5-prompt-wrap{display:flex;flex-direction:column;gap:8px}
 .s5-prompt-area{width:100%;padding:12px;border:1px solid var(--color-border-mid);border-radius:6px;font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6}
     `);
