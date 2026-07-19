@@ -13,7 +13,7 @@
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _tblData = null, _record = null;
   let _riskData = []; // [{ risk_id, display_name, risk_type, risk_source, risk_description, controls }]
-  let _gsRiskData = []; // applicable Group Standard risks + controls (Group Standards tab)
+  let _gsRiskData = []; // applicable Internal Standard risks + controls (Internal Standards tab)
   let _tcByRC   = null; // fk_Risk_Control_ID → test control (R→T pairing)
 
   const _state = {
@@ -21,7 +21,7 @@
     hsSelected: {},         // source of truth (legal tab): `${riskId}::${standard_ref}` → bool
     complianceSelected: {}, // compliance team additions (Compliance View tab)
     hsNotApplicable: {},    // standard_ref → { reason, date } — N/A decisions
-    gsSelected: {}          // Group Standard control picks (pk_Risk_Control_ID → bool)
+    gsSelected: {}          // Internal Standard control picks (pk_Risk_Control_ID → bool)
   };
 
   // ---- Public API ---------------------------------------------
@@ -105,7 +105,7 @@
         if (c.selected) _state.gsSelected[c.control_id] = true;
       });
     } else {
-      // Default: select all controls for applicable Group Standard risks
+      // Default: select all controls for applicable Internal Standard risks
       _gsRiskData.forEach(r =>
         r.controls.forEach(c => { _state.gsSelected[c.pk_Risk_Control_ID] = true; })
       );
@@ -155,7 +155,7 @@
     return result;
   }
 
-  // ---- Build applicable Group Standard risks + their controls -
+  // ---- Build applicable Internal Standard risks + their controls -
   function _buildGroupStandardControlData() {
     if (!_tblData) return [];
     const gsa = _record?.['step-5']?.group_standard_assessment;
@@ -189,7 +189,7 @@
     return WizUtils.buildTabStrip([
       ['wizard', 'Legal/Regulatory Controls'],
       ['dpia', 'DPIA Controls'],
-      ['groupstd', 'Group Standards Controls'],
+      ['groupstd', 'Internal Standards Controls'],
       ['compliance', 'AI Act Compliance Controls'],
       ['reference', 'Reference']
     ], _switchTab);
@@ -528,22 +528,22 @@
   }
 
   // ================================================================
-  // ---- Group Standards Compliance — controls for GS risks --------
+  // ---- Internal Standards Compliance — controls for GS risks --------
   // ================================================================
   function _buildGroupStandardsCompliancePane() {
     const card = _el('div', 'step-detail-card');
     const ey = _el('p', `step-detail-eyebrow color-${_colorKey}`); ey.textContent = _phaseTitle; card.appendChild(ey);
-    const title = _el('h2', 'step-detail-title'); title.textContent = 'Controls for Group Standards Compliance'; card.appendChild(title);
-    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'Select the controls that treat each applicable Group Standard risk (derived from the Acceptable Use of AI Tools Standard).' }));
+    const title = _el('h2', 'step-detail-title'); title.textContent = 'Controls for Internal Standards Compliance'; card.appendChild(title);
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'Select the controls that treat each applicable Internal Standard risk (derived from the Acceptable Use of AI Tools Standard).' }));
 
     if (_gsRiskData.length === 0) {
       const warn = _el('div', 'wiz9-warn');
-      warn.innerHTML = '<strong>No applicable Group Standard risks.</strong> In Step 5 → Group Standards Risks, mark at least one risk as applicable and save.';
+      warn.innerHTML = '<strong>No applicable Internal Standard risks.</strong> In Step 5 → Internal Standards Risks, mark at least one risk as applicable and save.';
       card.appendChild(warn);
       return card;
     }
 
-    card.appendChild(_sectionLabel(`Group Standard Risks (${_gsRiskData.length})`));
+    card.appendChild(_sectionLabel(`Internal Standard Risks (${_gsRiskData.length})`));
     card.appendChild(_el('p', 'wiz9-intro', { innerHTML: 'Review controls grouped by risk and select those relevant to this use case. The assessor decides which monitoring controls apply.' }));
 
     const list = _el('div', 'wiz9-risk-list');
@@ -552,7 +552,7 @@
 
     const actRow = _el('div', 'wiz-action-row');
     const saveBtn = _el('button', 'wiz-btn-primary');
-    saveBtn.textContent = 'Save Group Standards Controls ✓';
+    saveBtn.textContent = 'Save Internal Standards Controls ✓';
     saveBtn.addEventListener('click', _handleGroupStandardsSave);
     actRow.appendChild(saveBtn);
     card.appendChild(actRow);
@@ -566,7 +566,7 @@
 
     const hdr = _el('div', 'wiz9-risk-hdr');
     const left = _el('div', 'wiz9-risk-hdr-left');
-    left.appendChild(_el('span', 'wiz-art-tag', { textContent: risk.groupstandard_ref || 'Group Standard' }));
+    left.appendChild(_el('span', 'wiz-art-tag', { textContent: risk.groupstandard_ref || 'Internal Standard' }));
     left.appendChild(_el('span', 'wiz9-risk-name', { textContent: risk.display_name }));
     hdr.appendChild(left);
 
@@ -618,7 +618,7 @@
     icon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
     hdr.appendChild(icon);
 
-    hdr.appendChild(_el('span', 'wiz9-src-badge wiz9-src-badge--gs', { textContent: 'Group Standard' }));
+    hdr.appendChild(_el('span', 'wiz9-src-badge wiz9-src-badge--gs', { textContent: 'Internal Standard' }));
     hdr.appendChild(_el('span', 'wiz9-ctrl-name', { textContent: ctrl.jkName }));
     if (ctrl.fk_Harmonised_Standard_IDs) hdr.appendChild(_el('span', 'wiz9-standard-ref', { textContent: WizUtils.fmtStdRef(ctrl.fk_Harmonised_Standard_IDs) }));
     card.appendChild(hdr);
@@ -647,11 +647,11 @@
     existing.group_standard_controls = _buildGroupStandardControlsOutput(today);
     _record['step-6'] = existing;
     WizUtils.saveRecord(_record);
-    if (typeof _ucShowStatus === 'function') _ucShowStatus('Group Standards controls saved ✓');
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Internal Standards controls saved ✓');
     const results = _container.querySelector('#gs-results');
     if (results) {
       const n = existing.group_standard_controls.selected_count;
-      results.innerHTML = `<div class="wiz9-info">✓ Saved — <strong>${n}</strong> Group Standard control${n !== 1 ? 's' : ''} selected.</div>`;
+      results.innerHTML = `<div class="wiz9-info">✓ Saved — <strong>${n}</strong> Internal Standard control${n !== 1 ? 's' : ''} selected.</div>`;
     }
   }
 
@@ -885,7 +885,7 @@
       selected_hs,
       compliance_additions: complianceAdditions,
       dpia_controls:        dpiaControls,
-      // Preserve the Group Standards selections so this save does not wipe them
+      // Preserve the Internal Standards selections so this save does not wipe them
       group_standard_controls: _buildGroupStandardControlsOutput(today)
     };
   }

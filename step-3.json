@@ -51,7 +51,7 @@
         "change_board_required": true
       }
     ],
-    "escalation_rule": "If data identification in Step 4 reveals personal, confidential, or Group-identifying data is involved, the use case must be treated as Tier 2 regardless of content type."
+    "escalation_rule": "If data identification in Step 4 reveals personal, confidential, or organisation-identifying data is involved, the use case must be treated as Tier 2 regardless of content type."
   },
 
   "axis_b_classification": {
@@ -110,7 +110,7 @@
         "outcomes": {
           "any_yes": {
             "classification": "PROHIBITED",
-            "workflow_consequence": "HARD STOP — system cannot be placed on market or put into service. No compliance framework controls apply. Use case must not be built or deployed. ISG must record the prohibition determination and notify the AI Change Board.",
+            "workflow_consequence": "HARD STOP — system cannot be placed on market or put into service. No compliance framework controls apply. Use case must not be built or deployed. AI Governance Team must record the prohibition determination and notify the AI Change Board.",
             "applicable_articles": []
           },
           "all_no": {
@@ -522,7 +522,7 @@
       {
         "axis_a": "tier_1",
         "axis_b": "MINIMAL_RISK",
-        "label": "ISG fast-track",
+        "label": "AI Governance Team fast-track",
         "change_board_required": false,
         "requires_conformity_assessment": false,
         "requires_dpia": false,
@@ -533,14 +533,14 @@
       {
         "axis_a": "tier_1",
         "axis_b": "LIMITED_RISK",
-        "label": "ISG fast-track with Article 50 disclosure",
+        "label": "AI Governance Team fast-track with Article 50 disclosure",
         "change_board_required": false,
         "requires_conformity_assessment": false,
         "requires_dpia": false,
         "article_14_human_oversight": false,
         "article_50_transparency": true,
         "sr9_oversight_mechanism": "Portfolio-level governance via Steps 12, 14, and 15. Article 50 disclosure controls required — consider whether disclosure infrastructure elevates this to Tier 2.",
-        "escalation_note": "If implementing Article 50 disclosure requires deploying labelling infrastructure or modifying external-facing systems, ISG should consider reclassifying as Tier 2."
+        "escalation_note": "If implementing Article 50 disclosure requires deploying labelling infrastructure or modifying external-facing systems, AI Governance Team should consider reclassifying as Tier 2."
       },
       {
         "axis_a": "tier_2",
@@ -593,9 +593,9 @@
   "output_record_template": {
     "description": "The completed classification record produced at the end of Step 3. This record is carried forward into all subsequent steps and included in the AI Change Board submission pack.",
     "fields": {
-      "use_case_id": "string — assigned by ISG on receipt of request form",
+      "use_case_id": "string — assigned by AI Governance Team on receipt of request form",
       "classification_date": "ISO 8601 date",
-      "classified_by": "string — name and role of ISG reviewer",
+      "classified_by": "string — name and role of AI Governance Team reviewer",
       "axis_a": {
         "tier": "tier_1 | tier_2",
         "tier_label": "string",

@@ -385,7 +385,7 @@ function _ucShowStatus(msg) {
     _workflow = await loadWorkflow();
     await Promise.all([
       WizUtils.loadArticles(),    // hydrate the article table before any render
-      WizUtils.loadSrControls(),  // hydrate the Group Standard (SR) controls for step headers
+      WizUtils.loadSrControls(),  // hydrate the Internal Standard (SR) controls for step headers
     ]);
     _stepIndex = indexSteps(_workflow);
     _phaseIndex = indexPhases(_workflow);

@@ -157,7 +157,7 @@
         <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px">${t.label}</p>
         <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">${t.definition}</p>
         <div style="margin-bottom:8px">${t.examples.map(e => `<span class="ov-chip">${e}</span>`).join('')}</div>
-        <span class="badge ${t.change_board_required ? 'tier2' : 'all'}">${t.change_board_required ? 'Change Board required' : 'ISG fast-track'}</span>`;
+        <span class="badge ${t.change_board_required ? 'tier2' : 'all'}">${t.change_board_required ? 'Change Board required' : 'AI Governance Team fast-track'}</span>`;
       pane.appendChild(c);
     });
     pane.appendChild(_el('div', 'gate-note warning', { style: 'margin-top:4px;margin-bottom:24px', textContent: `Escalation rule: ${axisA.escalation_rule}` }));
@@ -292,7 +292,7 @@
       const headerRow = _el('div', '', { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px' });
       headerRow.append(
         _el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: tier.label }),
-        _el('span', `badge ${tier.change_board_required ? 'tier2' : 'all'}`, { textContent: tier.change_board_required ? 'Change Board required' : 'ISG fast-track' })
+        _el('span', `badge ${tier.change_board_required ? 'tier2' : 'all'}`, { textContent: tier.change_board_required ? 'Change Board required' : 'AI Governance Team fast-track' })
       );
       const chips = _el('div', '');
       tier.examples.forEach(e => chips.appendChild(_el('span', 'ov-chip', { textContent: e })));
@@ -920,7 +920,7 @@
     container.appendChild(headerRow);
 
     if (classification === 'PROHIBITED') {
-      container.appendChild(_el('div', 'gate-note danger', { textContent: 'One or more answers indicate a use prohibited under Article 5 of the EU AI Act. This system cannot be deployed. ISG must record this determination and notify the AI Change Board.' }));
+      container.appendChild(_el('div', 'gate-note danger', { textContent: 'One or more answers indicate a use prohibited under Article 5 of the EU AI Act. This system cannot be deployed. AI Governance Team must record this determination and notify the AI Change Board.' }));
       _appendSaveRow(container, record); return;
     }
     if (classification === 'OUT_OF_SCOPE') {

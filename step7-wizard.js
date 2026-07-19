@@ -1,5 +1,5 @@
 /* Step 7 — Residual Risk
-   Domain-tabbed wizard (Legal/Regulatory, DPIA, Group Standards) matching the
+   Domain-tabbed wizard (Legal/Regulatory, DPIA, Internal Standards) matching the
    risk/control domains of Steps 5 and 6. Under each domain, every risk is one
    block with three in-order sections: 1) Control Activation, 2) Control Testing,
    3) Residual Risk. Residual unlocks per risk once its activation and testing
@@ -230,7 +230,7 @@
       push(c.control_id, c.control_name, 'Compliance', null, 'compliance')
     );
     ((s6.group_standard_controls?.controls) || []).filter(c => c.selected).forEach(c =>
-      push(c.control_id, c.control_name, 'Group Standard', c.risk_id, 'group_standard')
+      push(c.control_id, c.control_name, 'Internal Standard', c.risk_id, 'group_standard')
     );
     (s6.dpia_controls || []).forEach(c => {
       const key = 'DPIA__' + c.control_name;
@@ -356,7 +356,7 @@
     return WizUtils.buildTabStrip([
       ['legal',    'Legal/Regulatory'],
       ['dpia',     'DPIA'],
-      ['groupstd', 'Group Standards']
+      ['groupstd', 'Internal Standards']
     ], _switchTab);
   }
 
@@ -372,7 +372,7 @@
     }
     if (id === 'groupstd') {
       const p = _container.querySelector('[data-pane="groupstd"]');
-      if (p) { p.innerHTML = ''; p.appendChild(_buildDomainRiskPane('group_standard', 'Group Standards')); }
+      if (p) { p.innerHTML = ''; p.appendChild(_buildDomainRiskPane('group_standard', 'Internal Standards')); }
     }
     if (id === 'dpia') {
       const p = _container.querySelector('[data-pane="dpia"]');
@@ -389,7 +389,7 @@
 
     pLegal.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory'));
     pDpia.appendChild(_buildDpiaResidualPane());
-    pGs.appendChild(_buildDomainRiskPane('group_standard', 'Group Standards'));
+    pGs.appendChild(_buildDomainRiskPane('group_standard', 'Internal Standards'));
 
     pw.appendChild(pLegal);
     pw.appendChild(pDpia);

@@ -158,10 +158,10 @@ window.WizUtils = (function () {
     return m ? `${m[1]} · ${art.short_name}` : art.short_name;
   }
 
-  // ---- Group Standard (SR) controls (tbl_AI_SR_Controls.json) -------
+  // ---- Internal Standard (SR) controls (tbl_AI_SR_Controls.json) -------
   // Hydrated once at startup like the article table, and indexed by the steps
   // each control applies to (its workflow_steps array). buildStepHeader reads
-  // SR_BY_STEP synchronously to render the per-step "Group standard checklist".
+  // SR_BY_STEP synchronously to render the per-step "internal standard checklist".
   const SR_CONTROLS = [];
   const SR_BY_STEP = new Map(); // step-id → SR control rows
 
@@ -253,12 +253,12 @@ window.WizUtils = (function () {
     if (step.applicability) meta.appendChild(el('span', `badge ${step.applicabilityKey || 'all'}`, { textContent: step.applicability }));
     body.appendChild(meta);
 
-    // Group standard checklist — the SR controls this step discharges, sourced
+    // internal standard checklist — the SR controls this step discharges, sourced
     // from tbl_AI_SR_Controls.json (workflow_steps). Ref + name per row; the
     // csa_checklist_item is revealed on click (and shown as a hover tooltip).
     const srControls = srControlsForStep(step.id);
     if (srControls.length) {
-      body.appendChild(sectionLabel('Group standard checklist'));
+      body.appendChild(sectionLabel('internal standard checklist'));
       const list = el('ul', 'sr-todo-list');
       srControls.forEach(c => {
         const li = el('li', 'sr-todo-item');
