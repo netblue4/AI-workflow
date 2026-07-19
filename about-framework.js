@@ -64,6 +64,8 @@
     wrap.appendChild(_sectionTitle('How it fits together'));
     wrap.appendChild(_flowDiagram());
 
+    wrap.appendChild(_buildStandardsBasis());
+
     wrap.appendChild(_sectionTitle('The building blocks'));
     const blocks = el('div', 'abt-cards');
     wrap.appendChild(blocks);
@@ -86,6 +88,39 @@
     const close = el('div', 'abt-note');
     close.innerHTML = '<strong>Presumption of conformity.</strong> When these harmonised standards are cited in the Official Journal of the EU, the same evidence chain shown here becomes the basis for a presumption of conformity under Article 40 — no re-assessment required.';
     wrap.appendChild(close);
+    return wrap;
+  }
+
+  // ---- Standards basis: how the steps map to ISO/IEC 42001 ----
+  function _buildStandardsBasis() {
+    const wrap = el('div', '');
+    wrap.appendChild(_sectionTitle('Standards basis'));
+    wrap.appendChild(el('p', 'abt-body', { textContent: 'The workflow implements an ISO/IEC 42001-aligned AI management-system lifecycle. Each step maps to a clause of ISO/IEC 42001; the classification and DPIA criteria come from EU law, not any internal standard.' }));
+    const rows = [
+      ['1 — Training prerequisite', '7.2 Competence · 7.3 Awareness', '—'],
+      ['2 — Business case', '8.1 Operational planning · A.6 lifecycle', '—'],
+      ['3 — System classification', '6.1 Planning · A.5 impact assessment', 'EU AI Act'],
+      ['4 — Data identification & DPIA', '6.1.4 / 8.4 impact assessment · A.7 data', 'GDPR Art. 35'],
+      ['5 — Risk identification', '6.1.2 / 8.2 AI risk assessment', 'ISO 31000 · ISO/IEC 23894'],
+      ['6 — Control identification', '6.1.3 / 8.3 AI risk treatment · Annex A', 'ISO/IEC harmonised standards'],
+      ['7 — Residual risk', '6.1.3 residual-risk acceptance', '—'],
+      ['8 — AI Change Board approval', 'Clause 5 Leadership · 8.1 control', '—'],
+      ['10 — User obligations briefing', '7.3 Awareness · A.9 responsible use', '—'],
+      ['11 — Central inventory & records', '7.5 Documented information · A.6', '—'],
+      ['12 — Periodic & triggered review', '9.1 Monitoring · 9.3 Review · 10 Improvement', '—'],
+    ];
+    const scroll = el('div', 'abt-std-scroll');
+    const table = document.createElement('table');
+    table.className = 'abt-std-table';
+    table.innerHTML =
+      '<thead><tr><th>Workflow step</th><th>Reflects ISO/IEC 42001</th><th>Criteria from</th></tr></thead>' +
+      '<tbody>' + rows.map(([a, b, c]) =>
+        `<tr><td>${a}</td><td>${b}</td><td>${c}</td></tr>`).join('') + '</tbody>';
+    scroll.appendChild(table);
+    wrap.appendChild(scroll);
+    const note = el('div', 'abt-note');
+    note.innerHTML = '<strong>In one line.</strong> An ISO/IEC 42001-aligned lifecycle — impact assessment (GDPR Art. 35 DPIA), risk assessment and treatment (ISO 31000 / ISO/IEC 23894), and monitoring — with classification driven by the EU AI Act.';
+    wrap.appendChild(note);
     return wrap;
   }
 
@@ -270,6 +305,13 @@
     .abt-shell .wiz-tab-strip{margin:18px 0 0;padding:0;border-bottom:1px solid var(--color-border);flex-wrap:wrap;background:none}
     .abt-tab-panes{margin-top:4px}
     .abt-tab-pane--hidden{display:none}
+    /* standards-basis table */
+    .abt-std-scroll{overflow-x:auto;margin:8px 0 12px;max-width:96ch}
+    .abt-std-table{width:100%;border-collapse:collapse;font-size:13px}
+    .abt-std-table th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#b8963e;padding:8px 12px;border-bottom:2px solid var(--color-border);white-space:nowrap}
+    .abt-std-table td{padding:9px 12px;border-bottom:1px solid var(--color-border);color:var(--color-text-secondary);vertical-align:top;line-height:1.5}
+    .abt-std-table td:first-child{color:var(--color-text-primary);font-weight:500;white-space:nowrap}
+    .abt-std-table tr:hover td{background:var(--color-surface)}
     .abt-ref-host{margin-top:4px}
     /* numbered stages */
     .abt-steps{list-style:none;counter-reset:s;padding:0;margin:8px 0 10px;display:flex;flex-direction:column;gap:10px;max-width:82ch}
