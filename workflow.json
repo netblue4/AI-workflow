@@ -27,9 +27,9 @@
       "number": 2,
       "title": "Due diligence",
       "owners": [
-        "ISG Team",
+        "AI Governance Team",
         "DPO",
-        "AI Taskforce"
+        "AI Working Group"
       ],
       "colorKey": "purple",
       "steps": [
@@ -43,7 +43,7 @@
       "title": "Build",
       "owners": [
         "Development Team",
-        "ISG Team"
+        "AI Governance Team"
       ],
       "colorKey": "green",
       "steps": []
@@ -53,8 +53,8 @@
       "number": 4,
       "title": "Verification",
       "owners": [
-        "AI Taskforce",
-        "ISG Team",
+        "AI Working Group",
+        "AI Governance Team",
         "Authorised Users"
       ],
       "colorKey": "blue",
@@ -69,7 +69,7 @@
       "title": "Approval gate",
       "owners": [
         "CISO",
-        "ISG Team",
+        "AI Governance Team",
         "AI Change Board"
       ],
       "colorKey": "amber",
@@ -83,9 +83,9 @@
       "number": 6,
       "title": "Ongoing governance",
       "owners": [
-        "ISG Team",
+        "AI Governance Team",
         "CISO",
-        "SteerCo"
+        "Steering Committee"
       ],
       "colorKey": "coral",
       "steps": [
@@ -109,7 +109,7 @@
       "gates": [
         {
           "type": "info",
-          "text": "Gate: If training is not current, complete it before proceeding. The ISG team maintains training records."
+          "text": "Gate: If training is not current, complete it before proceeding. The AI Governance Team maintains training records."
         }
       ],
       "detailFile": "step-1.json"
@@ -160,7 +160,7 @@
         "Requestor",
         "Data Governance Team",
         "DPO",
-        "ISG Team"
+        "AI Governance Team"
       ],
       "ownerIcon": "user",
       "applicability": "All tiers",
@@ -168,7 +168,7 @@
       "gates": [
         {
           "type": "danger",
-          "text": "Hard stop: Personal, confidential, or Group-identifying data must not enter external AI tools without approved safeguards and contracts. Escalate to ISG before proceeding."
+          "text": "Hard stop: Personal, confidential, or organisation-identifying data must not enter external AI tools without approved safeguards and contracts. Escalate to AI Governance Team before proceeding."
         },
         {
           "type": "danger",
@@ -188,7 +188,7 @@
       "title": "Risk identification",
       "isNew": false,
       "owners": [
-        "ISG Team"
+        "AI Governance Team"
       ],
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
@@ -203,7 +203,7 @@
       "title": "Control identification",
       "isNew": false,
       "owners": [
-        "ISG Team"
+        "AI Governance Team"
       ],
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
@@ -218,8 +218,8 @@
       "title": "Residual risk",
       "isNew": false,
       "owners": [
-        "AI Taskforce",
-        "ISG Team"
+        "AI Working Group",
+        "AI Governance Team"
       ],
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
@@ -247,7 +247,7 @@
       "gates": [
         {
           "type": "success",
-          "text": "On approval: Proceed to Phase 4. ISG registers the use case in the central inventory."
+          "text": "On approval: Proceed to Phase 4. AI Governance Team registers the use case in the central inventory."
         },
         {
           "type": "warning",
@@ -263,7 +263,7 @@
       "title": "User obligations briefing",
       "isNew": true,
       "owners": [
-        "ISG Team",
+        "AI Governance Team",
         "Authorised Users"
       ],
       "ownerIcon": "users",
@@ -282,7 +282,7 @@
           "Flagging outputs clearly wrong or inconsistent with professional knowledge",
           "Not publishing or acting on output without the required human review step",
           "Deleting chat history after each session as instructed",
-          "Reporting anomalous, harmful, or unexpected outputs to ISG"
+          "Reporting anomalous, harmful, or unexpected outputs to AI Governance Team"
         ]
       },
       "gates": [
@@ -301,7 +301,7 @@
       "isNew": false,
       "owners": [
         "CISO",
-        "ISG Team"
+        "AI Governance Team"
       ],
       "ownerIcon": "shield",
       "applicability": "All approved use cases",
@@ -316,8 +316,8 @@
       "title": "Periodic and triggered review",
       "isNew": false,
       "owners": [
-        "ISG Team",
-        "SteerCo"
+        "AI Governance Team",
+        "Steering Committee"
       ],
       "ownerIcon": "shield",
       "applicability": "All approved use cases",
@@ -329,7 +329,7 @@
         },
         {
           "type": "info",
-          "text": "Training feedback loop: Trends from reviews must be escalated to ISG for targeted training programmes under AI SR7."
+          "text": "Training feedback loop: Trends from reviews must be escalated to AI Governance Team for targeted training programmes under AI SR7."
         }
       ],
       "detailFile": "step-12.json"

@@ -23,7 +23,7 @@
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
-    group_standard_risks: {}, // pk_Risk_ID → boolean (Group Standard risks, assessor-marked)
+    group_standard_risks: {}, // pk_Risk_ID → boolean (Internal Standard risks, assessor-marked)
   };
 
   // Legal assessment state
@@ -268,7 +268,7 @@
     return WizUtils.buildTabStrip([
       ['legal', 'Legal/Regulatory Risks'],
       ['dpia', 'DPIA Risks'],
-      ['groupstd', 'Group Standards Risks'],
+      ['groupstd', 'Internal Standards Risks'],
       ['review', 'Review']
     ], _switchTab);
   }
@@ -799,7 +799,7 @@
     };
   }
 
-  // ---- Group Standards pane -----------------------------------
+  // ---- Internal Standards pane -----------------------------------
   function _renderGroupStandardsPane() {
     const pane = _container.querySelector('[data-pane="groupstd"]');
     if (!pane) return;
@@ -811,7 +811,7 @@
     const card = _el('div', 'step-detail-card');
 
     const title = _el('h2', 'step-detail-title');
-    title.textContent = 'Group Standards Risk Assessment';
+    title.textContent = 'Internal Standards Risk Assessment';
     card.appendChild(title);
 
     const sub = _el('p', 'step-detail-summary');
@@ -820,7 +820,7 @@
 
     const gsRisks = (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard');
     if (!gsRisks.length) {
-      card.appendChild(_el('p', 'wiz8-notice', { textContent: 'No Group Standard risks defined.' }));
+      card.appendChild(_el('p', 'wiz8-notice', { textContent: 'No Internal Standard risks defined.' }));
       return card;
     }
 
@@ -839,7 +839,7 @@
 
     const actRow = _el('div', 'wiz-action-row');
     const saveBtn = _el('button', 'wiz-btn-primary');
-    saveBtn.textContent = 'Save Group Standards Assessment ✓';
+    saveBtn.textContent = 'Save Internal Standards Assessment ✓';
     saveBtn.addEventListener('click', _handleSaveGroupStandards);
     actRow.appendChild(saveBtn);
     card.appendChild(actRow);
@@ -859,7 +859,7 @@
     // Yellow "derived from" information banner
     const banner = _el('div', '');
     banner.style.cssText = 'background:rgba(212,184,96,0.14);border:1px solid rgba(212,184,96,0.40);color:#ecd489;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.5;margin-bottom:10px';
-    banner.innerHTML = `<strong>Risk derived from</strong> the Acceptable Use of AI Tools Standard — ${risk.groupstandard_ref || 'Group Standard'}.`;
+    banner.innerHTML = `<strong>Risk derived from</strong> the Acceptable Use of AI Tools Standard — ${risk.groupstandard_ref || 'Internal Standard'}.`;
     body.appendChild(banner);
 
     if (risk.risk_description) {
@@ -939,7 +939,7 @@
     if (!_record['step-5']) _record['step-5'] = {};
     _record['step-5'].group_standard_assessment = _buildGroupStandardOutputRecord();
     WizUtils.saveRecord(_record);
-    if (typeof _ucShowStatus === 'function') _ucShowStatus('Group Standards assessment saved ✓');
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Internal Standards assessment saved ✓');
     _renderGroupStandardsPane();
   }
 

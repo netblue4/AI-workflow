@@ -658,11 +658,11 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       html += `</tbody></table>`;
     }
 
-    // ---- Group Standards Risk Assessment ----
+    // ---- Internal Standards Risk Assessment ----
     const gsa = s8.group_standard_assessment;
-    html += `<h3 class="sub-heading">Group Standards Risk Assessment (Acceptable Use of AI Tools Standard)</h3>`;
+    html += `<h3 class="sub-heading">Internal Standards Risk Assessment (Acceptable Use of AI Tools Standard)</h3>`;
     if (!gsa?.completed) {
-      html += _notComplete('Group Standards assessment not yet saved.');
+      html += _notComplete('Internal Standards assessment not yet saved.');
     } else {
       html += `<p class="section-meta">Completed: ${gsa.assessment_date} &nbsp;|&nbsp; ${gsa.selected_count} of ${gsa.total_risks} risks applicable</p>`;
       html += `<table class="data-table data-table--risk">
@@ -819,10 +819,10 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
       </table>`;
     }
 
-    // ---- Group Standards Controls -----------------------------------
+    // ---- Internal Standards Controls -----------------------------------
     const gsCtrls = ((s9.group_standard_controls && s9.group_standard_controls.controls) || []).filter(c => c.selected);
     if (gsCtrls.length > 0) {
-      html += `<h3 class="sub-heading">Group Standards Controls</h3>`;
+      html += `<h3 class="sub-heading">Internal Standards Controls</h3>`;
       const gsByRisk = new Map();
       gsCtrls.forEach(c => {
         const k = c.risk_id || 'unknown';
@@ -1132,7 +1132,7 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     risk-treatment measures and traced in Section 2 (Compliance Traceability). This report records each
     requirement, its activation status and its implementing evidence; the technical implementation of each HS
     requirement is carried out by the development team.</li>
-    <li><strong>Group standard requirements</strong> are evidenced by the organisation's workflow controls,
+    <li><strong>internal standard requirements</strong> are evidenced by the organisation's workflow controls,
     scheduled with their operational status in Sections 3–4.</li>
   </ul>
   <p><strong>Presumption of conformity.</strong> Under <strong>Article 40</strong> of Regulation (EU) 2024/1689,
