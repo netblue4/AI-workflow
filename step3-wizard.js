@@ -23,7 +23,7 @@
     gate_answers: {},          // { G1_Q1: 'yes'|'no', G5_Q0: 'provider'|'deployer', … }
     organisation_role: null,   // 'provider' | 'deployer'
     art25_override: false,     // true if user acknowledged Art.25 warning and elected to continue as Deployer
-    rationale: '',             // free-text assessment rationale (holds JAKE's reasoning)
+    rationale: '',             // free-text assessment rationale (holds your AI tool's reasoning)
     result: null
   };
 
@@ -55,7 +55,7 @@
     _updateGateVisibility();
 
     // Only render the results panel for a completed classification (one with a
-    // computed outcome). A draft loaded from JAKE has gate answers + tier but no
+    // computed outcome). A draft loaded from your AI tool has gate answers + tier but no
     // outcome yet — show the gates with those answers restored so the assessor
     // reviews and runs the classification.
     if (_state.result && _state.result.axis_b && _state.result.axis_b.ai_act_outcome) {
@@ -122,13 +122,13 @@
     _updateGateVisibility();
   }
 
-  // Assessment-rationale textbox — holds the reasoning JAKE returns (or the
+  // Assessment-rationale textbox — holds the reasoning your AI tool returns (or the
   // assessor's own notes) so the "why" is saved in the record, not separately.
   function _buildRationaleSection() {
     const wrap = _el('div', 's3-rationale-wrap');
     wrap.appendChild(_sectionLabel('Assessment rationale'));
     const hint = _el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin:0 0 8px' });
-    hint.textContent = 'Why this classification was reached. Loaded from JAKE’s reasoning, or add your own notes. Saved with the classification.';
+    hint.textContent = 'Why this classification was reached. Loaded from your AI tool’s reasoning, or add your own notes. Saved with the classification.';
     wrap.appendChild(hint);
     const ta = _el('textarea', 's3-rationale-ta');
     ta.rows = 5;

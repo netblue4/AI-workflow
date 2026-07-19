@@ -1,7 +1,7 @@
 // step2-wizard.js
 // Business Case Documentation — Step 2.
 // Captures the business case description and URL, and provides the
-// combined Stage 1 "Ask JAKE" prompt for Steps 3 (Classification) and 4 (DPIA).
+// combined Stage 1 "Ask your AI tool" prompt for Steps 3 (Classification) and 4 (DPIA).
 
 (function () {
   'use strict';
@@ -41,7 +41,7 @@
     card.appendChild(identNote);
 
     card.appendChild(_buildBusinessCaseForm());
-    card.appendChild(_buildAskJakeSection());
+    card.appendChild(_buildAskAiSection());
     card.appendChild(_buildLoadClfSection());
     card.appendChild(_buildLoadSection());
 
@@ -100,7 +100,7 @@
     bcLabel.htmlFor = 's2-business-case';
     bcLabel.textContent = 'Business case description';
     const bcHint = _el('p', 's2-field-hint', {
-      textContent: 'Describe the system, its purpose, the users, the data it will process, the technology stack, and how the outputs are used. The more detail you provide, the more accurate the JAKE analysis will be.'
+      textContent: 'Describe the system, its purpose, the users, the data it will process, the technology stack, and how the outputs are used. The more detail you provide, the more accurate the analysis will be.'
     });
     const bcArea = _el('textarea', 's2-textarea');
     bcArea.id = 's2-business-case';
@@ -133,17 +133,17 @@
     return section;
   }
 
-  // ── Ask JAKE collapsible ──────────────────────────────────────────────────
+  // ── Ask your AI tool collapsible ──────────────────────────────────────────────────
 
-  function _buildAskJakeSection() {
-    const section = _el('div', 'wiz-collapsible-section s2-jake-section');
+  function _buildAskAiSection() {
+    const section = _el('div', 'wiz-collapsible-section s2-ai-section');
 
-    const header  = _el('div', 'wiz-collapsible-header s2-jake-header');
+    const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    const title   = _el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Ask JAKE to draft a classification and DPIA' });
+    const title   = _el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Ask your AI tool to draft a classification and DPIA' });
     const sub     = _el('p', '', {
       style: 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0',
-      textContent: 'Stage 1 prompt — covers Steps 3 (EU AI Act classification) and 4 (DPIA). Paste into JAKE, save the report, then record the answers in the step wizards.'
+      textContent: 'Stage 1 prompt — covers Steps 3 (EU AI Act classification) and 4 (DPIA). Paste into your AI tool, save the report, then record the answers in the step wizards.'
     });
     hLeft.append(title, sub);
     const hRight  = _el('div', 'wiz-collapsible-header-right');
@@ -156,14 +156,14 @@
     const body = _el('div', 'wiz-collapsible-body');
     body.style.display = 'none';
 
-    const instruct = _el('div', 's2-jake-instructions');
+    const instruct = _el('div', 's2-ai-instructions');
     instruct.innerHTML = `
       <strong>How to use this prompt</strong>
       <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
         <li>Enter your business case description in the field above — it will be automatically inserted into the prompt.</li>
         <li>Copy the prompt using the button below.</li>
-        <li>Paste it into JAKE and run it.</li>
-        <li>Save the JAKE report as a PDF alongside this system record.</li>
+        <li>Paste it into your AI tool and run it.</li>
+        <li>Save the report as a PDF alongside this system record.</li>
         <li>Use the report to answer the questions in the Step 3 and Step 4 wizards.</li>
       </ol>`;
     body.appendChild(instruct);
@@ -200,20 +200,20 @@
 
   function _buildPrompt(businessCase) {
     const bc = (businessCase || '').trim() || '[PASTE YOUR BUSINESS CASE DESCRIPTION HERE]';
-    const template = _detail?.jake_prompt_template || '';
+    const template = _detail?.ai_prompt_template || '';
     return template.replace('{{business_case}}', bc);
   }
 
-  // ── Load JAKE output into Step 3 (Classification) ─────────────────────────
+  // ── Load your AI tool output into Step 3 (Classification) ─────────────────────────
 
   function _buildLoadClfSection() {
-    const section = _el('div', 'wiz-collapsible-section s2-jake-section');
-    const header  = _el('div', 'wiz-collapsible-header s2-jake-header');
+    const section = _el('div', 'wiz-collapsible-section s2-ai-section');
+    const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Load JAKE output into Step 3 (Classification)' }));
+    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Load your AI tool output into Step 3 (Classification)' }));
     hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: 'Loads the tier and gate answers as a draft — review and finalise in Step 3.' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
-    const chevron = _el('span', 's2-jake-chevron');
+    const chevron = _el('span', 's2-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     hRight.appendChild(chevron);
     header.append(hLeft, hRight);
@@ -222,7 +222,7 @@
     const body = _el('div', 'wiz-collapsible-body');
     body.style.display = 'none';
     const ta = _el('textarea', 's2-prompt-area');
-    ta.rows = 8; ta.placeholder = 'Paste JAKE’s full reply (or just its ```json block) here…';
+    ta.rows = 8; ta.placeholder = 'Paste your AI tool’s full reply (or just its ```json block) here…';
     const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;margin:10px 0';
     const checkBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Validate & preview' });
     const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Step 3' });
@@ -329,7 +329,7 @@
     if (gate.G5_Q0) axisB.organisation_role = gate.G5_Q0;
     _record['step-3'] = Object.assign({}, prev, {
       step_id: 'step-3', step_title: 'System classification',
-      loaded_from_jake: true, loaded_at: new Date().toISOString(),
+      loaded_from_ai: true, loaded_at: new Date().toISOString(),
       rationale: reasoning || prev.rationale || '',
       axis_a: axisA, axis_b: axisB
     });
@@ -339,16 +339,16 @@
     return Object.keys(gate).length + (tier ? 1 : 0);
   }
 
-  // ── Load JAKE output into Step 4 (DPIA) ───────────────────────────────────
+  // ── Load your AI tool output into Step 4 (DPIA) ───────────────────────────────────
 
   function _buildLoadSection() {
-    const section = _el('div', 'wiz-collapsible-section s2-jake-section');
-    const header  = _el('div', 'wiz-collapsible-header s2-jake-header');
+    const section = _el('div', 'wiz-collapsible-section s2-ai-section');
+    const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Load JAKE output into Step 4 (DPIA)' }));
-    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: 'Paste JAKE’s output; the DPIA answers are validated and loaded into Step 4 so you don’t re-key them.' }));
+    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Load your AI tool output into Step 4 (DPIA)' }));
+    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: 'Paste your AI tool’s output; the DPIA answers are validated and loaded into Step 4 so you don’t re-key them.' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
-    const chevron = _el('span', 's2-jake-chevron');
+    const chevron = _el('span', 's2-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     hRight.appendChild(chevron);
     header.append(hLeft, hRight);
@@ -359,7 +359,7 @@
 
     const ta = _el('textarea', 's2-prompt-area');
     ta.rows = 8;
-    ta.placeholder = 'Paste JAKE’s full reply (or just its ```json block) here…';
+    ta.placeholder = 'Paste your AI tool’s full reply (or just its ```json block) here…';
 
     const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;margin:10px 0';
     const checkBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Validate & preview' });
@@ -403,7 +403,7 @@
   function _extractDpiaAnswers(text) {
     const tryParse = s => { try { return JSON.parse(s); } catch (_) { return null; } };
     // Returns { answers, reasoning } — reasoning is the sibling of dpia_answers
-    // when JAKE emits { "dpia_answers": {...}, "reasoning": "..." }.
+    // when your AI tool emits { "dpia_answers": {...}, "reasoning": "..." }.
     const pick = o => {
       if (o && o.dpia_answers && typeof o.dpia_answers === 'object') {
         return { answers: o.dpia_answers, reasoning: _isEmpty(o.reasoning) ? '' : String(o.reasoning).trim() };
@@ -426,7 +426,7 @@
     return Object.keys(o).some(k => /_f\d/.test(k));
   }
 
-  // Canonical form for tolerant matching: JAKE reformats option text (drops the
+  // Canonical form for tolerant matching: your AI tool reformats option text (drops the
   // spaces around a "/", swaps "—" for a space, changes case). Strip everything
   // except letters and digits so "Employees / staff" == "Employees/staff" and
   // "Art.6(1)(f) — Legitimate interests" == "Art.6(1)(f) Legitimate interests".
@@ -434,7 +434,7 @@
   function _isEmpty(v) { return v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === ''); }
 
   // Match a single select value to an option: canonical-exact, then containment
-  // either way (handles JAKE truncating or padding the option text).
+  // either way (handles your AI tool truncating or padding the option text).
   function _matchSelect(val, options) {
     if (!options) return String(val == null ? '' : val).trim();
     const c = _canon(val);
@@ -474,10 +474,10 @@
       const f = _dpiaFields[id];
       if (!f) { warnings.push(`Unknown field <code>${_esc(id)}</code> — skipped.`); return; }
       // Conditional field whose show-condition isn't met is not shown in Step 4,
-      // so ignore whatever JAKE put here — it often slides a neighbouring answer
+      // so ignore whatever your AI tool put here — it often slides a neighbouring answer
       // into the hidden slot (e.g. explainability into s5_f2 when not automated).
       if (f.condition && !_condMet(f.condition, answers)) { if (!_isEmpty(val)) skipped++; return; }
-      if (_isEmpty(val)) { return; } // JAKE left it blank — skip quietly, no warning
+      if (_isEmpty(val)) { return; } // your AI tool left it blank — skip quietly, no warning
       if (f.type === 'checkbox_group') {
         const ok = _matchCheckbox(val, f.options);
         if (ok.length === 0) { warnings.push(`<code>${_esc(id)}</code>: couldn’t match "${_esc(String(val)).slice(0, 60)}" to any option — skipped.`); return; }
@@ -516,7 +516,7 @@
     _record['step-4'] = Object.assign({}, prev, {
       step_id: 'step-4',
       step_title: 'Data identification and DPIA',
-      loaded_from_jake: true,
+      loaded_from_ai: true,
       loaded_at: new Date().toISOString(),
       rationale: reasoning || prev.rationale || '',
       answers
@@ -565,11 +565,11 @@
       .s2-input { display:block;width:100%;padding:8px 10px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface);box-sizing:border-box;margin-top:4px; }
       .s2-input:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16)); }
 
-      /* Ask JAKE collapsible */
-      .s2-jake-section { margin-top:24px;margin-bottom:24px; }
-      .s2-jake-header { background:var(--teal-50,rgba(93,202,165,0.10)) !important; }
-      .s2-jake-header:hover { background:var(--teal-100,rgba(93,202,165,0.16)) !important; }
-      .s2-jake-instructions { font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm,4px);padding:12px 14px;margin-bottom:14px;line-height:1.6; }
+      /* Ask your AI tool collapsible */
+      .s2-ai-section { margin-top:24px;margin-bottom:24px; }
+      .s2-ai-header { background:var(--teal-50,rgba(93,202,165,0.10)) !important; }
+      .s2-ai-header:hover { background:var(--teal-100,rgba(93,202,165,0.16)) !important; }
+      .s2-ai-instructions { font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm,4px);padding:12px 14px;margin-bottom:14px;line-height:1.6; }
       .s2-prompt-wrap { display:flex;flex-direction:column;gap:8px; }
       .s2-copy-btn { align-self:flex-start; }
       .s2-prompt-area { width:100%;padding:12px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6; }

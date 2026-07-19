@@ -12,7 +12,7 @@
   let _step = null, _colorKey = null, _phaseTitle = null;
   let _container = null, _detail = null, _record = null;
   const _answers = {}; // fieldId → string | string[]
-  let _rationale = ''; // free-text DPIA rationale (holds JAKE's reasoning)
+  let _rationale = ''; // free-text DPIA rationale (holds your AI tool's reasoning)
 
   // ---- Public API ---------------------------------------------
   window.mountStep4Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -49,7 +49,7 @@
     _evalConditions();
     // Persist the saved DPIA summary across navigation, the way Step 3 shows a
     // saved classification result. A completed save carries completion_date +
-    // data_types_identified; a JAKE-loaded draft (answers only) does not.
+    // data_types_identified; an AI-tool-loaded draft (answers only) does not.
     if (s7 && s7.completion_date && s7.data_types_identified) {
       _renderResults(s7);
       const prog = _container.querySelector('#dpia-progress');
@@ -177,13 +177,13 @@
     return card;
   }
 
-  // Rationale textbox — holds the reasoning JAKE returns (or the assessor's own
+  // Rationale textbox — holds the reasoning your AI tool returns (or the assessor's own
   // notes) so the "why" behind the DPIA answers is saved in the record.
   function _buildRationaleSection() {
     const wrap = _el('div', 'dpia-rationale-wrap');
     wrap.appendChild(_sectionLabel('DPIA rationale'));
     const hint = _el('p', 'dpia-rationale-hint');
-    hint.textContent = 'Reasoning behind the DPIA answers. Loaded from JAKE’s reasoning, or add your own notes. Saved with the DPIA.';
+    hint.textContent = 'Reasoning behind the DPIA answers. Loaded from your AI tool’s reasoning, or add your own notes. Saved with the DPIA.';
     wrap.appendChild(hint);
     const ta = document.createElement('textarea');
     ta.className = 'dpia-rationale-ta';

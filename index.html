@@ -119,7 +119,7 @@ function indexPhases(workflow) {
 
 // ---- Render nav panel from data ----------------------------
 // A step counts as complete when its own record slice holds a real, saved
-// result — not merely a JAKE-loaded draft. Drives the green nav icons.
+// result — not merely an AI-tool-loaded draft. Drives the green nav icons.
 function isStepComplete(stepId) {
   const rec = (window.WizUtils && WizUtils.loadRecord && WizUtils.loadRecord()) || {};
   const s = rec[stepId];
