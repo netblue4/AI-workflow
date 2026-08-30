@@ -1637,6 +1637,14 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
   .trace-summary--ok{background:rgba(52,199,120,0.14);color:#8cebb0}
   .trace-summary--warn{background:rgba(212,184,96,0.15);color:#ecd489}
   .applies-if-filter{background:rgba(212,184,96,0.18);color:#ecd489}
+  /* Pale "document" islands keep their light background on screen but were inheriting the dark
+     theme's light body text, leaving light-on-light. Force dark text so they stay legible. */
+  .rag-page{color:#1f2937}
+  .rag-page-title{color:#111}
+  .declaration-block{color:#1f2937}
+  .declaration-block .sub-heading{color:#1e3a5f}
+  .test-plan-hdr{color:#1f2937}
+  .trace-row--gap td,.trace-row--na td{color:#1f2937}
 }
 `;
   }
