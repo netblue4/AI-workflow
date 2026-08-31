@@ -254,6 +254,10 @@
 
 
   // ---- Report guide: what's in the AI System Conformity Assessment Report ----
+  // Plain-language mirror of the Step 8 report's structure. KEEP IN SYNC with the
+  // section list/order in report-wizard.js → _buildReportHTML(): if a section is
+  // renamed, reordered, added or removed there, update _REPORT_PART_A /
+  // _REPORT_PART_B below so this reference tab doesn't drift from the real report.
   const _REPORT_PART_A = [
     ['Cover / Identification', "The front page. It names the AI system being assessed, gives it a reference number and date, says who carried out the assessment, and sums up the headline result, so anyone picking it up immediately knows what they're looking at."],
     ['1. System Classification', "The law treats different AI uses very differently. A few are banned outright, some are tightly regulated, most are low-risk. This section shows which category the system falls into and why, including how risky it is and whether the organisation is building the AI or just using someone else's. That classification drives which rules apply for the rest of the report."],
