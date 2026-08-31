@@ -1373,7 +1373,8 @@ ${rows.join('')}`;
   }
 
   function _ctrlStatusPill(status) {
-    if (status === 'evidence_provided') return '<span class="status-pill status-pill--accept">✓ Evidence provided</span>';
+    if (status === 'evidence_provided') return '<span class="status-pill status-pill--accept">✓ Met</span>';
+    if (status === 'not_met')           return '<span class="status-pill status-pill--fail">✗ Not met</span>';
     if (status === 'waived')            return '<span class="status-pill status-pill--na">— Waived</span>';
     if (status === 'in_progress')       return '<span class="status-pill status-pill--pend">◑ In progress</span>';
     if (status === 'not_started')       return '<span class="status-pill status-pill--excl">○ Not started</span>';
@@ -1383,15 +1384,17 @@ ${rows.join('')}`;
   function _testStatusKey(status) {
     if (status === 'evidence_provided' || status === 'completed')      return 'accept';
     if (status === 'waived'            || status === 'not_applicable') return 'na';
+    if (status === 'not_met')                                          return 'fail';
     if (status === 'in_progress')                                      return 'pend';
     return 'pend';
   }
 
   function _testStatusLabel(status) {
-    if (status === 'evidence_provided') return '✓ Evidence provided';
+    if (status === 'evidence_provided') return '✓ Met';
     if (status === 'completed')         return '✓ Completed';
     if (status === 'waived')            return '— Waived';
     if (status === 'not_applicable')    return '— N/A';
+    if (status === 'not_met')           return '✗ Not met';
     if (status === 'in_progress')       return '◑ In progress';
     return '○ Not started';
   }
@@ -1504,6 +1507,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .status-pill--filter{background:#ede9fe;color:#5b21b6}
 .status-pill--pend{background:#fef3c7;color:#92400e}
 .status-pill--na{background:#f3f4f6;color:#6b7280}
+.status-pill--fail{background:#fee2e2;color:#991b1b}
 
 .ans-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:8.5pt;font-weight:700;white-space:nowrap}
 .ans-pill--yes{background:#d1fae5;color:#065f46}
