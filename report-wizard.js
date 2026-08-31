@@ -130,15 +130,21 @@
 </head>
 <body>
 ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
+
+${_partBanner('A', 'EU AI Act Conformity Dossier', 'The formal EU AI Act conformity assessment for this system — the complete evidence dossier. It is produced first and submitted to the AI Change Board for review, and can be printed and provided to a regulator on its own.')}
+${_section(1, 'System Classification', 'What the system is and how it is classified under the EU AI Act — which determines exactly which legal obligations apply. Confirms the assessment addressed the right requirements.', _classificationSection(s3))}
+${_section(2, 'Risk Identification', 'The risks this system poses, identified against the pre-mapped catalogue (the Article&nbsp;9 risk-management step). Shows the hazards were named systematically, not ad hoc.', _riskAssessmentSection(s8, s10))}
+${_section(3, 'Compliance &amp; Control Traceability', 'Maps each applicable AI Act obligation to the harmonised-standard requirement that makes it testable, the control(s) that treat it, and their live operational status. This is the core evidence that every obligation is covered — nothing unaddressed.', _complianceTraceabilitySection(s3, s9, s10) + '<h3 class="sub-heading">Operational Control Register</h3><p class="section-meta">The controls behind the requirements above, grouped by risk, with their operational status. Includes DPIA and internal-standard controls that support — but sit outside — the per-article map.</p>' + _controlScheduleSection(s9, s10))}
+${_section(4, 'Verification Evidence', 'The tests that prove the selected controls actually work — controls are not just named, but evidenced.', _verificationSection(s10))}
+${_section(5, 'Conformity Assessment Conclusion', 'The assessor&rsquo;s conclusion that, on the evidence above, the system meets its applicable requirements — the basis of conformity submitted to the Board for decision.', _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy))}
+
+${_partDivider('End of Part&nbsp;A — EU AI Act Conformity Dossier. The assessment above is submitted to the AI Change Board; Part&nbsp;B records the Board&rsquo;s review and decision on it.')}
+
+${_partBanner('B', 'Internal Governance &amp; Sign-off', 'The internal governance layer: the Board&rsquo;s at-a-glance status, the outstanding-items list, internal-standard conformance, and the deployment decision. This rests on Part&nbsp;A and records what the Board did with it.')}
 ${_ragSummaryPage(s9, s10)}
-${_section(1, 'System Classification', _classificationSection(s3))}
-${_section(2, 'EU AI Act Compliance Traceability', _complianceTraceabilitySection(s3, s9, s10))}
-${_section(3, 'Risk Identification', _riskAssessmentSection(s8, s10))}
-${_section(4, 'Control Schedule', _controlScheduleSection(s9, s10))}
-${_section(5, 'Verification Evidence', _verificationSection(s10))}
-${_section(6, 'Outstanding Items', _outstandingItemsSection(s9, s10))}
-${_section(7, 'Conformity Assessment Declaration', _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy))}
-${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _srControlsSection())}
+${_section(6, 'Outstanding Items', 'Anything not yet evidenced or resolved — the specific items that must close before, or as conditions of, approval. The Board&rsquo;s action list.', _outstandingItemsSection(s9, s10))}
+${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', 'Conformance with the organisation&rsquo;s own AI Acceptable Use Standard (beyond the legal minimum), including first-line self-assessment.', _srControlsSection())}
+${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and sign-off recorded against this assessment. On approval this authorises deployment and triggers issuance of the formal EU Declaration of Conformity (Article&nbsp;47).', _boardDecisionSection())}
 </body>
 </html>`;
   }
@@ -350,9 +356,10 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     return `
 <div class="rag-page page-break">
   <div class="rag-page-hdr">
-    <div class="rag-page-title">CAB Sign-off Summary</div>
+    <div class="rag-page-title">Change Board Sign-off Summary</div>
     <span class="rag-pill rag-pill--${overall} rag-pill--lg">${overallLabel}</span>
   </div>
+  <p class="section-desc">A one-page status view for the decision: overall RAG, how many controls are evidenced, and the residual risk per risk — the Board's go/no-go at a glance.</p>
   <div class="rag-stat-row">
     <div class="rag-stat rag-stat--${ctrlStatClass}">
       <div class="rag-stat-num">${doneCtrls}/${totalCtrls}</div>
@@ -1055,7 +1062,7 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
   }
 
   // ---- Section 6: Conformity Declaration ---------------------
-  function _conformityDeclarationSection(s3, s9, s10, today, useCase, assessedBy) {
+  function _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy) {
     const artCount   = s3?.axis_b?.applicable_articles?.length ?? 0;
     // Legal risks are treated via HS requirements, not the legacy HS controls.
     const legalHsCount = _legalHsTreatments(s9, s10).rows.length;
@@ -1077,20 +1084,20 @@ ${_section(8, 'Internal Standard Compliance — AI Acceptable Use Standard', _sr
     <tr>
       <td class="mono">[18286.16]</td>
       <td>Articles 9–17 Completion Verification</td>
-      <td>Sections 1–5 of this report evidence completion of all applicable article requirements</td>
+      <td>Sections 1–4 of Part A evidence completion of all applicable article requirements</td>
       <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ Evidenced' : '○ Pending'}</span></td>
     </tr>
     <tr>
       <td class="mono">[18286.17]</td>
       <td>Competent Reviewer Sign-off</td>
-      <td>AI Change Board approval decision (below)</td>
-      <td><span class="status-pill status-pill--pend">○ Awaiting Board</span></td>
+      <td>AI Change Board decision — recorded in Part B</td>
+      <td><span class="status-pill status-pill--pend">○ Recorded in Part B</span></td>
     </tr>
     <tr>
       <td class="mono">[18286.18]</td>
       <td>No Critical Gaps Declaration</td>
-      <td>Compliance Traceability section — all applicable HS requirements must show ✓ Activated or ✓ Self-certified</td>
-      <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 2' : '○ Pending'}</span></td>
+      <td>Compliance &amp; Control Traceability — all applicable HS requirements must show ✓ Activated or ✓ Self-certified</td>
+      <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 3' : '○ Pending'}</span></td>
     </tr>
     <tr>
       <td class="mono">[18286.19]</td>
@@ -1129,11 +1136,12 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
   <ul class="basis-list">
     <li><strong>EU AI Act requirements</strong> are evidenced against <strong>harmonised standard (HS)
     requirements</strong>. For each applicable Article, the corresponding HS requirements are activated as the
-    risk-treatment measures and traced in Section 2 (Compliance Traceability). This report records each
+    risk-treatment measures and traced in Section 3 (Compliance &amp; Control Traceability). This report records each
     requirement, its activation status and its implementing evidence; the technical implementation of each HS
     requirement is carried out by the development team.</li>
     <li><strong>internal standard requirements</strong> are evidenced by the organisation's workflow controls,
-    scheduled with their operational status in Sections 3–4.</li>
+    recorded with their operational status in the Operational Control Register (Section 3) and in Internal
+    Standard Compliance (Part B).</li>
   </ul>
   <p><strong>Presumption of conformity.</strong> Under <strong>Article 40</strong> of Regulation (EU) 2024/1689,
   an AI system that conforms to harmonised standards — or parts thereof — whose references are published in the
@@ -1144,17 +1152,24 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
   without re-assessment.</p>
 </div>
 
-<h3 class="sub-heading">Declaration of Conformity</h3>
+<h3 class="sub-heading">Assessor's Conclusion</h3>
 <div class="declaration-block">
-  <p>The undersigned confirms that the AI system identified above has been assessed against the applicable
-  requirements of Regulation (EU) 2024/1689 (EU AI Act) in accordance with the organisation's AI governance
-  workflow. This assessment covers system classification, risk identification, control selection, harmonised
-  standard traceability, and verification testing as documented in this report.</p>
-  <p>To the best of the reviewer's knowledge, the described system complies with the applicable requirements
-  identified in this assessment, subject to the outstanding items noted above.</p>
+  <p>Having assessed the AI system identified above against the applicable requirements of Regulation (EU)
+  2024/1689 (EU AI Act) — covering system classification, risk identification, control selection,
+  harmonised-standard traceability and verification testing as documented in Part A — the assessor concludes
+  that, to the best of their knowledge, the system meets the applicable requirements identified in this
+  assessment, subject to the outstanding items noted in Part B.</p>
+  <p>This conclusion is submitted to the AI Change Board for decision (Part B). The formal EU Declaration of
+  Conformity (Article 47) is issued following Board approval; it is not made by this document.</p>
 </div>
 
-${_signatureBlock()}`;
+<table class="sig-table">
+  <tr>
+    <td class="sig-cell"><div class="sig-filled">${_esc(assessedBy)}</div><div class="sig-label">Assessed by</div></td>
+    <td class="sig-cell"><div class="sig-filled">${today}</div><div class="sig-label">Date</div></td>
+    <td class="sig-cell"><div class="sig-line"></div><div class="sig-label">Role — Assessor / Compliance</div></td>
+  </tr>
+</table>`;
   }
 
   // Digital AI Change Board approval if recorded; otherwise blank signature lines.
@@ -1308,14 +1323,35 @@ ${rows.join('')}`;
   }
 
   // ---- Helpers ------------------------------------------------
-  function _section(num, title, content) {
+  function _section(num, title, desc, content) {
     return `<div class="section ${num === 1 ? '' : 'page-break'}">
       <div class="section-hdr">
         <span class="section-num">${num}</span>
         <span class="section-title">${title}</span>
       </div>
+      ${desc ? `<p class="section-desc">${desc}</p>` : ''}
       <div class="section-body">${content}</div>
     </div>`;
+  }
+
+  // Part banner introducing a top-level part of the report (A = regulator
+  // conformity dossier, B = internal governance & sign-off).
+  function _partBanner(letter, title, desc) {
+    return `<div class="part-banner page-break">
+      <div class="part-tag">Part ${letter}</div>
+      <div class="part-title">${title}</div>
+      <div class="part-desc">${desc}</div>
+    </div>`;
+  }
+
+  function _partDivider(text) {
+    return `<div class="part-divider">${text}</div>`;
+  }
+
+  // AI Change Board decision — the governance sign-off (Part B). This is the act
+  // that follows and depends on the assessor's conformity conclusion in Part A.
+  function _boardDecisionSection() {
+    return `<p>The AI Change Board records here its decision on the conformity assessment set out in Part A. Approval authorises deployment and triggers issuance of the formal EU Declaration of Conformity (Article&nbsp;47) for this system; the Board may also reject the request or approve it subject to the outstanding items listed above.</p>${_signatureBlock()}`;
   }
 
   function _notComplete(msg) {
@@ -1413,7 +1449,15 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .section-hdr{display:flex;align-items:center;gap:12px;border-bottom:2px solid #0d9488;padding-bottom:8px;margin-bottom:20px}
 .section-num{width:28px;height:28px;background:#0d9488;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11pt;font-weight:700;flex-shrink:0}
 .section-title{font-size:14pt;font-weight:700;color:#111}
+.section-desc{font-size:9pt;color:#555;margin:-12px 0 16px;line-height:1.55;max-width:82%}
 .section-body{padding-bottom:20px}
+
+/* Part banners + dependency divider */
+.part-banner{padding:22px 0 16px;border-bottom:3px solid #0d9488;margin:0 0 24px}
+.part-tag{font-size:10pt;font-weight:700;letter-spacing:.14em;color:#0d9488;text-transform:uppercase}
+.part-title{font-size:18pt;font-weight:800;color:#111;margin:4px 0 8px}
+.part-desc{font-size:9.5pt;color:#555;line-height:1.6;max-width:78%}
+.part-divider{margin:28px 0;padding:14px 18px;background:#f0fdfa;border:1px dashed #0d9488;border-radius:6px;font-size:9.5pt;color:#0f766e;font-weight:600;text-align:center;line-height:1.5}
 .sub-heading{font-size:10.5pt;font-weight:700;color:#1e3a5f;margin:18px 0 8px;padding-bottom:3px;border-bottom:1px solid #e5e7eb}
 .section-meta{font-size:9pt;color:#666;margin-bottom:10px}
 .empty-note{font-size:9.5pt;color:#888;font-style:italic;padding:8px 0}
@@ -1620,6 +1664,11 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
   .cover-header,.section-hdr{border-bottom-color:#d4b860}
   .section-num{background:linear-gradient(180deg,#ecd489,#d4b860);color:#241d08}
   .sub-heading{color:#a4ccf6;border-bottom-color:rgba(240,232,208,0.14)}
+  .part-title{color:#f3efe3}
+  .part-tag{color:#e0b94a}
+  .part-desc,.section-desc{color:#b1a992}
+  .part-banner{border-bottom-color:#d4b860}
+  .part-divider{background:rgba(212,184,96,0.08);border-color:#d4b860;color:#ecd489}
   .cmt-label,.cs-lbl,.cs-sub,.csb-title,.section-meta,.reason-cell,.dt-label,.ctrl-ref,.ctrl-id,.empty-note,.ctrl-src{color:#b1a992}
   .cmt-value,.ctrl-name{color:#ece7da}
   .csb-icon--pend,.csb-status--pend,.ctrl-status--desel,.ctrl-row--dim,.row-dim td,.ans-pill--na{color:#7d755f}
