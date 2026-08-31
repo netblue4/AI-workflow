@@ -19,16 +19,19 @@
   let _container = null, _tblData = null, _record = null;
 
   const _config = {
+    // Requirement/control status. 'evidence_provided' is the internal value for
+    // "Met" (kept stable so existing done-checks keep working); 'not_met' is a
+    // real fail/gap state. 'in_progress' was retired — map legacy values below.
     status_options: [
       { value: 'not_started',       label: 'Not started' },
-      { value: 'in_progress',       label: 'In progress' },
-      { value: 'evidence_provided', label: 'Evidence provided' },
+      { value: 'evidence_provided', label: 'Met' },
+      { value: 'not_met',           label: 'Not met' },
       { value: 'waived',            label: 'Waived' },
     ],
     status_colors: {
       not_started:       { bg: '#262219', text: '#b1a992' },
-      in_progress:       { bg: 'rgba(212,184,96,0.16)', text: '#ecd489' },
       evidence_provided: { bg: 'rgba(52,199,120,0.16)', text: '#8cebb0' },
+      not_met:           { bg: 'rgba(226,90,88,0.16)', text: '#fba4a3' },
       waived:            { bg: 'rgba(138,130,235,0.16)', text: '#bfb8ff' },
     },
     risk_matrix: {
@@ -67,7 +70,7 @@
   // on a canonical form so "[18286.1]" and "18286.1" resolve to the same key.
   const _canonRef = r => String(r == null ? '' : r).replace(/[[\]\s]/g, '');
 
-  const STATUS_LEGACY_MAP = { pending: 'not_started', completed: 'evidence_provided', not_applicable: 'waived' };
+  const STATUS_LEGACY_MAP = { pending: 'not_started', completed: 'evidence_provided', not_applicable: 'waived', in_progress: 'not_started' };
 
   // ---- Public API ---------------------------------------------
   window.mountStep7Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -296,7 +299,7 @@
         // Default the evidence note to the framework self-certification for this HS
         // requirement (shown in Step 6). Saved notes below override this default.
         const fs = _fsByRef.get(_canonRef(ref)) || '';
-        _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: fs };
+        _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: fs, test_results: {} };
       });
     });
     const savedHsAct = saved7?.hs_activation || {};
@@ -305,7 +308,11 @@
         // A saved record wins — but if it predates this feature and has no note,
         // fall back to the framework statement so existing assessments benefit too.
         const fs = _fsByRef.get(_canonRef(ref)) || '';
-        _hsActState[_hsActKey(riskId, ref)] = { status: st.status || 'not_started', notes: st.notes || fs };
+        _hsActState[_hsActKey(riskId, ref)] = {
+          status: STATUS_LEGACY_MAP[st.status] || st.status || 'not_started',
+          notes: st.notes || fs,
+          test_results: st.test_results || {}
+        };
       });
     });
     _deriveActFromHs(); // bridge HS activation → control activation for the report
@@ -351,7 +358,7 @@
       if (statuses.length) {
         if (statuses.every(s => s === 'evidence_provided')) st = 'evidence_provided';
         else if (statuses.every(s => s === 'evidence_provided' || s === 'waived')) st = 'waived';
-        else if (statuses.some(s => s !== 'not_started')) st = 'in_progress';
+        else if (statuses.some(s => s === 'not_met')) st = 'not_met';
       }
       if (!_actState[c.key]) _actState[c.key] = { notes: '', status: 'not_started' };
       _actState[c.key].status = st;
@@ -610,70 +617,30 @@
   }
 
   function _buildTestControlCard(tc, plan, planIdx) {
-    const status = _testState.status[tc.pk_Test_Control_ID] || 'not_started';
-    const card   = _el('div', 's7-ctrl-card');
+    // Result-only card: each test captures a Test Result; the single judgment
+    // (Met / Not met / Waived) lives on the parent control in section 1.
+    const card = _el('div', 's7-ctrl-card');
     card.dataset.tcId = tc.pk_Test_Control_ID;
 
     const hdr = _el('div', 's7-ctrl-hdr');
-    const srcBadge = _el('span', 's7-src-badge');
-    srcBadge.textContent = 'EU AI Act';
-    hdr.appendChild(srcBadge);
-    const name = _el('span', 's7-ctrl-name');
-    name.textContent = tc.jkName;
-    hdr.appendChild(name);
+    hdr.appendChild(_el('span', 's7-src-badge', { textContent: WizUtils.fmtStdRef(tc.control_ref) || 'Test' }));
+    hdr.appendChild(_el('span', 's7-ctrl-name', { textContent: tc.jkName }));
     card.appendChild(hdr);
 
-    if (tc.jkObjective) {
-      const obj = _el('p', 's7-ctrl-obj');
-      obj.textContent = tc.jkObjective;
-      card.appendChild(obj);
-    }
+    if (tc.jkObjective) card.appendChild(_el('p', 's7-ctrl-obj', { textContent: tc.jkObjective }));
 
     const notesWrap = _el('div', 's7-ctrl-notes-wrap');
-    const notesLbl  = _el('label', 's7-ctrl-notes-lbl');
-    notesLbl.textContent = 'Evidence / Notes';
-    notesWrap.appendChild(notesLbl);
+    notesWrap.appendChild(_el('label', 's7-ctrl-notes-lbl', { textContent: 'Test result' }));
     const textarea = document.createElement('textarea');
     textarea.className   = 's7-ctrl-notes';
-    textarea.placeholder = 'Add Jira ticket URL or evidence notes…';
+    textarea.placeholder = 'Record the outcome and attach the test report or link proving the test passed…';
     textarea.rows        = 2;
     textarea.value       = _testState.notes[tc.pk_Test_Control_ID] || '';
     textarea.addEventListener('input', () => {
       _testState.notes[tc.pk_Test_Control_ID] = textarea.value;
-      if (textarea.value && _testState.status[tc.pk_Test_Control_ID] === 'not_started') {
-        _testState.status[tc.pk_Test_Control_ID] = 'in_progress';
-        _syncTestCardStatus(card, 'in_progress', plan, planIdx);
-      }
     });
     notesWrap.appendChild(textarea);
     card.appendChild(notesWrap);
-
-    const statusRow = _el('div', 's7-ctrl-status-row');
-    const statusLbl = _el('span', 's7-ctrl-status-lbl');
-    statusLbl.textContent = 'Status';
-    statusRow.appendChild(statusLbl);
-
-    const sel = document.createElement('select');
-    sel.className = 's7-ctrl-status-sel';
-    _config.status_options.forEach(opt => {
-      const o = document.createElement('option');
-      o.value = opt.value; o.textContent = opt.label;
-      if (opt.value === status) o.selected = true;
-      sel.appendChild(o);
-    });
-
-    const pill = _el('span', `s7-ctrl-pill s7-ctrl-pill--${status}`);
-    pill.textContent = _config.status_options.find(o => o.value === status)?.label || status;
-
-    sel.addEventListener('change', () => {
-      _testState.status[tc.pk_Test_Control_ID] = sel.value;
-      _syncTestCardStatus(card, sel.value, plan, planIdx);
-      if (plan.risk_id) _syncResidualPanel(plan.risk_id);
-    });
-
-    statusRow.appendChild(sel);
-    statusRow.appendChild(pill);
-    card.appendChild(statusRow);
     return card;
   }
 
@@ -736,14 +703,15 @@
     textarea.rows        = 3;
     textarea.addEventListener('input', () => {
       _actState[ctrl.key].notes = textarea.value;
-      if (textarea.value.trim() && _actState[ctrl.key].status === 'not_started') {
-        _actState[ctrl.key].status = 'in_progress';
-        _syncActCard(card, 'in_progress');
-        _updateActProgress();
-      }
     });
     notesWrap.appendChild(notesLbl); notesWrap.appendChild(textarea);
     card.appendChild(notesWrap);
+
+    // Tests attached to this control — their results gate the "Met" status.
+    const myTests = (_planData.find(p => p.risk_id === ctrl.risk_id)?.test_controls || [])
+      .filter(tc => tc.fk_Risk_Control_ID === ctrl.key);
+    const warn = _el('p', 's9-fs-prefill-hint'); warn.style.color = '#fba4a3'; warn.style.display = 'none';
+    card.appendChild(warn);
 
     const statusWrap = _el('div', 's9-status-wrap');
     const statusLbl  = _el('label', 's9-field-label'); statusLbl.textContent = 'Status';
@@ -756,6 +724,17 @@
       select.appendChild(o);
     });
     select.addEventListener('change', () => {
+      // "Met" guard: this control can only be Met once every one of its tests has a result.
+      if (select.value === 'evidence_provided' && myTests.length) {
+        const missing = myTests.some(tc => !String(_testState.notes[tc.pk_Test_Control_ID] || '').trim());
+        if (missing) {
+          select.value = _actState[ctrl.key].status;
+          warn.textContent = 'Record a result for every test before marking this control “Met”.';
+          warn.style.display = '';
+          return;
+        }
+      }
+      warn.style.display = 'none';
       _actState[ctrl.key].status = select.value;
       _syncActCard(card, select.value);
       _updateActProgress();
@@ -802,52 +781,61 @@
     // What evidence to ask for depends on how the requirement is verified.
     const ctype = h?.coverage_type || 'Test';
     const tests = _tcByHsRef.get(ref) || [];
-    let evLabel = 'Evidence / Notes';
-    let evPlaceholder = 'Describe how this requirement is implemented and evidenced…';
+    if (!st.test_results) st.test_results = {}; // { pk_Test_Control_ID → result text }
+
+    // Warning line used by the "Met" guard below.
+    const warn = _el('p', 's9-fs-prefill-hint'); warn.style.color = '#fba4a3'; warn.style.display = 'none';
 
     if (ctype === 'Test' && tests.length) {
-      // The test proves the requirement operates as expected — ask for its result.
+      // One "Test result" box per verification test; the requirement status is
+      // the single judgment recorded once all test results are in.
       const tWrap = _el('div', 's9-obj-wrap');
       tWrap.appendChild(_el('span', 's9-field-label', { textContent: tests.length > 1 ? 'Verification tests' : 'Verification test' }));
       tests.forEach(tc => {
-        const line = _el('div', ''); line.style.margin = '6px 0';
+        const tid = tc.pk_Test_Control_ID;
+        const line = _el('div', ''); line.style.margin = '10px 0 4px';
         line.appendChild(_el('span', 's9-src-badge s9-src-badge--framework', { textContent: WizUtils.fmtStdRef(tc.control_ref) }));
         line.appendChild(_el('span', 's9-ctrl-name', { textContent: ' ' + (tc.jkName || '') }));
         if (tc.jkObjective) line.appendChild(_el('p', 's9-ctrl-obj', { textContent: tc.jkObjective }));
         tWrap.appendChild(line);
+        tWrap.appendChild(_el('label', 's9-field-label', { textContent: 'Test result' }));
+        const rta = document.createElement('textarea');
+        rta.className = 's9-ctrl-notes'; rta.rows = 2;
+        rta.placeholder = 'Record the outcome and attach the test report or link proving the test passed…';
+        rta.value = st.test_results[tid] || '';
+        rta.addEventListener('input', () => { st.test_results[tid] = rta.value; });
+        tWrap.appendChild(rta);
       });
       card.appendChild(tWrap);
-      evLabel = 'Test result';
-      evPlaceholder = 'Record the outcome and attach the test report or link proving the test passed…';
-    } else if (ctype === 'Document') {
-      evLabel = 'Document reference';
-      evPlaceholder = 'Reference the external document that evidences this requirement (title, version, link)…';
-    } else if (ctype === 'Workflow') {
-      card.appendChild(_domainMuted('Evidenced by the governance workflow. Add a pointer to the relevant step or record if needed.'));
-      evLabel = 'Evidence pointer';
-      evPlaceholder = 'Optional — point to the workflow step or record that evidences this requirement…';
+    } else {
+      // Document / Workflow requirements (and Test-type with no defined tests):
+      // a single evidence field, as before.
+      let evLabel = 'Evidence / Notes';
+      let evPlaceholder = 'Describe how this requirement is implemented and evidenced…';
+      if (ctype === 'Document') {
+        evLabel = 'Document reference';
+        evPlaceholder = 'Reference the external document that evidences this requirement (title, version, link)…';
+      } else if (ctype === 'Workflow') {
+        card.appendChild(_domainMuted('Evidenced by the governance workflow. Add a pointer to the relevant step or record if needed.'));
+        evLabel = 'Evidence pointer';
+        evPlaceholder = 'Optional — point to the workflow step or record that evidences this requirement…';
+      }
+      const notesWrap = _el('div', 's9-notes-wrap');
+      notesWrap.appendChild(_el('label', 's9-field-label', { textContent: evLabel }));
+      if (prefilledFromFs) {
+        notesWrap.appendChild(_el('p', 's9-fs-prefill-hint', {
+          textContent: 'Pre-filled from the framework self-certification shown in Step 6 — edit or confirm.'
+        }));
+      }
+      const ta = document.createElement('textarea');
+      ta.className = 's9-ctrl-notes'; ta.rows = prefilledFromFs ? 4 : 3; ta.value = st.notes;
+      ta.placeholder = evPlaceholder;
+      ta.addEventListener('input', () => { _hsActState[key].notes = ta.value; });
+      notesWrap.appendChild(ta);
+      card.appendChild(notesWrap);
     }
 
-    const notesWrap = _el('div', 's9-notes-wrap');
-    notesWrap.appendChild(_el('label', 's9-field-label', { textContent: evLabel }));
-    if (prefilledFromFs) {
-      notesWrap.appendChild(_el('p', 's9-fs-prefill-hint', {
-        textContent: 'Pre-filled from the framework self-certification shown in Step 6 — edit or confirm.'
-      }));
-    }
-    const ta = document.createElement('textarea');
-    ta.className = 's9-ctrl-notes'; ta.rows = prefilledFromFs ? 4 : 3; ta.value = st.notes;
-    ta.placeholder = evPlaceholder;
-    ta.addEventListener('input', () => {
-      _hsActState[key].notes = ta.value;
-      if (ta.value.trim() && _hsActState[key].status === 'not_started') {
-        _hsActState[key].status = 'in_progress';
-        _syncHsCard(card, 'in_progress');
-        _deriveActFromHs(); _updateActProgress();
-      }
-    });
-    notesWrap.appendChild(ta);
-    card.appendChild(notesWrap);
+    card.appendChild(warn);
 
     const statusWrap = _el('div', 's9-status-wrap');
     statusWrap.appendChild(_el('label', 's9-field-label', { textContent: 'Status' }));
@@ -857,6 +845,18 @@
       if (opt.value === st.status) o.selected = true; select.appendChild(o);
     });
     select.addEventListener('change', () => {
+      // "Met" guard: a Test-type requirement can only be Met once every one of its
+      // verification tests has a recorded result.
+      if (select.value === 'evidence_provided' && ctype === 'Test' && tests.length) {
+        const missing = tests.some(tc => !String(st.test_results[tc.pk_Test_Control_ID] || '').trim());
+        if (missing) {
+          select.value = st.status;
+          warn.textContent = 'Record a result for every verification test before marking this requirement “Met”.';
+          warn.style.display = '';
+          return;
+        }
+      }
+      warn.style.display = 'none';
       _hsActState[key].status = select.value;
       _syncHsCard(card, select.value);
       _deriveActFromHs(); _updateActProgress();
@@ -894,11 +894,11 @@
         return s === 'evidence_provided' || s === 'waived';
       });
     }
-    // Tests: all test controls for this risk must be evidenced/waived
+    // Tests: every test must have a recorded result (or its control is waived)
     const plan = _planData.find(p => p.risk_id === riskId);
     const testsDone = !plan || plan.test_controls.length === 0 || plan.test_controls.every(tc =>
-      _testState.status[tc.pk_Test_Control_ID] === 'evidence_provided' ||
-      _testState.status[tc.pk_Test_Control_ID] === 'waived'
+      String(_testState.notes[tc.pk_Test_Control_ID] || '').trim() ||
+      _actState[tc.fk_Risk_Control_ID]?.status === 'waived'
     );
     // Activation: all activation controls for this risk must be evidenced/waived
     const actCtrls = _controls.filter(c => c.risk_id === riskId);
@@ -1027,19 +1027,49 @@
     const meta  = _record?._meta || {};
 
     // Test plans (Tab 1)
-    const plans = _planData.map(p => ({
+    const nonLegalPlans = _planData.map(p => ({
       plan_ref:      p.risk_id,
       plan_name:     p.risk_name,
       risk_name:     p.risk_name,
-      test_controls: p.test_controls.map(tc => ({
-        test_control_id:            tc.pk_Test_Control_ID,
-        control_ref:                tc.control_ref || '',
-        control_name:               tc.jkName      || '',
-        fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
-        notes:                      _testState.notes[tc.pk_Test_Control_ID]  || '',
-        status:                     _testState.status[tc.pk_Test_Control_ID] || 'not_started'
-      }))
+      test_controls: p.test_controls.map(tc => {
+        const result = _testState.notes[tc.pk_Test_Control_ID] || '';
+        const parentWaived = _actState[tc.fk_Risk_Control_ID]?.status === 'waived';
+        return {
+          test_control_id:            tc.pk_Test_Control_ID,
+          control_ref:                tc.control_ref || '',
+          control_name:               tc.jkName      || '',
+          fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
+          notes:                      result,
+          // A non-legal test is "done" when it has a result, or its control is waived.
+          status:                     parentWaived ? 'waived' : (String(result).trim() ? 'evidence_provided' : 'not_started')
+        };
+      })
     }));
+    // Legal risks verify their requirements via HS-linked tests recorded in the HS
+    // cards. Emit those as plan entries too, so the report counts and lists them like
+    // any other test (a test is "done" when it has a result, or its requirement is waived).
+    const legalPlans = [];
+    _legalRiskIds().forEach(riskId => {
+      const riskName = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId)?.risk_name || riskId;
+      const tcs = [];
+      _legalRiskHsRefs(riskId).forEach(ref => {
+        const stt = _hsActState[_hsActKey(riskId, ref)];
+        (_tcByHsRef.get(ref) || []).forEach(tc => {
+          const result = String(stt?.test_results?.[tc.pk_Test_Control_ID] || '');
+          const status = stt?.status === 'waived' ? 'waived' : (result.trim() ? 'evidence_provided' : 'not_started');
+          tcs.push({
+            test_control_id:            tc.pk_Test_Control_ID,
+            control_ref:                tc.control_ref || '',
+            control_name:               tc.jkName || '',
+            fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
+            notes:                      result,
+            status
+          });
+        });
+      });
+      if (tcs.length) legalPlans.push({ plan_ref: riskId, plan_name: riskName, risk_name: riskName, test_controls: tcs });
+    });
+    const plans = nonLegalPlans.concat(legalPlans);
     const allTests   = plans.reduce((a, p) => a.concat(p.test_controls), []);
     const evidTests  = allTests.filter(t => t.status === 'evidence_provided').length;
     const waivedTests = allTests.filter(t => t.status === 'waived').length;
@@ -1064,8 +1094,9 @@
       const i = k.indexOf('::'); if (i < 0) return;
       const riskId = k.slice(0, i), ref = k.slice(i + 2);
       const st = _hsActState[k];
-      if (st && (st.status !== 'not_started' || st.notes)) {
-        (hs_activation[riskId] = hs_activation[riskId] || {})[ref] = { status: st.status, notes: st.notes || '' };
+      const hasResults = st && st.test_results && Object.values(st.test_results).some(v => String(v || '').trim());
+      if (st && (st.status !== 'not_started' || st.notes || hasResults)) {
+        (hs_activation[riskId] = hs_activation[riskId] || {})[ref] = { status: st.status, notes: st.notes || '', test_results: st.test_results || {} };
       }
     });
 
@@ -1169,6 +1200,7 @@
 .s7-ctrl-pill--not_started{background:#262219;color:#b1a992}
 .s7-ctrl-pill--in_progress{background:rgba(212,184,96,0.16);color:#ecd489}
 .s7-ctrl-pill--evidence_provided{background:rgba(52,199,120,0.16);color:#8cebb0}
+.s7-ctrl-pill--not_met{background:rgba(226,90,88,0.16);color:#fba4a3}
 .s7-ctrl-pill--waived{background:rgba(138,130,235,0.16);color:#bfb8ff}
 
 /* ---- Shared plan/list styles ---- */

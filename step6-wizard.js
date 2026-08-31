@@ -462,6 +462,24 @@
         hdrRow.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: h?.standard_name || ref }));
         txt.appendChild(hdrRow);
         if (h?.standard_text) txt.appendChild(_el('p', 'wiz9-hs-item-desc', { textContent: h.standard_text }));
+        // Preview the verification tests this control brings — their results are
+        // recorded per-test in Step 7 (Residual Risk → Harmonised Standard Verification).
+        const refTests = (_tblData.testControls || []).filter(tc =>
+          (tc.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean).includes(ref)
+        );
+        if (refTests.length) {
+          const tl = _el('div', ''); tl.style.cssText = 'margin:7px 0 2px;padding:6px 10px;border-left:2px solid var(--color-border);border-radius:2px';
+          const lbl = _el('span', ''); lbl.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-tertiary)';
+          lbl.textContent = (refTests.length > 1 ? `${refTests.length} verification tests` : '1 verification test') + ' — result recorded in Step 7';
+          tl.appendChild(lbl);
+          refTests.forEach(tc => {
+            const row = _el('div', ''); row.style.cssText = 'display:flex;gap:7px;align-items:baseline;margin-top:4px;font-size:12px';
+            row.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(tc.control_ref) }));
+            row.appendChild(_el('span', '', { textContent: tc.jkName || '' }));
+            tl.appendChild(row);
+          });
+          txt.appendChild(tl);
+        }
         item.appendChild(txt);
         body.appendChild(item);
       });
