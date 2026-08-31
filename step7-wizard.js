@@ -273,7 +273,14 @@
     });
 
     // --- Tab 3 residual state (fallback to legacy step-9) ---
-    const allRiskIds = new Set(_controls.filter(c => c.risk_id).map(c => c.risk_id));
+    // Include legal/regulatory risks too: they are treated via HS requirements
+    // (not activation controls), so they never appear in _controls. Without this,
+    // their _residualState entry is never created and the Likelihood/Impact change
+    // handlers throw on undefined — so the Risk Level never computes and never saves.
+    const allRiskIds = new Set([
+      ..._controls.filter(c => c.risk_id).map(c => c.risk_id),
+      ..._legalRiskIds(),
+    ]);
     allRiskIds.forEach(riskId => { _residualState[riskId] = { likelihood: '', impact: '', justification: '' }; });
     const savedResidual = saved7?.residual_risks || _record?.['step-9']?.residual_risks || {};
     Object.entries(savedResidual).forEach(([riskId, rr]) => {
