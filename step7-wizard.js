@@ -617,32 +617,23 @@
   }
 
   function _buildTestControlCard(tc, plan, planIdx) {
-    const status = _testState.status[tc.pk_Test_Control_ID] || 'not_started';
-    const card   = _el('div', 's7-ctrl-card');
+    // Result-only card: each test captures a Test Result; the single judgment
+    // (Met / Not met / Waived) lives on the parent control in section 1.
+    const card = _el('div', 's7-ctrl-card');
     card.dataset.tcId = tc.pk_Test_Control_ID;
 
     const hdr = _el('div', 's7-ctrl-hdr');
-    const srcBadge = _el('span', 's7-src-badge');
-    srcBadge.textContent = 'EU AI Act';
-    hdr.appendChild(srcBadge);
-    const name = _el('span', 's7-ctrl-name');
-    name.textContent = tc.jkName;
-    hdr.appendChild(name);
+    hdr.appendChild(_el('span', 's7-src-badge', { textContent: WizUtils.fmtStdRef(tc.control_ref) || 'Test' }));
+    hdr.appendChild(_el('span', 's7-ctrl-name', { textContent: tc.jkName }));
     card.appendChild(hdr);
 
-    if (tc.jkObjective) {
-      const obj = _el('p', 's7-ctrl-obj');
-      obj.textContent = tc.jkObjective;
-      card.appendChild(obj);
-    }
+    if (tc.jkObjective) card.appendChild(_el('p', 's7-ctrl-obj', { textContent: tc.jkObjective }));
 
     const notesWrap = _el('div', 's7-ctrl-notes-wrap');
-    const notesLbl  = _el('label', 's7-ctrl-notes-lbl');
-    notesLbl.textContent = 'Evidence / Notes';
-    notesWrap.appendChild(notesLbl);
+    notesWrap.appendChild(_el('label', 's7-ctrl-notes-lbl', { textContent: 'Test result' }));
     const textarea = document.createElement('textarea');
     textarea.className   = 's7-ctrl-notes';
-    textarea.placeholder = 'Add Jira ticket URL or evidence notes…';
+    textarea.placeholder = 'Record the outcome and attach the test report or link proving the test passed…';
     textarea.rows        = 2;
     textarea.value       = _testState.notes[tc.pk_Test_Control_ID] || '';
     textarea.addEventListener('input', () => {
@@ -650,33 +641,6 @@
     });
     notesWrap.appendChild(textarea);
     card.appendChild(notesWrap);
-
-    const statusRow = _el('div', 's7-ctrl-status-row');
-    const statusLbl = _el('span', 's7-ctrl-status-lbl');
-    statusLbl.textContent = 'Status';
-    statusRow.appendChild(statusLbl);
-
-    const sel = document.createElement('select');
-    sel.className = 's7-ctrl-status-sel';
-    _config.status_options.forEach(opt => {
-      const o = document.createElement('option');
-      o.value = opt.value; o.textContent = opt.label;
-      if (opt.value === status) o.selected = true;
-      sel.appendChild(o);
-    });
-
-    const pill = _el('span', `s7-ctrl-pill s7-ctrl-pill--${status}`);
-    pill.textContent = _config.status_options.find(o => o.value === status)?.label || status;
-
-    sel.addEventListener('change', () => {
-      _testState.status[tc.pk_Test_Control_ID] = sel.value;
-      _syncTestCardStatus(card, sel.value, plan, planIdx);
-      if (plan.risk_id) _syncResidualPanel(plan.risk_id);
-    });
-
-    statusRow.appendChild(sel);
-    statusRow.appendChild(pill);
-    card.appendChild(statusRow);
     return card;
   }
 
@@ -743,6 +707,12 @@
     notesWrap.appendChild(notesLbl); notesWrap.appendChild(textarea);
     card.appendChild(notesWrap);
 
+    // Tests attached to this control — their results gate the "Met" status.
+    const myTests = (_planData.find(p => p.risk_id === ctrl.risk_id)?.test_controls || [])
+      .filter(tc => tc.fk_Risk_Control_ID === ctrl.key);
+    const warn = _el('p', 's9-fs-prefill-hint'); warn.style.color = '#fba4a3'; warn.style.display = 'none';
+    card.appendChild(warn);
+
     const statusWrap = _el('div', 's9-status-wrap');
     const statusLbl  = _el('label', 's9-field-label'); statusLbl.textContent = 'Status';
     const select     = document.createElement('select');
@@ -754,6 +724,17 @@
       select.appendChild(o);
     });
     select.addEventListener('change', () => {
+      // "Met" guard: this control can only be Met once every one of its tests has a result.
+      if (select.value === 'evidence_provided' && myTests.length) {
+        const missing = myTests.some(tc => !String(_testState.notes[tc.pk_Test_Control_ID] || '').trim());
+        if (missing) {
+          select.value = _actState[ctrl.key].status;
+          warn.textContent = 'Record a result for every test before marking this control “Met”.';
+          warn.style.display = '';
+          return;
+        }
+      }
+      warn.style.display = 'none';
       _actState[ctrl.key].status = select.value;
       _syncActCard(card, select.value);
       _updateActProgress();
@@ -913,11 +894,11 @@
         return s === 'evidence_provided' || s === 'waived';
       });
     }
-    // Tests: all test controls for this risk must be evidenced/waived
+    // Tests: every test must have a recorded result (or its control is waived)
     const plan = _planData.find(p => p.risk_id === riskId);
     const testsDone = !plan || plan.test_controls.length === 0 || plan.test_controls.every(tc =>
-      _testState.status[tc.pk_Test_Control_ID] === 'evidence_provided' ||
-      _testState.status[tc.pk_Test_Control_ID] === 'waived'
+      String(_testState.notes[tc.pk_Test_Control_ID] || '').trim() ||
+      _actState[tc.fk_Risk_Control_ID]?.status === 'waived'
     );
     // Activation: all activation controls for this risk must be evidenced/waived
     const actCtrls = _controls.filter(c => c.risk_id === riskId);
@@ -1050,14 +1031,19 @@
       plan_ref:      p.risk_id,
       plan_name:     p.risk_name,
       risk_name:     p.risk_name,
-      test_controls: p.test_controls.map(tc => ({
-        test_control_id:            tc.pk_Test_Control_ID,
-        control_ref:                tc.control_ref || '',
-        control_name:               tc.jkName      || '',
-        fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
-        notes:                      _testState.notes[tc.pk_Test_Control_ID]  || '',
-        status:                     _testState.status[tc.pk_Test_Control_ID] || 'not_started'
-      }))
+      test_controls: p.test_controls.map(tc => {
+        const result = _testState.notes[tc.pk_Test_Control_ID] || '';
+        const parentWaived = _actState[tc.fk_Risk_Control_ID]?.status === 'waived';
+        return {
+          test_control_id:            tc.pk_Test_Control_ID,
+          control_ref:                tc.control_ref || '',
+          control_name:               tc.jkName      || '',
+          fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
+          notes:                      result,
+          // A non-legal test is "done" when it has a result, or its control is waived.
+          status:                     parentWaived ? 'waived' : (String(result).trim() ? 'evidence_provided' : 'not_started')
+        };
+      })
     }));
     // Legal risks verify their requirements via HS-linked tests recorded in the HS
     // cards. Emit those as plan entries too, so the report counts and lists them like
