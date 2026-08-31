@@ -34,6 +34,7 @@
       ['dpia',     'How do we perform a DPIA'],
       ['risks',    'How do we identify risks'],
       ['residual', 'How do we calculate residual risk'],
+      ['report',   "What's in the AI System Conformity Assessment Report"],
     ];
     const paneWrap = el('div', 'abt-tab-panes');
     const panes = {}; const loaded = {};
@@ -136,6 +137,7 @@
 
   function _fillTrainingPane(id, pane) {
     if (id === 'residual') { pane.appendChild(_buildResidualPane()); return; }
+    if (id === 'report')   { pane.appendChild(_buildReportGuidePane()); return; }
     const cfg = _TRAINING[id];
     pane.appendChild(_sectionTitle(cfg.title));
     pane.appendChild(el('p', 'abt-body', { textContent: cfg.body }));
@@ -251,6 +253,63 @@
   }
 
 
+  // ---- Report guide: what's in the AI System Conformity Assessment Report ----
+  // Plain-language mirror of the Step 8 report's structure. KEEP IN SYNC with the
+  // section list/order in report-wizard.js → _buildReportHTML(): if a section is
+  // renamed, reordered, added or removed there, update _REPORT_PART_A /
+  // _REPORT_PART_B below so this reference tab doesn't drift from the real report.
+  const _REPORT_PART_A = [
+    ['Cover / Identification', "The front page. It names the AI system being assessed, gives it a reference number and date, says who carried out the assessment, and sums up the headline result, so anyone picking it up immediately knows what they're looking at."],
+    ['1. System Classification', "The law treats different AI uses very differently. A few are banned outright, some are tightly regulated, most are low-risk. This section shows which category the system falls into and why, including how risky it is and whether the organisation is building the AI or just using someone else's. That classification drives which rules apply for the rest of the report."],
+    ['2. Risk Identification', "You can't manage a danger you haven't named. This lists the specific things that could go wrong with this system, for example biased decisions, confidently wrong answers, or misuse of people's personal data, and who is responsible for each. They're drawn from a ready-made library of known AI risks rather than guessed at on the day."],
+    ['3. Compliance & Control Traceability', "The heart of the report, and the part that proves nothing was missed. For each rule the system must follow, it shows the specific safeguard put in place to meet it, and marks whether that safeguard is done, still outstanding, or genuinely not needed. Below it, a register lists the actual safeguards in place, grouped by the risk they address, with their current status. Anything left uncovered shows up here as a gap."],
+    ['4. Verification Evidence', "Saying a safeguard exists isn't the same as proving it works. This shows the tests run against each safeguard and whether they passed, so the reader can see the controls were actually checked, not just written down."],
+    ['5. Conformity Assessment Conclusion', "This shows the assessor's conclusion: based on everything above, the system meets the rules it has to meet. It includes a short checklist confirming the assessment is complete, and is signed by the assessor. This is the recommendation passed to the decision-makers, it is not yet the final approval."],
+    ['— handover —', "A short note marking that the evidence (Part A) is finished and is now going to the internal decision-makers for a verdict."],
+  ];
+  const _REPORT_PART_B = [
+    ['Change Board Sign-off Summary', "The decision-makers need the bottom line, not the whole file. This is a single-page dashboard, a red/amber/green rating, how much of the work is complete, and how much risk is left over, so they can see at a glance whether it's safe to approve."],
+    ['6. Outstanding Items', "Approval often comes with strings attached. This is a plain list of anything still unfinished, so the board knows exactly what must be fixed before, or as a condition of, saying yes."],
+    ['7. Internal Standard Compliance', "Most organisations hold themselves to a higher bar than the legal minimum. This shows whether the system also meets the company's own internal AI rules, including checks the team has confirmed for themselves."],
+    ['8. AI Change Board Decision', "The board's formal verdict: approve, reject, or approve with conditions. Approving it clears the system to go live and triggers the official legal declaration that it complies."],
+  ];
+
+  function _reportSubhead(title, aud) {
+    const h = el('p', 'abt-rep-sub');
+    h.appendChild(document.createTextNode(title + '  '));
+    const s = el('span', ''); s.textContent = '· ' + aud;
+    h.appendChild(s);
+    return h;
+  }
+
+  function _reportTable(rows) {
+    const scroll = el('div', 'abt-std-scroll');
+    const table = document.createElement('table');
+    table.className = 'abt-rep-table';
+    table.innerHTML = '<thead><tr><th>Section</th><th>What it shows</th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    rows.forEach(([sec, desc]) => {
+      const tr = document.createElement('tr');
+      const c1 = document.createElement('td'); c1.textContent = sec;
+      const c2 = document.createElement('td'); c2.textContent = desc;
+      tr.append(c1, c2); tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    scroll.appendChild(table);
+    return scroll;
+  }
+
+  function _buildReportGuidePane() {
+    const wrap = el('div', '');
+    wrap.appendChild(_sectionTitle("What's in the AI System Conformity Assessment Report"));
+    wrap.appendChild(el('p', 'abt-body', { textContent: "The report is a single assessment split into two parts. Part A is the evidence that the system follows the rules — the part you could hand to a regulator. Part B is the internal record of the go-ahead decision made off the back of that evidence. Part A is completed first; Part B depends on it." }));
+    wrap.appendChild(_reportSubhead('Part A — the conformity evidence', 'for the regulator'));
+    wrap.appendChild(_reportTable(_REPORT_PART_A));
+    wrap.appendChild(_reportSubhead('Part B — the internal decision', 'for the AI Change Board, the internal approvers'));
+    wrap.appendChild(_reportTable(_REPORT_PART_B));
+    return wrap;
+  }
+
   // Live counts from the data tables.
   function _loadCounts() {
     const splitRefs = s => (s || '').split(',').map(x => x.trim()).filter(Boolean);
@@ -312,6 +371,14 @@
     .abt-std-table td{padding:9px 12px;border-bottom:1px solid var(--color-border);color:var(--color-text-secondary);vertical-align:top;line-height:1.5}
     .abt-std-table td:first-child{color:var(--color-text-primary);font-weight:500;white-space:nowrap}
     .abt-std-table tr:hover td{background:var(--color-surface)}
+    /* report-guide table */
+    .abt-rep-sub{font-size:14px;font-weight:700;color:var(--color-text-primary);margin:24px 0 2px}
+    .abt-rep-sub span{font-weight:500;color:var(--color-text-tertiary);font-size:12px}
+    .abt-rep-table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 4px}
+    .abt-rep-table th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#b8963e;padding:8px 12px;border-bottom:2px solid var(--color-border)}
+    .abt-rep-table td{padding:10px 12px;border-bottom:1px solid var(--color-border);color:var(--color-text-secondary);vertical-align:top;line-height:1.55}
+    .abt-rep-table td:first-child{color:var(--color-text-primary);font-weight:600;width:28%;min-width:150px}
+    .abt-rep-table tr:hover td{background:var(--color-surface)}
     .abt-ref-host{margin-top:4px}
     /* numbered stages */
     .abt-steps{list-style:none;counter-reset:s;padding:0;margin:8px 0 10px;display:flex;flex-direction:column;gap:10px;max-width:82ch}

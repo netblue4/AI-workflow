@@ -120,6 +120,11 @@
     const useCase = meta.use_case_id || s3?.use_case_id || '—';
     const assessedBy = meta.assessed_by || s3?.classified_by || '—';
 
+    // Report structure = Part A (regulator conformity dossier) then Part B
+    // (internal governance & sign-off). The plain-language reader's guide in the
+    // "About the framework" page mirrors this section list — KEEP IN SYNC: if a
+    // section below is renamed, reordered, added or removed, update
+    // _REPORT_PART_A / _REPORT_PART_B in about-framework.js to match.
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
