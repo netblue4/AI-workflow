@@ -406,5 +406,21 @@
     "control_ref": "[10.1.T4]",
     "jkName": "Deployer Disclosure Activation Test Report",
     "jkObjective": "To provide a per-run evidence record proving the provider transparency disclosure is active in the production configuration and passes an automated visibility and accessibility check, with deployment blocked when the disclosure component is disabled or unreachable."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-056",
+    "fk_Risk_Control_ID": "[4.10.R1]",
+    "fk_Harmonised_Standard_IDs": "[18284.10]",
+    "control_ref": "[4.10.T1]",
+    "jkName": "PII Egress & No-Training Test Report",
+    "jkObjective": "To provide evidence that prompts and outputs are scanned and that personal or confidential data is blocked or redacted before leaving the system, and that the provider contract bars retention of and training on submitted data."
+  },
+  {
+    "pk_Test_Control_ID": "TCTRL-057",
+    "fk_Risk_Control_ID": "[3.21.R1]",
+    "fk_Harmonised_Standard_IDs": "[18229-2.21]",
+    "control_ref": "[3.21.T1]",
+    "jkName": "Content Moderation Test Report",
+    "jkObjective": "To provide evidence that the output content-safety classifier blocks toxic, hateful, dangerous, and abusive content, and holds up against jailbreak and prompt-injection attempts designed to elicit unsafe output."
   }
 ]
