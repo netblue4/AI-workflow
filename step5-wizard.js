@@ -24,6 +24,7 @@
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
     group_standard_risks: {}, // pk_Risk_ID → boolean (Internal Standard risks, assessor-marked)
+    nist_risks: {}, // riskName → boolean (NIST AI RMF-sourced risks, assessor-marked)
   };
 
   // Legal assessment state
@@ -52,6 +53,7 @@
     _tblControls     = [];
     _controlsByRisk  = new Map();
     _state.legal_risks    = {};
+    _state.nist_risks     = {};
     _wizState.answers     = {};
     _wizState.rationales  = {};
 
@@ -104,7 +106,8 @@
     const saved8 = _record?.['step-5'];
     if (saved8?.legal_assessment?.risks) {
       saved8.legal_assessment.risks.forEach(r => {
-        _state.legal_risks[r.risk_name] = r.selected;
+        if (r.risk_source === 'NIST_RMF') _state.nist_risks[r.risk_name] = r.selected;
+        else _state.legal_risks[r.risk_name] = r.selected;
       });
     }
     if (saved8?.legal_assessment?.wizard_answers) {
@@ -139,6 +142,13 @@
       );
     }
 
+    // NIST AI RMF risks default to applicable (they are cross-cutting) unless the
+    // assessor has previously marked them; the assessor reviews them in their own tab.
+    if (Object.keys(_state.nist_risks).length === 0) {
+      (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF')
+        .forEach(r => { _state.nist_risks[r.risk_name] = true; });
+    }
+
     _renderPanes(pw);
   }
 
@@ -154,6 +164,7 @@
     const groupMap = new Map(); // article_name → [riskObj, ...]
 
     for (const risk of _tblRisks) {
+      if (risk.risk_source === 'NIST_RMF') continue; // shown in their own NIST tab
       const controls = _controlsByRisk.get(risk.pk_Risk_ID) || [];
 
       // Apply the Step-3 RCN applicability filter using the risk's own HS link
@@ -267,6 +278,7 @@
   function _buildTabStrip() {
     return WizUtils.buildTabStrip([
       ['legal', 'Legal/Regulatory Risks'],
+      ['nist', 'NIST AI RMF Risks'],
       ['dpia', 'DPIA Risks'],
       ['groupstd', 'Internal Standards Risks'],
       ['review', 'Review']
@@ -300,6 +312,10 @@
     if (id === 'groupstd') {
       const pane = _container.querySelector('[data-pane="groupstd"]');
       if (pane) { pane.innerHTML = ''; pane.appendChild(_buildGroupStandardsPane()); }
+    }
+    if (id === 'nist') {
+      const pane = _container.querySelector('[data-pane="nist"]');
+      if (pane) { pane.innerHTML = ''; pane.appendChild(_buildNistPane()); }
     }
     if (id === 'dpia') {
       const pane = _container.querySelector('[data-pane="dpia"]');
@@ -444,14 +460,16 @@
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const legal  = _el('div', 'wiz-pane');                  legal.dataset.pane  = 'legal';
+    const nist   = _el('div', 'wiz-pane wiz-pane--hidden'); nist.dataset.pane   = 'nist';
     const dpia   = _el('div', 'wiz-pane wiz-pane--hidden'); dpia.dataset.pane   = 'dpia';
     const gstd   = _el('div', 'wiz-pane wiz-pane--hidden'); gstd.dataset.pane   = 'groupstd';
     const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
     legal.appendChild(_buildLegalCard());
+    nist.appendChild(_buildNistPane());
     dpia.appendChild(_buildDpiaRisksPane());
     gstd.appendChild(_buildGroupStandardsPane());
     review.appendChild(_buildCombinedReviewPane());
-    pw.appendChild(legal); pw.appendChild(dpia); pw.appendChild(gstd); pw.appendChild(review);
+    pw.appendChild(legal); pw.appendChild(nist); pw.appendChild(dpia); pw.appendChild(gstd); pw.appendChild(review);
   }
 
 
@@ -787,16 +805,118 @@
         relevance:     _computeRelevance(wq.risk_name)
       };
     });
-    const sel = risks.filter(r => r.selected).length;
+    const allRisks = risks.concat(_nistOutputRisks());
+    const sel = allRisks.filter(r => r.selected).length;
     return {
       completed:          true,
       assessment_date:    today,
       wizard_answers:     { ..._wizState.answers },
       wizard_rationales:  { ..._wizState.rationales },
-      total_risks:        wqs.length,
+      total_risks:        allRisks.length,
       selected_count:     sel,
-      risks
+      risks:              allRisks
     };
+  }
+
+  // NIST AI RMF risks, recorded alongside the legal risks (they are EU AI Act
+  // article-mapped and flow through the legal control path in Step 6) but tagged
+  // risk_source: 'NIST_RMF' and assessed in their own Step 5 tab.
+  function _nistOutputRisks() {
+    return (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').map(r => ({
+      risk_name:   r.risk_name,
+      risk_source: 'NIST_RMF',
+      selected:    _state.nist_risks[r.risk_name] !== false,
+      relevance:   'unassessed'
+    }));
+  }
+
+  // ---- NIST AI RMF pane -----------------------------------------
+  function _renderNistPane() {
+    const pane = _container.querySelector('[data-pane="nist"]');
+    if (!pane) return;
+    pane.innerHTML = '';
+    pane.appendChild(_buildNistPane());
+  }
+
+  function _buildNistPane() {
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'NIST AI RMF Risk Assessment' }));
+    const sub = _el('p', 'step-detail-summary');
+    sub.textContent = 'Risks surfaced by the NIST AI Risk Management Framework that sit alongside — and beyond — the EU AI Act article set. Each is mapped to an AI Act article and flows through control selection in Step 6. Mark each risk as applicable to this use case.';
+    card.appendChild(sub);
+
+    const nistRisks = (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF');
+    if (!nistRisks.length) {
+      card.appendChild(_el('p', 'wiz8-notice', { textContent: 'No NIST AI RMF risks defined.' }));
+      return card;
+    }
+
+    const list = _el('div', 's5-gs-list');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:12px;margin:12px 0';
+    nistRisks.forEach(r => list.appendChild(_buildNistItem(r)));
+    card.appendChild(list);
+
+    const actRow = _el('div', 'wiz-action-row');
+    const saveBtn = _el('button', 'wiz-btn-primary', { textContent: 'Save NIST AI RMF Assessment ✓' });
+    saveBtn.addEventListener('click', _handleSaveNist);
+    actRow.appendChild(saveBtn);
+    card.appendChild(actRow);
+    return card;
+  }
+
+  function _buildNistItem(risk) {
+    const key = risk.risk_name;
+    const cur = _state.nist_risks[key]; // true | false | undefined
+    const badgeFor = v => v === true ? ['Applicable', 'ok'] : v === false ? ['Not applicable', 'none'] : ['Unanswered', ''];
+    const [btxt, bmod] = badgeFor(cur);
+    const badge = _el('span', `wiz-item-badge${bmod ? ' wiz-item-badge--' + bmod : ''}`);
+    badge.textContent = btxt;
+
+    const body = _el('div', 's5-risk-body');
+    const artName = WizUtils.ARTICLES_BY_ID.get(risk.fk_AI_Article_ID)?.article_name || risk.fk_AI_Article_ID || '';
+    const banner = _el('div', '');
+    banner.style.cssText = 'background:rgba(93,130,214,0.14);border:1px solid rgba(93,130,214,0.40);color:#a4ccf6;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.5;margin-bottom:10px';
+    banner.innerHTML = `<strong>Surfaced by the NIST AI RMF</strong> — ${_rEsc(risk.nist_ai_rmf || '')}. Mapped to EU AI Act ${_rEsc(artName)}.`;
+    body.appendChild(banner);
+
+    if (risk.risk_description) {
+      const desc = _el('p', '');
+      desc.style.cssText = 'margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)';
+      desc.textContent = risk.risk_description;
+      body.appendChild(desc);
+    }
+
+    const btnRow = _el('div', 's5-answer-row');
+    [['yes', '✓ Yes', true], ['no', '✗ No', false]].forEach(([k, lbl, val]) => {
+      const btn = _el('button', `s5-answer-btn s5-answer-btn--${k}${cur === val ? ' s5-answer-btn--active' : ''}`);
+      btn.textContent = lbl;
+      btn.addEventListener('click', () => {
+        _state.nist_risks[key] = val;
+        btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
+        btn.classList.add('s5-answer-btn--active');
+        const [t, m] = badgeFor(val);
+        badge.textContent = t;
+        badge.className = `wiz-item-badge${m ? ' wiz-item-badge--' + m : ''}`;
+      });
+      btnRow.appendChild(btn);
+    });
+    body.appendChild(btnRow);
+
+    const { section } = WizUtils.buildCollapsible({ title: risk.risk_name, number: risk.pk_Risk_ID, icon: false, body });
+    section.querySelector('.wiz-collapsible-header-right').prepend(badge);
+    return section;
+  }
+
+  function _handleSaveNist() {
+    if (!_record) {
+      _record = { _meta: { schema_version: '1.0', created: new Date().toISOString(), last_modified: new Date().toISOString() } };
+    }
+    _record._meta.last_modified = new Date().toISOString();
+    if (!_record['step-5']) _record['step-5'] = {};
+    _record['step-5'].legal_assessment = _buildLegalOutputRecord();
+    WizUtils.saveRecord(_record);
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('NIST AI RMF risks saved ✓');
+    _renderNistPane();
   }
 
   // ---- Internal Standards pane -----------------------------------

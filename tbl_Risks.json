@@ -159,7 +159,8 @@
     "risk_description": "The LLM (Generator), Retriever, and Response Interface are at risk from 'Ungrounded Generation' — a condition where the model returns fluent, confident output that is not supported by the retrieved context. It has two compounding modes: 'Empty-Retrieval Fabrication', where the Retriever returns no relevant chunks yet the Generator answers anyway from parametric memory instead of refusing; and 'Context Override', where relevant chunks are retrieved but the model contradicts or ignores them, presenting invented facts, citations, or figures as authoritative. Because the output is well-formed and assertive, a human reviewer cannot distinguish a grounded answer from a fabricated one without checking every claim against source. The result is confident misinformation delivered as fact — the most consequential failure mode of a retrieval-augmented system, and one no accuracy-drift metric will catch because each individual response is internally plausible.",
     "risk_role": "Engineer",
     "fk_Harmonised_Standard_IDs": "[18229-2.20],[18229-2.10],[18229-2.12],[18229-2.13]",
-    "nist_ai_rmf": "Valid & reliable | GenAI Profile: Confabulation"
+    "nist_ai_rmf": "Valid & reliable | GenAI Profile: Confabulation",
+    "risk_source": "NIST_RMF"
   },
   {
     "pk_Risk_ID": "RISK-021",
@@ -168,7 +169,8 @@
     "risk_description": "The Vector Store, Embedding Model, LLM (Generator), and Response Interface are at risk from 'Data Exfiltration by Inference' — a condition where personal or confidential data is exposed through the system's outputs rather than a breach of its storage. It has three compounding modes: 'Memorised Recall', where personal data embedded in training or indexed content is reproduced verbatim in a response; 'Model Inversion', where an attacker reconstructs individual records by probing the model or the retrieval layer with crafted queries; and 'Third-Party Egress', where prompts or retrieved context containing personal or confidential data are transmitted to an external model provider without a lawful basis or a contractual bar on retention and training. Unlike a classic data breach, the data leaves through the front door — a plausible answer — so perimeter and access controls do not detect it. The result is unlawful disclosure of personal data and loss of confidential information, with direct GDPR exposure that the Step 4 DPIA flags but that no control in the risk register currently treats.",
     "risk_role": "Data Engineer",
     "fk_Harmonised_Standard_IDs": "[18282.3],[18284.2],[18284.8],[18284.10]",
-    "nist_ai_rmf": "Privacy-enhanced | GenAI Profile: Data privacy"
+    "nist_ai_rmf": "Privacy-enhanced | GenAI Profile: Data privacy",
+    "risk_source": "NIST_RMF"
   },
   {
     "pk_Risk_ID": "RISK-022",
@@ -177,7 +179,8 @@
     "risk_description": "The LLM (Generator) and Embedding Model are at risk from 'Uncontrolled Dependency Drift' — a condition where the system's behaviour, availability, or compliance posture changes because a third-party model or component it depends on changes outside the organisation's control. It has three compounding modes: 'Silent Model Update', where the provider revises or deprecates the underlying model and previously validated behaviour, prompts, or guardrails silently regress; 'Provenance and Terms Breach', where the provider's training data, licensing, or no-retention/no-training commitments cannot be evidenced, breaking the chain of assurance the assessment relies on; and 'Availability Failure', where the external service degrades or is withdrawn and the system has no validated fallback. Because the failing component sits with a supplier, the organisation cannot inspect or test it directly and may not even be notified of a change. The result is a system operating outside the conditions under which it was assessed — a substantial modification (Art. 25) that went unre-assessed, or a supply-chain compromise that no internal control can see.",
     "risk_role": "Engineer",
     "fk_Harmonised_Standard_IDs": "[42001.1],[42001.2],[42001.3],[18282.5]",
-    "nist_ai_rmf": "Secure & resilient; Accountable & transparent | GenAI Profile: Value chain and component integration"
+    "nist_ai_rmf": "Secure & resilient; Accountable & transparent | GenAI Profile: Value chain and component integration",
+    "risk_source": "NIST_RMF"
   },
   {
     "pk_Risk_ID": "RISK-024",
@@ -186,7 +189,8 @@
     "risk_description": "The LLM (Generator), Output Guardrail, and Response Interface are at risk from 'Unsafe Output Emission' — a condition where the system produces toxic, harassing, dangerous, or otherwise harmful content, whether spontaneously, in response to a benign prompt, or when deliberately elicited by a user who jailbreaks the Input Guardrail. Modes range from hateful, degrading, or abusive language directed at a user or third party, through to actionable dangerous instructions. In a customer- or public-facing deployment, the reputational, safety, and legal consequences of a single harmful output can be severe and immediate. The result is real-world harm to a person and to the organisation from content the system should never have produced. Applicability is use-case dependent: an internal, low-stakes assistant carries far less exposure than a public-facing one.",
     "risk_role": "Engineer",
     "fk_Harmonised_Standard_IDs": "[18229-2.20],[18282.7],[18229-2.21]",
-    "nist_ai_rmf": "Safe | GenAI Profile: Dangerous, violent, or hateful content; Obscene, degrading, and/or abusive content"
+    "nist_ai_rmf": "Safe | GenAI Profile: Dangerous, violent, or hateful content; Obscene, degrading, and/or abusive content",
+    "risk_source": "NIST_RMF"
   },
   {
     "pk_Risk_ID": "RISK-025",
