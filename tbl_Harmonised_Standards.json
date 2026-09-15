@@ -853,5 +853,23 @@
     "standard_name": "Corrective Action Process",
     "standard_text": "A documented corrective action process is in place to respond to PMM findings, including root cause analysis, remediation steps, re-testing, and where necessary triggering a re-assessment under Article 43.",
     "coverage_type": "Document"
+  },
+  {
+    "pk_Harmonised_Standard_ID": "HS-096",
+    "fk_AI_Article_ID": "ART-004",
+    "standard_ref": "[18284.10]",
+    "standard_group": "[18284: Quality and Governance] - Privacy Protection",
+    "standard_name": "Personal Data Egress & Output Filtering",
+    "standard_text": "Prompts and generated outputs are scanned for personal and confidential data and blocked or redacted before egress; the external model provider is contractually barred from retaining or training on submitted data, and data-loss-prevention controls are applied across the prompt and response path.",
+    "coverage_type": "Test"
+  },
+  {
+    "pk_Harmonised_Standard_ID": "HS-097",
+    "fk_AI_Article_ID": "ART-003",
+    "standard_ref": "[18229-2.21]",
+    "standard_group": "[18229-2: Trustworthiness (Robustness)] - Content Safety",
+    "standard_name": "Content Moderation Guardrail",
+    "standard_text": "Generated outputs pass through a content-safety classifier that blocks toxic, hateful, harassing, dangerous, or abusive content before delivery, and the guardrail is tested for resistance to jailbreak and prompt-injection attempts designed to elicit unsafe content.",
+    "coverage_type": "Test"
   }
 ]
