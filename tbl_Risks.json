@@ -160,7 +160,14 @@
     "risk_role": "Engineer",
     "fk_Harmonised_Standard_IDs": "[18229-2.20],[18229-2.10],[18229-2.12],[18229-2.13]",
     "nist_ai_rmf": "Valid & reliable | GenAI Profile: Confabulation",
-    "risk_source": "NIST_RMF"
+    "risk_source": "NIST_RMF",
+    "applies_if": [
+      "The system generates free-text answers that users or downstream processes rely on as factual",
+      "Grounding is not enforced — the model can answer even when retrieval returns nothing relevant",
+      "Outputs are not required to cite or link to the source passages they are based on",
+      "A human does not verify each answer against source before it is acted on"
+    ],
+    "traditional_analog": "Like a research assistant who, rather than admit they don't know, confidently invents a plausible-sounding citation or figure — and no one checks the source."
   },
   {
     "pk_Risk_ID": "RISK-021",
@@ -170,7 +177,14 @@
     "risk_role": "Data Engineer",
     "fk_Harmonised_Standard_IDs": "[18282.3],[18284.2],[18284.8],[18284.10]",
     "nist_ai_rmf": "Privacy-enhanced | GenAI Profile: Data privacy",
-    "risk_source": "NIST_RMF"
+    "risk_source": "NIST_RMF",
+    "applies_if": [
+      "The system is trained on, indexes, or retrieves content containing personal or confidential data",
+      "Prompts or retrieved context are sent to an external (third-party) model provider",
+      "Personal or confidential data in inputs or outputs is not filtered or redacted",
+      "The provider's no-retention / no-training commitment is not contractually evidenced"
+    ],
+    "traditional_analog": "Like a call-centre agent who, mid-answer, reads out another customer's account details — the data escapes through the conversation, not through a hacked database."
   },
   {
     "pk_Risk_ID": "RISK-022",
@@ -180,7 +194,14 @@
     "risk_role": "Engineer",
     "fk_Harmonised_Standard_IDs": "[42001.1],[42001.2],[42001.3],[18282.5]",
     "nist_ai_rmf": "Secure & resilient; Accountable & transparent | GenAI Profile: Value chain and component integration",
-    "risk_source": "NIST_RMF"
+    "risk_source": "NIST_RMF",
+    "applies_if": [
+      "The system depends on a third-party model, embedding, or API the organisation does not control",
+      "The provider can update, deprecate, or change the model without the organisation's approval",
+      "The provider's training-data provenance, licensing, or no-training terms cannot be evidenced",
+      "There is no validated fallback if the external service degrades or is withdrawn"
+    ],
+    "traditional_analog": "Like building a product on a supplier's component that can be silently changed or discontinued at any time — no notice, no inspection rights, and no spare."
   },
   {
     "pk_Risk_ID": "RISK-024",
@@ -190,7 +211,14 @@
     "risk_role": "Engineer",
     "fk_Harmonised_Standard_IDs": "[18229-2.20],[18282.7],[18229-2.21]",
     "nist_ai_rmf": "Safe | GenAI Profile: Dangerous, violent, or hateful content; Obscene, degrading, and/or abusive content",
-    "risk_source": "NIST_RMF"
+    "risk_source": "NIST_RMF",
+    "applies_if": [
+      "The system generates free-text or media output that reaches people (staff, customers, or the public)",
+      "There is no output content-safety filter, or it is not tested against jailbreak / prompt-injection",
+      "The deployment is customer- or public-facing, or otherwise high-stakes",
+      "A harmful, toxic, or dangerous output would cause real reputational, safety, or legal harm"
+    ],
+    "traditional_analog": "Like a live broadcast with no delay or moderation — a single offensive or dangerous message goes straight to the audience with nothing to catch it."
   },
   {
     "pk_Risk_ID": "RISK-025",

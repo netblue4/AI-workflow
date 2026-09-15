@@ -886,6 +886,18 @@
       body.appendChild(desc);
     }
 
+    // "Applies if any of" — mirrors the EU AI Act risk display so the assessor has
+    // the same concrete criteria to decide applicability.
+    if (Array.isArray(risk.applies_if) && risk.applies_if.length) {
+      body.appendChild(_el('p', 's5-applies-label', { textContent: 'Applies if any of:' }));
+      const ul = _el('ul', 's5-applies-list');
+      risk.applies_if.forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
+      body.appendChild(ul);
+    }
+    if (risk.traditional_analog) {
+      body.appendChild(_el('div', 's5-analog-row', { textContent: '💡 ' + risk.traditional_analog }));
+    }
+
     const btnRow = _el('div', 's5-answer-row');
     [['yes', '✓ Yes', true], ['no', '✗ No', false]].forEach(([k, lbl, val]) => {
       const btn = _el('button', `s5-answer-btn s5-answer-btn--${k}${cur === val ? ' s5-answer-btn--active' : ''}`);
