@@ -4,9 +4,7 @@
   "standard_reference": "GDPR Article 35",
   "version": "1.1",
   "description": "A DPIA must be completed where an AI system is likely to result in a high risk to the rights and freedoms of natural persons (GDPR Art.35). This wizard captures the mandatory DPIA elements. The data types inventory produced here feeds directly into the Risk Assessment in Step 5.",
-
   "scope_note": "A DPIA is required where AI processing is likely to result in a high risk to individuals — including systematic profiling, processing of special-category data at scale, or automated decision-making with legal effects (Art.22). The data types inventory produced here feeds directly into the Risk Assessment in Step 5.",
-
   "reference_sections": [
     {
       "heading": "When is a DPIA mandatory? (Art.35(1)–(3))",
@@ -64,7 +62,6 @@
       ]
     }
   ],
-
   "sections": [
     {
       "id": "s1",
@@ -92,19 +89,28 @@
           "id": "s1_f3",
           "label": "Controller / processor relationship",
           "type": "select",
-          "options": ["Organisation is data controller", "Organisation is data processor", "Joint controllership", "Not yet determined"],
+          "options": [
+            "Organisation is data controller",
+            "Organisation is data processor",
+            "Joint controllership",
+            "Not yet determined"
+          ],
           "required": true
         },
         {
           "id": "s1_f4",
           "label": "Vendor / AI provider data processing agreement in place?",
           "type": "select",
-          "options": ["Yes — DPA signed", "In progress", "No — required before go-live", "Not applicable (no third-party processing)"],
+          "options": [
+            "Yes — DPA signed",
+            "In progress",
+            "No — required before go-live",
+            "Not applicable (no third-party processing)"
+          ],
           "required": true
         }
       ]
     },
-
     {
       "id": "s2",
       "title": "Data inventory",
@@ -156,7 +162,14 @@
           "id": "s2_f3",
           "label": "Estimated volume of data subjects",
           "type": "select",
-          "options": ["Fewer than 100", "100–1,000", "1,000–10,000", "10,000–100,000", "Over 100,000", "Not yet known"],
+          "options": [
+            "Fewer than 100",
+            "100–1,000",
+            "1,000–10,000",
+            "10,000–100,000",
+            "Over 100,000",
+            "Not yet known"
+          ],
           "required": false
         },
         {
@@ -168,7 +181,6 @@
         }
       ]
     },
-
     {
       "id": "s3",
       "title": "Special category data (Art.9)",
@@ -223,7 +235,6 @@
         }
       ]
     },
-
     {
       "id": "s4",
       "title": "Lawful basis for processing",
@@ -273,7 +284,6 @@
         }
       ]
     },
-
     {
       "id": "s5",
       "title": "Automated decision-making (Art.22)",
@@ -329,7 +339,6 @@
         }
       ]
     },
-
     {
       "id": "s6",
       "title": "Data flows and third parties",
@@ -373,7 +382,6 @@
         }
       ]
     },
-
     {
       "id": "s9",
       "title": "Necessity and proportionality",
@@ -402,7 +410,6 @@
         }
       ]
     },
-
     {
       "id": "s10",
       "title": "Risk identification, controls & rating",
@@ -482,7 +489,12 @@
           "id": "s10_f2",
           "label": "Inherent privacy risk rating (before controls)",
           "type": "select",
-          "options": ["Low", "Medium", "High", "Very High"],
+          "options": [
+            "Low",
+            "Medium",
+            "High",
+            "Very High"
+          ],
           "required": true,
           "output_key": "inherent_risk_rating"
         },
@@ -490,7 +502,12 @@
           "id": "s10_f3",
           "label": "Residual privacy risk rating (after controls)",
           "type": "select",
-          "options": ["Low", "Medium", "High", "Very High"],
+          "options": [
+            "Low",
+            "Medium",
+            "High",
+            "Very High"
+          ],
           "required": true,
           "output_key": "residual_risk_rating"
         },
@@ -503,7 +520,6 @@
         }
       ]
     },
-
     {
       "id": "s11",
       "title": "DPO consultation",
@@ -545,7 +561,6 @@
       ]
     }
   ],
-
   "output_schema": {
     "description": "Fields written to system-record['step-4'] on save",
     "keys": {
@@ -570,7 +585,6 @@
       "answers": "flat map of all field IDs to their values"
     }
   },
-
   "requirement_labels": [
     "GDPR Art.35 — DPIA mandatory for high-risk processing",
     "GDPR Art.6 — Lawful basis",
@@ -580,5 +594,6 @@
     "GDPR Art.36 — Prior consultation with supervisory authority",
     "ISO/IEC 42001 — AI system governance",
     "EU AI Act — High-risk AI system data governance"
-  ]
+  ],
+  "ai_prompt": "You are an AI governance specialist completing a GDPR Data Protection Impact Assessment (DPIA) for a new AI use case. Your analysis will be saved as a supporting document alongside a formal governance record and must be detailed enough for a DPO to review.\n\nBUSINESS CASE:\n{{business_case}}\n\n---\n\nWork through every question below internally, considering each carefully — but do NOT write out prose answers or explanations. Your ENTIRE response must be ONLY the single JSON block specified at the end of this prompt: the MACHINE-READABLE DPIA. Put your reasoning in the \"reasoning\" field inside that JSON block. Do not skip any question when forming your answers, and output nothing outside the JSON block.\n\n===================================================================\nDATA IDENTIFICATION AND DPIA\n===================================================================\n\nAnswer every question below. The label in [brackets] is the field id — use it\nexactly as the key in the machine-readable JSON block at the very end.\n\nS1 — SYSTEM DESCRIPTION\n\nProcessing description  [s1_f1]\n\nProcessing purposes  [s1_f2]\n\nController / processor relationship  [s1_f3]\nSelect one: Organisation is data controller | Organisation is data processor | Joint controllership | Not yet determined\n\nVendor / AI provider data processing agreement in place?  [s1_f4]\nSelect one: Yes — DPA signed | In progress | No — required before go-live | Not applicable (no third-party processing)\n\n---\n\nS2 — DATA INVENTORY\n\nData subjects  [s2_f1]\nSelect all that apply: Employees / staff | Customers / clients | Prospective customers | Job applicants | Children (under 18) | Vulnerable adults | Members of the public | Suppliers / contractors | Other | None — no personal data processed\n\nPersonal data types processed  [s2_f2]\nSelect all that apply: Name and contact details | Identity documents (passport, national ID) | Financial data (salary, account numbers, transaction history) | Location data | Online identifiers (IP address, cookies, device IDs) | Behavioural / usage data | Professional / employment data | Communications content (emails, messages) | Photographs / images | Voice recordings / transcripts | Inferred / derived data (AI-generated scores, predictions) | Other non-special-category personal data | None — no personal data processed\n\nEstimated volume of data subjects  [s2_f3]\nSelect one: Fewer than 100 | 100–1,000 | 1,000–10,000 | 10,000–100,000 | Over 100,000 | Not yet known\n\nData retention period  [s2_f4]\n\n---\n\nS3 — SPECIAL CATEGORY DATA (ART.9)\n\nSpecial category data processed  [s3_f1]\nSelect all that apply: Racial or ethnic origin | Political opinions | Religious or philosophical beliefs | Trade union membership | Genetic data | Biometric data (for unique identification) | Health / medical data | Sex life or sexual orientation | None — no special category data\n\nArt.9(2) condition relied upon  [s3_f2]  — CONDITIONAL: only if special-category data was selected in s3_f1; otherwise leave its JSON value \"\"\nSelect one: Not applicable — no special category data | Art.9(2)(a) — Explicit consent | Art.9(2)(b) — Employment / social security obligations | Art.9(2)(c) — Vital interests | Art.9(2)(d) — Legitimate activities of a not-for-profit body | Art.9(2)(e) — Manifestly made public by the data subject | Art.9(2)(f) — Legal claims / judicial acts | Art.9(2)(g) — Substantial public interest (with safeguards) | Art.9(2)(h) — Medical / health purposes | Art.9(2)(i) — Public health (Art.9(3)) | Art.9(2)(j) — Scientific / historical research or statistics\n\nSafeguards in place for special category data  [s3_f3]  — CONDITIONAL: only if special-category data was selected in s3_f1; otherwise leave its JSON value \"\"\n\n---\n\nS4 — LAWFUL BASIS FOR PROCESSING\n\nPrimary lawful basis (Art.6)  [s4_f1]\nSelect one: Art.6(1)(a) — Consent | Art.6(1)(b) — Performance of a contract | Art.6(1)(c) — Compliance with a legal obligation | Art.6(1)(d) — Vital interests | Art.6(1)(e) — Public task | Art.6(1)(f) — Legitimate interests\n\nLegitimate interests assessment (LIA) completed?  [s4_f2]  — CONDITIONAL: only if the s4_f1 lawful basis is legitimate interests; otherwise leave its JSON value \"\"\nSelect one: Not required — lawful basis is not Art.6(1)(f) | Yes — LIA completed and documented | In progress | No — required before go-live\n\nData subject notification mechanism  [s4_f3]\nSelect one: Privacy notice updated to include this processing | Specific notice provided at point of collection | Existing notice already covers this processing | Notice not yet updated — required before go-live | Not applicable (no direct collection from data subjects)\n\n---\n\nS5 — AUTOMATED DECISION-MAKING (ART.22)\n\nDoes the AI system make automated decisions with legal or similarly significant effects?  [s5_f1]\nSelect one: No — output is advisory only; human makes all decisions | Partially — AI output influences decisions but human reviews every case | Yes — AI output directly determines outcomes for individuals | Not yet assessed\n\nArt.22(2) ground relied upon  [s5_f2]  — CONDITIONAL: only if s5_f1 is Partially or Yes; otherwise leave its JSON value \"\"\nSelect one: Not applicable — no Art.22 automated decisions | Art.22(2)(a) — Necessary for contract performance | Art.22(2)(b) — Authorised by Union or Member State law | Art.22(2)(c) — Explicit consent\n\nHuman oversight mechanism for automated decisions  [s5_f3]  — CONDITIONAL: only if s5_f1 is Partially or Yes; otherwise leave its JSON value \"\"\n\nAI system explainability / transparency level  [s5_f4]\nSelect one: Full explainability — decision factors and weights are disclosed | Partial — high-level rationale provided to data subjects | Black-box — output only, no rationale available | Not yet assessed\n\n---\n\nS6 — DATA FLOWS AND THIRD PARTIES\n\nPersonal data transferred outside the EEA?  [s6_f1]\nSelect one: No — all processing within EEA | Yes — adequacy decision applies | Yes — Standard Contractual Clauses (SCCs) in place | Yes — Binding Corporate Rules (BCRs) | Yes — transfer mechanism not yet confirmed | Unknown\n\nThird-party recipients / sub-processors  [s6_f2]\n\nPersonal data used to train or fine-tune the AI model?  [s6_f3]\nSelect one: No — inference only; no training data retained by vendor | Yes — explicit consent or another basis obtained | Unknown — vendor contract does not address this | Not applicable\n\n---\n\nS9 — NECESSITY AND PROPORTIONALITY\n\nCould the business purpose be achieved with less personal data or without AI?  [s9_f1]\nSelect one: No — AI and this level of data are necessary for the stated purpose | Partially — some data could be reduced; mitigation documented | Yes — redesign required before proceeding | Not yet assessed\n\nProportionality and necessity statement  [s9_f2]\n\n---\n\nS10 — RISK IDENTIFICATION, CONTROLS & RATING\n\nPrivacy risks identified  [s10_f1]\nSelect all that apply: Unauthorised access to personal data via AI interface | Re-identification of pseudonymised data through AI inference | AI-generated output revealing personal data inadvertently | Bias / discriminatory outcomes affecting protected characteristics | Unlawful profiling or scoring of individuals | Personal data retained in AI model weights / caches | Third-country transfer without adequate safeguards | Data subject unaware of AI-driven processing | Inaccurate AI output used to make decisions about individuals | Vendor data breach or model exfiltration\n\n  · Controls in place ·\n\nTechnical security measures in place  [s7_f1]\nSelect all that apply: Encryption at rest | Encryption in transit (TLS 1.2+) | Access controls / role-based access | Multi-factor authentication (MFA) | Audit logging of access and processing | Data masking / pseudonymisation before AI input | Automated anomaly detection | Penetration testing of AI interface | Data loss prevention (DLP) controls | None currently in place\n\nData minimisation approach  [s7_f2]\n\nCan personal data be erased from AI model outputs / logs?  [s8_f2]\nSelect one: Yes — erasure process confirmed with vendor | Partial — logs erased but model weights cannot be adjusted | No — technical limitation prevents erasure | Not assessed\n\n  · Risk rating ·\n\nInherent privacy risk rating (before controls)  [s10_f2]\nSelect one: Low | Medium | High | Very High\n\nResidual privacy risk rating (after controls)  [s10_f3]\nSelect one: Low | Medium | High | Very High\n\nResidual risk justification  [s10_f4]\n\n---\n\nS11 — DPO CONSULTATION\n\nDPO consulted?  [s11_f1]\nSelect one: Yes — DPO reviewed and approved | Yes — DPO noted concerns (documented below) | Consultation in progress | No — DPO not required (no DPO designated) | No — not yet consulted\n\nDPO advice / concerns  [s11_f2]\n\nSupervisory authority consultation required (Art.36)?  [s11_f3]\nSelect one: No — residual risk is acceptable | Yes — Art.36 prior consultation initiated | Under assessment\n\n===================================================================\nMACHINE-READABLE DPIA ANSWERS (JSON) — output this block last\n===================================================================\nOutput ONE fenced json code block exactly as below.\nThis block is loaded directly into the Step 4 DPIA, so accuracy matters:\n- Keys are fixed field ids — do not rename, add, remove or reorder them.\n- For each select/checkbox field, copy the option text VERBATIM from that\n  question's Select: list — character for character, including spaces around\n  \"/\", the \"—\" dashes, capitalisation and bracketed text. Do not abbreviate,\n  paraphrase or drop punctuation.\n- Checkbox fields must be a JSON array of the exact option strings (e.g.\n  [\"Employees / staff\", \"Customers / clients\"]).\n- Put every value under its OWN field id only — never place one field's answer\n  under a different field.\n- If you cannot determine a field, use [] (checkbox) or \"\" (text/select).\n- Some fields are CONDITIONAL and only apply when another answer triggers them:\n  s5_f2 and s5_f3 apply only if s5_f1 indicates automated decisions (Partially/Yes);\n  s3_f2 and s3_f3 only if special-category data is present; s4_f2 only if the\n  lawful basis is legitimate interests. If a condition is not met, set that field\n  to \"\"/[] and keep every other answer under its OWN id — never slide an answer\n  up into a hidden field.\n\n```json\n{\n  \"dpia_answers\": {\n    \"s1_f1\": \"free text — Processing description\",\n    \"s1_f2\": \"free text — Processing purposes\",\n    \"s1_f3\": \"one exact option string from 'Controller / processor relationship'\",\n    \"s1_f4\": \"one exact option string from 'Vendor / AI provider data processing agr'\",\n    \"s2_f1\": [array of exact option strings from \"Data subjects\"],\n    \"s2_f2\": [array of exact option strings from \"Personal data types processed\"],\n    \"s2_f3\": \"one exact option string from 'Estimated volume of data subjects'\",\n    \"s2_f4\": \"free text — Data retention period\",\n    \"s3_f1\": [array of exact option strings from \"Special category data processed\"],\n    \"s3_f2\": \"one exact option string from 'Art.9(2) condition relied upon'\",\n    \"s3_f3\": \"free text — Safeguards in place for special category\",\n    \"s4_f1\": \"one exact option string from 'Primary lawful basis (Art.6)'\",\n    \"s4_f2\": \"one exact option string from 'Legitimate interests assessment (LIA) co'\",\n    \"s4_f3\": \"one exact option string from 'Data subject notification mechanism'\",\n    \"s5_f1\": \"one exact option string from 'Does the AI system make automated decisi'\",\n    \"s5_f2\": \"one exact option string from 'Art.22(2) ground relied upon'\",\n    \"s5_f3\": \"free text — Human oversight mechanism for automated \",\n    \"s5_f4\": \"one exact option string from 'AI system explainability / transparency '\",\n    \"s6_f1\": \"one exact option string from 'Personal data transferred outside the EE'\",\n    \"s6_f2\": \"free text — Third-party recipients / sub-processors\",\n    \"s6_f3\": \"one exact option string from 'Personal data used to train or fine-tune'\",\n    \"s9_f1\": \"one exact option string from 'Could the business purpose be achieved w'\",\n    \"s9_f2\": \"free text — Proportionality and necessity statement\",\n    \"s10_f1\": [array of exact option strings from \"Privacy risks identified\"],\n    \"s7_f1\": [array of exact option strings from \"Technical security measures in place\"],\n    \"s7_f2\": \"free text — Data minimisation approach\",\n    \"s8_f2\": \"one exact option string from 'Can personal data be erased from AI mode'\",\n    \"s10_f2\": \"one exact option string from 'Inherent privacy risk rating (before con'\",\n    \"s10_f3\": \"one exact option string from 'Residual privacy risk rating (after cont'\",\n    \"s10_f4\": \"free text — Residual risk justification\",\n    \"s11_f1\": \"one exact option string from 'DPO consulted?'\",\n    \"s11_f2\": \"free text — DPO advice / concerns\",\n    \"s11_f3\": \"one exact option string from 'Supervisory authority consultation requi'\"\n  },\n  \"reasoning\": \"Concise justification for the DPIA answers — special-category handling, lawful basis, automated-decision-making, proportionality, and the inherent/residual risk ratings.\"\n}\n```\n"
 }
