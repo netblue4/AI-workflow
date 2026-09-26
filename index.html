@@ -35,6 +35,11 @@
       <div id="uc-status" class="uc-status"></div>
     </div>
 
+    <button class="nav-about nav-dashboard" id="nav-dashboard" onclick="selectDashboard()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      <span>Assessment home</span>
+    </button>
+
     <button class="nav-about" id="nav-about" onclick="selectAbout()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <span>About the framework</span>
@@ -191,6 +196,166 @@ function selectAbout() {
   const panel = document.getElementById('detail-panel');
   panel.scrollTop = 0;
   if (typeof mountAboutFramework === 'function') mountAboutFramework(panel);
+}
+
+// ---- Assessment home / dashboard (Wave 5) --------------------
+// One screen: how ready you are, every step's status, and one-click into any
+// step. The self-service hub a non-practitioner lands on.
+function selectDashboard() {
+  _activeStepId = null;
+  if (_workflow) renderNav(_workflow, _stepIndex, _phaseIndex, null);
+  document.getElementById('nav-about')?.classList.remove('active');
+  document.getElementById('nav-dashboard')?.classList.add('active');
+  const panel = document.getElementById('detail-panel');
+  panel.scrollTop = 0;
+  panel.innerHTML = '';
+  panel.appendChild(buildDashboard());
+}
+
+function buildDashboard() {
+  WizUtils.injectStyles('dashboard-styles', `
+    .dash{max-width:920px;margin:0 auto;padding:8px 4px 40px}
+    .dash-head{margin-bottom:20px}
+    .dash-kicker{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-tertiary);margin:0 0 4px}
+    .dash-title{font-size:26px;font-weight:700;color:var(--color-text-primary);margin:0}
+    .dash-sub{font-size:13px;color:var(--color-text-secondary);margin:6px 0 0}
+    .dash-meter{background:var(--color-surface);border:1px solid var(--color-border-mid,var(--color-border));border-radius:12px;padding:20px 22px;margin:18px 0 24px}
+    .dash-meter-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .dash-pct{font-size:34px;font-weight:800;color:var(--teal-600,#5dcaa5);line-height:1}
+    .dash-pct small{font-size:14px;font-weight:600;color:var(--color-text-secondary);margin-left:8px}
+    .dash-meter-note{font-size:13px;color:var(--color-text-secondary)}
+    .dash-bar{height:12px;border-radius:8px;background:var(--color-bg);overflow:hidden;border:1px solid var(--color-border)}
+    .dash-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal-400,#5dcaa5),var(--teal-600,#3fae86));transition:width .4s}
+    .dash-phase{margin-bottom:18px}
+    .dash-phase-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 8px}
+    .dash-pip{width:9px;height:9px;border-radius:50%}
+    .dash-steps{display:flex;flex-direction:column;gap:8px}
+    .dash-step{display:flex;align-items:center;gap:12px;background:var(--color-surface);border:1px solid var(--color-border-mid,var(--color-border));border-radius:8px;padding:11px 14px;cursor:pointer;transition:border-color .12s,background .12s}
+    .dash-step:hover{border-color:var(--teal-400,#2dd4bf);background:var(--color-bg-hover,rgba(0,0,0,0.02))}
+    .dash-step-num{width:26px;height:26px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+    .dash-step-num--done{background:var(--teal-400,#5dcaa5);color:#08251c}
+    .dash-step-num--todo{background:var(--color-bg);border:1px solid var(--color-border-mid,var(--color-border));color:var(--color-text-tertiary)}
+    .dash-step-title{flex:1;font-size:14px;font-weight:600;color:var(--color-text-primary);min-width:0}
+    .dash-step-status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:10px}
+    .dash-step-status--done{background:rgba(52,199,120,0.16);color:#2c9e5e}
+    .dash-step-status--todo{background:var(--color-bg);color:var(--color-text-tertiary);border:1px solid var(--color-border)}
+    .dash-step-arrow{color:var(--color-text-tertiary);font-size:16px}
+    .dash-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;padding-top:20px;border-top:1px solid var(--color-border)}
+    .dash-btn{font-size:12.5px;font-weight:600;font-family:inherit;border-radius:7px;padding:9px 16px;cursor:pointer;border:1px solid var(--color-border-mid,var(--color-border));background:var(--color-surface);color:var(--color-text-secondary)}
+    .dash-btn:hover{color:var(--color-text-primary);border-color:var(--teal-400,#2dd4bf)}
+    .dash-btn--primary{background:var(--teal-400,#5dcaa5);border-color:var(--teal-400,#5dcaa5);color:#08251c}
+    .dash-next{display:inline-flex;align-items:center;gap:8px;margin-top:4px;font-size:13px;font-weight:600;color:var(--teal-600,#3fae86);background:none;border:none;cursor:pointer;font-family:inherit;padding:0}
+  `);
+
+  const rec = (window.WizUtils && WizUtils.loadRecord && WizUtils.loadRecord()) || {};
+  const meta = rec._meta || {};
+  const ids = _orderedStepIds();
+  const doneArr = ids.map(isStepComplete);
+  const done = doneArr.filter(Boolean).length;
+  const total = ids.length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const firstTodo = ids.find(id => !isStepComplete(id));
+
+  const dash = document.createElement('div');
+  dash.className = 'dash';
+
+  const head = document.createElement('div');
+  head.className = 'dash-head';
+  head.innerHTML = `<p class="dash-kicker">Assessment home</p>
+    <h1 class="dash-title">${meta.use_case_name ? _escHtml(meta.use_case_name) : 'Your AI use case'}</h1>
+    <p class="dash-sub">${meta.use_case_id ? _escHtml(meta.use_case_id) + ' · ' : ''}${meta.assessed_by ? 'Assessed by ' + _escHtml(meta.assessed_by) : 'Work through the steps below to assess and authorise this AI system.'}</p>`;
+  dash.appendChild(head);
+
+  // Readiness meter
+  const meter = document.createElement('div');
+  meter.className = 'dash-meter';
+  const left = total - done;
+  meter.innerHTML = `
+    <div class="dash-meter-top">
+      <div class="dash-pct">${pct}%<small>ready to deploy</small></div>
+      <div class="dash-meter-note">${done} of ${total} steps complete${left ? ` · <strong>${left}</strong> to go` : ' · <strong>all done</strong> 🎉'}</div>
+    </div>
+    <div class="dash-bar"><div class="dash-bar-fill" style="width:${pct}%"></div></div>`;
+  if (firstTodo) {
+    const nb = document.createElement('button');
+    nb.className = 'dash-next';
+    nb.innerHTML = `Continue → ${_stepIndex[firstTodo].number} — ${_escHtml(_stepIndex[firstTodo].title)}`;
+    nb.onclick = () => selectStep(firstTodo);
+    meter.appendChild(nb);
+  }
+  dash.appendChild(meter);
+
+  // Steps grouped by phase
+  (_workflow?.phases || []).forEach(phase => {
+    const steps = (phase.steps || []).filter(id => _stepIndex[id]);
+    if (!steps.length) return;
+    const colorKey = PHASE_COLOR[phase.colorKey] || 'teal';
+    const pw = document.createElement('div');
+    pw.className = 'dash-phase';
+    const h = document.createElement('div');
+    h.className = 'dash-phase-h';
+    h.innerHTML = `<span class="dash-pip pip-${colorKey}"></span> Phase ${phase.number} — ${_escHtml(phase.title)}`;
+    pw.appendChild(h);
+    const list = document.createElement('div');
+    list.className = 'dash-steps';
+    steps.forEach(id => {
+      const st = _stepIndex[id];
+      const cpl = isStepComplete(id);
+      const row = document.createElement('div');
+      row.className = 'dash-step';
+      row.onclick = () => selectStep(id);
+      row.innerHTML = `
+        <span class="dash-step-num ${cpl ? 'dash-step-num--done' : 'dash-step-num--todo'}">${cpl ? '✓' : st.number}</span>
+        <span class="dash-step-title">${_escHtml(st.title)}</span>
+        <span class="dash-step-status ${cpl ? 'dash-step-status--done' : 'dash-step-status--todo'}">${cpl ? 'Done' : 'To do'}</span>
+        <span class="dash-step-arrow">→</span>`;
+      list.appendChild(row);
+    });
+    pw.appendChild(list);
+    dash.appendChild(pw);
+  });
+
+  // Footer actions
+  const actions = document.createElement('div');
+  actions.className = 'dash-actions';
+  const exBtn = document.createElement('button');
+  exBtn.className = 'dash-btn';
+  exBtn.textContent = 'Load a completed example';
+  exBtn.onclick = () => { if (confirm('Load a completed example assessment? This replaces the current record.')) { loadWorkedExample(); } };
+  const clrBtn = document.createElement('button');
+  clrBtn.className = 'dash-btn';
+  clrBtn.textContent = '↺ Clear and start over';
+  clrBtn.onclick = () => { if (confirm('Clear the current assessment and start over?')) { try { sessionStorage.removeItem(UC_RECORD_KEY); } catch (_) {} try { _ucSetIdentity({}); } catch (_) {} selectDashboard(); } };
+  actions.append(exBtn, clrBtn);
+  dash.appendChild(actions);
+
+  return dash;
+}
+
+function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// A fully-worked example assessment, so a first-time user can see one done.
+function loadWorkedExample() {
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const rec = {
+    _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: now, last_modified: now, use_case_name: 'JAKE — Contract Q&A Assistant', use_case_id: 'UC-2025-014', assessed_by: 'A. Rivera (Risk & Compliance)' },
+    'step-1': { attested: true, attested_by: 'A. Rivera', attested_at: now },
+    'step-2': { step_id: 'step-2', business_case: 'JAKE is an AI assistant used by the Legal and Procurement teams to answer questions from uploaded customer contracts and draft summary clauses. It runs on a third-party foundation-model API; our organisation is the deployer. Its outputs are shared with clients. It processes customer contracts and financial records, which include personal data (PII). People use its outputs as the basis for decisions; human verification is currently informal. If it produces an incorrect or hallucinated output, the assessed business impact is severe, and could cause a regulatory or compliance breach.', input_mode: 'text', saved_at: now },
+    'step-3': { step_id: 'step-3', step_title: 'System classification', axis_a: { tier: 'tier_2', tier_label: 'Tier 2 — Business-impacting' }, axis_b: { ai_act_outcome: 'high_risk', organisation_role: 'deployer', transparency_obligations_apply: true, applicable_articles: [{ article_number: 'Article 10' }, { article_number: 'Article 14' }, { article_number: 'Article 15' }] }, combined_outcome: { article_14_human_oversight: true, requires_conformity_assessment: true }, all_requirement_control_numbers: [], rationale: 'High-risk: assists decisions affecting access to an essential service; deployer role; transparency and human-oversight obligations apply.', classified_by: 'A. Rivera', use_case_id: 'UC-2025-014' },
+    'step-4': { step_id: 'step-4', step_title: 'Data identification and DPIA', completion_date: today, lawful_basis: 'Art.6(1)(f) — Legitimate interests', inherent_risk_rating: 'High', residual_risk_rating: 'Medium', dpo_consulted: 'Yes', data_types_identified: { data_subjects: ['Customers', 'Employees'], standard_personal_data: ['Name', 'Contact details', 'Contract terms'], special_category_data: [], automated_decision_making: 'No', security_measures: ['Encryption at rest', 'Role-based access control', 'Audit logging'], privacy_risks: ['Re-identification of pseudonymised contract data', 'Excessive retention of uploaded documents', 'Personal data egress to a third-party model'] }, answers: {} },
+    'step-5': { legal_assessment: { completed: true, assessment_date: today, total_risks: 24, selected_count: 18, risks: [] }, group_standard_assessment: { completed: true, assessment_date: today, total_risks: 1, selected_count: 1, risks: [] } },
+    'step-6': { assessment_date: today },
+    'step-7': { assessment_date: today },
+    'step-8': { attested: true },
+    'step-10': { attested: true },
+    'step-11': { attested: true },
+    'step-12': { attested: true }
+  };
+  try { sessionStorage.setItem(UC_RECORD_KEY, JSON.stringify(rec)); } catch (_) {}
+  try { _ucSetIdentity(rec._meta); } catch (_) {}
+  try { window.dispatchEvent(new Event('record-saved')); } catch (_) {}
+  selectDashboard();
 }
 
 async function selectStep(stepId) {
@@ -525,6 +690,8 @@ function _ucShowStatus(msg) {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', _ucSyncToRecord);
     });
+    // Land on the assessment home so users get an at-a-glance status + a way in.
+    try { selectDashboard(); } catch (_) {}
   } catch (e) {
     document.getElementById('nav-scroll').innerHTML =
       `<p style="padding:12px;font-size:12px;color:var(--color-text-tertiary)">Could not load workflow.json: ${e.message}</p>`;
