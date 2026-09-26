@@ -31,6 +31,7 @@
   const _wizState = {
     answers:    {}, // riskName → 'yes'|'partially'|'no'
     rationales: {}, // riskName → string
+    challenges: {}, // riskName → string (assessor's objection, drives the re-assessment cycle)
   };
 
   // Category color palette — populated from step5-legal-risk-guidance.json after load
@@ -56,6 +57,7 @@
     _state.nist_risks     = {};
     _wizState.answers     = {};
     _wizState.rationales  = {};
+    _wizState.challenges  = {};
 
     _injectStyles();
 
@@ -116,6 +118,9 @@
     if (saved8?.legal_assessment?.wizard_rationales) {
       Object.assign(_wizState.rationales, saved8.legal_assessment.wizard_rationales);
     }
+    if (saved8?.legal_assessment?.wizard_challenges) {
+      Object.assign(_wizState.challenges, saved8.legal_assessment.wizard_challenges);
+    }
     if (saved8?.group_standard_assessment?.risks) {
       saved8.group_standard_assessment.risks.forEach(r => {
         _state.group_standard_risks[r.risk_id] = r.selected;
@@ -124,21 +129,11 @@
 
     _filteredFGItems = _buildFGItems();
 
-    // Pre-populate wizard answers for risks whose article isn't triggered in Step 3
-    if (_legalGuidance?.wizard_questions && _step3Data?.axis_b?.applicable_articles?.length) {
-      _legalGuidance.wizard_questions.forEach(wq => {
-        if (_wizState.answers[wq.risk_name] === undefined && _isArticleApplicable(wq.risk_name) === false) {
-          _wizState.answers[wq.risk_name] = 'no';
-        }
-      });
-    }
-
-    // Default: select all legal risks if no prior legal state; pre-deselect non-applicable per Step 3
+    // Default: select all legal risks if no prior legal state. Risks start
+    // Unanswered like every other risk — no Step 3 pre-answering.
     if (Object.keys(_state.legal_risks).length === 0) {
       _filteredFGItems.forEach(fg =>
-        fg.risks.forEach(r => {
-          _state.legal_risks[r.jkName] = _isArticleApplicable(r.jkName) !== false;
-        })
+        fg.risks.forEach(r => { _state.legal_risks[r.jkName] = true; })
       );
     }
 
@@ -479,6 +474,7 @@
     const card = _el('div', 'step-detail-card');
     card.appendChild(_buildAskAiCollapsible());
     card.appendChild(_buildLoadRaSection());
+    card.appendChild(_buildChallengeCompileSection());
     card.appendChild(_buildLegalPane());
     return card;
   }
@@ -500,6 +496,160 @@
       };
     });
     return cat;
+  }
+
+  // ── Challenge cycle ────────────────────────────────────────────────────────
+  // The assessor disputes a risk's answer/justification; the challenge is a
+  // written objection. Challenges from every tab are compiled into one prompt
+  // that asks the AI tool to re-assess and rewrite justifications, whose reply
+  // reloads through the same "Load your AI tool output" path.
+
+  function _pendingChallenges() {
+    return Object.keys(_wizState.challenges).filter(n => (_wizState.challenges[n] || '').trim());
+  }
+
+  function _currentAnswerFor(name) {
+    if (_wizState.answers[name]) return _wizState.answers[name];
+    const nb = _state.nist_risks[name];
+    if (nb === true)  return 'yes';
+    if (nb === false) return 'no';
+    return 'unanswered';
+  }
+
+  // Pre-fill contradiction — polarity flips with the current answer.
+  function _challengeSeed(name, getAns) {
+    const ans  = getAns();
+    const just = (_wizState.rationales[name] || '').trim();
+    const jq   = just ? `The justification states: "${just}" — ` : '';
+    if (ans === 'no') {
+      return `I dispute this. ${jq}but for this system this risk SHOULD apply, because [state which of the conditions are actually met]. Reassess as applicable and write a justification accordingly.`;
+    }
+    return `I dispute this. ${jq}but for this system that does not hold, because [state why the conditions are not actually met]. Reassess as Not applicable and rewrite the justification accordingly.`;
+  }
+
+  // Reusable challenge control appended under a risk's justification box.
+  function _buildChallengeUI(name, getAns) {
+    const wrap = _el('div', 's5-challenge-wrap');
+    const has  = () => !!(_wizState.challenges[name] || '').trim();
+
+    const btn   = _el('button', 's5-challenge-btn', { type: 'button' });
+    const panel = _el('div', 's5-challenge-panel');
+    panel.style.display = has() ? '' : 'none';
+    const setBtn = () => { btn.textContent = (panel.style.display === 'none' ? '⚑ Challenge this assessment' : '⚑ Hide challenge'); btn.classList.toggle('is-active', has()); };
+
+    const lbl = _el('p', 's5-challenge-label', { textContent: 'Your challenge — sent to the AI tool to re-assess and rewrite the justification:' });
+    const ta  = document.createElement('textarea');
+    ta.className = 's5-challenge-ta';
+    ta.rows = 3;
+    ta.placeholder = 'Explain why you dispute this assessment…';
+    ta.value = _wizState.challenges[name] || '';
+    ta.addEventListener('input', () => { _wizState.challenges[name] = ta.value; btn.classList.toggle('is-active', has()); });
+
+    const clear = _el('button', 's5-challenge-clear', { type: 'button', textContent: 'Clear challenge' });
+    clear.addEventListener('click', () => { delete _wizState.challenges[name]; ta.value = ''; panel.style.display = 'none'; setBtn(); });
+
+    panel.append(lbl, ta, clear);
+    btn.addEventListener('click', () => {
+      const hidden = panel.style.display === 'none';
+      panel.style.display = hidden ? '' : 'none';
+      if (hidden && !ta.value.trim()) { ta.value = _challengeSeed(name, getAns); _wizState.challenges[name] = ta.value; }
+      setBtn();
+    });
+    setBtn();
+    wrap.append(btn, panel);
+    return wrap;
+  }
+
+  // Compile every pending challenge into a re-assessment prompt.
+  function _buildChallengePrompt() {
+    const names = _pendingChallenges();
+    if (!names.length) return '';
+
+    const seen = new Set(); const baseline = [];
+    const push = (n, a) => { if (seen.has(n)) return; seen.add(n); baseline.push(`  ${_riskIdByName.get(n) || '?'} — ${n}: ${a}`); };
+    Object.keys(_wizState.answers).forEach(n => push(n, _wizState.answers[n]));
+    Object.keys(_state.nist_risks).forEach(n => { const v = _state.nist_risks[n]; push(n, v === true ? 'yes' : v === false ? 'no' : 'unanswered'); });
+
+    const lines = [];
+    lines.push(
+      'RE-ASSESSMENT REQUEST',
+      '',
+      'You previously produced a risk assessment for this AI system. The assessor has reviewed it and formally challenged the risks listed below.',
+      '',
+      'For EACH challenged risk:',
+      '- Reconsider your answer in light of the assessor’s objection and the system context.',
+      '- If the objection is valid, change the answer (an excluded risk becomes "no") and REWRITE the justification to reflect the corrected reasoning.',
+      '- If the objection is not valid, keep the answer but strengthen the justification to directly address the objection.',
+      '',
+      'Leave every non-challenged risk unchanged.',
+      '',
+      'Return ONLY the complete risk_assessment JSON in the shape below, including EVERY risk. Do NOT omit challenged risks — represent an excluded risk as "no" with its new justification in "reasoning":',
+      '',
+      '```json',
+      '{ "risk_assessment": { "risks": { "RISK-XXX": "yes|partially|no" }, "reasoning": { "RISK-XXX": "…" }, "selected_controls": { "RISK-XXX": ["ref"] } } }',
+      '```',
+      '',
+      '=== CURRENT ASSESSMENT (baseline — keep these unless challenged) ===',
+      ...baseline,
+      '',
+      '=== CHALLENGED RISKS ==='
+    );
+    names.forEach(n => {
+      const id   = _riskIdByName.get(n) || '?';
+      const just = (_wizState.rationales[n] || '').trim() || '(none recorded)';
+      lines.push(
+        `[${id}] ${n}`,
+        `  Current answer: ${_currentAnswerFor(n)}`,
+        `  Current justification: ${just}`,
+        `  Assessor challenge: ${(_wizState.challenges[n] || '').trim()}`,
+        ''
+      );
+    });
+    return lines.join('\n');
+  }
+
+  function _buildChallengeCompileSection() {
+    const section = _el('div', 's5-ai-section');
+    const header  = _el('div', 's5-ai-header');
+    const hLeft   = _el('div', 's5-ai-header-left');
+    const title   = _sectionLabel('Compile challenges into a re-assessment prompt');
+    title.style.marginBottom = '2px';
+    const sub = _el('p', ''); sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
+    const countTxt = () => { const n = _pendingChallenges().length; return n ? `${n} challenge${n !== 1 ? 's' : ''} pending — build a prompt to send back to your AI tool.` : 'No challenges yet — add one under any risk you dispute.'; };
+    sub.textContent = countTxt();
+    hLeft.append(title, sub);
+    const hRight = _el('div', 's5-ai-header-right');
+    const chevron = _el('span', 's5-ai-chevron');
+    chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    hRight.appendChild(chevron);
+    header.append(hLeft, hRight);
+    section.appendChild(header);
+
+    const body = _el('div', 's5-ai-body'); body.style.display = 'none';
+    const info = _el('p', ''); info.style.cssText = 'font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 10px';
+    info.textContent = 'This gathers every challenge you have written (across the Legal and NIST tabs) into one prompt. Paste it into your AI tool; it re-assesses the challenged risks, rewrites their justifications, and returns an updated assessment. Load that reply back in above, then repeat as needed.';
+    const buildBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Build re-assessment prompt' });
+    const copyBtn  = _el('button', 'wiz-btn-primary', { textContent: 'Copy prompt' }); copyBtn.style.display = 'none';
+    const promptArea = _el('textarea', 's5-prompt-area'); promptArea.rows = 14; promptArea.readOnly = true; promptArea.style.marginTop = '10px';
+    promptArea.placeholder = 'Your compiled challenge prompt will appear here…';
+    buildBtn.addEventListener('click', () => {
+      const p = _buildChallengePrompt();
+      sub.textContent = countTxt();
+      if (!p) { promptArea.value = ''; promptArea.placeholder = 'No challenges to compile. Add a challenge under a risk first.'; copyBtn.style.display = 'none'; return; }
+      promptArea.value = p; copyBtn.style.display = '';
+    });
+    copyBtn.addEventListener('click', () => WizUtils.copyToClipboard(promptArea.value, copyBtn));
+    const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+    btnRow.append(buildBtn, copyBtn);
+    body.append(info, btnRow, promptArea);
+    section.appendChild(body);
+    header.addEventListener('click', () => {
+      const hidden = body.style.display === 'none';
+      body.style.display = hidden ? '' : 'none';
+      chevron.style.transform = hidden ? 'rotate(180deg)' : '';
+      if (hidden) sub.textContent = countTxt();
+    });
+    return section;
   }
 
   function _buildLoadRaSection() {
@@ -542,6 +692,7 @@
       preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and controls for ${_res.ctrlCount} risk${_res.ctrlCount !== 1 ? 's' : ''} as a draft. Review in <strong>Step 5</strong> (risks) and <strong>Step 6</strong> (controls), then save each.</span>`;
       applyBtn.style.display = 'none';
       _renderLegalPane();
+      _renderNistPane();
     });
 
     body.append(ta, btnRow, preview);
@@ -629,6 +780,15 @@
       // reflect in live state so the pane shows them immediately
       Object.assign(_wizState.answers, res.legalAnswers);
       Object.assign(_wizState.rationales, res.rationales);
+      // NIST-source risks are assessed in their own tab via _state.nist_risks —
+      // mirror any loaded answers there so the NIST tab reflects the re-assessment.
+      const nistNames = new Set((_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').map(r => r.risk_name));
+      Object.entries(res.legalAnswers).forEach(([name, a]) => {
+        if (nistNames.has(name)) _state.nist_risks[name] = (a === 'yes' || a === 'partially');
+      });
+      // A challenge is resolved once the AI returns a fresh answer/justification for it.
+      Object.keys(res.legalAnswers).forEach(n => { delete _wizState.challenges[n]; });
+      Object.keys(res.rationales).forEach(n => { delete _wizState.challenges[n]; });
     }
     // Step 5 group-standard risk applicability
     if (Object.keys(res.gsr).length) {
@@ -699,10 +859,8 @@
       const riskG      = _legalGuidance.risks?.[wq.risk_name];
       const answer     = _wizState.answers[wq.risk_name] || null;
       const article    = _getArticleForRisk(wq.risk_name);
-      const artNum     = article?.article_name.match(/^(Article \d+[a-zA-Z]*)/)?.[1] || '';
       const category   = riskG?.category || null;
       const catColors  = _catColor(category ? (_legalGuidance.categories?.[category]?.color || 'slate') : 'slate');
-      const prefiltered = _isArticleApplicable(wq.risk_name) === false;
       const appliesIf  = riskG?.applies_if || [];
 
       // Badge lives in header — create before body so click handler can update it
@@ -745,10 +903,9 @@
       });
 
       const body = _el('div', 's5-risk-body');
-      if (prefiltered) {
-        const note = _el('div', 's5-prefilter-note');
-        note.innerHTML = `<strong>Pre-filtered by Step 3:</strong> ${artNum} is not triggered for this system — pre-answered "No". Override below if needed.`;
-        body.appendChild(note);
+      // 💡 explanation sits directly below the risk title.
+      if (riskG?.traditional_analog) {
+        body.appendChild(_el('div', 's5-analog-row', { textContent: '💡 ' + riskG.traditional_analog }));
       }
       if (appliesIf.length) {
         body.appendChild(_el('p', 's5-applies-label', { textContent: 'Applies if any of:' }));
@@ -756,11 +913,9 @@
         appliesIf.forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
         body.appendChild(ul);
       }
-      if (riskG?.traditional_analog) {
-        body.appendChild(_el('div', 's5-analog-row', { textContent: '💡 ' + riskG.traditional_analog }));
-      }
       body.appendChild(btnRow);
       body.appendChild(ta);
+      body.appendChild(_buildChallengeUI(wq.risk_name, () => _wizState.answers[wq.risk_name]));
 
       const artId = article?.pk_AI_Article_ID || null;
       const riskNum = _riskIdByName.get(wq.risk_name) || '';
@@ -812,6 +967,7 @@
       assessment_date:    today,
       wizard_answers:     { ..._wizState.answers },
       wizard_rationales:  { ..._wizState.rationales },
+      wizard_challenges:  { ..._wizState.challenges },
       total_risks:        allRisks.length,
       selected_count:     sel,
       risks:              allRisks
@@ -879,6 +1035,11 @@
     banner.innerHTML = `<strong>Surfaced by the NIST AI RMF</strong> — ${_rEsc(risk.nist_ai_rmf || '')}. Mapped to EU AI Act ${_rEsc(artName)}.`;
     body.appendChild(banner);
 
+    // 💡 explanation sits high up, directly under the source banner.
+    if (risk.traditional_analog) {
+      body.appendChild(_el('div', 's5-analog-row', { textContent: '💡 ' + risk.traditional_analog }));
+    }
+
     if (risk.risk_description) {
       const desc = _el('p', '');
       desc.style.cssText = 'margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)';
@@ -893,9 +1054,6 @@
       const ul = _el('ul', 's5-applies-list');
       risk.applies_if.forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
       body.appendChild(ul);
-    }
-    if (risk.traditional_analog) {
-      body.appendChild(_el('div', 's5-analog-row', { textContent: '💡 ' + risk.traditional_analog }));
     }
 
     const btnRow = _el('div', 's5-answer-row');
@@ -913,6 +1071,17 @@
       btnRow.appendChild(btn);
     });
     body.appendChild(btnRow);
+
+    // Justification box — the AI tool's reasoning for this NIST risk loads here
+    // (shared rationale store), and it is what a challenge contradicts.
+    const nta = document.createElement('textarea');
+    nta.className   = 's5-rationale-ta';
+    nta.placeholder = 'Justification…';
+    nta.rows        = 2;
+    nta.value       = _wizState.rationales[key] || '';
+    nta.addEventListener('input', () => { _wizState.rationales[key] = nta.value; });
+    body.appendChild(nta);
+    body.appendChild(_buildChallengeUI(key, () => (_state.nist_risks[key] === true ? 'yes' : _state.nist_risks[key] === false ? 'no' : undefined)));
 
     const { section } = WizUtils.buildCollapsible({ title: risk.risk_name, number: risk.pk_Risk_ID, icon: false, body });
     section.querySelector('.wiz-collapsible-header-right').prepend(badge);
@@ -1388,6 +1557,18 @@
 .s5-answer-btn--no.s5-answer-btn--active{background:#211d15;border-color:#8b8574;color:#b1a992}
 .s5-rationale-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-bg-subtle,#211d15)}
 .s5-rationale-ta:focus{outline:none;border-color:#8ce3c6;background:var(--color-surface)}
+
+/* Challenge cycle */
+.s5-challenge-wrap{margin-top:8px}
+.s5-challenge-btn{font-size:11.5px;font-weight:600;color:#e0b94a;background:none;border:1px solid rgba(224,150,80,0.45);border-radius:6px;padding:5px 12px;cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s}
+.s5-challenge-btn:hover{background:rgba(224,150,80,0.10)}
+.s5-challenge-btn.is-active{background:rgba(224,120,80,0.14);border-color:#e0964f;color:#f0b878}
+.s5-challenge-panel{margin-top:8px;padding:10px 12px;border:1px solid rgba(224,150,80,0.35);border-radius:6px;background:rgba(224,120,80,0.06)}
+.s5-challenge-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#e0b94a;margin:0 0 6px}
+.s5-challenge-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-surface)}
+.s5-challenge-ta:focus{outline:none;border-color:#e0964f}
+.s5-challenge-clear{margin-top:6px;font-size:11px;color:var(--color-text-tertiary);background:none;border:none;cursor:pointer;font-family:inherit;text-decoration:underline;padding:0}
+.s5-challenge-clear:hover{color:#fba4a3}
 
 /* Reference pane */
 .wiz8-cat-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
