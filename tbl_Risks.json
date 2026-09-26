@@ -239,6 +239,60 @@
     "nist_ai_rmf": "Govern (function) | —"
   },
   {
+    "pk_Risk_ID": "RISK-027",
+    "fk_AI_Article_ID": "ART-008",
+    "risk_name": "Technical Documentation Deficiency",
+    "risk_description": "The system record is at risk from 'Incomplete Technical File' — a condition where the system's identity, architecture, training methodology, accuracy metrics and version history are not documented to the standard a regulator can review. When the technical file is missing, out of date, or too thin to reconstruct how the system was built and validated, conformity cannot be demonstrated and changes cannot be traced. The result is an AI system that cannot be evidenced as compliant, in breach of the Article 11 technical-documentation duty.",
+    "risk_role": "Engineer",
+    "fk_Harmonised_Standard_IDs": "[18286.9],[18286.10],[18286.11],[18286.12],[18286.14]",
+    "nist_ai_rmf": "Accountable & transparent | Map function"
+  },
+  {
+    "pk_Risk_ID": "RISK-028",
+    "fk_AI_Article_ID": "ART-010",
+    "risk_name": "Deployer Duty Neglect",
+    "risk_description": "The operating organisation is at risk from 'Unmet Deployer Duties' — a condition where the deployer does not use the system per its instructions, does not implement the human-oversight measures assigned to it, does not monitor and log operation, or does not identify the persons affected by the system's decisions. When a deployer treats a high-risk AI system as fire-and-forget, the safeguards the provider designed are never actually operated. The result is a compliant-by-design system run in a non-compliant way, in breach of the Article 26 deployer obligations.",
+    "risk_role": "AI Governance",
+    "fk_Harmonised_Standard_IDs": "[42001.5],[42001.6],[42001.7],[42001.9]",
+    "nist_ai_rmf": "Accountable & transparent | Manage function"
+  },
+  {
+    "pk_Risk_ID": "RISK-029",
+    "fk_AI_Article_ID": "ART-011",
+    "risk_name": "Conformity Assessment Gap",
+    "risk_description": "The authorisation record is at risk from 'Unverified Conformity' — a condition where the system is put into use without a completed conformity assessment confirming that Articles 9–17 are satisfied, reviewed by a competent person, and signed off with no critical gaps. When conformity is assumed rather than verified and recorded, a non-conforming system can reach production undetected. The result is deployment without the demonstrated conformity Article 43 requires.",
+    "risk_role": "AI Governance",
+    "fk_Harmonised_Standard_IDs": "[18286.16],[18286.17],[18286.18],[18286.19],[18286.20]",
+    "nist_ai_rmf": "Accountable & transparent | Govern function"
+  },
+  {
+    "pk_Risk_ID": "RISK-030",
+    "fk_AI_Article_ID": "ART-013",
+    "risk_name": "Post-Market Monitoring Failure",
+    "risk_description": "The live system is at risk from 'Blind Operation' — a condition where performance data is not collected after deployment, drift and degradation are not detected, user incidents have no reporting channel, and corrective action has no defined process. When a deployed AI system is not monitored, its accuracy can decay and harms can accumulate with no one noticing or acting. The result is an AI system whose real-world behaviour is unknown and unmanaged, in breach of the Article 72 post-market-monitoring duty.",
+    "risk_role": "Engineer",
+    "fk_Harmonised_Standard_IDs": "[18286.21],[18286.22],[18286.23],[18286.24],[18286.25]",
+    "nist_ai_rmf": "Valid & reliable | Measure function"
+  },
+  {
+    "pk_Risk_ID": "RISK-031",
+    "fk_AI_Article_ID": "ART-012",
+    "risk_name": "AI Interaction Disclosure Failure",
+    "risk_role": "Engineer",
+    "fk_Harmonised_Standard_IDs": "[12792.1],[12792.2],[12792.3],[12792.5]",
+    "nist_ai_rmf": "Accountable & transparent | GenAI Profile: Human-AI configuration",
+    "risk_description": "The Response Interface and Output Channel are at risk from 'Undisclosed AI Interaction' — a condition where a person interacts with the system, or receives content it generated, without being told they are dealing with an AI. When users are not informed that they are conversing with a machine, and when AI-generated or manipulated content is not clearly labelled, they cannot calibrate their trust or exercise their rights. The result is people deceived about the nature of what they are reading or who they are dealing with, in breach of the Article 50 transparency duties."
+  },
+  {
+    "pk_Risk_ID": "RISK-032",
+    "fk_AI_Article_ID": "ART-007",
+    "risk_name": "Risk Management Lifecycle Gap",
+    "risk_role": "AI Governance",
+    "fk_Harmonised_Standard_IDs": "[18228.1],[18228.2],[18228.3],[18228.4],[18228.5]",
+    "nist_ai_rmf": "Valid & reliable | GenAI Profile: Governance",
+    "risk_description": "The governance process is at risk from 'Unmanaged Risk Lifecycle' — a condition where risks are not systematically identified, estimated, evaluated and mitigated across the AI system's life. When there is no continuous, documented risk-management process, newly emerging hazards go unnoticed and known ones are never re-evaluated as the system and its context change. The result is an AI system operating with stale or incomplete risk treatment, in breach of the Article 9 duty to run a risk-management system throughout the lifecycle."
+  },
+  {
     "pk_Risk_ID": "GSR-001",
     "fk_AI_Article_ID": null,
     "risk_category": "Group_Standard",

@@ -1,20 +1,48 @@
 {
   "version": "1.0",
-  "description": "Guidance data for Step 5 Risk Assessment. Edit this file to adapt the language, categories, applies-if conditions, and relevance rules to suit your organisation. This file is loaded at runtime by step5-wizard.js \u2014 no code changes are required.",
-
+  "description": "Guidance data for Step 5 Risk Assessment. Edit this file to adapt the language, categories, applies-if conditions, and relevance rules to suit your organisation. This file is loaded at runtime by step5-wizard.js — no code changes are required.",
   "color_palette": {
-    "amber":  { "bg": "#fef3c7", "text": "#92400e" },
-    "rose":   { "bg": "#ffe4e6", "text": "#9f1239" },
-    "teal":   { "bg": "#ccfbf1", "text": "#115e59" },
-    "slate":  { "bg": "#f1f5f9", "text": "#334155" },
-    "red":    { "bg": "#fee2e2", "text": "#b91c1c" },
-    "purple": { "bg": "#ede9fe", "text": "#6d28d9" },
-    "indigo": { "bg": "#e0e7ff", "text": "#4338ca" },
-    "orange": { "bg": "#ffedd5", "text": "#9a3412" },
-    "green":  { "bg": "#dcfce7", "text": "#166534" },
-    "blue":   { "bg": "#dbeafe", "text": "#1e40af" }
+    "amber": {
+      "bg": "#fef3c7",
+      "text": "#92400e"
+    },
+    "rose": {
+      "bg": "#ffe4e6",
+      "text": "#9f1239"
+    },
+    "teal": {
+      "bg": "#ccfbf1",
+      "text": "#115e59"
+    },
+    "slate": {
+      "bg": "#f1f5f9",
+      "text": "#334155"
+    },
+    "red": {
+      "bg": "#fee2e2",
+      "text": "#b91c1c"
+    },
+    "purple": {
+      "bg": "#ede9fe",
+      "text": "#6d28d9"
+    },
+    "indigo": {
+      "bg": "#e0e7ff",
+      "text": "#4338ca"
+    },
+    "orange": {
+      "bg": "#ffedd5",
+      "text": "#9a3412"
+    },
+    "green": {
+      "bg": "#dcfce7",
+      "text": "#166534"
+    },
+    "blue": {
+      "bg": "#dbeafe",
+      "text": "#1e40af"
+    }
   },
-
   "categories": {
     "Human Control": {
       "color": "amber",
@@ -67,7 +95,7 @@
   "risks": {
     "Human Oversight Bypass Failure": {
       "category": "Human Control",
-      "traditional_analog": "Automation over-reliance \u2014 like unchecked automated trading or credit-scoring systems with no kill switch or mandatory human review checkpoint before consequential action is taken.",
+      "traditional_analog": "Automation over-reliance — like unchecked automated trading or credit-scoring systems with no kill switch or mandatory human review checkpoint before consequential action is taken.",
       "applies_if": [
         "AI output is used to make or significantly influence decisions without a mandatory human review step",
         "Users have no mechanism to override, halt, or contest AI-driven actions",
@@ -89,7 +117,7 @@
     },
     "Subgroup Coverage Failure": {
       "category": "Bias & Fairness",
-      "traditional_analog": "Sampling bias in analytics \u2014 like an underrepresented demographic in credit-scoring training data, where sparse records cause systematically worse outcomes for that group at inference time.",
+      "traditional_analog": "Sampling bias in analytics — like an underrepresented demographic in credit-scoring training data, where sparse records cause systematically worse outcomes for that group at inference time.",
       "applies_if": [
         "The AI system processes data about or makes decisions that affect distinct groups of people (by age, gender, ethnicity, disability, or other protected characteristic)",
         "Training data was collected over a period or from a source where certain groups may have been underrepresented",
@@ -111,7 +139,7 @@
     },
     "Proxy Discrimination Propagation Failure": {
       "category": "Bias & Fairness",
-      "traditional_analog": "Redlining / indirect discrimination \u2014 where a seemingly neutral variable (e.g. postcode, browsing history) acts as a statistical proxy for a protected characteristic, producing discriminatory outcomes that are harder to detect than direct discrimination.",
+      "traditional_analog": "Redlining / indirect discrimination — where a seemingly neutral variable (e.g. postcode, browsing history) acts as a statistical proxy for a protected characteristic, producing discriminatory outcomes that are harder to detect than direct discrimination.",
       "applies_if": [
         "The AI uses data variables that may correlate with protected characteristics (e.g. location, purchasing patterns, social connections)",
         "The AI ranks, scores, or filters individuals for employment, credit, insurance, benefits, or similar consequential decisions",
@@ -133,7 +161,7 @@
     },
     "Dataset Lifecycle Integrity Failure": {
       "category": "Data Integrity",
-      "traditional_analog": "Database change management failure \u2014 like a version-controlled ETL pipeline where an undocumented schema change silently corrupts downstream analytical models, discovered only during an audit.",
+      "traditional_analog": "Database change management failure — like a version-controlled ETL pipeline where an undocumented schema change silently corrupts downstream analytical models, discovered only during an audit.",
       "applies_if": [
         "The AI model is periodically retrained or fine-tuned on updated data",
         "The system's knowledge base (RAG pipeline) is refreshed with new documents or data feeds",
@@ -149,10 +177,10 @@
     },
     "Data Governance Documentation Failure": {
       "category": "Data Integrity",
-      "traditional_analog": "Undocumented data lineage / missing information asset register \u2014 like an ETL pipeline with no data dictionary, where no one can trace the origin, transformation logic, or quality of data feeding a regulatory report.",
+      "traditional_analog": "Undocumented data lineage / missing information asset register — like an ETL pipeline with no data dictionary, where no one can trace the origin, transformation logic, or quality of data feeding a regulatory report.",
       "applies_if": [
         "The AI system uses training or retrieval data whose selection rationale, legal permission, and preparation history are not formally documented",
-        "The organisation cannot trace which datasets were used, when they were collected, or why they were selected \u2014 meaning it cannot produce this evidence to a regulator examining Art.10(2) or Art.11/Annex IV compliance",
+        "The organisation cannot trace which datasets were used, when they were collected, or why they were selected — meaning it cannot produce this evidence to a regulator examining Art.10(2) or Art.11/Annex IV compliance",
         "Multiple data sources are combined without a documented provenance chain that records origin, transformation steps, and legal basis for each source"
       ],
       "relevance_factors": {
@@ -168,7 +196,7 @@
     },
     "Data Quality Measurement Failure": {
       "category": "Data Integrity",
-      "traditional_analog": "Silent data quality degradation in production \u2014 like a financial reporting system that passes incomplete or duplicate records through an ETL pipeline with no quality checks, producing incorrect regulatory submissions.",
+      "traditional_analog": "Silent data quality degradation in production — like a financial reporting system that passes incomplete or duplicate records through an ETL pipeline with no quality checks, producing incorrect regulatory submissions.",
       "applies_if": [
         "The AI system's outputs depend directly on the quality and completeness of input data",
         "No formal data quality metrics, thresholds, or validation rules are applied before data is used",
@@ -190,7 +218,7 @@
     },
     "Audit Log Integrity Failure": {
       "category": "Monitoring & Audit",
-      "traditional_analog": "SOX / GDPR audit trail tampering \u2014 like a financial transaction log that can be modified or deleted, making post-incident investigation and regulatory audit impossible and creating legal exposure.",
+      "traditional_analog": "SOX / GDPR audit trail tampering — like a financial transaction log that can be modified or deleted, making post-incident investigation and regulatory audit impossible and creating legal exposure.",
       "applies_if": [
         "The AI system is subject to regulatory logging requirements (EU AI Act Art.12, GDPR Art.5(1)(f) accountability obligations, internal compliance policy)",
         "Audit trails are required to reconstruct or justify AI decisions in the event of a complaint, legal challenge, or regulatory review",
@@ -212,7 +240,7 @@
     },
     "Log Retention Violation": {
       "category": "Monitoring & Audit",
-      "traditional_analog": "Log retention policy breach / evidence spoliation \u2014 like security event logs deleted before the mandatory retention window, preventing forensic investigation after an incident and creating regulatory exposure.",
+      "traditional_analog": "Log retention policy breach / evidence spoliation — like security event logs deleted before the mandatory retention window, preventing forensic investigation after an incident and creating regulatory exposure.",
       "applies_if": [
         "The AI system's operational logs are subject to a defined minimum retention period (regulatory, contractual, or internal policy)",
         "Logs are stored in systems with automatic deletion, rolling overwrite, or size-based truncation that could violate retention requirements",
@@ -231,7 +259,7 @@
     },
     "Adversarial Input Evasion Failure": {
       "category": "Cybersecurity",
-      "traditional_analog": "Input validation bypass / AI-layer SQL injection \u2014 where a malicious user crafts inputs designed to manipulate the model's logic or extract sensitive information, analogous to how SQL injection exploits improperly sanitised database queries.",
+      "traditional_analog": "Input validation bypass / AI-layer SQL injection — where a malicious user crafts inputs designed to manipulate the model's logic or extract sensitive information, analogous to how SQL injection exploits improperly sanitised database queries.",
       "applies_if": [
         "The AI system accepts natural language or structured input directly from users (prompt injection risk)",
         "The system is exposed to potentially adversarial, untrusted, or external users or data sources",
@@ -250,7 +278,7 @@
     },
     "Unauthorised Access and Privilege Escalation Failure": {
       "category": "Access Control",
-      "traditional_analog": "Privileged access management (PAM) failure / RBAC violation \u2014 like a compromised service account with excessive permissions giving an attacker access to sensitive model weights, training data, or the AI decision pipeline.",
+      "traditional_analog": "Privileged access management (PAM) failure / RBAC violation — like a compromised service account with excessive permissions giving an attacker access to sensitive model weights, training data, or the AI decision pipeline.",
       "applies_if": [
         "The AI system stores sensitive data (training data, personal data, model weights, inference logs) requiring formal access controls",
         "Multiple users, teams, or automated systems have access to the AI infrastructure with different privilege levels",
@@ -266,7 +294,7 @@
     },
     "Cyber Attack Detection Failure": {
       "category": "Cybersecurity",
-      "traditional_analog": "IDS/SIEM gap \u2014 like a web server silently exfiltrating sensitive data for weeks because anomalous query patterns were not monitored, leaving the organisation without early warning of an active attack.",
+      "traditional_analog": "IDS/SIEM gap — like a web server silently exfiltrating sensitive data for weeks because anomalous query patterns were not monitored, leaving the organisation without early warning of an active attack.",
       "applies_if": [
         "The AI system processes sensitive or personal data that could be targeted for exfiltration via query manipulation",
         "Prompt injection or adversarial inputs could manipulate AI outputs to bypass controls or leak information",
@@ -285,7 +313,7 @@
     },
     "Accuracy Measurement and Drift Failure": {
       "category": "Performance Integrity",
-      "traditional_analog": "Model drift / SLA degradation in production \u2014 like a fraud detection model that was 95% accurate at launch but silently degraded to 70% over 18 months as fraud patterns changed, with no monitoring alert to trigger retraining.",
+      "traditional_analog": "Model drift / SLA degradation in production — like a fraud detection model that was 95% accurate at launch but silently degraded to 70% over 18 months as fraud patterns changed, with no monitoring alert to trigger retraining.",
       "applies_if": [
         "The AI system makes consequential decisions that depend on maintaining a defined level of accuracy or performance",
         "The system is deployed in an environment where the characteristics of input data may evolve over time",
@@ -307,7 +335,7 @@
     },
     "Feedback Loop Contamination Failure": {
       "category": "Performance Integrity",
-      "traditional_analog": "Self-reinforcing algorithmic error \u2014 like a recommendation engine trained on user clicks that progressively amplifies engagement-optimising content, embedding and amplifying its own biases with each retraining cycle.",
+      "traditional_analog": "Self-reinforcing algorithmic error — like a recommendation engine trained on user clicks that progressively amplifies engagement-optimising content, embedding and amplifying its own biases with each retraining cycle.",
       "applies_if": [
         "The AI system learns from, adapts to, or is retrained using user interactions, feedback, or behavioural signals",
         "The system is periodically retrained on data that includes outputs previously generated by the AI itself",
@@ -323,7 +351,7 @@
     },
     "Output Reproducibility Failure": {
       "category": "Performance Integrity",
-      "traditional_analog": "Audit reproducibility requirement \u2014 like a regulatory capital model that cannot reproduce a prior month's output because an undocumented parameter was changed, making supervisory review and model validation impossible.",
+      "traditional_analog": "Audit reproducibility requirement — like a regulatory capital model that cannot reproduce a prior month's output because an undocumented parameter was changed, making supervisory review and model validation impossible.",
       "applies_if": [
         "AI-generated outputs must be reproducible for regulatory audit, legal proceedings, or compliance review",
         "Identical or equivalent inputs should produce consistent results for legal, contractual, or risk management reasons",
@@ -345,7 +373,7 @@
     },
     "Input Corruption Propagation Failure": {
       "category": "Performance Integrity",
-      "traditional_analog": "Garbage-in-garbage-out / upstream data quality cascade \u2014 like a risk model silently ingesting corrupted market data feeds and producing incorrect risk calculations for hours before detection, with no validation gate between ingest and processing.",
+      "traditional_analog": "Garbage-in-garbage-out / upstream data quality cascade — like a risk model silently ingesting corrupted market data feeds and producing incorrect risk calculations for hours before detection, with no validation gate between ingest and processing.",
       "applies_if": [
         "The AI system ingests real-time or externally sourced data feeds that could be corrupted, incomplete, or manipulated",
         "No validation or sanity-check gate exists between data ingestion and AI processing",
@@ -364,7 +392,7 @@
     },
     "Fail-Safe Activation Failure": {
       "category": "Availability & Resilience",
-      "traditional_analog": "Circuit breaker / graceful degradation failure \u2014 like a critical payment processing system with no fallback mode, where a software fault causes total service loss rather than a safe degraded state or manual override.",
+      "traditional_analog": "Circuit breaker / graceful degradation failure — like a critical payment processing system with no fallback mode, where a software fault causes total service loss rather than a safe degraded state or manual override.",
       "applies_if": [
         "The AI system is relied upon for time-sensitive or operationally critical functions where failure causes direct harm",
         "A system fault would leave users, staff, or affected individuals without a safe fallback or manual alternative",
@@ -385,7 +413,7 @@
     },
     "AI Disclosure Mechanism Failure": {
       "category": "Transparency",
-      "traditional_analog": "Consumer protection / advertising standards non-disclosure \u2014 like undisclosed AI-generated product reviews or a chatbot that does not identify itself as AI, violating EU AI Act Art.50 and consumer protection law transparency obligations.",
+      "traditional_analog": "Consumer protection / advertising standards non-disclosure — like undisclosed AI-generated product reviews or a chatbot that does not identify itself as AI, violating EU AI Act Art.50 and consumer protection law transparency obligations.",
       "applies_if": [
         "The AI system interacts directly with members of the public, customers, or employees in a way that could be mistaken for human interaction",
         "AI-generated content is published, distributed, or used to inform decisions without labelling or attribution",
@@ -404,7 +432,7 @@
     },
     "Deployer Instructions and Intended Use Failure": {
       "category": "Documentation & Transparency",
-      "traditional_analog": "A pharmaceutical company releasing a drug without a patient information leaflet \u2014 clinicians cannot prescribe safely, dosing errors occur, and the manufacturer cannot demonstrate they met their duty to inform.",
+      "traditional_analog": "A pharmaceutical company releasing a drug without a patient information leaflet — clinicians cannot prescribe safely, dosing errors occur, and the manufacturer cannot demonstrate they met their duty to inform.",
       "applies_if": [
         "The AI system has not produced formal instructions documenting its intended purpose and the specific tasks it is designed to perform",
         "Known limitations, failure modes, or scenarios in which the AI should not be used are not documented and provided to deployers",
@@ -426,7 +454,7 @@
     },
     "Quality Management System Conformity Failure": {
       "category": "Governance & Compliance",
-      "traditional_analog": "An ISO 9001-certified manufacturer removing their quality management system after certification \u2014 components are produced without any systematic design control, change management, or corrective action process. Defects compound because no system exists to catch them.",
+      "traditional_analog": "An ISO 9001-certified manufacturer removing their quality management system after certification — components are produced without any systematic design control, change management, or corrective action process. Defects compound because no system exists to catch them.",
       "applies_if": [
         "The organisation does not have a documented QMS covering the AI system's full lifecycle from design through post-market monitoring",
         "There are no documented roles and responsibilities for AI safety and compliance within the organisation",
@@ -442,6 +470,126 @@
           "Yes",
           "Partially"
         ],
+        "high_if_step7_has_special_categories": false,
+        "high_if_step7_has_personal_data": false,
+        "high_if_step7_training_data_used": false
+      }
+    },
+    "AI Interaction Disclosure Failure": {
+      "category": "Transparency",
+      "traditional_analog": "Like an undisclosed chatbot posing as a human agent, or a photo published with no hint it was AI-generated — the audience is misled about what they're really dealing with.",
+      "applies_if": [
+        "The system interacts with people in a way that could be mistaken for a human",
+        "The system generates or manipulates text, image, audio or video content shown to people",
+        "AI-generated content is published without a clear 'AI-generated' label",
+        "Users are not told, at or before first interaction, that they are dealing with an AI"
+      ],
+      "relevance_factors": {
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [],
+        "high_if_step7_has_special_categories": false,
+        "high_if_step7_has_personal_data": false,
+        "high_if_step7_training_data_used": false
+      }
+    },
+    "Risk Management Lifecycle Gap": {
+      "category": "Monitoring & Audit",
+      "traditional_analog": "Like a factory with no ongoing safety programme — hazards are only found after an incident, never through a standing process.",
+      "applies_if": [
+        "No documented, repeatable process exists for identifying and estimating the system's risks",
+        "Identified risks are not re-evaluated as the system, data or use context changes",
+        "Mitigations are chosen without recording why they are adequate",
+        "No owner is accountable for the risk-management lifecycle"
+      ],
+      "relevance_factors": {
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [],
+        "high_if_step7_has_special_categories": false,
+        "high_if_step7_has_personal_data": false,
+        "high_if_step7_training_data_used": false
+      }
+    },
+    "Technical Documentation Deficiency": {
+      "category": "Monitoring & Audit",
+      "traditional_analog": "Like a medical device with no design history file — you cannot prove how it was built or that it was ever validated.",
+      "applies_if": [
+        "The system's architecture and components are not documented",
+        "Training data and methodology are not recorded",
+        "Achieved accuracy and validation results are not written down",
+        "There is no version history linking documentation to the deployed system"
+      ],
+      "relevance_factors": {
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [],
+        "high_if_step7_has_special_categories": false,
+        "high_if_step7_has_personal_data": false,
+        "high_if_step7_training_data_used": false
+      }
+    },
+    "Deployer Duty Neglect": {
+      "category": "Monitoring & Audit",
+      "traditional_analog": "Like buying certified safety equipment and never switching on its safety features — the protection exists on paper but not in practice.",
+      "applies_if": [
+        "The system is used outside, or without regard to, the provider's instructions for use",
+        "The human-oversight measures assigned to the deployer are not implemented",
+        "Operation is not monitored or logged by the deployer",
+        "The natural persons affected by the system's outputs have not been identified"
+      ],
+      "relevance_factors": {
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [],
+        "high_if_step7_has_special_categories": false,
+        "high_if_step7_has_personal_data": false,
+        "high_if_step7_training_data_used": false
+      }
+    },
+    "Conformity Assessment Gap": {
+      "category": "Monitoring & Audit",
+      "traditional_analog": "Like shipping a product to market without ever running the final pre-launch safety sign-off — you're hoping it conforms rather than proving it.",
+      "applies_if": [
+        "Articles 9–17 completion has not been verified before deployment",
+        "No competent reviewer has signed off the assessment",
+        "There is no explicit declaration that no critical gaps remain",
+        "The conformity conclusion is undated or not tied to a system version"
+      ],
+      "relevance_factors": {
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [],
+        "high_if_step7_has_special_categories": false,
+        "high_if_step7_has_personal_data": false,
+        "high_if_step7_training_data_used": false
+      }
+    },
+    "Post-Market Monitoring Failure": {
+      "category": "Monitoring & Audit",
+      "traditional_analog": "Like launching a product and never tracking field failures — defects surface only through complaints or harm, never through monitoring.",
+      "applies_if": [
+        "Performance is not measured on live data after deployment",
+        "There is no detection of model drift or accuracy degradation",
+        "Users have no channel to report incidents or harmful outputs",
+        "There is no defined corrective-action process when problems are found"
+      ],
+      "relevance_factors": {
+        "high_if_step3_ai_act_outcome": [
+          "HIGH_RISK",
+          "PROHIBITED"
+        ],
+        "high_if_step7_automated_decisions_contains": [],
         "high_if_step7_has_special_categories": false,
         "high_if_step7_has_personal_data": false,
         "high_if_step7_training_data_used": false
@@ -462,7 +610,7 @@
     {
       "id": "wq03",
       "risk_name": "Proxy Discrimination Propagation Failure",
-      "question": "Does the AI use input variables \u2014 such as location, purchasing history, or social network data \u2014 that could act as proxies for protected characteristics?"
+      "question": "Does the AI use input variables — such as location, purchasing history, or social network data — that could act as proxies for protected characteristics?"
     },
     {
       "id": "wq04",
@@ -512,12 +660,12 @@
     {
       "id": "wq15",
       "risk_name": "Feedback Loop Contamination Failure",
-      "question": "Does the AI system use its own historical outputs \u2014 directly or indirectly \u2014 as future training or reinforcement data?"
+      "question": "Does the AI system use its own historical outputs — directly or indirectly — as future training or reinforcement data?"
     },
     {
       "id": "wq16",
       "risk_name": "Output Reproducibility Failure",
-      "question": "Is reproducibility required for this system \u2014 must the same input reliably produce the same output across runs and environments?"
+      "question": "Is reproducibility required for this system — must the same input reliably produce the same output across runs and environments?"
     },
     {
       "id": "wq17",
@@ -543,6 +691,36 @@
       "id": "wq21",
       "risk_name": "Quality Management System Conformity Failure",
       "question": "Does the organisation have a documented Quality Management System (QMS) covering AI design controls, change management, post-market monitoring, and incident reporting for this AI system?"
+    },
+    {
+      "id": "wq20",
+      "risk_name": "AI Interaction Disclosure Failure",
+      "question": "Does the system interact with people as if human, or produce AI-generated content, without clearly disclosing that it is AI?"
+    },
+    {
+      "id": "wq21",
+      "risk_name": "Risk Management Lifecycle Gap",
+      "question": "Is there no continuous, documented process to identify, evaluate and mitigate the system's risks across its lifecycle?"
+    },
+    {
+      "id": "wq22",
+      "risk_name": "Technical Documentation Deficiency",
+      "question": "Is the system's technical documentation (architecture, training, accuracy, versions) missing or too thin for a regulator to review?"
+    },
+    {
+      "id": "wq23",
+      "risk_name": "Deployer Duty Neglect",
+      "question": "As the deployer, are you not operating the provider's assigned oversight, monitoring and instructions-for-use duties?"
+    },
+    {
+      "id": "wq24",
+      "risk_name": "Conformity Assessment Gap",
+      "question": "Is the system being deployed without a completed, signed-off conformity assessment confirming Articles 9–17 are met?"
+    },
+    {
+      "id": "wq25",
+      "risk_name": "Post-Market Monitoring Failure",
+      "question": "After go-live, is the system's performance not monitored for drift, with no incident channel or corrective-action process?"
     }
   ]
 }
