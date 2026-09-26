@@ -9,9 +9,16 @@
   const _el = WizUtils.el;
   const _sectionLabel = WizUtils.sectionLabel;
 
-  let _state = { business_case: '', business_case_url: '' };
+  let _state = {
+    business_case: '', business_case_url: '',
+    input_mode: 'text',                              // 'text' | 'wiz'
+    wizard: { answers: {}, idx: 0, completed: false } // use-case builder state
+  };
   let _record = {};
   let _detail = null;
+  let _descHost = null;   // host node the description-capture area re-renders into
+  let _segText = null;    // "Write it myself" toggle button
+  let _segWiz = null;     // "Guide me" toggle button
   let _dpiaFields = null; // fieldId → { type, options } (from step-4.json), for load validation
   let _clfKeys = null;    // gate-answer key → allowed values (from step-3.json), for classification load
 
@@ -26,6 +33,12 @@
     if (_record['step-2']) {
       _state.business_case     = _record['step-2'].business_case     || '';
       _state.business_case_url = _record['step-2'].business_case_url || '';
+      _state.input_mode        = _record['step-2'].input_mode        || 'text';
+      const w = _record['step-2'].use_case_wizard;
+      if (w && typeof w === 'object') {
+        _state.wizard = Object.assign({ answers: {}, idx: 0, completed: false }, w);
+        if (!_state.wizard.answers || typeof _state.wizard.answers !== 'object') _state.wizard.answers = {};
+      }
     }
 
     container.innerHTML = '';
@@ -91,28 +104,107 @@
     }).catch(() => {});
   }
 
-  // ── Business case form ────────────────────────────────────────────────────
+  // ── Use-case builder question set ─────────────────────────────────────────
+  // Minimum-typing wizard: each question is read, answered by selecting one or
+  // more options (with an optional free-text box), and composed into a business
+  // case narrative that feeds the same {{business_case}} slot as free typing.
+  // The order and vocabulary deliberately mirror the Step 3 tier gates and Step
+  // 4 DPIA fields so the downstream AI draft has the signal it needs.
+
+  const _EXCL = o => /^none\b|^no significant/i.test(o); // mutually-exclusive option
+
+  const QUESTIONS = [
+    { id: 'tasks', group: 'Purpose', type: 'multi', other: true, otherPh: 'Other task…',
+      q: 'What does {sys} help people do?', help: 'Select all that apply.',
+      options: ['Summarise documents', 'Answer questions from documents', 'Draft text or content', 'Translate', 'Extract or structure data', 'Classify or categorise', 'Generate or review code', 'Analyse data or produce reports', 'Search and retrieve information', 'Support decisions'],
+      compose: (s, sys, o) => { const it = s.concat(o ? [o] : []); return it.length ? `${sys} is an AI system used to ${_listJoin(it.map(_lc1))}.` : `${sys} is an AI system.`; } },
+
+    { id: 'hosting', group: 'Provenance', type: 'single',
+      q: 'Where does {sys} run?', help: 'This tells the assessment whether a third party is in the picture.',
+      options: ['In-house / self-hosted', 'Third-party SaaS product', 'Foundation-model API (e.g. a hosted LLM)', 'Not sure'],
+      compose: s => ({ 'In-house / self-hosted': 'It runs on infrastructure the organisation hosts itself.', 'Third-party SaaS product': 'It runs on a third-party SaaS platform.', 'Foundation-model API (e.g. a hosted LLM)': 'It is built on a third-party foundation-model API.' }[s[0]] || '') },
+
+    { id: 'role', group: 'Provenance', type: 'single',
+      q: 'Is your organisation building {sys}, or using someone else’s?', help: 'Provider = you build or substantially modify it. Deployer = you use it under your own authority.',
+      options: ['Provider — we build or substantially modify it', 'Deployer — we use it under our authority', 'Not sure'],
+      compose: s => ({ 'Provider — we build or substantially modify it': 'Our organisation acts as the provider of the system (we build or substantially modify it).', 'Deployer — we use it under our authority': 'Our organisation acts as the deployer of the system (we use it under our own authority).' }[s[0]] || '') },
+
+    { id: 'users', group: 'Users', type: 'multi', other: true, otherPh: 'Which department(s)?',
+      q: 'Who is allowed to use {sys}?', help: 'Select all that apply.',
+      options: ['All staff', 'A specific department', 'Executive leadership', 'Contractors', 'External users or customers'],
+      compose: (s, sys, o) => { let it = s.slice(); if (o) { it = it.filter(x => x !== 'A specific department'); it.push(`the ${o} department`); } return it.length ? `It is available to ${_listJoin(it.map(_lc1))}.` : ''; } },
+
+    { id: 'reach', group: 'Users', type: 'single',
+      q: 'Where do {sys}’s outputs go?',
+      options: ['Internal use only', 'Shared with clients', 'Shared with vendors or partners', 'Public-facing'],
+      compose: s => ({ 'Internal use only': 'Its outputs are used internally only.', 'Shared with clients': 'Its outputs are shared with clients.', 'Shared with vendors or partners': 'Its outputs are shared with vendors or partners.', 'Public-facing': 'Its outputs are public-facing.' }[s[0]] || '') },
+
+    { id: 'data_types', group: 'Data', type: 'multi', other: true, otherPh: 'Other data type…',
+      q: 'What kinds of documents or data does {sys} process?', help: 'Select all that apply.',
+      options: ['Employee handbooks or policies', 'Technical designs or IP', 'Customer contracts', 'Financial records', 'Personnel or HR records', 'Customer personal data', 'Health data', 'Public or marketing content', 'Source code', 'Emails or correspondence'],
+      compose: (s, sys, o) => { const it = s.concat(o ? [o] : []); return it.length ? `It processes ${_listJoin(it.map(_lc1))}.` : ''; } },
+
+    { id: 'sensitive', group: 'Data', type: 'multi',
+      q: 'Does that data include any sensitive information?', help: 'Select all that apply.',
+      options: ['Personal data (PII)', 'Special-category data (e.g. health, biometric)', 'Trade secrets or confidential IP', 'Financial or payment data', 'None of these'],
+      compose: s => { const it = s.filter(x => x !== 'None of these'); if (!it.length) return s.includes('None of these') ? 'The data is not expected to contain personal, special-category, or confidential information.' : ''; return `This data includes ${_listJoin(it.map(_lc1))}.`; } },
+
+    { id: 'application', group: 'Oversight', type: 'multi',
+      q: 'How are {sys}’s outputs used?', help: 'Select all that apply.',
+      options: ['Read for general understanding', 'Copied into external communications', 'Used as the basis for a decision', 'Used to approve or trigger a workflow', 'Published without human edits'],
+      compose: s => s.length ? `Its outputs are ${_listJoin(s.map(_lc1))}.` : '' },
+
+    { id: 'oversight', group: 'Oversight', type: 'single',
+      q: 'Is there a human check before {sys}’s output is acted on?',
+      options: ['Yes — formal verification is required', 'Informal or ad-hoc checking', 'No — outputs are used directly'],
+      compose: s => ({ 'Yes — formal verification is required': 'A formal human verification step is required before outputs are acted on.', 'Informal or ad-hoc checking': 'Human checking of outputs is informal or ad-hoc.', 'No — outputs are used directly': 'There is no human verification step; outputs are used directly.' }[s[0]] || '') },
+
+    { id: 'impact', group: 'Consequences', type: 'single',
+      q: 'If {sys} is wrong or hallucinates, how serious is it?',
+      options: ['Negligible', 'Minor', 'Moderate', 'Severe'],
+      compose: s => s[0] ? `If the system produces an incorrect or hallucinated output, the assessed business impact is ${_lc1(s[0])}.` : '' },
+
+    { id: 'consequences', group: 'Consequences', type: 'multi',
+      q: 'A wrong answer could lead to…', help: 'Select all that apply.',
+      options: ['Regulatory or compliance breach', 'Physical safety hazard', 'Financial loss', 'Reputational harm', 'Discrimination or unfair outcome', 'No significant consequence'],
+      compose: s => { const it = s.filter(x => x !== 'No significant consequence'); if (!it.length) return s.includes('No significant consequence') ? 'A wrong output is not expected to cause significant harm.' : ''; return `A wrong output could result in ${_listJoin(it.map(_lc1))}.`; } }
+  ];
+
+  // Text helpers for narrative assembly.
+  function _lc1(s) { return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
+  function _listJoin(a) { a = a.filter(Boolean); if (a.length <= 1) return a[0] || ''; if (a.length === 2) return a[0] + ' and ' + a[1]; return a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+  function _qSys()    { const n = (_record._meta && _record._meta.use_case_name || '').trim(); return n || 'your AI system'; }
+  function _narrSys() { const n = (_record._meta && _record._meta.use_case_name || '').trim(); return n || 'The system'; }
+
+  function _assembleNarrative(answers) {
+    const sys = _narrSys(); const parts = [];
+    QUESTIONS.forEach(q => {
+      const a = answers[q.id] || { sel: [], other: '' };
+      const sentence = q.compose(a.sel || [], sys, (a.other || '').trim());
+      if (sentence) parts.push(sentence);
+    });
+    return parts.join(' ');
+  }
+
+  // ── Business case form (toggle: type it, or use the guided builder) ────────
 
   function _buildBusinessCaseForm() {
     const section = _el('div', 's2-form-section');
 
-    const bcLabel = _el('label', 's2-field-label');
-    bcLabel.htmlFor = 's2-business-case';
-    bcLabel.textContent = 'Business case description';
-    const bcHint = _el('p', 's2-field-hint', {
-      textContent: 'Describe the system, its purpose, the users, the data it will process, the technology stack, and how the outputs are used. The more detail you provide, the more accurate the analysis will be.'
-    });
-    const bcArea = _el('textarea', 's2-textarea');
-    bcArea.id = 's2-business-case';
-    bcArea.placeholder = 'Describe the AI use case: what problem it solves, who uses it, what data is involved, what technology is used, where it is hosted, and what the outputs are used for.';
-    bcArea.value = _state.business_case;
-    bcArea.rows = 10;
-    bcArea.addEventListener('input', () => {
-      _state.business_case = bcArea.value;
-      _saveState();
-      _refreshPrompt();
-    });
-    section.append(bcLabel, bcHint, bcArea);
+    // Segmented toggle
+    const seg = _el('div', 's2-seg');
+    _segText = _el('button', 's2-seg-btn' + (_state.input_mode === 'text' ? ' is-on' : ''), { textContent: '✍️  Write it myself' });
+    _segWiz  = _el('button', 's2-seg-btn' + (_state.input_mode === 'wiz'  ? ' is-on' : ''), { textContent: '🧭  Guide me' });
+    _segText.type = 'button'; _segWiz.type = 'button';
+    _segText.addEventListener('click', () => _setMode('text'));
+    _segWiz.addEventListener('click',  () => { if (!_answeredAny()) _state.wizard.idx = 0; _setMode('wiz'); });
+    seg.append(_segText, _segWiz);
+    section.appendChild(seg);
+
+    // Host the description-capture area (text view OR wizard view)
+    _descHost = _el('div', 's2-desc-host');
+    section.appendChild(_descHost);
+    _renderDesc();
 
     const urlWrap = _el('div', '', { style: 'margin-top:14px' });
     const urlLabel = _el('label', 's2-field-label');
@@ -131,6 +223,152 @@
     section.appendChild(urlWrap);
 
     return section;
+  }
+
+  // ── Description-capture area: mode switch + renderers ─────────────────────
+
+  function _setMode(mode) {
+    _state.input_mode = mode;
+    if (_segText) _segText.classList.toggle('is-on', mode === 'text');
+    if (_segWiz)  _segWiz.classList.toggle('is-on', mode === 'wiz');
+    _saveState();
+    _renderDesc();
+  }
+
+  function _renderDesc() {
+    if (!_descHost) return;
+    _descHost.innerHTML = '';
+    _descHost.appendChild(_state.input_mode === 'wiz' ? _buildWizardView() : _buildTextView());
+  }
+
+  function _buildTextView() {
+    const view = _el('div', '');
+
+    if (_state.wizard.completed && _state.business_case) {
+      const note = _el('div', 's2-wiz-builtnote');
+      note.innerHTML = '<span>✓ Generated from the guided builder — edit freely below.</span>';
+      const editBtn = _el('button', 's2-wiz-reopen', { type: 'button', textContent: 'Reopen builder' });
+      editBtn.addEventListener('click', () => { _state.wizard.idx = 0; _setMode('wiz'); });
+      note.appendChild(editBtn);
+      view.appendChild(note);
+    }
+
+    const bcLabel = _el('label', 's2-field-label');
+    bcLabel.htmlFor = 's2-business-case';
+    bcLabel.textContent = 'Business case description';
+    const bcHint = _el('p', 's2-field-hint', {
+      textContent: 'Describe the system, its purpose, the users, the data it will process, the technology stack, and how the outputs are used. The more detail you provide, the more accurate the analysis will be. Prefer help? Switch to “Guide me”.'
+    });
+    const bcArea = _el('textarea', 's2-textarea');
+    bcArea.id = 's2-business-case';
+    bcArea.placeholder = 'Describe the AI use case: what problem it solves, who uses it, what data is involved, what technology is used, where it is hosted, and what the outputs are used for.';
+    bcArea.value = _state.business_case;
+    bcArea.rows = 10;
+    bcArea.addEventListener('input', () => {
+      _state.business_case = bcArea.value;
+      _saveState();
+      _refreshPrompt();
+    });
+    view.append(bcLabel, bcHint, bcArea);
+    return view;
+  }
+
+  function _ensureAns(id) {
+    if (!_state.wizard.answers[id]) _state.wizard.answers[id] = { sel: [], other: '' };
+    return _state.wizard.answers[id];
+  }
+  function _answered(k) {
+    const a = _state.wizard.answers[QUESTIONS[k].id];
+    return !!(a && ((a.sel && a.sel.length) || (a.other && a.other.trim())));
+  }
+  function _answeredAny() { return QUESTIONS.some((_, k) => _answered(k)); }
+
+  function _toggleOpt(q, opt) {
+    const a = _ensureAns(q.id);
+    if (q.type === 'single') {
+      a.sel = a.sel.length === 1 && a.sel[0] === opt ? [] : [opt];
+    } else {
+      const i = a.sel.indexOf(opt);
+      if (i > -1) a.sel.splice(i, 1); else a.sel.push(opt);
+      const excl = q.options.filter(_EXCL);
+      if (excl.length) {
+        if (_EXCL(opt)) a.sel = a.sel.includes(opt) ? [opt] : [];
+        else a.sel = a.sel.filter(x => !_EXCL(x));
+      }
+    }
+    _saveState();
+  }
+
+  function _buildWizardView() {
+    const wrap = _el('div', 's2-wiz');
+    const N = QUESTIONS.length;
+    const i = Math.max(0, Math.min(_state.wizard.idx, N - 1));
+    _state.wizard.idx = i;
+    const q = QUESTIONS[i];
+    const sys = _qSys();
+
+    // Progress: label + jump dots
+    const prog = _el('div', 's2-wiz-prog');
+    prog.appendChild(_el('div', 's2-wiz-meta', { textContent: `${q.group} · Question ${i + 1} of ${N}` }));
+    const dots = _el('div', 's2-wiz-dots');
+    QUESTIONS.forEach((_, k) => {
+      const d = _el('span', 's2-wiz-dot' + (k === i ? ' is-active' : '') + (_answered(k) ? ' is-done' : ''));
+      d.title = 'Go to question ' + (k + 1);
+      d.addEventListener('click', () => { _state.wizard.idx = k; _renderDesc(); });
+      dots.appendChild(d);
+    });
+    prog.appendChild(dots);
+    wrap.appendChild(prog);
+
+    // Question + help
+    wrap.appendChild(_el('p', 's2-wiz-q', { textContent: q.q.replace('{sys}', sys) }));
+    if (q.help) wrap.appendChild(_el('p', 's2-wiz-help', { textContent: q.help }));
+
+    // Options
+    const ans = _ensureAns(q.id);
+    const opts = _el('div', 's2-wiz-opts');
+    q.options.forEach(opt => {
+      const on = ans.sel.includes(opt);
+      const b = _el('button', 's2-chip' + (on ? ' is-on' : ''), { type: 'button', textContent: opt });
+      b.addEventListener('click', () => { _toggleOpt(q, opt); _renderDesc(); });
+      opts.appendChild(b);
+    });
+    wrap.appendChild(opts);
+
+    // Optional free text
+    if (q.other) {
+      const oi = _el('input', 's2-wiz-other');
+      oi.type = 'text';
+      oi.placeholder = q.otherPh || 'Other (optional)…';
+      oi.value = ans.other || '';
+      oi.addEventListener('input', () => { ans.other = oi.value; _saveState(); });
+      wrap.appendChild(oi);
+    }
+
+    // Nav
+    const nav = _el('div', 's2-wiz-nav');
+    const back = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: i === 0 ? 'Cancel' : '← Back' });
+    back.addEventListener('click', () => {
+      if (i === 0) { _setMode('text'); }
+      else { _state.wizard.idx = i - 1; _renderDesc(); }
+    });
+    const spacer = _el('div', ''); spacer.style.flex = '1';
+    const skip = _el('button', 's2-wiz-skip', { type: 'button', textContent: 'Skip' });
+    skip.addEventListener('click', () => { if (i < N - 1) { _state.wizard.idx = i + 1; _renderDesc(); } else { _finishWizard(); } });
+    const next = _el('button', 'wiz-btn-primary', { type: 'button', textContent: i === N - 1 ? 'Build use case' : 'Next →' });
+    next.addEventListener('click', () => { if (i < N - 1) { _state.wizard.idx = i + 1; _renderDesc(); } else { _finishWizard(); } });
+    nav.append(back, spacer, skip, next);
+    wrap.appendChild(nav);
+
+    return wrap;
+  }
+
+  function _finishWizard() {
+    _state.business_case = _assembleNarrative(_state.wizard.answers);
+    _state.wizard.completed = true;
+    _saveState();
+    _refreshPrompt();
+    _setMode('text');
   }
 
   // ── Ask your AI tool collapsible ──────────────────────────────────────────────────
@@ -539,6 +777,8 @@
       step_id:           'step-2',
       business_case:     _state.business_case,
       business_case_url: _state.business_case_url,
+      input_mode:        _state.input_mode,
+      use_case_wizard:   _state.wizard,
       saved_at:          new Date().toISOString()
     };
     if (!_record._meta) _record._meta = {
@@ -573,6 +813,37 @@
       .s2-prompt-wrap { display:flex;flex-direction:column;gap:8px; }
       .s2-copy-btn { align-self:flex-start; }
       .s2-prompt-area { width:100%;padding:12px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6; }
+
+      /* Business-case mode toggle */
+      .s2-seg { display:inline-flex;gap:2px;padding:3px;background:var(--color-bg);border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);margin-bottom:14px; }
+      .s2-seg-btn { appearance:none;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--color-text-secondary);padding:6px 14px;border-radius:var(--radius-sm,4px);transition:background .12s,color .12s; }
+      .s2-seg-btn:hover { color:var(--color-text-primary); }
+      .s2-seg-btn.is-on { background:var(--color-surface);color:var(--color-text-primary);box-shadow:0 1px 2px rgba(0,0,0,0.12); }
+      .s2-desc-host { min-height:40px; }
+      .s2-wiz-builtnote { display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--color-text-secondary);background:var(--teal-50,rgba(93,202,165,0.10));border:1px solid var(--teal-100,rgba(93,202,165,0.30));border-radius:var(--radius-md,6px);padding:8px 12px;margin-bottom:10px; }
+      .s2-wiz-reopen { appearance:none;border:1px solid var(--color-border-mid);background:var(--color-surface);cursor:pointer;font-family:inherit;font-size:11.5px;color:var(--color-text-secondary);padding:3px 10px;border-radius:var(--radius-sm,4px); }
+      .s2-wiz-reopen:hover { color:var(--color-text-primary);border-color:var(--teal-400,#2dd4bf); }
+
+      /* Use-case builder wizard */
+      .s2-wiz { border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);padding:18px;background:var(--color-surface); }
+      .s2-wiz-prog { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap; }
+      .s2-wiz-meta { font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--color-text-tertiary); }
+      .s2-wiz-dots { display:flex;gap:6px; }
+      .s2-wiz-dot { width:9px;height:9px;border-radius:50%;background:var(--color-border-mid);cursor:pointer;transition:background .12s,transform .12s; }
+      .s2-wiz-dot:hover { transform:scale(1.25); }
+      .s2-wiz-dot.is-done { background:var(--teal-400,#5dcaa5); }
+      .s2-wiz-dot.is-active { background:var(--color-text-secondary);box-shadow:0 0 0 3px var(--teal-100,rgba(93,202,165,0.20)); }
+      .s2-wiz-q { font-size:15px;font-weight:600;color:var(--color-text-primary);margin:0 0 4px;line-height:1.4; }
+      .s2-wiz-help { font-size:11.5px;color:var(--color-text-tertiary);margin:0 0 14px; }
+      .s2-wiz-opts { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px; }
+      .s2-chip { appearance:none;cursor:pointer;font-family:inherit;font-size:12.5px;color:var(--color-text-primary);background:var(--color-bg);border:1px solid var(--color-border-mid);border-radius:20px;padding:7px 14px;transition:background .12s,border-color .12s,color .12s; }
+      .s2-chip:hover { border-color:var(--teal-400,#2dd4bf); }
+      .s2-chip.is-on { background:var(--teal-400,#5dcaa5);border-color:var(--teal-400,#5dcaa5);color:#08251c;font-weight:500; }
+      .s2-wiz-other { display:block;width:100%;padding:8px 10px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);box-sizing:border-box;margin-bottom:12px; }
+      .s2-wiz-other:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16)); }
+      .s2-wiz-nav { display:flex;align-items:center;gap:8px;margin-top:6px; }
+      .s2-wiz-skip { appearance:none;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:12px;color:var(--color-text-tertiary);padding:6px 8px;text-decoration:underline; }
+      .s2-wiz-skip:hover { color:var(--color-text-secondary); }
 
     `);
   }
