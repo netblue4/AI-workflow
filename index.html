@@ -262,6 +262,10 @@ async function selectStep(stepId) {
   // render asynchronously (glossify is idempotent).
   try { WizUtils.glossify(panel); } catch (_) {}
   setTimeout(() => { try { WizUtils.glossify(panel); } catch (_) {} }, 500);
+
+  // No dead-ends — make "complete Step N first" notices clickable (Wave 2)
+  try { linkifyDeadEnds(panel); } catch (_) {}
+  setTimeout(() => { try { linkifyDeadEnds(panel); } catch (_) {} }, 500);
 }
 
 // Renders the system-vs-user responsibilities split used by the User obligations
@@ -317,6 +321,9 @@ function buildMomentumBar(stepId) {
     .momentum-dot.is-active{background:var(--color-text-secondary);box-shadow:0 0 0 3px var(--teal-100,rgba(93,202,165,0.18))}
     .momentum-complete{font-size:10px;color:var(--color-text-tertiary)}
     @media (max-width:640px){.momentum-btn-title{display:none}.momentum-complete{display:none}}
+    .deadend-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .deadend-goto{font-size:12px;font-weight:600;font-family:inherit;color:#08251c;background:var(--teal-400,#5dcaa5);border:none;border-radius:6px;padding:5px 12px;cursor:pointer}
+    .deadend-goto:hover{filter:brightness(1.06)}
   `);
 
   const ids = _orderedStepIds();
@@ -357,6 +364,37 @@ function buildMomentumBar(stepId) {
 
   bar.append(back, prog, next);
   return bar;
+}
+
+// ---- No dead-ends (Wave 2): make "Step N not yet completed" actionable ----
+// Any notice that tells the user to go complete another step gets a "Go to
+// Step N" button, so a gap is never a place you have to hunt from.
+function linkifyDeadEnds(root) {
+  if (!root || !_stepIndex) return;
+  // Broad selector (any notice/info/warn/empty box), gated hard by text + size
+  // so only genuine "go complete Step N" notices get a button.
+  const sel = '[class*="notice"], [class*="info"], [class*="warn"], [class*="empty"], .s5-prefilter-note';
+  root.querySelectorAll(sel).forEach(elm => {
+    if (elm.dataset.deadendLinked) return;
+    const txt = elm.textContent || '';
+    if (txt.length > 400) return;
+    if (!/not yet complete|Complete (and save|Step|the)|before proceeding/i.test(txt)) return;
+    const nums = [...new Set((txt.match(/Step (\d+)/g) || []).map(s => s.match(/\d+/)[0]))];
+    const targets = nums.filter(nu => _stepIndex['step-' + nu] && 'step-' + nu !== _activeStepId);
+    if (!targets.length) return;
+    elm.dataset.deadendLinked = '1';
+    const row = document.createElement('div');
+    row.className = 'deadend-row';
+    targets.forEach(nu => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'deadend-goto';
+      b.textContent = `Go to Step ${nu} →`;
+      b.onclick = () => selectStep('step-' + nu);
+      row.appendChild(b);
+    });
+    elm.appendChild(row);
+  });
 }
 
 // Steps without a full wizard can still be completed digitally — a checkbox
