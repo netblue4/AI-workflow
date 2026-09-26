@@ -256,6 +256,12 @@ async function selectStep(stepId) {
   // Momentum bar — global Back · progress · Next (Wave 2)
   const _mb = buildMomentumBar(stepId);
   if (_mb) panel.appendChild(_mb);
+
+  // Plain-language glossary — wrap jargon with hover definitions (Wave 2).
+  // Runs now for synchronous content, and again shortly after for steps that
+  // render asynchronously (glossify is idempotent).
+  try { WizUtils.glossify(panel); } catch (_) {}
+  setTimeout(() => { try { WizUtils.glossify(panel); } catch (_) {} }, 500);
 }
 
 // Renders the system-vs-user responsibilities split used by the User obligations

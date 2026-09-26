@@ -17,6 +17,77 @@ window.WizUtils = (function () {
     return el('p', 'section-label', { textContent: text });
   }
 
+  // ---- Plain-language glossary (Wave 2) -------------------------------
+  // Jargon gets a dotted underline + hover definition so non-practitioners
+  // aren't bounced by acronyms. glossify() wraps the FIRST occurrence of each
+  // term inside a mounted panel; longest terms match first.
+  const GLOSSARY = [
+    { key: 'special',    term: 'special category data',     ci: true,  def: 'Sensitive personal data (health, biometric, etc.) with extra protection under GDPR Article 9.' },
+    { key: 'presumption',term: 'presumption of conformity', ci: true,  def: 'The law assumes you comply with a requirement once you implement the relevant harmonised standard.' },
+    { key: 'conformity', term: 'conformity assessment',     ci: true,  def: 'The formal check that your system meets the EU AI Act’s requirements before it is deployed.' },
+    { key: 'harmonised', term: 'harmonised standards',      ci: true,  def: 'EU-approved technical standards. Following them gives a legal presumption that you meet the law.' },
+    { key: 'nist',       term: 'NIST AI RMF',               ci: false, def: 'A voluntary US framework for identifying and managing AI risks; complements the EU AI Act.' },
+    { key: 'residual',   term: 'residual risk',             ci: true,  def: 'The risk that remains after your controls have been applied.' },
+    { key: 'inherent',   term: 'inherent risk',             ci: true,  def: 'The risk before any controls are applied.' },
+    { key: 'lawful',     term: 'lawful basis',              ci: true,  def: 'The legal ground (GDPR Article 6) that permits you to process personal data.' },
+    { key: 'annex3',     term: 'Annex III',                 ci: false, def: 'The EU AI Act’s list of high-risk uses — e.g. employment, credit, essential services, law enforcement.' },
+    { key: 'confab',     term: 'confabulation',             ci: true,  def: 'An AI stating a confident, plausible, but false answer — a hallucination.' },
+    { key: 'dpia',       term: 'DPIA',                      ci: false, def: 'Data Protection Impact Assessment — the privacy risk check the GDPR requires before high-risk processing of personal data.' },
+    { key: 'dpo',        term: 'DPO',                       ci: false, def: 'Data Protection Officer — the person accountable for data-protection compliance.' },
+    { key: 'deployer',   term: 'deployer',                  ci: true,  def: 'The organisation that uses an AI system under its own authority (rather than building it).' },
+    { key: 'provider',   term: 'provider',                  ci: true,  def: 'The organisation that builds or substantially modifies an AI system.' }
+  ].map(g => ({ ...g, re: new RegExp('\\b' + g.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', g.ci ? 'i' : '') }))
+   .sort((a, b) => b.term.length - a.term.length);
+
+  function glossify(root) {
+    if (!root || !root.ownerDocument) return;
+    const reject = ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'ABBR', 'CODE', 'OPTION', 'BUTTON', 'H1'];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const p = n.parentNode;
+        if (!p || reject.includes(p.nodeName)) return NodeFilter.FILTER_REJECT;
+        if (p.closest && p.closest('.wiz-term, .no-glossify, .momentum-bar, button, input, textarea')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const nodes = []; let n; while ((n = walker.nextNode())) nodes.push(n);
+    // Idempotent: skip terms already wrapped, so glossify() is safe to call
+    // more than once on the same panel (e.g. for async-rendered content).
+    const used = new Set();
+    root.querySelectorAll && root.querySelectorAll('abbr.wiz-term[data-gk]').forEach(a => used.add(a.dataset.gk));
+    nodes.forEach(node => {
+      for (const g of GLOSSARY) {
+        if (used.has(g.key)) continue;
+        const m = g.re.exec(node.nodeValue);
+        if (!m) continue;
+        used.add(g.key);
+        const after = node.splitText(m.index);
+        after.nodeValue = after.nodeValue.slice(m[0].length);
+        const ab = el('abbr', 'wiz-term', { title: g.def, textContent: m[0] });
+        ab.dataset.gk = g.key;
+        after.parentNode.insertBefore(ab, after);
+        break; // one term per text node
+      }
+    });
+  }
+
+  // ---- Per-step "Why this step?" plain-language purpose (Wave 2) -------
+  const STEP_WHY = {
+    'step-1':  'Confirms the person requesting the AI has done basic risk-awareness training, so they can make sensible calls in the steps that follow.',
+    'step-2':  'Captures what the system actually does. Everything downstream — the classification, the risks, the controls — is derived from this description, so it is worth getting right.',
+    'step-3':  'Works out how tightly the EU AI Act regulates this system (prohibited, high-risk, limited, or minimal). That risk class decides which obligations apply.',
+    'step-4':  'Runs the privacy check the GDPR requires before processing personal data, and records the safeguards you have in place.',
+    'step-5':  'Identifies which risks actually apply to your system — from the law, NIST, privacy, and your internal standards — in one list.',
+    'step-6':  'Selects the controls that treat each applicable risk. These are the concrete things you must do to make the system safe.',
+    'step-7':  'Checks whether each control’s evidence is in place, and what risk remains after the controls are applied.',
+    'step-8':  'Pulls everything into the formal report: the evidence a regulator would want, and the sign-off decision to deploy.',
+    'step-9':  'Records the obligations the people using this system must follow day-to-day.',
+    'step-10': 'Records the obligations the people using this system must follow day-to-day.',
+    'step-11': 'Registers the use case in the central AI inventory so it is tracked and not forgotten.',
+    'step-12': 'Sets the schedule for reviewing this system as it — and the law — changes over time.'
+  };
+
   // ---- sessionStorage -------------------------------------------------
   function loadRecord() {
     try {
@@ -239,6 +310,24 @@ window.WizUtils = (function () {
     if (phaseTitle) sec.appendChild(el('p', 'step-detail-phase-label', { textContent: phaseTitle }));
     sec.appendChild(el('h1', 'step-detail-title step-title-lg', { textContent: `${step.number} — ${step.title}` }));
 
+    // "Why this step?" — plain-language purpose, so a non-practitioner sees the
+    // point of the step without needing it explained in person.
+    const why = STEP_WHY[step.id];
+    if (why) {
+      const wrap = el('div', 'step-why');
+      const btn = el('button', 'step-why-btn', { type: 'button' });
+      btn.innerHTML = '<span class="step-why-q">?</span> Why this step?';
+      const p = el('p', 'step-why-text', { textContent: why });
+      p.style.display = 'none';
+      btn.addEventListener('click', () => {
+        const open = p.style.display === 'none';
+        p.style.display = open ? '' : 'none';
+        btn.classList.toggle('is-open', open);
+      });
+      wrap.append(btn, p);
+      sec.appendChild(wrap);
+    }
+
     // Everything else (meta, summary, deliverables, gates, requirement labels)
     // lives in a details block that is collapsed by default, so each step reads
     // as just its title until the assessor chooses to expand the context.
@@ -396,6 +485,13 @@ window.WizUtils = (function () {
 
   injectStyles('wiz-shared-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
+.wiz-term{border-bottom:1px dotted var(--color-text-tertiary);cursor:help;text-decoration:none;color:inherit}
+.step-why{margin:4px 0 2px}
+.step-why-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:2px 0;cursor:pointer;font-family:inherit;font-size:12px;font-weight:500;color:var(--teal-600,#8ce3c6)}
+.step-why-btn:hover{color:var(--teal-700,#a7ecd4)}
+.step-why-q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--teal-100,rgba(93,202,165,0.18));color:var(--teal-700,#8ce3c6);font-size:10px;font-weight:700}
+.step-why-btn.is-open{color:var(--color-text-secondary)}
+.step-why-text{margin:8px 0 0;max-width:70ch;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);background:var(--teal-50,rgba(93,202,165,0.08));border-left:3px solid var(--teal-400,#5dcaa5);border-radius:0 6px 6px 0;padding:10px 14px}
 .step-header-toggle{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:5px 0;background:none;border:none;cursor:pointer;color:var(--color-text-tertiary);font-family:inherit;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
 .step-header-toggle:hover{color:var(--color-text-secondary)}
 .step-header-chevron{display:flex;align-items:center;transition:transform .2s}
@@ -453,5 +549,5 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
 })();

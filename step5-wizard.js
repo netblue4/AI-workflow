@@ -458,6 +458,7 @@
     const pane = _el('div', 'wiz-pane'); pane.dataset.pane = 'all';
     pane.appendChild(_buildConsolidatedCard());
     pw.appendChild(pane);
+    if (WizUtils.glossify) { try { WizUtils.glossify(pane); } catch (_) {} }
   }
 
   function _renderConsolidated() {
