@@ -95,7 +95,7 @@
 
     const shell = _el('div', 'wiz-shell');
     shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle));
-    shell.appendChild(_buildTabStrip());
+    // Consolidated: the three domain tabs are stacked into one scroll (below).
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
     container.innerHTML = '';
@@ -394,20 +394,46 @@
     }
   }
 
-  // ---- Panes -------------------------------------------------
+  // ---- Panes (consolidated: one scroll, no tabs) -------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const pLegal = _el('div', 'wiz-pane');                  pLegal.dataset.pane = 'legal';
-    const pDpia  = _el('div', 'wiz-pane wiz-pane--hidden'); pDpia.dataset.pane  = 'dpia';
-    const pGs    = _el('div', 'wiz-pane wiz-pane--hidden'); pGs.dataset.pane    = 'groupstd';
+    const pane = _el('div', 'wiz-pane'); pane.dataset.pane = 'all';
+    pane.appendChild(_buildStep7Toolbar());
+    pane.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory'));
+    pane.appendChild(_buildDpiaResidualPane());
+    pane.appendChild(_buildDomainRiskPane('group_standard', 'Internal Standards'));
+    pane.appendChild(_el('div', 's7-shared-results'));
+    pw.appendChild(pane);
+    if (WizUtils.glossify) { try { WizUtils.glossify(pane); } catch (_) {} }
+  }
 
-    pLegal.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory'));
-    pDpia.appendChild(_buildDpiaResidualPane());
-    pGs.appendChild(_buildDomainRiskPane('group_standard', 'Internal Standards'));
-
-    pw.appendChild(pLegal);
-    pw.appendChild(pDpia);
-    pw.appendChild(pGs);
+  // Verification snapshot + expand/collapse so no control is ever hidden.
+  function _verificationCounts() {
+    const doneS = s => s === 'evidence_provided' || s === 'waived';
+    let total = 0, done = 0; const risks = new Set();
+    _controls.forEach(c => { total++; if (doneS((_actState[c.key] || {}).status)) done++; if (c.risk_id) risks.add(c.risk_id); });
+    _legalRiskIds().forEach(id => { risks.add(id); _legalRiskHsRefs(id).forEach(ref => { total++; if (doneS((_hsActState[_hsActKey(id, ref)] || {}).status)) done++; }); });
+    return { total, done, risks: risks.size };
+  }
+  function _setAllExpanded(open) {
+    const pane = _container.querySelector('[data-pane="all"]');
+    if (!pane) return;
+    pane.querySelectorAll('.s9-risk-acc-body').forEach(b => b.classList.toggle('s9-collapsed', !open));
+    pane.querySelectorAll('.s9-risk-acc-chevron').forEach(c => c.style.transform = open ? '' : 'rotate(-90deg)');
+  }
+  function _buildStep7Toolbar() {
+    const { total, done, risks } = _verificationCounts();
+    const bar = _el('div', 's7-toolbar');
+    const sum = _el('div', 's7-toolbar-summary');
+    sum.innerHTML = `<strong>${total}</strong> control${total !== 1 ? 's' : ''} to verify across <strong>${risks}</strong> risk${risks !== 1 ? 's' : ''} · <span class="s7-toolbar-done">${done} evidenced or waived</span>`;
+    const acts = _el('div', 's7-toolbar-actions');
+    const ex = _el('button', 's7-toolbar-btn', { type: 'button', textContent: '⤢ Expand all' });
+    ex.addEventListener('click', () => _setAllExpanded(true));
+    const co = _el('button', 's7-toolbar-btn', { type: 'button', textContent: '⤡ Collapse all' });
+    co.addEventListener('click', () => _setAllExpanded(false));
+    acts.append(ex, co);
+    bar.append(sum, acts);
+    return bar;
   }
 
   // ===========================================================
@@ -1169,6 +1195,13 @@
   function _injectStyles() {
     WizUtils.injectStyles('wiz7-base-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
+.s7-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border:1px solid var(--color-border-mid,var(--color-border));border-radius:8px;background:var(--color-surface)}
+.s7-toolbar-summary{font-size:13px;color:var(--color-text-secondary)}
+.s7-toolbar-summary strong{color:var(--color-text-primary)}
+.s7-toolbar-done{color:#8cebb0;font-weight:600}
+.s7-toolbar-actions{display:flex;gap:8px}
+.s7-toolbar-btn{font-size:12px;font-weight:600;font-family:inherit;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border-mid,var(--color-border));border-radius:6px;padding:6px 12px;cursor:pointer}
+.s7-toolbar-btn:hover{color:var(--color-text-primary);border-color:var(--teal-400,#2dd4bf)}
 .wiz-tab-strip{display:flex;gap:2px;padding:14px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-surface)}
 .wiz-tab{padding:8px 16px;font-size:12px;font-weight:500;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--color-text-secondary);font-family:inherit;transition:color .15s,border-color .15s;white-space:nowrap}
 .wiz-tab:hover{color:var(--color-text-primary)}
