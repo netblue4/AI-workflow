@@ -252,6 +252,20 @@ async function selectStep(stepId) {
     }
     if (content.childElementCount) panel.appendChild(content);
   }
+
+  // Momentum bar — global Back · progress · Next (Wave 2)
+  const _mb = buildMomentumBar(stepId);
+  if (_mb) panel.appendChild(_mb);
+
+  // Plain-language glossary — wrap jargon with hover definitions (Wave 2).
+  // Runs now for synchronous content, and again shortly after for steps that
+  // render asynchronously (glossify is idempotent).
+  try { WizUtils.glossify(panel); } catch (_) {}
+  setTimeout(() => { try { WizUtils.glossify(panel); } catch (_) {} }, 500);
+
+  // No dead-ends — make "complete Step N first" notices clickable (Wave 2)
+  try { linkifyDeadEnds(panel); } catch (_) {}
+  setTimeout(() => { try { linkifyDeadEnds(panel); } catch (_) {} }, 500);
 }
 
 // Renders the system-vs-user responsibilities split used by the User obligations
@@ -274,6 +288,113 @@ function buildAccountabilityBlock(acc) {
   });
   wrap.appendChild(grid);
   return wrap;
+}
+
+// ---- Momentum bar (Wave 2): global Back · progress · Next -----
+// A novice should always know what's next without hunting the sidebar. Shown at
+// the foot of every step; the Next button lights up once the step is complete.
+function _orderedStepIds() {
+  const ids = [];
+  (_workflow?.phases || []).forEach(p => (p.steps || []).forEach(id => { if (_stepIndex && _stepIndex[id]) ids.push(id); }));
+  return ids;
+}
+
+function buildMomentumBar(stepId) {
+  if (!_workflow || !_stepIndex) return null;
+  WizUtils.injectStyles('momentum-styles', `
+    .momentum-bar{position:sticky;bottom:0;display:flex;align-items:stretch;gap:12px;justify-content:space-between;margin-top:28px;padding:12px 16px;background:var(--color-surface);border-top:1px solid var(--color-border-mid,var(--color-border));box-shadow:0 -6px 16px rgba(0,0,0,0.18);z-index:20}
+    .momentum-btn{display:flex;align-items:center;gap:10px;background:var(--color-bg);border:1px solid var(--color-border-mid,var(--color-border));border-radius:8px;padding:8px 14px;cursor:pointer;font-family:inherit;color:var(--color-text-secondary);max-width:44%;transition:background .12s,border-color .12s,color .12s}
+    .momentum-btn:hover:not(:disabled){color:var(--color-text-primary);border-color:var(--teal-400,#2dd4bf)}
+    .momentum-btn:disabled{opacity:.5;cursor:default}
+    .momentum-btn--next.is-ready{background:var(--teal-400,#5dcaa5);border-color:var(--teal-400,#5dcaa5);color:#08251c}
+    .momentum-btn--next.is-ready .momentum-btn-kicker{color:#0c3a2b}
+    .momentum-btn-text{display:flex;flex-direction:column;line-height:1.2;text-align:left;min-width:0}
+    .momentum-btn--next .momentum-btn-text{text-align:right}
+    .momentum-btn-kicker{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary)}
+    .momentum-btn-title{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .momentum-arrow{font-size:16px;flex-shrink:0}
+    .momentum-progress{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex:1;min-width:0}
+    .momentum-count{font-size:11px;font-weight:700;color:var(--color-text-secondary)}
+    .momentum-dots{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+    .momentum-dot{width:7px;height:7px;border-radius:50%;background:var(--color-border-mid,var(--color-border))}
+    .momentum-dot.is-done{background:var(--teal-400,#5dcaa5)}
+    .momentum-dot.is-active{background:var(--color-text-secondary);box-shadow:0 0 0 3px var(--teal-100,rgba(93,202,165,0.18))}
+    .momentum-complete{font-size:10px;color:var(--color-text-tertiary)}
+    @media (max-width:640px){.momentum-btn-title{display:none}.momentum-complete{display:none}}
+    .deadend-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .deadend-goto{font-size:12px;font-weight:600;font-family:inherit;color:#08251c;background:var(--teal-400,#5dcaa5);border:none;border-radius:6px;padding:5px 12px;cursor:pointer}
+    .deadend-goto:hover{filter:brightness(1.06)}
+  `);
+
+  const ids = _orderedStepIds();
+  const i = ids.indexOf(stepId);
+  if (i < 0) return null;
+  const total = ids.length;
+  const done = ids.filter(isStepComplete).length;
+  const complete = isStepComplete(stepId);
+  const prevId = i > 0 ? ids[i - 1] : null;
+  const nextId = i < total - 1 ? ids[i + 1] : null;
+
+  const bar = document.createElement('div');
+  bar.className = 'momentum-bar';
+
+  const back = document.createElement('button');
+  back.className = 'momentum-btn momentum-btn--back';
+  if (prevId) {
+    const ps = _stepIndex[prevId];
+    back.innerHTML = `<span class="momentum-arrow">←</span><span class="momentum-btn-text"><span class="momentum-btn-kicker">Back</span><span class="momentum-btn-title">${ps.number} — ${ps.title}</span></span>`;
+    back.onclick = () => selectStep(prevId);
+  } else { back.style.visibility = 'hidden'; }
+
+  const prog = document.createElement('div');
+  prog.className = 'momentum-progress';
+  const dots = ids.map((id, k) => `<span class="momentum-dot${k === i ? ' is-active' : ''}${isStepComplete(id) ? ' is-done' : ''}"></span>`).join('');
+  prog.innerHTML = `<span class="momentum-count">Step ${i + 1} of ${total}</span><span class="momentum-dots">${dots}</span><span class="momentum-complete">${done} of ${total} complete</span>`;
+
+  const next = document.createElement('button');
+  next.className = 'momentum-btn momentum-btn--next' + (complete ? ' is-ready' : '');
+  if (nextId) {
+    const ns = _stepIndex[nextId];
+    next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">${complete ? 'Next ✓' : 'Next'}</span><span class="momentum-btn-title">${ns.number} — ${ns.title}</span></span><span class="momentum-arrow">→</span>`;
+    next.onclick = () => selectStep(nextId);
+  } else {
+    next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">Done</span><span class="momentum-btn-title">End of workflow</span></span>`;
+    next.disabled = true;
+  }
+
+  bar.append(back, prog, next);
+  return bar;
+}
+
+// ---- No dead-ends (Wave 2): make "Step N not yet completed" actionable ----
+// Any notice that tells the user to go complete another step gets a "Go to
+// Step N" button, so a gap is never a place you have to hunt from.
+function linkifyDeadEnds(root) {
+  if (!root || !_stepIndex) return;
+  // Broad selector (any notice/info/warn/empty box), gated hard by text + size
+  // so only genuine "go complete Step N" notices get a button.
+  const sel = '[class*="notice"], [class*="info"], [class*="warn"], [class*="empty"], .s5-prefilter-note';
+  root.querySelectorAll(sel).forEach(elm => {
+    if (elm.dataset.deadendLinked) return;
+    const txt = elm.textContent || '';
+    if (txt.length > 400) return;
+    if (!/not yet complete|Complete (and save|Step|the)|before proceeding/i.test(txt)) return;
+    const nums = [...new Set((txt.match(/Step (\d+)/g) || []).map(s => s.match(/\d+/)[0]))];
+    const targets = nums.filter(nu => _stepIndex['step-' + nu] && 'step-' + nu !== _activeStepId);
+    if (!targets.length) return;
+    elm.dataset.deadendLinked = '1';
+    const row = document.createElement('div');
+    row.className = 'deadend-row';
+    targets.forEach(nu => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'deadend-goto';
+      b.textContent = `Go to Step ${nu} →`;
+      b.onclick = () => selectStep('step-' + nu);
+      row.appendChild(b);
+    });
+    elm.appendChild(row);
+  });
 }
 
 // Steps without a full wizard can still be completed digitally — a checkbox

@@ -21,6 +21,8 @@
   let _controlsByRisk = new Map(); // pk_Risk_ID → [control, ...]
   let _riskIdByName   = new Map(); // risk_name → pk_Risk_ID
   let _showExcluded   = false;     // Wave 1: hide risks marked Not applicable behind a toggle
+  let _savedNoteEl    = null;      // Wave 2: live "Saved ✓" indicator in the risk header
+  let _riskheadSummaryEl = null;   // Wave 2: risk-count summary, updated in place on autosave
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
@@ -458,6 +460,7 @@
     const pane = _el('div', 'wiz-pane'); pane.dataset.pane = 'all';
     pane.appendChild(_buildConsolidatedCard());
     pw.appendChild(pane);
+    if (WizUtils.glossify) { try { WizUtils.glossify(pane); } catch (_) {} }
   }
 
   function _renderConsolidated() {
@@ -484,13 +487,13 @@
     card.appendChild(_buildRiskListHeader(applicable, excluded));
     card.appendChild(list);
 
-    // Bottom actions (mirror of the header's primary action)
+    // Bottom actions — answers auto-save, so this is just a tidy/clear utility.
     const actRow = _el('div', 'wiz-action-row');
-    const saveBtn = _el('button', 'wiz-btn-primary', { textContent: 'Save all risks ✓' });
-    saveBtn.addEventListener('click', _saveAllRisks);
+    const tidyBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Tidy list (collapse excluded)' });
+    tidyBtn.addEventListener('click', _saveAllRisks);
     const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear legal answers' });
-    clearBtn.addEventListener('click', () => { _wizState.answers = {}; _wizState.rationales = {}; _renderConsolidated(); });
-    actRow.append(saveBtn, clearBtn);
+    clearBtn.addEventListener('click', () => { _wizState.answers = {}; _wizState.rationales = {}; _autosave(); _renderConsolidated(); });
+    actRow.append(tidyBtn, clearBtn);
     card.appendChild(actRow);
 
     // Preserve the old Review tab's context (classification + DPIA inputs) in a
@@ -552,10 +555,15 @@
 
   function _buildRiskListHeader(applicable, excluded) {
     const head = _el('div', 's5-riskhead');
+    const left = _el('div', 's5-riskhead-left');
     const summary = _el('div', 's5-riskhead-summary');
     summary.innerHTML = `<strong>${applicable}</strong> risk${applicable !== 1 ? 's' : ''} to review` +
       (excluded ? ` · <span class="s5-riskhead-excl">${excluded} marked not applicable</span>` : '');
-    head.appendChild(summary);
+    _riskheadSummaryEl = summary;
+    _savedNoteEl = _el('span', 's5-saved-flag', { textContent: 'Saved ✓' });
+    const hint = _el('span', 's5-autosave-hint', { textContent: 'Answers save automatically' });
+    left.append(summary, hint, _savedNoteEl);
+    head.appendChild(left);
 
     const actions = _el('div', 's5-riskhead-actions');
     if (excluded) {
@@ -566,9 +574,7 @@
     const acceptBtn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Accept all remaining' });
     acceptBtn.title = 'Marks every unanswered risk as applicable, then saves.';
     acceptBtn.addEventListener('click', _acceptAllRemaining);
-    const saveBtn = _el('button', 'wiz-btn-primary', { type: 'button', textContent: 'Save all risks ✓' });
-    saveBtn.addEventListener('click', _saveAllRisks);
-    actions.append(acceptBtn, saveBtn);
+    actions.appendChild(acceptBtn);
     head.appendChild(actions);
     return head;
   }
@@ -593,9 +599,9 @@
     _saveAllRisks();
   }
 
-  // Save every source at once (legal + NIST fold into legal_assessment; internal
-  // standards into group_standard_assessment).
-  function _saveAllRisks() {
+  // Persist every source at once (legal + NIST fold into legal_assessment;
+  // internal standards into group_standard_assessment). No re-render.
+  function _writeRisksRecord() {
     (_legalGuidance?.wizard_questions || []).forEach(wq => {
       const ans = _wizState.answers[wq.risk_name];
       if (ans === 'yes' || ans === 'partially') _state.legal_risks[wq.risk_name] = true;
@@ -608,8 +614,38 @@
     _record['step-5'].legal_assessment = _buildLegalOutputRecord();
     _record['step-5'].group_standard_assessment = _buildGroupStandardOutputRecord();
     WizUtils.saveRecord(_record);
+  }
+
+  function _saveAllRisks() {
+    _writeRisksRecord();
     if (typeof _ucShowStatus === 'function') _ucShowStatus('All risks saved ✓');
     _renderConsolidated();
+  }
+
+  // Auto-save: persist on every change without re-rendering (so expanded cards
+  // and scroll position are undisturbed), and flash a "Saved" indicator.
+  let _asTimer = null;
+  function _autosave() { _writeRisksRecord(); _flashSaved(); _refreshRiskCounts(); }
+  function _autosaveSoon() { clearTimeout(_asTimer); _asTimer = setTimeout(_autosave, 400); }
+
+  function _riskCounts() {
+    let excluded = 0, applicable = 0;
+    (_legalGuidance?.wizard_questions || []).forEach(wq => { _wizState.answers[wq.risk_name] === 'no' ? excluded++ : applicable++; });
+    (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').forEach(r => { _state.nist_risks[r.risk_name] === false ? excluded++ : applicable++; });
+    (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard').forEach(r => { _state.group_standard_risks[r.pk_Risk_ID] === false ? excluded++ : applicable++; });
+    return { applicable, excluded };
+  }
+  function _refreshRiskCounts() {
+    if (!_riskheadSummaryEl) return;
+    const { applicable, excluded } = _riskCounts();
+    _riskheadSummaryEl.innerHTML = `<strong>${applicable}</strong> risk${applicable !== 1 ? 's' : ''} to review` +
+      (excluded ? ` · <span class="s5-riskhead-excl">${excluded} marked not applicable</span>` : '');
+  }
+  function _flashSaved() {
+    if (!_savedNoteEl) return;
+    _savedNoteEl.classList.add('is-on');
+    clearTimeout(_savedNoteEl._t);
+    _savedNoteEl._t = setTimeout(() => _savedNoteEl && _savedNoteEl.classList.remove('is-on'), 1600);
   }
 
   // ── Load your AI tool risk assessment into Steps 5 & 6 ─────────────────────────────
@@ -676,7 +712,7 @@
     ta.rows = 3;
     ta.placeholder = 'Explain why you dispute this assessment…';
     ta.value = _wizState.challenges[name] || '';
-    ta.addEventListener('input', () => { _wizState.challenges[name] = ta.value; btn.classList.toggle('is-active', has()); });
+    ta.addEventListener('input', () => { _wizState.challenges[name] = ta.value; btn.classList.toggle('is-active', has()); _autosaveSoon(); });
 
     const clear = _el('button', 's5-challenge-clear', { type: 'button', textContent: 'Clear challenge' });
     clear.addEventListener('click', () => { delete _wizState.challenges[name]; ta.value = ''; panel.style.display = 'none'; setBtn(); });
@@ -1008,7 +1044,7 @@
       ta.placeholder = 'Rationale…';
       ta.rows        = 2;
       ta.value       = _wizState.rationales[wq.risk_name] || '';
-      ta.addEventListener('input', () => { _wizState.rationales[wq.risk_name] = ta.value; });
+      ta.addEventListener('input', () => { _wizState.rationales[wq.risk_name] = ta.value; _autosaveSoon(); });
 
       const btnRow = _el('div', 's5-answer-row');
       [['yes', '✓ Yes'], ['partially', '~ Partial'], ['no', '✗ No']].forEach(([val, lbl]) => {
@@ -1026,6 +1062,7 @@
             _wizState.rationales[wq.risk_name] = genRationale(val);
             ta.value = _wizState.rationales[wq.risk_name];
           }
+          _autosave();
         });
         btnRow.appendChild(btn);
       });
@@ -1190,6 +1227,7 @@
         const [t, m] = badgeFor(val);
         badge.textContent = t;
         badge.className = `wiz-item-badge${m ? ' wiz-item-badge--' + m : ''}`;
+        _autosave();
       });
       btnRow.appendChild(btn);
     });
@@ -1202,7 +1240,7 @@
     nta.placeholder = 'Justification…';
     nta.rows        = 2;
     nta.value       = _wizState.rationales[key] || '';
-    nta.addEventListener('input', () => { _wizState.rationales[key] = nta.value; });
+    nta.addEventListener('input', () => { _wizState.rationales[key] = nta.value; _autosaveSoon(); });
     body.appendChild(nta);
     body.appendChild(_buildChallengeUI(key, () => (_state.nist_risks[key] === true ? 'yes' : _state.nist_risks[key] === false ? 'no' : undefined)));
 
@@ -1300,6 +1338,7 @@
         const [t, m] = badgeFor(val);
         badge.textContent = t;
         badge.className = `wiz-item-badge${m ? ' wiz-item-badge--' + m : ''}`;
+        _autosave();
       });
       btnRow.appendChild(btn);
     });
@@ -1696,9 +1735,13 @@
 .s5-src-chip--internal{background:rgba(212,184,96,0.16);color:#ecd489}
 .s5-src-chip--privacy{background:rgba(52,199,120,0.16);color:#8cebb0}
 .s5-riskhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--color-border)}
+.s5-riskhead-left{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .s5-riskhead-summary{font-size:13px;color:var(--color-text-secondary)}
 .s5-riskhead-summary strong{color:var(--color-text-primary)}
 .s5-riskhead-excl{color:var(--color-text-tertiary)}
+.s5-autosave-hint{font-size:11px;color:var(--color-text-tertiary)}
+.s5-saved-flag{font-size:11px;font-weight:600;color:#8cebb0;opacity:0;transform:translateY(-2px);transition:opacity .2s,transform .2s}
+.s5-saved-flag.is-on{opacity:1;transform:translateY(0)}
 .s5-riskhead-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .s5-riskhead-toggle{font-size:11.5px;font-weight:500;color:var(--teal-600,#8ce3c6);background:none;border:1px solid rgba(93,202,165,0.45);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:inherit}
 .s5-riskhead-toggle:hover{background:rgba(93,202,165,0.10)}
