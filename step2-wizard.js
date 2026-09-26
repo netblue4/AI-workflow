@@ -53,14 +53,12 @@
     identNote.innerHTML = '<strong>Use case identity</strong> (name, ID, and assessor) is captured in the <strong>Use Case Record</strong> panel in the left sidebar. Complete that panel before proceeding.';
     card.appendChild(identNote);
 
+    // Step 2 now captures only the business case. The "Ask your AI tool" and
+    // "Load output" sections moved to Step 3 (classification) and Step 4 (DPIA),
+    // exposed via window.AiPromptSections and rendered by those wizards.
     card.appendChild(_buildBusinessCaseForm());
-    card.appendChild(_buildAskAiSection());
-    card.appendChild(_buildLoadClfSection());
-    card.appendChild(_buildLoadSection());
 
     container.appendChild(card);
-    _loadDpiaSchema();
-    _loadClfSchema();
   };
 
   // Load the Step 3 gate-answer keys + allowed values so the classification
@@ -373,15 +371,20 @@
 
   // ── Ask your AI tool collapsible ──────────────────────────────────────────────────
 
-  function _buildAskAiSection() {
+  function _buildAskAiSection(cfg) {
+    cfg = cfg || {};
+    const cfgTitle    = cfg.title    || 'Ask your AI tool to draft a classification and DPIA';
+    const cfgSubtitle = cfg.subtitle || 'Stage 1 prompt — covers Steps 3 (EU AI Act classification) and 4 (DPIA). Paste into your AI tool, save the report, then record the answers in the step wizards.';
+    const cfgTemplate = cfg.promptTemplate || _detail?.ai_prompt_template || '';
+    const bcGetter    = cfg.bcGetter || (() => _state.business_case);
     const section = _el('div', 'wiz-collapsible-section s2-ai-section');
 
     const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    const title   = _el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Ask your AI tool to draft a classification and DPIA' });
+    const title   = _el('p', 'section-label', { style: 'margin-bottom:2px', textContent: cfgTitle });
     const sub     = _el('p', '', {
       style: 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0',
-      textContent: 'Stage 1 prompt — covers Steps 3 (EU AI Act classification) and 4 (DPIA). Paste into your AI tool, save the report, then record the answers in the step wizards.'
+      textContent: cfgSubtitle
     });
     hLeft.append(title, sub);
     const hRight  = _el('div', 'wiz-collapsible-header-right');
@@ -395,7 +398,7 @@
     body.style.display = 'none';
 
     const instruct = _el('div', 's2-ai-instructions');
-    instruct.innerHTML = `
+    instruct.innerHTML = cfg.instructionsHtml || `
       <strong>How to use this prompt</strong>
       <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
         <li>Enter your business case description in the field above — it will be automatically inserted into the prompt.</li>
@@ -409,10 +412,10 @@
     const promptWrap = _el('div', 's2-prompt-wrap');
     const copyBtn = _el('button', 'wiz-btn-secondary s2-copy-btn', { textContent: 'Copy prompt' });
     const promptArea = _el('textarea', 's2-prompt-area');
-    promptArea.id = 's2-prompt-textarea';
+    if (!cfg.promptTemplate) promptArea.id = 's2-prompt-textarea'; // live-refresh only on Step 2
     promptArea.readOnly = true;
     promptArea.rows = 24;
-    promptArea.value = _buildPrompt(_state.business_case);
+    promptArea.value = _buildPrompt(bcGetter(), cfgTemplate);
 
     copyBtn.addEventListener('click', () => WizUtils.copyToClipboard(promptArea.value, copyBtn));
 
@@ -436,20 +439,22 @@
 
   // ── The Stage 1 prompt ────────────────────────────────────────────────────
 
-  function _buildPrompt(businessCase) {
+  function _buildPrompt(businessCase, template) {
     const bc = (businessCase || '').trim() || '[PASTE YOUR BUSINESS CASE DESCRIPTION HERE]';
-    const template = _detail?.ai_prompt_template || '';
-    return template.replace('{{business_case}}', bc);
+    const tmpl = template || _detail?.ai_prompt_template || '';
+    return tmpl.replace('{{business_case}}', bc);
   }
 
   // ── Load your AI tool output into Step 3 (Classification) ─────────────────────────
 
-  function _buildLoadClfSection() {
+  function _buildLoadClfSection(cfg) {
+    cfg = cfg || {};
+    _loadClfSchema();
     const section = _el('div', 'wiz-collapsible-section s2-ai-section');
     const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Load your AI tool output into Step 3 (Classification)' }));
-    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: 'Loads the tier and gate answers as a draft — review and finalise in Step 3.' }));
+    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: cfg.title || 'Load your AI tool output into Step 3 (Classification)' }));
+    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: cfg.subtitle || 'Loads the tier and gate answers as a draft — review and finalise in Step 3.' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
     const chevron = _el('span', 's2-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -482,8 +487,9 @@
       if (!_res) return;
       const n = _applyClf(_res.tier, _res.gate, _res.reasoning);
       const rNote = _res.reasoning ? ' Its rationale was loaded into the Assessment rationale box.' : '';
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} classification answer${n !== 1 ? 's' : ''} as a draft.${rNote} Open <strong>Step 3 — System classification</strong>, review the gates, then run the classification to finalise the outcome and articles.</span>`;
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} classification answer${n !== 1 ? 's' : ''} as a draft.${rNote} Review the gates below, then run the classification to finalise the outcome and articles.</span>`;
       applyBtn.style.display = 'none';
+      if (typeof cfg.onApplied === 'function') setTimeout(cfg.onApplied, 400);
     });
 
     body.append(ta, btnRow, preview);
@@ -579,12 +585,14 @@
 
   // ── Load your AI tool output into Step 4 (DPIA) ───────────────────────────────────
 
-  function _buildLoadSection() {
+  function _buildLoadSection(cfg) {
+    cfg = cfg || {};
+    _loadDpiaSchema();
     const section = _el('div', 'wiz-collapsible-section s2-ai-section');
     const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: 'Load your AI tool output into Step 4 (DPIA)' }));
-    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: 'Paste your AI tool’s output; the DPIA answers are validated and loaded into Step 4 so you don’t re-key them.' }));
+    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: cfg.title || 'Load your AI tool output into Step 4 (DPIA)' }));
+    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: cfg.subtitle || 'Paste your AI tool’s output; the DPIA answers are validated and loaded into Step 4 so you don’t re-key them.' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
     const chevron = _el('span', 's2-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -622,8 +630,9 @@
       if (!_clean) return;
       const n = _applyDpia(_clean, _reasoning);
       const rNote = _reasoning ? ' Its rationale was loaded into the DPIA rationale box.' : '';
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} DPIA field${n !== 1 ? 's' : ''} into Step 4.${rNote} Open <strong>Step 4 — Data identification and DPIA</strong> to review and save.</span>`;
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} DPIA field${n !== 1 ? 's' : ''} into Step 4.${rNote} Review the answers below and save.</span>`;
       applyBtn.style.display = 'none';
+      if (typeof cfg.onApplied === 'function') setTimeout(cfg.onApplied, 400);
     });
 
     body.append(ta, btnRow, preview);
@@ -847,5 +856,44 @@
 
     `);
   }
+
+  // ── Exposed section builders ──────────────────────────────────────────────
+  // Step 3 (classification) and Step 4 (DPIA) render the same "Ask your AI tool"
+  // + "Load output" sections at the top of their screens, using their own split
+  // prompt (step-3.json / step-4.json ai_prompt) and the business case from the
+  // saved record.
+  const _bcFromRecord = () => (WizUtils.loadRecord()?.['step-2']?.business_case || '');
+  const _askInstructions = (loadLabel) => `
+    <strong>How to use this prompt</strong>
+    <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
+      <li>Copy the prompt below (your Step 2 business case is already inserted).</li>
+      <li>Paste it into your AI tool and run it.</li>
+      <li>Paste its reply into “${loadLabel}” below to fill this screen automatically.</li>
+    </ol>`;
+
+  window.AiPromptSections = {
+    askClassification: (detail) => _buildAskAiSection({
+      title: 'Ask your AI tool to draft the classification',
+      subtitle: 'EU AI Act classification prompt — paste into your AI tool, then load its reply below.',
+      promptTemplate: (detail && detail.ai_prompt) || '',
+      bcGetter: _bcFromRecord,
+      instructionsHtml: _askInstructions('Load your AI tool output')
+    }),
+    askDpia: (detail) => _buildAskAiSection({
+      title: 'Ask your AI tool to draft the DPIA',
+      subtitle: 'GDPR DPIA prompt — paste into your AI tool, then load its reply below.',
+      promptTemplate: (detail && detail.ai_prompt) || '',
+      bcGetter: _bcFromRecord,
+      instructionsHtml: _askInstructions('Load your AI tool output')
+    }),
+    loadClassification: (cfg) => _buildLoadClfSection(Object.assign({
+      title: 'Load your AI tool output',
+      subtitle: 'Loads the tier and gate answers as a draft — review and finalise below.'
+    }, cfg || {})),
+    loadDpia: (cfg) => _buildLoadSection(Object.assign({
+      title: 'Load your AI tool output',
+      subtitle: 'Loads the DPIA answers as a draft — review and save below.'
+    }, cfg || {}))
+  };
 
 })();

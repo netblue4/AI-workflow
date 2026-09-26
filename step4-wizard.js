@@ -30,6 +30,14 @@
 
     const shell = _el('div', 'wiz-shell');
     shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
+    // AI prompt + load-output sections (moved here from Step 2) — draft the DPIA
+    // with your AI tool, then load its reply to fill this screen.
+    if (window.AiPromptSections) {
+      const ai = _el('div', 'step-content-section');
+      ai.appendChild(window.AiPromptSections.askDpia(detail));
+      ai.appendChild(window.AiPromptSections.loadDpia({ onApplied: () => window.selectStep && window.selectStep('step-4') }));
+      shell.appendChild(ai);
+    }
     // Reference/methodology moved to the About the framework training area; the
     // step is a single wizard pane now (no tab strip).
     const pw = _el('div', 'wiz-pane-wrap');

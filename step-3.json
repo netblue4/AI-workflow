@@ -3,7 +3,6 @@
   "version": "1.0",
   "title": "System classification",
   "standard_note": "AI SR9 corrected intent: The applicable oversight, transparency, and accountability obligations are determined by the EU AI Act risk classification assigned here. Human oversight requirements under Article 14 apply specifically to High-Risk AI systems. Portfolio-level governance monitoring applies to all tiers via Steps 12, 14, and 15.",
-
   "classification_model": {
     "description": "Step 3 produces a dual-axis classification record. Axis A captures the internal governance tier from the standard. Axis B captures the legal risk tier from the EU AI Act wizard. Both axes are required — they answer different questions and must coexist. The combined result determines which downstream workflow steps are mandatory.",
     "axis_a": {
@@ -17,7 +16,6 @@
       "purpose": "Determines which legal obligations attach to the use case: Article obligations, harmonised standard controls, conformity assessment requirements, and the correct interpretation of AI SR9 oversight obligations."
     }
   },
-
   "axis_a_classification": {
     "description": "Internal governance tier — complete this section first.",
     "tiers": [
@@ -53,7 +51,6 @@
     ],
     "escalation_rule": "If data identification in Step 4 reveals personal, confidential, or organisation-identifying data is involved, the use case must be treated as Tier 2 regardless of content type."
   },
-
   "axis_b_classification": {
     "description": "EU AI Act legal risk tier — determined by completing Gates G1 through G5 in sequence. Gates may not be skipped except where a short-circuit outcome is explicitly defined. The wizard is authoritative for Article obligations; do not derive obligations from the tier label alone.",
     "reference_file": "ai_system_classification.json",
@@ -253,48 +250,115 @@
                 "title": "Risk Management System",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "High-risk AI systems must establish, implement, document, and maintain a risk management system throughout the entire lifecycle.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 6.1", "ISO 31000"],
-                "requirement_control_numbers": ["[18228.1]","[18228.2]","[18228.3]","[18228.4]","[18228.5]","[18228.6]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 6.1",
+                  "ISO 31000"
+                ],
+                "requirement_control_numbers": [
+                  "[18228.1]",
+                  "[18228.2]",
+                  "[18228.3]",
+                  "[18228.4]",
+                  "[18228.5]",
+                  "[18228.6]"
+                ]
               },
               {
                 "article_number": "Article 10",
                 "title": "Data and Data Governance",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "Training, validation, and testing data must meet data governance practices covering relevance, representativeness, and freedom from errors and biases.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 8", "ISO/IEC 5259"],
-                "requirement_control_numbers": ["[18284.1]","[18284.2]","[18284.3]","[18284.4]","[18284.5]","[18284.6]","[18284.7]","[18284.8]","[18284.9]","[18283.1]","[18283.2]","[18283.3]","[18283.4]","[18283.5]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 8",
+                  "ISO/IEC 5259"
+                ],
+                "requirement_control_numbers": [
+                  "[18284.1]",
+                  "[18284.2]",
+                  "[18284.3]",
+                  "[18284.4]",
+                  "[18284.5]",
+                  "[18284.6]",
+                  "[18284.7]",
+                  "[18284.8]",
+                  "[18284.9]",
+                  "[18283.1]",
+                  "[18283.2]",
+                  "[18283.3]",
+                  "[18283.4]",
+                  "[18283.5]"
+                ]
               },
               {
                 "article_number": "Article 11",
                 "title": "Technical Documentation",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "Providers must draw up technical documentation before the system is placed on the market, in accordance with Annex IV.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 7.5", "Annex IV AI Act"],
-                "requirement_control_numbers": ["[18286.9]","[18286.10]","[18286.11]","[18286.12]","[18286.13]","[18286.14]","[18286.15]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 7.5",
+                  "Annex IV AI Act"
+                ],
+                "requirement_control_numbers": [
+                  "[18286.9]",
+                  "[18286.10]",
+                  "[18286.11]",
+                  "[18286.12]",
+                  "[18286.13]",
+                  "[18286.14]",
+                  "[18286.15]"
+                ]
               },
               {
                 "article_number": "Article 12",
                 "title": "Record-Keeping and Logging",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "High-risk AI systems must have automatic logging capabilities to enable monitoring throughout the system's lifetime.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 9.1", "ISO/IEC 27001 Annex A.12.4"],
-                "requirement_control_numbers": ["[24970.1]","[24970.2]","[24970.3]","[24970.4]","[24970.5]","[24970.6]","[24970.7]","[24970.8]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 9.1",
+                  "ISO/IEC 27001 Annex A.12.4"
+                ],
+                "requirement_control_numbers": [
+                  "[24970.1]",
+                  "[24970.2]",
+                  "[24970.3]",
+                  "[24970.4]",
+                  "[24970.5]",
+                  "[24970.6]",
+                  "[24970.7]",
+                  "[24970.8]"
+                ]
               },
               {
                 "article_number": "Article 13",
                 "title": "Transparency and Provision of Information to Deployers",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "High-risk AI systems must provide deployers with clear instructions for use covering intended purpose, accuracy levels, risks, and human oversight measures.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 7.5", "ISO/IEC 42001 Annex A.6"],
-                "requirement_control_numbers": ["[18229-1.1]","[18229-1.2]","[18229-1.3]","[18229-1.4]","[18229-1.5]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 7.5",
+                  "ISO/IEC 42001 Annex A.6"
+                ],
+                "requirement_control_numbers": [
+                  "[18229-1.1]",
+                  "[18229-1.2]",
+                  "[18229-1.3]",
+                  "[18229-1.4]",
+                  "[18229-1.5]"
+                ]
               },
               {
                 "article_number": "Article 14",
                 "title": "Human Oversight",
                 "obligation_type": "provider_obligation_and_deployer_obligation",
                 "trigger_reason": "High-risk AI systems must be designed so that natural persons can effectively oversee them during use, including the ability to intervene or halt the system.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 8.4", "ISO/IEC TR 24028"],
-                "requirement_control_numbers": ["[18229-1.6]","[18229-1.7]","[18229-1.8]"],
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 8.4",
+                  "ISO/IEC TR 24028"
+                ],
+                "requirement_control_numbers": [
+                  "[18229-1.6]",
+                  "[18229-1.7]",
+                  "[18229-1.8]"
+                ],
                 "sr9_note": "This is the legal basis for the human oversight obligation under AI SR9. It applies to this use case because it is classified High-Risk. It does not apply to Limited Risk or Minimal Risk use cases."
               },
               {
@@ -302,24 +366,71 @@
                 "title": "Accuracy, Robustness and Cybersecurity",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "High-risk AI systems must achieve appropriate levels of accuracy, robustness, and cybersecurity, and be resilient against malicious third-party interference.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 8", "ISO/IEC 27001", "IEC 62443", "ENISA AI Cybersecurity Guidelines"],
-                "requirement_control_numbers": ["[18282.1]","[18282.2]","[18282.3]","[18282.4]","[18282.5]","[18282.6]","[18282.7]","[18282.8]","[18229-2.9]","[18229-2.10]","[18229-2.11]","[18229-2.12]","[18229-2.13]","[18229-2.14]","[18229-2.15]","[18229-2.16]","[18229-2.17]","[18229-2.18]","[18229-2.19]","[18229-2.20]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 8",
+                  "ISO/IEC 27001",
+                  "IEC 62443",
+                  "ENISA AI Cybersecurity Guidelines"
+                ],
+                "requirement_control_numbers": [
+                  "[18282.1]",
+                  "[18282.2]",
+                  "[18282.3]",
+                  "[18282.4]",
+                  "[18282.5]",
+                  "[18282.6]",
+                  "[18282.7]",
+                  "[18282.8]",
+                  "[18229-2.9]",
+                  "[18229-2.10]",
+                  "[18229-2.11]",
+                  "[18229-2.12]",
+                  "[18229-2.13]",
+                  "[18229-2.14]",
+                  "[18229-2.15]",
+                  "[18229-2.16]",
+                  "[18229-2.17]",
+                  "[18229-2.18]",
+                  "[18229-2.19]",
+                  "[18229-2.20]"
+                ]
               },
               {
                 "article_number": "Article 17",
                 "title": "Quality Management System",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "Providers must put a quality management system in place covering policies, procedures, and systematic actions needed to achieve conformity.",
-                "harmonised_standards": ["ISO/IEC 42001:2023", "ISO 9001"],
-                "requirement_control_numbers": ["[18286.1]","[18286.2]","[18286.3]","[18286.4]","[18286.5]","[18286.6]","[18286.7]","[18286.8]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023",
+                  "ISO 9001"
+                ],
+                "requirement_control_numbers": [
+                  "[18286.1]",
+                  "[18286.2]",
+                  "[18286.3]",
+                  "[18286.4]",
+                  "[18286.5]",
+                  "[18286.6]",
+                  "[18286.7]",
+                  "[18286.8]"
+                ]
               },
               {
                 "article_number": "Article 43",
                 "title": "Conformity Assessment",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "Before placing a high-risk AI system on the market, providers must carry out a conformity assessment — self-assessment or third-party depending on Annex I product type.",
-                "harmonised_standards": ["ISO/IEC 17065", "ISO/IEC 42001"],
-                "requirement_control_numbers": ["[18286.16]","[18286.17]","[18286.18]","[18286.19]","[18286.20]"],
+                "harmonised_standards": [
+                  "ISO/IEC 17065",
+                  "ISO/IEC 42001"
+                ],
+                "requirement_control_numbers": [
+                  "[18286.16]",
+                  "[18286.17]",
+                  "[18286.18]",
+                  "[18286.19]",
+                  "[18286.20]"
+                ],
                 "highlight": true
               },
               {
@@ -327,8 +438,17 @@
                 "title": "Post-Market Monitoring",
                 "obligation_type": "provider_obligation",
                 "trigger_reason": "Providers must establish and maintain a post-market monitoring system to proactively collect and review data on performance throughout the system's lifetime.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 9", "ISO 31000"],
-                "requirement_control_numbers": ["[18286.21]","[18286.22]","[18286.23]","[18286.24]","[18286.25]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 9",
+                  "ISO 31000"
+                ],
+                "requirement_control_numbers": [
+                  "[18286.21]",
+                  "[18286.22]",
+                  "[18286.23]",
+                  "[18286.24]",
+                  "[18286.25]"
+                ]
               }
             ],
             "next_gate": "G4"
@@ -373,8 +493,17 @@
                 "title": "Transparency Obligations for Certain AI Systems",
                 "obligation_type": "provider_obligation_and_deployer_obligation",
                 "trigger_reason": "The system either interacts with humans directly, generates synthetic or deceptive content, or produces AI-generated text intended for public dissemination. Users must be informed they are interacting with AI, or that content is AI-generated, in a clear and timely manner.",
-                "harmonised_standards": ["ISO/IEC 42001 Annex A.6", "prEN ISO/IEC 12792 Transparency Taxonomy"],
-                "requirement_control_numbers": ["[12792.1]","[12792.2]","[12792.3]","[12792.4]","[12792.5]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001 Annex A.6",
+                  "prEN ISO/IEC 12792 Transparency Taxonomy"
+                ],
+                "requirement_control_numbers": [
+                  "[12792.1]",
+                  "[12792.2]",
+                  "[12792.3]",
+                  "[12792.4]",
+                  "[12792.5]"
+                ]
               }
             ],
             "next_gate": "G5"
@@ -468,8 +597,16 @@
                 "title": "Obligations of Deployers of High-Risk AI Systems",
                 "obligation_type": "deployer_obligation",
                 "trigger_reason": "Your organisation is a deployer of a high-risk AI system. You must implement appropriate technical and organisational measures, ensure human oversight, monitor system operation, and log activity where feasible.",
-                "harmonised_standards": ["ISO/IEC 42001:2023 Clause 8.4"],
-                "requirement_control_numbers": ["[42001.5]","[42001.6]","[42001.7]","[42001.8]","[42001.9]"]
+                "harmonised_standards": [
+                  "ISO/IEC 42001:2023 Clause 8.4"
+                ],
+                "requirement_control_numbers": [
+                  "[42001.5]",
+                  "[42001.6]",
+                  "[42001.7]",
+                  "[42001.8]",
+                  "[42001.9]"
+                ]
               }
             ]
           },
@@ -480,8 +617,16 @@
                 "title": "Responsibilities along the AI Value Chain — Substantial Modification",
                 "obligation_type": "deployer_becomes_provider",
                 "trigger_reason": "Substantially modifying a high-risk AI system outside the provider's intended purpose makes the modifier responsible as a provider, triggering full Articles 9–17 obligations.",
-                "harmonised_standards": ["ISO/IEC 29101", "ISO 31000"],
-                "requirement_control_numbers": ["[42001.1]","[42001.2]","[42001.3]","[42001.4]"]
+                "harmonised_standards": [
+                  "ISO/IEC 29101",
+                  "ISO 31000"
+                ],
+                "requirement_control_numbers": [
+                  "[42001.1]",
+                  "[42001.2]",
+                  "[42001.3]",
+                  "[42001.4]"
+                ]
               }
             ]
           },
@@ -492,7 +637,6 @@
       }
     ]
   },
-
   "combined_outcome_matrix": {
     "description": "Maps the intersection of Axis A and Axis B to a combined workflow consequence. The AI Change Board must be presented with both axes and the combined consequence record.",
     "rules": [
@@ -589,7 +733,6 @@
       }
     ]
   },
-
   "output_record_template": {
     "description": "The completed classification record produced at the end of Step 3. This record is carried forward into all subsequent steps and included in the AI Change Board submission pack.",
     "fields": {
@@ -625,7 +768,6 @@
       "all_requirement_control_numbers": "string[] — deduplicated union of all requirement_control_numbers from applicable_articles across all gates. Reserved for harmonised standards resolution in a future step."
     }
   },
-
   "deliverables": [
     "Completed dual-axis classification record: internal tier (Axis A) and EU AI Act outcome (Axis B)",
     "Gate-by-gate answers for G1–G5 with question IDs recorded for audit trail",
@@ -633,10 +775,10 @@
     "Combined outcome record identifying which downstream steps are mandatory",
     "SR9 oversight mechanism statement specific to this use case"
   ],
-
   "requirement_labels": [
     "AI SR2 — Tiered authorisation",
     "AI SR9 — EU AI Act compliance (corrected: oversight obligations are tier-specific)",
     "EU AI Act — Regulation (EU) 2024/1689"
-  ]
+  ],
+  "ai_prompt": "You are an AI governance specialist completing an EU AI Act system classification for a new AI use case. Your analysis will be saved as a supporting document alongside a formal governance record and must be detailed enough for an AI Change Board to review.\n\nBUSINESS CASE:\n{{business_case}}\n\n---\n\nWork through every question below internally, considering each carefully — but do NOT write out prose answers or explanations. Your ENTIRE response must be ONLY the two JSON blocks specified at the end of this prompt: the CLASSIFICATION SUMMARY and the MACHINE-READABLE CLASSIFICATION. Put your reasoning in the \"reasoning\" field inside those JSON blocks. Do not skip any question when forming your answers, and output nothing outside the JSON blocks.\n\n===================================================================\nSYSTEM CLASSIFICATION\n===================================================================\n\nAXIS A — INTERNAL GOVERNANCE TIER\n\nOur standard defines two tiers:\n• Tier 1 (General productivity): AI output does not directly and significantly influence business decisions, external communications, or regulated processes. Examples: rewriting internal documents, research, brainstorming, internal drafts not published externally.\n• Tier 2 (Business-impacting content): AI output significantly influences decisions or is used in regulated, external-facing, or high-stakes contexts. Examples: marketing documents, legal/compliance documents, financial reports, code development, translation of regulated content.\nEscalation rule: If data identification in Step 4 reveals personal, confidential, or organisation-identifying data is involved, treat as Tier 2 regardless of content type.\n\nA1: Which governance tier applies to this use case?\nSelect: Tier 1 — General productivity | Tier 2 — Business-impacting content\n\n---\n\nAXIS B — EU AI ACT CLASSIFICATION (Gates G1–G5)\n\nGATE G1 — PROHIBITED PRACTICES SCREEN (Article 5)\nIMPORTANT: If the answer to G1 is YES, classification is PROHIBITED. Assessment ends — do not answer other gates.\n\nG1: Does this AI system involve ANY of the following prohibited practices?\n  • Subliminal, manipulative, or deceptive techniques to distort a person's behaviour causing harm (Art.5(1)(a))\n  • Exploitation of vulnerable groups (age, disability, socioeconomic situation) to distort behaviour harmfully (Art.5(1)(b))\n  • Social scoring of natural persons by public authorities leading to detrimental or disproportionate treatment (Art.5(1)(c))\n  • Predicting the risk of a person committing a crime based solely on profiling or personality traits (Art.5(1)(d))\n  • Compiling facial recognition databases by untargeted scraping of facial images from the internet or CCTV (Art.5(1)(e))\n  • Inferring emotions of natural persons in the workplace or in educational institutions, except for safety or medical reasons (Art.5(1)(f))\n  • Biometric categorisation to deduce or infer race, political opinions, trade union membership, religious beliefs, or sexual orientation (Art.5(1)(g))\n  • Real-time remote biometric identification in publicly accessible spaces for law enforcement purposes (Art.5(1)(h))\n\n\n---\n\nGATE G2 — AI SYSTEM DEFINITION CHECK (Article 3(1))\nIf ANY answer is NO, the system is OUT OF SCOPE of the EU AI Act. Internal governance tier (Axis A) still applies.\n\nG2_Q1: Is the system a machine-based system designed to operate with varying levels of autonomy that may exhibit adaptiveness after deployment? (Art.3(1))\n\nG2_Q2: Are the system's outputs (predictions, recommendations, decisions, or content) intended to influence real or virtual environments? (Art.3(1))\n\nG2 Gate outcome (IN SCOPE / OUT OF SCOPE):\n\n---\n\nGATE G3 — HIGH-RISK CLASSIFICATION — ANNEX III\nG3: Does this system fall within ANY of the following Annex III high-risk domains?\n  • Biometric identification or categorisation of natural persons (Annex III(1))\n  • Management or operation of critical infrastructure — roads, water, gas, heating, electricity (Annex III(2))\n  • Education or vocational training — determining access, evaluating students, monitoring during exams (Annex III(3))\n  • Employment, workers management, or self-employment — recruitment, promotion, task allocation, performance monitoring (Annex III(4))\n  • Eligibility for or assessment of essential private or public services — credit scoring, insurance risk, emergency dispatch, social benefits (Annex III(5))\n  • Law enforcement — individual risk assessment, polygraph, crime analytics, evidence reliability evaluation (Annex III(6))\n  • Migration, asylum, or border control management — risk assessment, application examination, document verification (Annex III(7))\n  • Administration of justice or democratic processes — assisting courts applying law, influencing elections (Annex III(8))\n\nIf YES — which Annex III domain(s) apply:\n\n---\n\nGATE G4 — ARTICLE 50 TRANSPARENCY OBLIGATIONS\nThis gate applies to ALL use cases regardless of G3 outcome.\n\nG4_Q1: Does the system interact directly with natural persons in a conversational or text-based interface (e.g. a chatbot)? (Art.50(1))\n\nG4_Q2: Does the system generate synthetic audio, image, video, or text content that could deceive persons into thinking it is human-generated — e.g. deepfakes? (Art.50(2))\n\nG4_Q3: Does the system generate or manipulate text that is published and could constitute information of public interest — e.g. news articles or public affairs content? (Art.50(3))\n\nArticle 50 applies (YES / NO):\n\n---\n\nGATE G5 — ORGANISATION ROLE AND DEPLOYER OBLIGATIONS (Articles 3(4), 3(7), 25, 26)\n\nG5_Q0: How is the organisation using this AI system?\n  • Provider: Building or developing it using APIs, open-source models, fine-tuning, or RAG. The organisation is responsible for the AI system's design and behaviour.\n  • Deployer: Subscribing to a ready-made third-party AI service (e.g. Microsoft Copilot, Google Workspace AI) largely as provided by the supplier.\n\nAnswer G5_Q1 through G5_Q3 only if the system was classified HIGH RISK in G3 AND the organisation is a Deployer. Otherwise mark as Not applicable.\n\nG5_Q1: Is the AI system high-risk and developed by a third-party provider? (Art.26)\n\nG5_Q2: Do natural persons in your organisation use the system's outputs to make decisions that affect other natural persons? (Art.26(2))\n\nG5_Q3 — Substantial modification check (Art.25):\nAre you fine-tuning or retraining the model on your own data? (Art.25(1))\nAre you changing the system's intended purpose beyond what the provider designed it for? (Art.25(1))\nAre you adding retrieval-augmented generation (RAG) using your own proprietary datasets? (Art.25(1))\nAre you integrating the system as a safety-critical or regulated component in a product? (Art.25(1))\n\n---\n\nCOMBINED OUTCOME\nBased on Axis A and Axis B, select and explain the combined outcome:\n  • AI Governance Team fast-track (Tier 1 + MINIMAL_RISK)\n  • AI Governance Team fast-track with Article 50 disclosure (Tier 1 + LIMITED_RISK)\n  • Full due diligence — internal governance driver (Tier 2 + MINIMAL_RISK)\n  • Full due diligence with Article 50 disclosure (Tier 2 + LIMITED_RISK)\n  • Mandatory escalation to Tier 2 — AI Act override (Tier 1 + HIGH_RISK)\n  • Full due diligence plus conformity assessment (Tier 2 + HIGH_RISK)\n\nCombined outcome:\nAI Change Board approval required (YES / NO):\nDPIA required (YES / NO / data identification determines):\nArticle 14 human oversight legally required (YES / NO):\nArticle 50 transparency disclosure required (YES / NO):\n\n===================================================================\nCLASSIFICATION SUMMARY (JSON) — output this block exactly at the end\n===================================================================\n\n--- CLASSIFICATION SUMMARY (JSON) ---\n{\n  \"axis_a\": \"tier_1 or tier_2\",\n  \"axis_b_outcome\": \"PROHIBITED or OUT_OF_SCOPE or HIGH_RISK or LIMITED_RISK or MINIMAL_RISK\",\n  \"organisation_role\": \"provider or deployer\",\n  \"article_50_applies\": true or false,\n  \"combined_outcome\": \"label from the combined outcome matrix\",\n  \"change_board_required\": true or false,\n  \"data_subjects\": [\"list\", \"applicable\", \"categories\"],\n  \"personal_data_types\": [\"list\", \"applicable\", \"types\"],\n  \"special_category_data\": \"none or list types\",\n  \"lawful_basis\": \"Art.6(1)(?) — description\",\n  \"automated_decision_making\": \"no — advisory only or partial or yes — determinative\",\n  \"dpia_inherent_risk\": \"Low or Medium or High or Very High\",\n  \"dpia_residual_risk\": \"Low or Medium or High or Very High\",\n  \"dpo_consultation_required\": true or false,\n  \"art36_consultation_required\": true or false\n}\n--- END CLASSIFICATION SUMMARY ---\n\n\n===================================================================\nMACHINE-READABLE CLASSIFICATION (JSON) — output this block too\n===================================================================\nAfter the classification summary above, output ONE fenced json block exactly\nas below. It is loaded directly into the Step 3 classification. Use the fixed\nkeys; answer each with the exact value shown (yes/no, provider/deployer, or\ntier_1/tier_2). Answer G5_Q1, G5_Q2 and the G5_Q3_SQ* sub-questions only for\nthe provider/deployer path that applies; otherwise use \"no\".\n\n```json\n{\n  \"classification\": {\n    \"tier\": \"tier_1 or tier_2 (your Axis A answer)\",\n    \"gate_answers\": {\n      \"G1_any\": \"yes or no — does the system involve ANY Article 5 prohibited practice listed in Gate G1?\",\n      \"G2_Q1\": \"yes or no — Is the system a machine-based system designed to operate with var\",\n      \"G2_Q2\": \"yes or no — Are the outputs produced by the system (predictions, recommendati\",\n      \"G3_any\": \"yes or no — does the system fall within ANY Annex III high-risk domain listed in Gate G3?\",\n      \"G4_Q1\": \"yes or no — Does the system interact directly with natural persons in a conve\",\n      \"G4_Q2\": \"yes or no — Does the system generate synthetic audio, image, video, or text c\",\n      \"G4_Q3\": \"yes or no — Does the system generate or manipulate text that is published and\",\n      \"G5_Q0\": \"provider or deployer — How is your organisation using this AI system?\",\n      \"G5_Q1\": \"yes or no — Is the AI system your organisation is deploying classified as hig\",\n      \"G5_Q2\": \"yes or no — Do natural persons in your organisation use the AI system's outpu\",\n      \"G5_Q3_SQ1\": \"yes or no — substantial-modification check (Art.25)\",\n      \"G5_Q3_SQ2\": \"yes or no — substantial-modification check (Art.25)\",\n      \"G5_Q3_SQ3\": \"yes or no — substantial-modification check (Art.25)\",\n      \"G5_Q3_SQ4\": \"yes or no — substantial-modification check (Art.25)\"\n    },\n    \"reasoning\": \"Concise justification for the tier and the material gate answers — why this EU AI Act outcome, the organisation role, and any Art.25 substantial-modification finding.\"\n  }\n}\n```"
 }

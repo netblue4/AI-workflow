@@ -43,6 +43,15 @@
     // Standard full-width title section (from workflow.json)
     container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
 
+    // AI prompt + load-output sections (moved here from Step 2) — draft the
+    // classification with your AI tool, then load its reply to fill this screen.
+    if (window.AiPromptSections) {
+      const ai = WizUtils.el('div', 'step-content-section');
+      ai.appendChild(window.AiPromptSections.askClassification(detail));
+      ai.appendChild(window.AiPromptSections.loadClassification({ onApplied: () => window.selectStep && window.selectStep('step-3') }));
+      container.appendChild(ai);
+    }
+
     // White content section — classification wizard. The reference/methodology
     // content now lives in the About the framework training area, so the step
     // itself is a single wizard pane (no tab strip).
