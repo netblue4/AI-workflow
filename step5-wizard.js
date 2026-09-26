@@ -22,6 +22,7 @@
   let _riskIdByName   = new Map(); // risk_name → pk_Risk_ID
   let _showExcluded   = false;     // Wave 1: hide risks marked Not applicable behind a toggle
   let _showRecommended = false;    // Priority tiers: recommended/technical group collapsed by default
+  const _recChecked = new Set();    // keys of Recommended risks ticked for bulk "not applicable"
   let _savedNoteEl    = null;      // Wave 2: live "Saved ✓" indicator in the risk header
   let _riskheadSummaryEl = null;   // Wave 2: risk-count summary, updated in place on autosave
 
@@ -62,6 +63,7 @@
     _wizState.answers     = {};
     _wizState.rationales  = {};
     _wizState.challenges  = {};
+    _recChecked.clear();
 
     _injectStyles();
 
@@ -504,17 +506,20 @@
 
     // ── Recommended (optional) group — collapsible, collapsed by default ──
     const recHdr = _groupHeader('rec', 'Recommended / technical (optional)', recN,
-      'Good-practice and NIST-surfaced risks beyond the mandatory set. Treat the ones that matter for your system.', true);
-    recommended.style.display = _showRecommended ? '' : 'none';
+      'Good-practice and NIST-surfaced risks beyond the mandatory set. Treat the ones that matter — or tick and bulk-dismiss the rest.', true);
+    const recBody = _el('div', 's5-rec-body');
+    if (recN) recBody.appendChild(_buildRecBulkBar());
+    recBody.appendChild(recommended);
+    recBody.style.display = _showRecommended ? '' : 'none';
     const chev = recHdr.querySelector('.s5-group-chev');
     if (chev) chev.style.transform = _showRecommended ? 'rotate(180deg)' : '';
     recHdr.addEventListener('click', () => {
       _showRecommended = !_showRecommended;
-      recommended.style.display = _showRecommended ? '' : 'none';
+      recBody.style.display = _showRecommended ? '' : 'none';
       if (chev) chev.style.transform = _showRecommended ? 'rotate(180deg)' : '';
     });
     card.appendChild(recHdr);
-    card.appendChild(recommended);
+    card.appendChild(recBody);
 
     // Bottom actions
     const actRow = _el('div', 'wiz-action-row');
@@ -556,6 +561,59 @@
     const chip = _el('span', 's5-req-badge', { textContent: 'Required' });
     if (right) right.prepend(chip); else section.prepend(chip);
   }
+  // Tick-box on a Recommended risk for the bulk "not applicable" action.
+  function _addRecCheckbox(section, key) {
+    const left = section.querySelector('.wiz-collapsible-header-left');
+    if (!left) return;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 's5-rec-check';
+    cb.dataset.key = key;
+    cb.checked = _recChecked.has(key);
+    cb.title = 'Select for bulk “not applicable”';
+    cb.addEventListener('click', e => {
+      e.stopPropagation(); // don't toggle the collapsible
+      if (cb.checked) _recChecked.add(key); else _recChecked.delete(key);
+    });
+    left.prepend(cb);
+  }
+  function _selectAllRecommended(check) {
+    const pane = _container.querySelector('[data-pane="all"]');
+    if (!pane) return;
+    pane.querySelectorAll('.s5-rec-check').forEach(cb => {
+      cb.checked = check;
+      if (check) _recChecked.add(cb.dataset.key); else _recChecked.delete(cb.dataset.key);
+    });
+  }
+  function _bulkMarkRecNotApplicable(reason) {
+    if (!_recChecked.size) return;
+    reason = (reason || '').trim() || 'Not applicable to this use case.';
+    _recChecked.forEach(key => {
+      const idx = key.indexOf('::');
+      const type = key.slice(0, idx), id = key.slice(idx + 2);
+      if (type === 'legal') { _wizState.answers[id] = 'no'; _wizState.rationales[id] = reason; }
+      else if (type === 'nist') { _state.nist_risks[id] = false; _wizState.rationales[id] = reason; }
+      else if (type === 'internal') { _state.group_standard_risks[id] = false; }
+    });
+    _recChecked.clear();
+    _autosave();
+    _renderConsolidated();
+  }
+  function _buildRecBulkBar() {
+    const bar = _el('div', 's5-recbulk');
+    const sel = _el('div', 's5-recbulk-sel');
+    const selAll = _el('button', 's5-recbulk-link', { type: 'button', textContent: 'Select all' });
+    selAll.addEventListener('click', () => _selectAllRecommended(true));
+    const clr = _el('button', 's5-recbulk-link', { type: 'button', textContent: 'Clear' });
+    clr.addEventListener('click', () => _selectAllRecommended(false));
+    sel.append(selAll, _el('span', '', { textContent: '·', style: 'color:var(--color-text-tertiary)' }), clr);
+    const reason = _el('input', 's5-recbulk-reason', { type: 'text', value: 'Not applicable — outside the scope of this use case.' });
+    reason.placeholder = 'Reason recorded as the justification…';
+    const btn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Mark selected as Not applicable' });
+    btn.addEventListener('click', () => _bulkMarkRecNotApplicable(reason.value));
+    bar.append(sel, reason, btn);
+    return bar;
+  }
 
   // Split risks into Required (mandatory) and Recommended (optional). Mandatory =
   // legal risks whose article Step 3 marked applicable, plus DPIA privacy risks.
@@ -581,6 +639,7 @@
         _addRequiredBadge(sec);
         mandatory.appendChild(sec); mandN++;
       } else {
+        _addRecCheckbox(sec, 'legal::' + name);
         recommended.appendChild(sec); recN++;
       }
     });
@@ -588,11 +647,13 @@
     // NIST → recommended
     (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').forEach(r => {
       const sec = _buildNistItem(r); _addSourceChip(sec, 'NIST', 'nist');
+      _addRecCheckbox(sec, 'nist::' + r.risk_name);
       recommended.appendChild(sec); recN++;
     });
     // Internal Standards → recommended
     (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard').forEach(r => {
       const sec = _buildGroupStandardItem(r); _addSourceChip(sec, 'Internal', 'internal');
+      _addRecCheckbox(sec, 'internal::' + r.pk_Risk_ID);
       recommended.appendChild(sec); recN++;
     });
     // DPIA privacy risks → required (identified facts from Step 4)
@@ -1809,6 +1870,13 @@
 .s5-group-chev{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 .s5-req-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:9px;background:rgba(226,90,88,0.18);color:#fba4a3;white-space:nowrap;flex-shrink:0}
 .s5-empty-note{font-size:12.5px;color:var(--color-text-secondary);background:var(--color-bg-subtle,#211d15);border:1px solid var(--color-border);border-radius:6px;padding:12px 14px;margin:6px 0}
+.s5-rec-check{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--teal-400,#5dcaa5)}
+.s5-recbulk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px dashed var(--color-border-mid,var(--color-border));border-radius:8px;background:var(--color-bg-subtle,#211d15)}
+.s5-recbulk-sel{display:flex;align-items:center;gap:6px;font-size:11.5px}
+.s5-recbulk-link{background:none;border:none;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--teal-600,#8ce3c6);padding:0}
+.s5-recbulk-link:hover{text-decoration:underline}
+.s5-recbulk-reason{flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--color-border-mid,var(--color-border));border-radius:6px;font-size:12px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface)}
+.s5-recbulk-reason:focus{outline:none;border-color:var(--teal-400,#2dd4bf)}
 
 /* Reference pane */
 .wiz8-cat-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
