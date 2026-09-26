@@ -20,6 +20,7 @@
   let _tblControls = [];   // all rows from tbl_Risk_Controls.json
   let _controlsByRisk = new Map(); // pk_Risk_ID → [control, ...]
   let _riskIdByName   = new Map(); // risk_name → pk_Risk_ID
+  let _showExcluded   = false;     // Wave 1: hide risks marked Not applicable behind a toggle
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
@@ -63,7 +64,7 @@
 
     const shell = _el('div', 'wiz-shell');
     shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
-    shell.appendChild(_buildTabStrip());
+    // Wave 1: the five source tabs are consolidated into one risk list (below).
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
     container.innerHTML = '';
@@ -451,32 +452,164 @@
     return lines.join('\n');
   }
 
-  // ---- Panes --------------------------------------------------
+  // ---- Panes (Wave 1: one consolidated risk list) -------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const legal  = _el('div', 'wiz-pane');                  legal.dataset.pane  = 'legal';
-    const nist   = _el('div', 'wiz-pane wiz-pane--hidden'); nist.dataset.pane   = 'nist';
-    const dpia   = _el('div', 'wiz-pane wiz-pane--hidden'); dpia.dataset.pane   = 'dpia';
-    const gstd   = _el('div', 'wiz-pane wiz-pane--hidden'); gstd.dataset.pane   = 'groupstd';
-    const review = _el('div', 'wiz-pane wiz-pane--hidden'); review.dataset.pane = 'review';
-    legal.appendChild(_buildLegalCard());
-    nist.appendChild(_buildNistPane());
-    dpia.appendChild(_buildDpiaRisksPane());
-    gstd.appendChild(_buildGroupStandardsPane());
-    review.appendChild(_buildCombinedReviewPane());
-    pw.appendChild(legal); pw.appendChild(nist); pw.appendChild(dpia); pw.appendChild(gstd); pw.appendChild(review);
+    const pane = _el('div', 'wiz-pane'); pane.dataset.pane = 'all';
+    pane.appendChild(_buildConsolidatedCard());
+    pw.appendChild(pane);
   }
 
+  function _renderConsolidated() {
+    const pw = _container?.querySelector('.wiz-pane-wrap');
+    if (pw) _renderPanes(pw);
+  }
 
-  // White content card for the legal tab (Ask your AI tool + risk list), matching
-  // the other Step 5 panes.
-  function _buildLegalCard() {
+  // One card: AI interaction at the top, then a single list of every risk
+  // (Legal, NIST, Internal Standards, and DPIA privacy risks) with a source
+  // chip on each — no tabs.
+  function _buildConsolidatedCard() {
     const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Risk identification' }));
+    card.appendChild(_el('p', 'step-detail-summary', {
+      textContent: 'One list of every risk that could apply to your system. Ask your AI tool to draft it, then review each risk — a small chip shows where it comes from. Mark the ones that apply, and save.'
+    }));
+
     card.appendChild(_buildAskAiCollapsible());
     card.appendChild(_buildLoadRaSection());
     card.appendChild(_buildChallengeCompileSection());
-    card.appendChild(_buildLegalPane());
+
+    // Build the list first so the header can report accurate counts.
+    const { list, excluded, applicable } = _buildConsolidatedList();
+    card.appendChild(_buildRiskListHeader(applicable, excluded));
+    card.appendChild(list);
+
+    // Bottom actions (mirror of the header's primary action)
+    const actRow = _el('div', 'wiz-action-row');
+    const saveBtn = _el('button', 'wiz-btn-primary', { textContent: 'Save all risks ✓' });
+    saveBtn.addEventListener('click', _saveAllRisks);
+    const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear legal answers' });
+    clearBtn.addEventListener('click', () => { _wizState.answers = {}; _wizState.rationales = {}; _renderConsolidated(); });
+    actRow.append(saveBtn, clearBtn);
+    card.appendChild(actRow);
+
+    // Preserve the old Review tab's context (classification + DPIA inputs) in a
+    // collapsed section, so nothing is lost by removing the tabs.
+    card.appendChild(_buildInputsCollapsible());
     return card;
+  }
+
+  // Small coloured chip identifying a risk's source, dropped into the card header.
+  function _addSourceChip(section, label, cls) {
+    const right = section.querySelector('.wiz-collapsible-header-right');
+    if (!right) return;
+    right.prepend(_el('span', 's5-src-chip s5-src-chip--' + cls, { textContent: label }));
+  }
+
+  function _buildConsolidatedList() {
+    const list = _el('div', 's5-consol-list');
+    let excluded = 0, applicable = 0;
+    // applicable = shown & not explicitly excluded (unanswered counts as needs-review, still shown)
+    const consider = (section, isExcluded) => {
+      if (isExcluded) { excluded++; if (!_showExcluded) section.style.display = 'none'; }
+      else applicable++;
+      list.appendChild(section);
+    };
+
+    // Legal / Regulatory — reuse the existing per-risk builder (challenge UI et al.)
+    const wqs = _legalGuidance?.wizard_questions || [];
+    const legalSecs = [...(_buildRiskList(wqs).children)];
+    legalSecs.forEach((sec, i) => {
+      _addSourceChip(sec, 'Legal', 'legal');
+      consider(sec, _wizState.answers[wqs[i]?.risk_name] === 'no');
+    });
+
+    // NIST AI RMF
+    (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').forEach(r => {
+      const sec = _buildNistItem(r);
+      _addSourceChip(sec, 'NIST', 'nist');
+      consider(sec, _state.nist_risks[r.risk_name] === false);
+    });
+
+    // Internal Standards
+    (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard').forEach(r => {
+      const sec = _buildGroupStandardItem(r);
+      _addSourceChip(sec, 'Internal', 'internal');
+      consider(sec, _state.group_standard_risks[r.pk_Risk_ID] === false);
+    });
+
+    // DPIA privacy risks — identified facts from Step 4, read-only, always shown
+    const privacy = _record?.['step-4']?.data_types_identified?.privacy_risks || [];
+    privacy.forEach(txt => {
+      const el = _el('div', 's5-dpia-risk');
+      el.append(_el('span', 's5-src-chip s5-src-chip--privacy', { textContent: 'Privacy' }),
+                _el('span', 's5-dpia-risk-txt', { textContent: txt }));
+      list.appendChild(el);
+    });
+
+    return { list, excluded, applicable };
+  }
+
+  function _buildRiskListHeader(applicable, excluded) {
+    const head = _el('div', 's5-riskhead');
+    const summary = _el('div', 's5-riskhead-summary');
+    summary.innerHTML = `<strong>${applicable}</strong> risk${applicable !== 1 ? 's' : ''} to review` +
+      (excluded ? ` · <span class="s5-riskhead-excl">${excluded} marked not applicable</span>` : '');
+    head.appendChild(summary);
+
+    const actions = _el('div', 's5-riskhead-actions');
+    if (excluded) {
+      const tog = _el('button', 's5-riskhead-toggle', { type: 'button', textContent: _showExcluded ? 'Hide excluded' : `Show ${excluded} excluded` });
+      tog.addEventListener('click', () => { _showExcluded = !_showExcluded; _renderConsolidated(); });
+      actions.appendChild(tog);
+    }
+    const acceptBtn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Accept all remaining' });
+    acceptBtn.title = 'Marks every unanswered risk as applicable, then saves.';
+    acceptBtn.addEventListener('click', _acceptAllRemaining);
+    const saveBtn = _el('button', 'wiz-btn-primary', { type: 'button', textContent: 'Save all risks ✓' });
+    saveBtn.addEventListener('click', _saveAllRisks);
+    actions.append(acceptBtn, saveBtn);
+    head.appendChild(actions);
+    return head;
+  }
+
+  function _buildInputsCollapsible() {
+    const body = _el('div', '');
+    body.appendChild(_buildStep3Card());
+    body.appendChild(_buildDpiaCard());
+    const { section } = WizUtils.buildCollapsible({ title: 'Assessment inputs — classification & DPIA', number: '', icon: false, body });
+    section.style.marginTop = '18px';
+    // start collapsed (buildCollapsible defaults open? force closed)
+    const b = section.querySelector('.wiz-collapsible-body');
+    if (b) b.style.display = 'none';
+    const chev = section.querySelector('.wiz-collapsible-header .wiz-gate-chevron, .wiz-collapsible-header svg');
+    return section;
+  }
+
+  function _acceptAllRemaining() {
+    (_legalGuidance?.wizard_questions || []).forEach(wq => { if (!_wizState.answers[wq.risk_name]) _wizState.answers[wq.risk_name] = 'yes'; });
+    (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').forEach(r => { if (_state.nist_risks[r.risk_name] === undefined) _state.nist_risks[r.risk_name] = true; });
+    (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard').forEach(r => { if (_state.group_standard_risks[r.pk_Risk_ID] === undefined) _state.group_standard_risks[r.pk_Risk_ID] = true; });
+    _saveAllRisks();
+  }
+
+  // Save every source at once (legal + NIST fold into legal_assessment; internal
+  // standards into group_standard_assessment).
+  function _saveAllRisks() {
+    (_legalGuidance?.wizard_questions || []).forEach(wq => {
+      const ans = _wizState.answers[wq.risk_name];
+      if (ans === 'yes' || ans === 'partially') _state.legal_risks[wq.risk_name] = true;
+      else if (ans === 'no') _state.legal_risks[wq.risk_name] = false;
+    });
+    if (!_record) _record = {};
+    if (!_record._meta) _record._meta = { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: new Date().toISOString(), last_modified: new Date().toISOString() };
+    _record._meta.last_modified = new Date().toISOString();
+    if (!_record['step-5']) _record['step-5'] = {};
+    _record['step-5'].legal_assessment = _buildLegalOutputRecord();
+    _record['step-5'].group_standard_assessment = _buildGroupStandardOutputRecord();
+    WizUtils.saveRecord(_record);
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('All risks saved ✓');
+    _renderConsolidated();
   }
 
   // ── Load your AI tool risk assessment into Steps 5 & 6 ─────────────────────────────
@@ -689,10 +822,9 @@
     applyBtn.addEventListener('click', () => {
       if (!_res) return;
       _applyRa(_res);
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and controls for ${_res.ctrlCount} risk${_res.ctrlCount !== 1 ? 's' : ''} as a draft. Review in <strong>Step 5</strong> (risks) and <strong>Step 6</strong> (controls), then save each.</span>`;
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and controls for ${_res.ctrlCount} risk${_res.ctrlCount !== 1 ? 's' : ''} as a draft. Review the list below, then click <strong>Save all risks</strong>. Controls appear in <strong>Step 6</strong>.</span>`;
       applyBtn.style.display = 'none';
-      _renderLegalPane();
-      _renderNistPane();
+      _renderConsolidated();
     });
 
     body.append(ta, btnRow, preview);
@@ -811,12 +943,8 @@
   }
 
   // ---- Re-render legal pane in place --------------------------
-  function _renderLegalPane() {
-    const pane = _container.querySelector('[data-pane="legal"]');
-    if (!pane) return;
-    pane.innerHTML = '';
-    pane.appendChild(_buildLegalCard());
-  }
+  // Wave 1: all three per-source re-renders funnel to the one consolidated view.
+  function _renderLegalPane() { _renderConsolidated(); }
 
   // ---- Legal pane -----------------------------------------
   function _buildLegalPane() {
@@ -987,12 +1115,7 @@
   }
 
   // ---- NIST AI RMF pane -----------------------------------------
-  function _renderNistPane() {
-    const pane = _container.querySelector('[data-pane="nist"]');
-    if (!pane) return;
-    pane.innerHTML = '';
-    pane.appendChild(_buildNistPane());
-  }
+  function _renderNistPane() { _renderConsolidated(); }
 
   function _buildNistPane() {
     const card = _el('div', 'step-detail-card');
@@ -1101,12 +1224,7 @@
   }
 
   // ---- Internal Standards pane -----------------------------------
-  function _renderGroupStandardsPane() {
-    const pane = _container.querySelector('[data-pane="groupstd"]');
-    if (!pane) return;
-    pane.innerHTML = '';
-    pane.appendChild(_buildGroupStandardsPane());
-  }
+  function _renderGroupStandardsPane() { _renderConsolidated(); }
 
   function _buildGroupStandardsPane() {
     const card = _el('div', 'step-detail-card');
@@ -1569,6 +1687,23 @@
 .s5-challenge-ta:focus{outline:none;border-color:#e0964f}
 .s5-challenge-clear{margin-top:6px;font-size:11px;color:var(--color-text-tertiary);background:none;border:none;cursor:pointer;font-family:inherit;text-decoration:underline;padding:0}
 .s5-challenge-clear:hover{color:#fba4a3}
+
+/* Wave 1 — consolidated risk list */
+.s5-consol-list{display:flex;flex-direction:column;gap:12px}
+.s5-src-chip{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.s5-src-chip--legal{background:rgba(80,150,225,0.16);color:#a4ccf6}
+.s5-src-chip--nist{background:rgba(93,130,214,0.16);color:#a4ccf6}
+.s5-src-chip--internal{background:rgba(212,184,96,0.16);color:#ecd489}
+.s5-src-chip--privacy{background:rgba(52,199,120,0.16);color:#8cebb0}
+.s5-riskhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--color-border)}
+.s5-riskhead-summary{font-size:13px;color:var(--color-text-secondary)}
+.s5-riskhead-summary strong{color:var(--color-text-primary)}
+.s5-riskhead-excl{color:var(--color-text-tertiary)}
+.s5-riskhead-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.s5-riskhead-toggle{font-size:11.5px;font-weight:500;color:var(--teal-600,#8ce3c6);background:none;border:1px solid rgba(93,202,165,0.45);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:inherit}
+.s5-riskhead-toggle:hover{background:rgba(93,202,165,0.10)}
+.s5-dpia-risk{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--color-border);border-radius:6px;padding:10px 12px;background:var(--color-surface)}
+.s5-dpia-risk-txt{font-size:12.5px;line-height:1.5;color:var(--color-text-primary)}
 
 /* Reference pane */
 .wiz8-cat-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
