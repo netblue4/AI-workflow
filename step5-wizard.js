@@ -37,6 +37,7 @@
     answers:    {}, // riskName → 'yes'|'partially'|'no'
     rationales: {}, // riskName → string
     challenges: {}, // riskName → string (assessor's objection, drives the re-assessment cycle)
+    areas:      {}, // riskName → { subcategory → bool } (Step B: which requirement areas apply)
   };
 
   // Category color palette — populated from step5-legal-risk-guidance.json after load
@@ -63,6 +64,7 @@
     _wizState.answers     = {};
     _wizState.rationales  = {};
     _wizState.challenges  = {};
+    _wizState.areas       = {};
     _recChecked.clear();
 
     _injectStyles();
@@ -126,6 +128,9 @@
     }
     if (saved8?.legal_assessment?.wizard_challenges) {
       Object.assign(_wizState.challenges, saved8.legal_assessment.wizard_challenges);
+    }
+    if (saved8?.legal_assessment?.wizard_area_selections) {
+      Object.assign(_wizState.areas, saved8.legal_assessment.wizard_area_selections);
     }
     if (saved8?.group_standard_assessment?.risks) {
       saved8.group_standard_assessment.risks.forEach(r => {
@@ -644,18 +649,6 @@
       }
     });
 
-    // NIST → recommended
-    (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').forEach(r => {
-      const sec = _buildNistItem(r); _addSourceChip(sec, 'NIST', 'nist');
-      _addRecCheckbox(sec, 'nist::' + r.risk_name);
-      recommended.appendChild(sec); recN++;
-    });
-    // Internal Standards → recommended
-    (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard').forEach(r => {
-      const sec = _buildGroupStandardItem(r); _addSourceChip(sec, 'Internal', 'internal');
-      _addRecCheckbox(sec, 'internal::' + r.pk_Risk_ID);
-      recommended.appendChild(sec); recN++;
-    });
     // DPIA privacy risks → required (identified facts from Step 4)
     const privacy = _record?.['step-4']?.data_types_identified?.privacy_risks || [];
     privacy.forEach(txt => {
@@ -704,8 +697,6 @@
 
   function _acceptAllRemaining() {
     (_legalGuidance?.wizard_questions || []).forEach(wq => { if (!_wizState.answers[wq.risk_name]) _wizState.answers[wq.risk_name] = 'yes'; });
-    (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').forEach(r => { if (_state.nist_risks[r.risk_name] === undefined) _state.nist_risks[r.risk_name] = true; });
-    (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard').forEach(r => { if (_state.group_standard_risks[r.pk_Risk_ID] === undefined) _state.group_standard_risks[r.pk_Risk_ID] = true; });
     _saveAllRisks();
   }
 
@@ -722,7 +713,6 @@
     _record._meta.last_modified = new Date().toISOString();
     if (!_record['step-5']) _record['step-5'] = {};
     _record['step-5'].legal_assessment = _buildLegalOutputRecord();
-    _record['step-5'].group_standard_assessment = _buildGroupStandardOutputRecord();
     WizUtils.saveRecord(_record);
   }
 
@@ -741,8 +731,6 @@
   function _riskTierCounts() {
     let mand = 0, rec = 0;
     (_legalGuidance?.wizard_questions || []).forEach(wq => { _isArticleApplicable(wq.risk_name) === true ? mand++ : rec++; });
-    rec += (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').length;
-    rec += (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard').length;
     mand += (_record?.['step-4']?.data_types_identified?.privacy_risks || []).length;
     return { mand, rec };
   }
@@ -768,10 +756,16 @@
   function _riskCatalog() {
     const cat = {};
     (_tblRisks || []).forEach(r => {
+      const areas = (_legalGuidance?.risks?.[r.risk_name]?.areas) || [];
+      // subcategory (canonicalised) → [refs]
+      const areaRefs = {};
+      areas.forEach(a => { areaRefs[_rCanon(a.subcategory)] = (a.refs || []).map(x => x.ref); });
       cat[r.pk_Risk_ID] = {
         name: r.risk_name,
-        kind: r.pk_Risk_ID.indexOf('GSR') === 0 ? 'gsr' : 'legal',
-        refs: (r.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean)
+        kind: 'legal',
+        refs: (r.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean),
+        areaNames: areas.map(a => a.subcategory),
+        areaRefs
       };
     });
     return cat;
@@ -847,7 +841,6 @@
     const seen = new Set(); const baseline = [];
     const push = (n, a) => { if (seen.has(n)) return; seen.add(n); baseline.push(`  ${_riskIdByName.get(n) || '?'} — ${n}: ${a}`); };
     Object.keys(_wizState.answers).forEach(n => push(n, _wizState.answers[n]));
-    Object.keys(_state.nist_risks).forEach(n => { const v = _state.nist_risks[n]; push(n, v === true ? 'yes' : v === false ? 'no' : 'unanswered'); });
 
     const lines = [];
     lines.push(
@@ -865,7 +858,7 @@
       'Return ONLY the complete risk_assessment JSON in the shape below, including EVERY risk. Do NOT omit challenged risks — represent an excluded risk as "no" with its new justification in "reasoning":',
       '',
       '```json',
-      '{ "risk_assessment": { "risks": { "RISK-XXX": "yes|partially|no" }, "reasoning": { "RISK-XXX": "…" }, "selected_controls": { "RISK-XXX": ["ref"] } } }',
+      '{ "risk_assessment": { "risks": { "RISK-XXX": "yes|partially|no" }, "reasoning": { "RISK-XXX": "…" }, "applicable_subcategories": { "RISK-XXX": ["requirement-area name"] } } }',
       '```',
       '',
       '=== CURRENT ASSESSMENT (baseline — keep these unless challenged) ===',
@@ -963,12 +956,12 @@
       if (!ra) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>risk_assessment</code> JSON block in the pasted text.</span>'; return; }
       _res = _validateRa(ra);
       preview.innerHTML = _renderRaPreview(_res);
-      if (_res.riskCount + _res.ctrlCount > 0) applyBtn.style.display = '';
+      if (_res.riskCount + _res.areaCount > 0) applyBtn.style.display = '';
     });
     applyBtn.addEventListener('click', () => {
       if (!_res) return;
       _applyRa(_res);
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and controls for ${_res.ctrlCount} risk${_res.ctrlCount !== 1 ? 's' : ''} as a draft. Review the list below, then click <strong>Save all risks</strong>. Controls appear in <strong>Step 6</strong>.</span>`;
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and requirement areas for ${_res.areaCount} risk${_res.areaCount !== 1 ? 's' : ''} as a draft. Review the list below, then click <strong>Save all risks</strong>. Selected requirements appear in <strong>Step 6</strong>.</span>`;
       applyBtn.style.display = 'none';
       _renderConsolidated();
     });
@@ -986,7 +979,7 @@
   function _extractRiskAssessment(text) {
     const tryParse = s => { try { return JSON.parse(s); } catch (_) { return null; } };
     const pick = o => (o && o.risk_assessment && typeof o.risk_assessment === 'object') ? o.risk_assessment
-                    : (o && typeof o === 'object' && (o.risks || o.selected_controls)) ? o : null;
+                    : (o && typeof o === 'object' && (o.risks || o.applicable_subcategories || o.selected_controls)) ? o : null;
     for (const f of [...(text || '').matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map(m => m[1])) {
       const a = pick(tryParse(f.trim())); if (a) return a;
     }
@@ -998,41 +991,42 @@
 
   function _validateRa(ra) {
     const cat = _riskCatalog();
-    const legalAnswers = {}; const gsr = {}; const controls = {}; const rationales = {}; const warnings = [];
-    let riskCount = 0; let ctrlCount = 0;
+    const legalAnswers = {}; const areaSel = {}; const controls = {}; const rationales = {}; const warnings = [];
+    let riskCount = 0; let areaCount = 0;
     Object.entries(ra.risks || {}).forEach(([id, v]) => {
       const r = cat[id];
       if (!r) { warnings.push(`Unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
       if (_rEmpty(v)) return;
       const a = _rYPN(v);
       if (!a) { warnings.push(`<code>${_rEsc(id)}</code>: "${_rEsc(String(v)).slice(0, 30)}" is not yes/partially/no — skipped.`); return; }
-      if (r.kind === 'gsr') gsr[id] = (a === 'yes' || a === 'partially');
-      else legalAnswers[r.name] = a;
+      legalAnswers[r.name] = a;
       riskCount++;
     });
-    // Reasoning → per-risk rationale (legal risks only — that's where the box lives)
+    // Reasoning → per-risk rationale
     Object.entries(ra.reasoning || {}).forEach(([id, txt]) => {
       const r = cat[id];
-      if (!r || r.kind !== 'legal' || _rEmpty(txt)) return;
+      if (!r || _rEmpty(txt)) return;
       rationales[r.name] = String(txt).trim();
     });
-    Object.entries(ra.selected_controls || {}).forEach(([id, refs]) => {
+    // applicable_subcategories → Step B area selections + derived HS refs for Step 6
+    Object.entries(ra.applicable_subcategories || {}).forEach(([id, subs]) => {
       const r = cat[id];
-      if (!r) { warnings.push(`Controls for unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
-      const arr = Array.isArray(refs) ? refs : (refs ? [refs] : []);
-      const valid = [];
-      arr.forEach(ref => {
-        const hit = r.refs.find(x => _rCanon(x) === _rCanon(ref));
-        if (hit) valid.push(hit);
-        else warnings.push(`<code>${_rEsc(id)}</code>: control "${_rEsc(String(ref)).slice(0, 24)}" is not a valid HS ref for this risk — skipped.`);
+      if (!r) { warnings.push(`Requirement areas for unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
+      const arr = Array.isArray(subs) ? subs : (subs ? [subs] : []);
+      const sel = {}; const refs = [];
+      arr.forEach(s => {
+        const hitName = r.areaNames.find(n => _rCanon(n) === _rCanon(s));
+        if (hitName) { sel[hitName] = true; (r.areaRefs[_rCanon(hitName)] || []).forEach(x => refs.push(x)); }
+        else warnings.push(`<code>${_rEsc(id)}</code>: area "${_rEsc(String(s)).slice(0, 28)}" is not a requirement area for this risk — skipped.`);
       });
-      if (valid.length) { controls[id] = valid; ctrlCount++; }
+      if (Object.keys(sel).length) { areaSel[r.name] = sel; areaCount++; }
+      if (refs.length) controls[id] = [...new Set(refs)];
     });
-    return { legalAnswers, gsr, controls, rationales, warnings, riskCount, ctrlCount };
+    return { legalAnswers, areaSel, controls, rationales, warnings, riskCount, areaCount };
   }
 
   function _renderRaPreview(res) {
-    let html = `<div style="color:#8cebb0;font-weight:600;margin-bottom:6px">✓ ${res.riskCount} risk answer${res.riskCount !== 1 ? 's' : ''} and control selections for ${res.ctrlCount} risk${res.ctrlCount !== 1 ? 's' : ''} recognised.</div>`;
+    let html = `<div style="color:#8cebb0;font-weight:600;margin-bottom:6px">✓ ${res.riskCount} risk answer${res.riskCount !== 1 ? 's' : ''} and requirement-area selections for ${res.areaCount} risk${res.areaCount !== 1 ? 's' : ''} recognised.</div>`;
     if (res.warnings.length) {
       html += `<div style="color:#ecd489;margin-bottom:4px">${res.warnings.length} item${res.warnings.length !== 1 ? 's' : ''} need attention:</div>`;
       html += '<ul style="margin:0 0 0 16px;padding:0;color:var(--color-text-secondary)">' +
@@ -1047,39 +1041,17 @@
     _record = WizUtils.loadRecord() || {};
     if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString() };
     _record._meta.last_modified = new Date().toISOString();
-    // Step 5 legal risk applicability + reasoning → rationale
-    if (Object.keys(res.legalAnswers).length || Object.keys(res.rationales).length) {
-      const s5 = _record['step-5'] || {};
-      const la = s5.legal_assessment || {};
-      la.wizard_answers    = Object.assign({}, la.wizard_answers || {}, res.legalAnswers);
-      la.wizard_rationales = Object.assign({}, la.wizard_rationales || {}, res.rationales);
-      s5.legal_assessment = la;
-      _record['step-5'] = s5;
-      // reflect in live state so the pane shows them immediately
-      Object.assign(_wizState.answers, res.legalAnswers);
-      Object.assign(_wizState.rationales, res.rationales);
-      // NIST-source risks are assessed in their own tab via _state.nist_risks —
-      // mirror any loaded answers there so the NIST tab reflects the re-assessment.
-      const nistNames = new Set((_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF').map(r => r.risk_name));
-      Object.entries(res.legalAnswers).forEach(([name, a]) => {
-        if (nistNames.has(name)) _state.nist_risks[name] = (a === 'yes' || a === 'partially');
-      });
-      // A challenge is resolved once the AI returns a fresh answer/justification for it.
-      Object.keys(res.legalAnswers).forEach(n => { delete _wizState.challenges[n]; });
-      Object.keys(res.rationales).forEach(n => { delete _wizState.challenges[n]; });
-    }
-    // Step 5 group-standard risk applicability
-    if (Object.keys(res.gsr).length) {
-      const s5 = _record['step-5'] || {};
-      const gsa = s5.group_standard_assessment || {};
-      const existing = new Map((gsa.risks || []).map(r => [r.risk_id, r]));
-      Object.entries(res.gsr).forEach(([id, sel]) => existing.set(id, { risk_id: id, selected: sel }));
-      gsa.risks = [...existing.values()];
-      s5.group_standard_assessment = gsa;
-      _record['step-5'] = s5;
-      Object.entries(res.gsr).forEach(([id, sel]) => { _state.group_standard_risks[id] = sel; });
-    }
-    // Step 6 control selection
+    // Reflect the loaded answers/rationales/areas into live state first…
+    Object.assign(_wizState.answers, res.legalAnswers);
+    Object.assign(_wizState.rationales, res.rationales);
+    Object.entries(res.areaSel).forEach(([n, sel]) => { _wizState.areas[n] = Object.assign({}, _wizState.areas[n] || {}, sel); });
+    // A challenge is resolved once the AI returns a fresh answer/justification for it.
+    Object.keys(res.legalAnswers).forEach(n => { delete _wizState.challenges[n]; });
+    Object.keys(res.rationales).forEach(n => { delete _wizState.challenges[n]; });
+    // …then rebuild the full Step 5 record so risks[] + derived refs stay coherent.
+    if (!_record['step-5']) _record['step-5'] = {};
+    _record['step-5'].legal_assessment = _buildLegalOutputRecord();
+    // Step 6 requirement selection (HS refs derived from the applicable areas)
     if (Object.keys(res.controls).length) {
       const s6 = _record['step-6'] || {};
       s6.selected_hs = Object.assign({}, s6.selected_hs || {}, res.controls);
@@ -1124,77 +1096,118 @@
   }
 
   // ---- Risk list (one collapsible row per risk) ---------------
+  // Two-step gate per risk: Step A (category question → applies?), Step B
+  // (per-subcategory treatment questions → which requirement areas apply).
+  // Step B is revealed only once Step A is Yes or Partial.
   function _buildRiskList(wqs) {
-    const BADGE   = { yes: '✓ Yes', partially: '~ Partial', no: '✗ No' };
+    const BADGE   = { yes: '✓ Applies', partially: '~ Partial', no: '✗ Not applicable' };
     const ANS_MOD = { yes: 'ok', partially: 'partial', no: 'none' };
     const list  = _el('div', 's5-risk-list');
 
     wqs.forEach(wq => {
-      const riskG      = _legalGuidance.risks?.[wq.risk_name];
-      const answer     = _wizState.answers[wq.risk_name] || null;
-      const article    = _getArticleForRisk(wq.risk_name);
-      const category   = riskG?.category || null;
-      const catColors  = _catColor(category ? (_legalGuidance.categories?.[category]?.color || 'slate') : 'slate');
-      const appliesIf  = riskG?.applies_if || [];
+      const name       = wq.risk_name;
+      const riskG      = _legalGuidance.risks?.[name] || {};
+      const answer     = _wizState.answers[name] || null;
+      const article    = _getArticleForRisk(name);
+      const areas      = riskG.areas || [];
 
-      // Badge lives in header — create before body so click handler can update it
+      if (!_wizState.areas[name]) _wizState.areas[name] = {};
+      const areaState = _wizState.areas[name];
+
+      // Auto-tick the sole area of a single-area risk once it applies, so its
+      // requirements flow to Step 6 without an extra click.
+      const applies = a => a === 'yes' || a === 'partially';
+      if (applies(answer) && areas.length === 1 && areaState[areas[0].subcategory] === undefined) {
+        areaState[areas[0].subcategory] = true;
+      }
+
       const badge = _el('span', `wiz-item-badge${answer ? ' wiz-item-badge--' + ANS_MOD[answer] : ''}`);
       badge.textContent = answer ? BADGE[answer] : 'Unanswered';
 
-      const genRationale = val => {
-        if (!appliesIf.length) return '';
-        const c = appliesIf.join('; ');
-        if (val === 'yes')       return `This risk applies. Conditions present: ${c}.`;
-        if (val === 'partially') return `This risk partially applies. Conditions may be present: ${c}.`;
-        return `This risk does not apply. None of the conditions apply: ${c}.`;
+      const body = _el('div', 's5-risk-body');
+
+      // Risk statement
+      if (riskG.risk_description) {
+        const d = _el('p', '');
+        d.style.cssText = 'margin:0;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)';
+        d.textContent = riskG.risk_description;
+        body.appendChild(d);
+      }
+
+      // ── STEP A — does this risk apply? ──
+      body.appendChild(_el('p', 's5-applies-label', { textContent: 'Step A — Does this risk apply?' }));
+      if (riskG.category_question) {
+        const q = _el('div', 's5-qblock'); q.textContent = riskG.category_question;
+        body.appendChild(q);
+      }
+
+      // ── STEP B — which requirement areas apply? (revealed on Yes/Partial) ──
+      const stepB = _el('div', 's5-stepb');
+      const buildStepB = () => {
+        stepB.innerHTML = '';
+        if (!applies(_wizState.answers[name])) { stepB.style.display = 'none'; return; }
+        stepB.style.display = '';
+        stepB.appendChild(_el('p', 's5-applies-label', { textContent: 'Step B — Which requirement areas apply?' }));
+        if (!areas.length) {
+          stepB.appendChild(_el('p', 's5-area-hint', { textContent: 'No requirement areas defined for this risk.' }));
+          return;
+        }
+        areas.forEach(area => {
+          const row = _el('label', 's5-area-row');
+          const cb  = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 's5-area-cb';
+          cb.checked = !!areaState[area.subcategory];
+          cb.addEventListener('change', () => { areaState[area.subcategory] = cb.checked; _autosaveSoon(); });
+          const main = _el('div', 's5-area-main');
+          main.appendChild(_el('div', 's5-area-name', { textContent: area.subcategory }));
+          if (area.treatment_question) {
+            main.appendChild(_el('div', 's5-area-q', { textContent: area.treatment_question }));
+          }
+          const chips = _el('div', 's5-area-refs');
+          (area.refs || []).forEach(rf => {
+            chips.appendChild(_el('span', 's5-ref-chip', { textContent: rf.ref + ' ' + rf.name }));
+          });
+          main.appendChild(chips);
+          row.append(cb, main);
+          stepB.appendChild(row);
+        });
       };
+      buildStepB();
+
+      const btnRow = _el('div', 's5-answer-row');
+      [['yes', '✓ Applies'], ['partially', '~ Partial'], ['no', '✗ Not applicable']].forEach(([val, lbl]) => {
+        const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer === val ? ' s5-answer-btn--active' : ''}`);
+        btn.textContent = lbl;
+        btn.addEventListener('click', () => {
+          _wizState.answers[name] = val;
+          btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
+          btn.classList.add('s5-answer-btn--active');
+          badge.textContent = BADGE[val];
+          badge.className   = `wiz-item-badge wiz-item-badge--${ANS_MOD[val]}`;
+          if (applies(val) && areas.length === 1 && areaState[areas[0].subcategory] === undefined) {
+            areaState[areas[0].subcategory] = true;
+          }
+          buildStepB();
+          _autosave();
+        });
+        btnRow.appendChild(btn);
+      });
+      body.appendChild(btnRow);
+      body.appendChild(stepB);
 
       const ta = document.createElement('textarea');
       ta.className   = 's5-rationale-ta';
       ta.placeholder = 'Rationale…';
       ta.rows        = 2;
-      ta.value       = _wizState.rationales[wq.risk_name] || '';
-      ta.addEventListener('input', () => { _wizState.rationales[wq.risk_name] = ta.value; _autosaveSoon(); });
-
-      const btnRow = _el('div', 's5-answer-row');
-      [['yes', '✓ Yes'], ['partially', '~ Partial'], ['no', '✗ No']].forEach(([val, lbl]) => {
-        const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer === val ? ' s5-answer-btn--active' : ''}`);
-        btn.textContent = lbl;
-        btn.addEventListener('click', () => {
-          _wizState.answers[wq.risk_name] = val;
-          btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
-          btn.classList.add('s5-answer-btn--active');
-          badge.textContent = BADGE[val];
-          badge.className   = `wiz-item-badge wiz-item-badge--${ANS_MOD[val]}`;
-          const existing = _wizState.rationales[wq.risk_name] || '';
-          const prevGen  = ['yes', 'partially', 'no'].map(v => genRationale(v));
-          if (!existing || prevGen.includes(existing)) {
-            _wizState.rationales[wq.risk_name] = genRationale(val);
-            ta.value = _wizState.rationales[wq.risk_name];
-          }
-          _autosave();
-        });
-        btnRow.appendChild(btn);
-      });
-
-      const body = _el('div', 's5-risk-body');
-      // 💡 explanation sits directly below the risk title.
-      if (riskG?.traditional_analog) {
-        body.appendChild(_el('div', 's5-analog-row', { textContent: '💡 ' + riskG.traditional_analog }));
-      }
-      if (appliesIf.length) {
-        body.appendChild(_el('p', 's5-applies-label', { textContent: 'Applies if any of:' }));
-        const ul = _el('ul', 's5-applies-list');
-        appliesIf.forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
-        body.appendChild(ul);
-      }
-      body.appendChild(btnRow);
+      ta.value       = _wizState.rationales[name] || '';
+      ta.addEventListener('input', () => { _wizState.rationales[name] = ta.value; _autosaveSoon(); });
       body.appendChild(ta);
-      body.appendChild(_buildChallengeUI(wq.risk_name, () => _wizState.answers[wq.risk_name]));
+      body.appendChild(_buildChallengeUI(name, () => _wizState.answers[name]));
 
       const artId = article?.pk_AI_Article_ID || null;
-      const riskNum = _riskIdByName.get(wq.risk_name) || '';
-      const { section } = WizUtils.buildCollapsible({ title: wq.risk_name, number: riskNum, icon: false, artId, artInline: true, body });
+      const riskNum = _riskIdByName.get(name) || '';
+      const { section } = WizUtils.buildCollapsible({ title: name, number: riskNum, icon: false, artId, artInline: true, body });
       section.querySelector('.wiz-collapsible-header-right').prepend(badge);
       list.appendChild(section);
     });
@@ -1224,28 +1237,40 @@
   function _buildLegalOutputRecord() {
     const today = new Date().toISOString().slice(0, 10);
     const wqs = _legalGuidance?.wizard_questions || [];
+    const cat = _riskCatalog();
     const risks = wqs.map(wq => {
-      const ans = _wizState.answers[wq.risk_name] || 'skipped';
+      const name = wq.risk_name;
+      const ans  = _wizState.answers[name] || 'skipped';
+      const selected = ans === 'yes' || ans === 'partially';
+      const areaState = _wizState.areas[name] || {};
+      const selectedAreas = Object.keys(areaState).filter(k => areaState[k]);
+      const rid = wq.risk_id || _riskIdByName.get(name);
+      const c = cat[rid] || { areaRefs: {} };
+      const refs = [];
+      selectedAreas.forEach(sub => (c.areaRefs[_rCanon(sub)] || []).forEach(x => refs.push(x)));
       return {
-        risk_name:     wq.risk_name,
-        risk_source:   'EU_AI_Act',
-        selected:      ans === 'yes' || ans === 'partially',
-        wizard_answer: ans,
-        rationale:     _wizState.rationales[wq.risk_name] || '',
-        relevance:     _computeRelevance(wq.risk_name)
+        risk_id:                rid,
+        risk_name:              name,
+        risk_source:            'EU_AI_Act',
+        selected,
+        wizard_answer:          ans,
+        rationale:              _wizState.rationales[name] || '',
+        selected_subcategories: selected ? selectedAreas : [],
+        selected_refs:          selected ? [...new Set(refs)] : [],
+        relevance:              _computeRelevance(name)
       };
     });
-    const allRisks = risks.concat(_nistOutputRisks());
-    const sel = allRisks.filter(r => r.selected).length;
+    const sel = risks.filter(r => r.selected).length;
     return {
-      completed:          true,
-      assessment_date:    today,
-      wizard_answers:     { ..._wizState.answers },
-      wizard_rationales:  { ..._wizState.rationales },
-      wizard_challenges:  { ..._wizState.challenges },
-      total_risks:        allRisks.length,
-      selected_count:     sel,
-      risks:              allRisks
+      completed:              true,
+      assessment_date:        today,
+      wizard_answers:         { ..._wizState.answers },
+      wizard_rationales:      { ..._wizState.rationales },
+      wizard_challenges:      { ..._wizState.challenges },
+      wizard_area_selections: JSON.parse(JSON.stringify(_wizState.areas)),
+      total_risks:            risks.length,
+      selected_count:         sel,
+      risks
     };
   }
 
@@ -1824,6 +1849,19 @@
 .s5-answer-btn--no.s5-answer-btn--active{background:#211d15;border-color:#8b8574;color:#b1a992}
 .s5-rationale-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-bg-subtle,#211d15)}
 .s5-rationale-ta:focus{outline:none;border-color:#8ce3c6;background:var(--color-surface)}
+
+/* Step A question block + Step B requirement areas */
+.s5-qblock{white-space:pre-wrap;font-size:12px;line-height:1.6;color:var(--color-text-secondary);background:var(--color-bg-subtle,#211d15);border:1px solid var(--color-border);border-radius:6px;padding:9px 12px}
+.s5-stepb{display:flex;flex-direction:column;gap:8px;padding-left:2px;border-left:2px solid rgba(93,202,165,0.35);margin-left:1px}
+.s5-area-hint{font-size:12px;color:var(--color-text-tertiary);margin:0}
+.s5-area-row{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--color-border);border-radius:7px;padding:10px 12px;background:var(--color-surface);cursor:pointer}
+.s5-area-row:hover{border-color:rgba(93,202,165,0.45)}
+.s5-area-cb{flex-shrink:0;width:16px;height:16px;margin-top:2px;cursor:pointer;accent-color:var(--teal-400,#5dcaa5)}
+.s5-area-main{display:flex;flex-direction:column;gap:5px;min-width:0}
+.s5-area-name{font-size:12.5px;font-weight:700;color:var(--color-text-primary)}
+.s5-area-q{white-space:pre-wrap;font-size:11.5px;line-height:1.55;color:var(--color-text-secondary)}
+.s5-area-refs{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.s5-ref-chip{font-size:10.5px;font-weight:600;background:rgba(80,150,225,0.14);color:#a4ccf6;border-radius:5px;padding:2px 7px;white-space:nowrap}
 
 /* Challenge cycle */
 .s5-challenge-wrap{margin-top:8px}

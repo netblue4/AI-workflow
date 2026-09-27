@@ -1,6 +1,6 @@
 {
-  "version": "1.0",
-  "description": "Guidance data for Step 5 Risk Assessment. Edit this file to adapt the language, categories, applies-if conditions, and relevance rules to suit your organisation. This file is loaded at runtime by step5-wizard.js — no code changes are required.",
+  "version": "2.0",
+  "description": "Step 5 display model derived from tbl_Risks.json + tbl_Harmonised_Standards.json. Each risk carries its category applicability question (Step A) and its requirement areas / subcategory treatment questions (Step B). Edit wording here to adapt the Step 5 screen.",
   "color_palette": {
     "amber": {
       "bg": "#fef3c7",
@@ -44,683 +44,983 @@
     }
   },
   "categories": {
-    "Human Control": {
+    "[18229-1: Trustworthiness]": {
       "color": "amber",
-      "description": "Risks that arise when AI systems act without adequate human oversight, intervention capability, or explainability."
+      "description": "Trustworthiness"
     },
-    "Bias & Fairness": {
+    "[18282: Cybersecurity]": {
       "color": "rose",
-      "description": "Risks that AI systems produce outcomes that are systematically unfair or discriminatory toward identifiable groups."
+      "description": "Cybersecurity"
     },
-    "Data Integrity": {
+    "[18229-2: Trustworthiness (Accuracy)]": {
       "color": "teal",
-      "description": "Risks arising from poor quality, undocumented, or improperly governed training and input data."
+      "description": "Trustworthiness (Accuracy)"
     },
-    "Monitoring & Audit": {
+    "[18229-2: Trustworthiness (Robustness)]": {
       "color": "slate",
-      "description": "Risks that AI decisions cannot be traced, audited, or reconstructed due to inadequate logging."
+      "description": "Trustworthiness (Robustness)"
     },
-    "Cybersecurity": {
+    "[18284: Quality and Governance]": {
       "color": "red",
-      "description": "Risks from adversarial attacks, model manipulation, and unauthorised extraction of model logic or data."
+      "description": "Quality and Governance"
     },
-    "Access Control": {
+    "[18283: Bias]": {
       "color": "purple",
-      "description": "Risks arising from insufficient identity management, privilege controls, or access governance over AI systems and their data."
+      "description": "Bias"
     },
-    "Performance Integrity": {
+    "[24970: AI System Logging]": {
       "color": "indigo",
-      "description": "Risks that AI accuracy, reliability, or reproducibility degrades in production without detection."
+      "description": "AI System Logging"
     },
-    "Availability & Resilience": {
+    "[18286: Quality Management System]": {
       "color": "orange",
-      "description": "Risks that AI system failures are not handled safely, causing operational disruption or harm."
+      "description": "Quality Management System"
     },
-    "Transparency": {
+    "[18228: Risk Management]": {
       "color": "green",
-      "description": "Risks arising from failure to disclose AI involvement, AI-generated content, or AI-driven decisions to affected parties."
+      "description": "Risk Management"
     },
-    "Infrastructure Security": {
+    "[42001: AI Management System]": {
       "color": "blue",
-      "description": "Risks to the AI deployment environment: containers, registries, network exposure, and host isolation."
-    }
-  },
-  "relevance_factor_keys": {
-    "high_if_step3_ai_act_outcome": "HIGH if Step 3 AI Act classification is one of the listed outcomes",
-    "high_if_step7_automated_decisions_contains": "HIGH if Step 7 automated decision-making answer contains any of the listed substrings",
-    "high_if_step7_has_special_categories": "HIGH if Step 7 DPIA identified any special-category data (GDPR Art.9)",
-    "high_if_step7_has_personal_data": "HIGH if Step 7 DPIA identified any standard personal data",
-    "high_if_step7_training_data_used": "HIGH if Step 7 DPIA indicates personal data is or may be used to train/fine-tune the model"
-  },
-  "risks": {
-    "Human Oversight Bypass Failure": {
-      "category": "Human Control",
-      "traditional_analog": "Automation over-reliance — like unchecked automated trading or credit-scoring systems with no kill switch or mandatory human review checkpoint before consequential action is taken.",
-      "applies_if": [
-        "AI output is used to make or significantly influence decisions without a mandatory human review step",
-        "Users have no mechanism to override, halt, or contest AI-driven actions",
-        "The AI system provides no confidence indicator or explanation alongside its outputs"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
+      "description": "AI Management System"
     },
-    "Subgroup Coverage Failure": {
-      "category": "Bias & Fairness",
-      "traditional_analog": "Sampling bias in analytics — like an underrepresented demographic in credit-scoring training data, where sparse records cause systematically worse outcomes for that group at inference time.",
-      "applies_if": [
-        "The AI system processes data about or makes decisions that affect distinct groups of people (by age, gender, ethnicity, disability, or other protected characteristic)",
-        "Training data was collected over a period or from a source where certain groups may have been underrepresented",
-        "The AI system's outputs affect employment, credit, benefits, healthcare access, or other individually significant decisions"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": true,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Proxy Discrimination Propagation Failure": {
-      "category": "Bias & Fairness",
-      "traditional_analog": "Redlining / indirect discrimination — where a seemingly neutral variable (e.g. postcode, browsing history) acts as a statistical proxy for a protected characteristic, producing discriminatory outcomes that are harder to detect than direct discrimination.",
-      "applies_if": [
-        "The AI uses data variables that may correlate with protected characteristics (e.g. location, purchasing patterns, social connections)",
-        "The AI ranks, scores, or filters individuals for employment, credit, insurance, benefits, or similar consequential decisions",
-        "Historical decisions are used as training labels and may embed past discriminatory patterns"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": true,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Dataset Lifecycle Integrity Failure": {
-      "category": "Data Integrity",
-      "traditional_analog": "Database change management failure — like a version-controlled ETL pipeline where an undocumented schema change silently corrupts downstream analytical models, discovered only during an audit.",
-      "applies_if": [
-        "The AI model is periodically retrained or fine-tuned on updated data",
-        "The system's knowledge base (RAG pipeline) is refreshed with new documents or data feeds",
-        "Third-party or externally sourced datasets are ingested without formal versioning and validation"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": true
-      }
-    },
-    "Data Governance Documentation Failure": {
-      "category": "Data Integrity",
-      "traditional_analog": "Undocumented data lineage / missing information asset register — like an ETL pipeline with no data dictionary, where no one can trace the origin, transformation logic, or quality of data feeding a regulatory report.",
-      "applies_if": [
-        "The AI system uses training or retrieval data whose selection rationale, legal permission, and preparation history are not formally documented",
-        "The organisation cannot trace which datasets were used, when they were collected, or why they were selected — meaning it cannot produce this evidence to a regulator examining Art.10(2) or Art.11/Annex IV compliance",
-        "Multiple data sources are combined without a documented provenance chain that records origin, transformation steps, and legal basis for each source"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": true
-      }
-    },
-    "Data Quality Measurement Failure": {
-      "category": "Data Integrity",
-      "traditional_analog": "Silent data quality degradation in production — like a financial reporting system that passes incomplete or duplicate records through an ETL pipeline with no quality checks, producing incorrect regulatory submissions.",
-      "applies_if": [
-        "The AI system's outputs depend directly on the quality and completeness of input data",
-        "No formal data quality metrics, thresholds, or validation rules are applied before data is used",
-        "Errors in input data would propagate into AI-driven decisions without triggering an alert or rejection"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Audit Log Integrity Failure": {
-      "category": "Monitoring & Audit",
-      "traditional_analog": "SOX / GDPR audit trail tampering — like a financial transaction log that can be modified or deleted, making post-incident investigation and regulatory audit impossible and creating legal exposure.",
-      "applies_if": [
-        "The AI system is subject to regulatory logging requirements (EU AI Act Art.12, GDPR Art.5(1)(f) accountability obligations, internal compliance policy)",
-        "Audit trails are required to reconstruct or justify AI decisions in the event of a complaint, legal challenge, or regulatory review",
-        "AI decision logs are stored in a system where they could be modified, deleted, or are not protected from tampering"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": true,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Log Retention Violation": {
-      "category": "Monitoring & Audit",
-      "traditional_analog": "Log retention policy breach / evidence spoliation — like security event logs deleted before the mandatory retention window, preventing forensic investigation after an incident and creating regulatory exposure.",
-      "applies_if": [
-        "The AI system's operational logs are subject to a defined minimum retention period (regulatory, contractual, or internal policy)",
-        "Logs are stored in systems with automatic deletion, rolling overwrite, or size-based truncation that could violate retention requirements",
-        "Historical AI decision logs may be required for regulatory audit, data subject requests, or post-incident investigation"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Adversarial Input Evasion Failure": {
-      "category": "Cybersecurity",
-      "traditional_analog": "Input validation bypass / AI-layer SQL injection — where a malicious user crafts inputs designed to manipulate the model's logic or extract sensitive information, analogous to how SQL injection exploits improperly sanitised database queries.",
-      "applies_if": [
-        "The AI system accepts natural language or structured input directly from users (prompt injection risk)",
-        "The system is exposed to potentially adversarial, untrusted, or external users or data sources",
-        "Security controls rely on the AI model itself to detect and reject malicious inputs rather than a separate validation layer"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Unauthorised Access and Privilege Escalation Failure": {
-      "category": "Access Control",
-      "traditional_analog": "Privileged access management (PAM) failure / RBAC violation — like a compromised service account with excessive permissions giving an attacker access to sensitive model weights, training data, or the AI decision pipeline.",
-      "applies_if": [
-        "The AI system stores sensitive data (training data, personal data, model weights, inference logs) requiring formal access controls",
-        "Multiple users, teams, or automated systems have access to the AI infrastructure with different privilege levels",
-        "Access to the AI model, its data, or its configuration is not governed by a documented and enforced IAM policy"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": true,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Cyber Attack Detection Failure": {
-      "category": "Cybersecurity",
-      "traditional_analog": "IDS/SIEM gap — like a web server silently exfiltrating sensitive data for weeks because anomalous query patterns were not monitored, leaving the organisation without early warning of an active attack.",
-      "applies_if": [
-        "The AI system processes sensitive or personal data that could be targeted for exfiltration via query manipulation",
-        "Prompt injection or adversarial inputs could manipulate AI outputs to bypass controls or leak information",
-        "No automated monitoring exists to detect unusual query volumes, anomalous output patterns, or potential AI-layer attacks"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": true,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Accuracy Measurement and Drift Failure": {
-      "category": "Performance Integrity",
-      "traditional_analog": "Model drift / SLA degradation in production — like a fraud detection model that was 95% accurate at launch but silently degraded to 70% over 18 months as fraud patterns changed, with no monitoring alert to trigger retraining.",
-      "applies_if": [
-        "The AI system makes consequential decisions that depend on maintaining a defined level of accuracy or performance",
-        "The system is deployed in an environment where the characteristics of input data may evolve over time",
-        "No baseline accuracy metric, monitoring threshold, or automated drift detection alert has been defined"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Feedback Loop Contamination Failure": {
-      "category": "Performance Integrity",
-      "traditional_analog": "Self-reinforcing algorithmic error — like a recommendation engine trained on user clicks that progressively amplifies engagement-optimising content, embedding and amplifying its own biases with each retraining cycle.",
-      "applies_if": [
-        "The AI system learns from, adapts to, or is retrained using user interactions, feedback, or behavioural signals",
-        "The system is periodically retrained on data that includes outputs previously generated by the AI itself",
-        "Errors or biases in current AI outputs could become embedded as ground truth in future training data"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": true
-      }
-    },
-    "Output Reproducibility Failure": {
-      "category": "Performance Integrity",
-      "traditional_analog": "Audit reproducibility requirement — like a regulatory capital model that cannot reproduce a prior month's output because an undocumented parameter was changed, making supervisory review and model validation impossible.",
-      "applies_if": [
-        "AI-generated outputs must be reproducible for regulatory audit, legal proceedings, or compliance review",
-        "Identical or equivalent inputs should produce consistent results for legal, contractual, or risk management reasons",
-        "Post-incident investigation requires the ability to reconstruct and replay a specific AI decision or output"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Input Corruption Propagation Failure": {
-      "category": "Performance Integrity",
-      "traditional_analog": "Garbage-in-garbage-out / upstream data quality cascade — like a risk model silently ingesting corrupted market data feeds and producing incorrect risk calculations for hours before detection, with no validation gate between ingest and processing.",
-      "applies_if": [
-        "The AI system ingests real-time or externally sourced data feeds that could be corrupted, incomplete, or manipulated",
-        "No validation or sanity-check gate exists between data ingestion and AI processing",
-        "Corrupted or anomalous inputs would propagate directly into AI outputs without triggering an alert or rejection"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Fail-Safe Activation Failure": {
-      "category": "Availability & Resilience",
-      "traditional_analog": "Circuit breaker / graceful degradation failure — like a critical payment processing system with no fallback mode, where a software fault causes total service loss rather than a safe degraded state or manual override.",
-      "applies_if": [
-        "The AI system is relied upon for time-sensitive or operationally critical functions where failure causes direct harm",
-        "A system fault would leave users, staff, or affected individuals without a safe fallback or manual alternative",
-        "No defined safe-state, limited-functionality mode, or emergency halt mechanism has been designed and tested"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "AI Disclosure Mechanism Failure": {
-      "category": "Transparency",
-      "traditional_analog": "Consumer protection / advertising standards non-disclosure — like undisclosed AI-generated product reviews or a chatbot that does not identify itself as AI, violating EU AI Act Art.50 and consumer protection law transparency obligations.",
-      "applies_if": [
-        "The AI system interacts directly with members of the public, customers, or employees in a way that could be mistaken for human interaction",
-        "AI-generated content is published, distributed, or used to inform decisions without labelling or attribution",
-        "The EU AI Act Art.50 transparency obligations apply to this system's output or interaction modality"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Deployer Instructions and Intended Use Failure": {
-      "category": "Documentation & Transparency",
-      "traditional_analog": "A pharmaceutical company releasing a drug without a patient information leaflet — clinicians cannot prescribe safely, dosing errors occur, and the manufacturer cannot demonstrate they met their duty to inform.",
-      "applies_if": [
-        "The AI system has not produced formal instructions documenting its intended purpose and the specific tasks it is designed to perform",
-        "Known limitations, failure modes, or scenarios in which the AI should not be used are not documented and provided to deployers",
-        "Deployers cannot access documented information on what human oversight measures, technical configurations, or competence requirements are needed to operate the system safely",
-        "Performance data, accuracy levels, and the metrics used to measure them are not declared in the documentation provided to deployers"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Quality Management System Conformity Failure": {
-      "category": "Governance & Compliance",
-      "traditional_analog": "An ISO 9001-certified manufacturer removing their quality management system after certification — components are produced without any systematic design control, change management, or corrective action process. Defects compound because no system exists to catch them.",
-      "applies_if": [
-        "The organisation does not have a documented QMS covering the AI system's full lifecycle from design through post-market monitoring",
-        "There are no documented roles and responsibilities for AI safety and compliance within the organisation",
-        "Design changes, model updates, or changes to retrieval data are not subject to a formal change control or impact assessment process",
-        "There is no formal incident reporting process, or reported incidents are not reviewed and acted upon within defined timeframes",
-        "Post-market monitoring data is not collected, reviewed, or used to trigger corrective actions"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK"
-        ],
-        "high_if_step7_automated_decisions_contains": [
-          "Yes",
-          "Partially"
-        ],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "AI Interaction Disclosure Failure": {
-      "category": "Transparency",
-      "traditional_analog": "Like an undisclosed chatbot posing as a human agent, or a photo published with no hint it was AI-generated — the audience is misled about what they're really dealing with.",
-      "applies_if": [
-        "The system interacts with people in a way that could be mistaken for a human",
-        "The system generates or manipulates text, image, audio or video content shown to people",
-        "AI-generated content is published without a clear 'AI-generated' label",
-        "Users are not told, at or before first interaction, that they are dealing with an AI"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Risk Management Lifecycle Gap": {
-      "category": "Monitoring & Audit",
-      "traditional_analog": "Like a factory with no ongoing safety programme — hazards are only found after an incident, never through a standing process.",
-      "applies_if": [
-        "No documented, repeatable process exists for identifying and estimating the system's risks",
-        "Identified risks are not re-evaluated as the system, data or use context changes",
-        "Mitigations are chosen without recording why they are adequate",
-        "No owner is accountable for the risk-management lifecycle"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Technical Documentation Deficiency": {
-      "category": "Monitoring & Audit",
-      "traditional_analog": "Like a medical device with no design history file — you cannot prove how it was built or that it was ever validated.",
-      "applies_if": [
-        "The system's architecture and components are not documented",
-        "Training data and methodology are not recorded",
-        "Achieved accuracy and validation results are not written down",
-        "There is no version history linking documentation to the deployed system"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Deployer Duty Neglect": {
-      "category": "Monitoring & Audit",
-      "traditional_analog": "Like buying certified safety equipment and never switching on its safety features — the protection exists on paper but not in practice.",
-      "applies_if": [
-        "The system is used outside, or without regard to, the provider's instructions for use",
-        "The human-oversight measures assigned to the deployer are not implemented",
-        "Operation is not monitored or logged by the deployer",
-        "The natural persons affected by the system's outputs have not been identified"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Conformity Assessment Gap": {
-      "category": "Monitoring & Audit",
-      "traditional_analog": "Like shipping a product to market without ever running the final pre-launch safety sign-off — you're hoping it conforms rather than proving it.",
-      "applies_if": [
-        "Articles 9–17 completion has not been verified before deployment",
-        "No competent reviewer has signed off the assessment",
-        "There is no explicit declaration that no critical gaps remain",
-        "The conformity conclusion is undated or not tied to a system version"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
-    },
-    "Post-Market Monitoring Failure": {
-      "category": "Monitoring & Audit",
-      "traditional_analog": "Like launching a product and never tracking field failures — defects surface only through complaints or harm, never through monitoring.",
-      "applies_if": [
-        "Performance is not measured on live data after deployment",
-        "There is no detection of model drift or accuracy degradation",
-        "Users have no channel to report incidents or harmful outputs",
-        "There is no defined corrective-action process when problems are found"
-      ],
-      "relevance_factors": {
-        "high_if_step3_ai_act_outcome": [
-          "HIGH_RISK",
-          "PROHIBITED"
-        ],
-        "high_if_step7_automated_decisions_contains": [],
-        "high_if_step7_has_special_categories": false,
-        "high_if_step7_has_personal_data": false,
-        "high_if_step7_training_data_used": false
-      }
+    "[12792: AI Transparency Taxonomy]": {
+      "color": "amber",
+      "description": "AI Transparency Taxonomy"
     }
   },
   "wizard_questions": [
     {
       "id": "wq01",
-      "risk_name": "Human Oversight Bypass Failure",
-      "question": "Does the AI system make or significantly influence decisions without a mandatory human review or override step?"
+      "risk_id": "RISK-001",
+      "risk_name": "Opaque system to deployers",
+      "question": "User Documentation: Do system operators need documentation to understand any of the following?\na) What the system is capable of doing\nb) The system's known limitations or blind spots\nc) Instructions for proper and safe usage"
     },
     {
       "id": "wq02",
-      "risk_name": "Subgroup Coverage Failure",
-      "question": "Does the AI system process data about, or make decisions that affect, people from distinct demographic or protected groups (age, gender, ethnicity, disability, etc.)?"
+      "risk_id": "RISK-002",
+      "risk_name": "Ineffective human oversight",
+      "question": "Human Oversight: Do users interact with the system in a way that requires any of the following?\na) Relying on the system to make or inform decisions\nb) The ability to understand and interpret the outputs\nc) The ability to override decisions or safely halt operations"
     },
     {
       "id": "wq03",
-      "risk_name": "Proxy Discrimination Propagation Failure",
-      "question": "Does the AI use input variables — such as location, purchasing history, or social network data — that could act as proxies for protected characteristics?"
+      "risk_id": "RISK-003",
+      "risk_name": "Security compromise",
+      "question": "Cybersecurity: Is the system exposed to any of the following attack vectors?\na) External or untrusted users\nb) Third-party data or models\nc) Public or networked infrastructure"
     },
     {
       "id": "wq04",
-      "risk_name": "Dataset Lifecycle Integrity Failure",
-      "question": "Are formal controls in place governing the collection, labelling, versioning, and retirement of all training datasets?"
+      "risk_id": "RISK-004",
+      "risk_name": "Inaccurate or unproven performance",
+      "question": "Accuracy: Do any of the following apply to the system's outputs?\na) Produces predictions\nb) Produces classifications\nc) Supports a task where output correctness is critical"
     },
     {
       "id": "wq05",
-      "risk_name": "Data Governance Documentation Failure",
-      "question": "Is the data lineage, schema, and quality thresholds for all training data formally documented and maintained?"
+      "risk_id": "RISK-005",
+      "risk_name": "Fragile or unsafe behaviour under stress",
+      "question": "Robustness: Must the system remain stable when facing any of the following?\na) Corrupted or unexpected inputs\nb) Changing environmental conditions\nc) Adversarial inputs or usage"
     },
     {
       "id": "wq06",
-      "risk_name": "Data Quality Measurement Failure",
-      "question": "Is the quality, completeness, and representativeness of training data regularly measured and reported against defined thresholds?"
+      "risk_id": "RISK-006",
+      "risk_name": "Poor data quality & governance",
+      "question": "Data Quality: Do any of the following apply to the system's datasets?\na) Performance depends on data quality or selection\nb) Uses data for training or fine-tuning\nc) Uses data for retrieval (RAG)\nd) Provenance and origin of the data affect outputs"
     },
     {
       "id": "wq07",
-      "risk_name": "Audit Log Integrity Failure",
-      "question": "Does the AI system generate comprehensive, tamper-evident audit logs of its decisions, inputs, and actions?"
+      "risk_id": "RISK-007",
+      "risk_name": "Discriminatory or biased outcomes",
+      "question": "Bias & Fairness: Do any of the following apply to the system?\na) Processes personal data about individuals\nb) Makes or informs decisions affecting people\nc) Could inadvertently treat demographic groups (age, gender, ethnicity, etc.) differently"
     },
     {
       "id": "wq08",
-      "risk_name": "Log Retention Violation",
-      "question": "Are AI system logs retained for the full period required by applicable regulations, internal policies, or contractual obligations?"
+      "risk_id": "RISK-008",
+      "risk_name": "Incomplete event recording",
+      "question": "Logging: Does the system require a secure, unalterable audit trail for any of the following?\na) System inputs and prompts\nb) Automated decisions and outputs\nc) System events and errors"
     },
     {
       "id": "wq09",
-      "risk_name": "Adversarial Input Evasion Failure",
-      "question": "Does the AI system accept external or user-supplied inputs that directly influence its predictions or decisions?"
+      "risk_id": "RISK-009",
+      "risk_name": "Inadequate system logging",
+      "question": "Traceability: Must past system events be reconstructable for any of the following reasons?\na) Routine audits or compliance checks\nb) Incident investigations or failure analysis\nc) Human oversight reviews"
+    },
+    {
+      "id": "wq10",
+      "risk_id": "RISK-010",
+      "risk_name": "No quality management system",
+      "question": "Quality Management (QMS): Does your organization's role include any of the following?\na) Acting as the original provider of a high-risk AI system\nb) Making substantial modifications to an existing AI system\nc) Operating under a formal Quality Management System"
+    },
+    {
+      "id": "wq11",
+      "risk_id": "RISK-011",
+      "risk_name": "Unmanaged risk lifecycle",
+      "question": "Risk Management: Does the system require risk management for any of the following phases?\na) Initial design and development\nb) Continuous monitoring during its active lifecycle\nc) Documented mitigation of known and emerging risks"
     },
     {
       "id": "wq12",
-      "risk_name": "Cyber Attack Detection Failure",
-      "question": "Does the AI system have monitoring controls to detect anomalous query patterns, unusual output behaviour, or attempted intrusions?"
+      "risk_id": "RISK-012",
+      "risk_name": "Incomplete technical file",
+      "question": "Technical Documentation: Do you need to produce a formal Technical File detailing any of the following?\na) How the system was designed and built\nb) How the system was validated and tested\nc) How the system is version-controlled"
     },
     {
       "id": "wq13",
-      "risk_name": "Unauthorised Access and Privilege Escalation Failure",
-      "question": "Are role-based access controls in place limiting who can query, modify, retrain, or administer the AI system?"
+      "risk_id": "RISK-013",
+      "risk_name": "Unmanaged substantial modification",
+      "question": "System Modifications: Will the system undergo future updates involving any of the following?\na) New models or significant architecture changes\nb) New retrieval data or training datasets\nc) Changes to the system's intended purpose"
     },
     {
       "id": "wq14",
-      "risk_name": "Accuracy Measurement and Drift Failure",
-      "question": "Is the AI system's accuracy formally measured at deployment and monitored on an ongoing basis for model drift or degradation?"
+      "risk_id": "RISK-014",
+      "risk_name": "Unmet deployer duties",
+      "question": "Deployer Obligations: Does your organization's responsibility include any of the following?\na) Acting as the deployer of a high-risk AI system\nb) Managing the system's day-to-day operation in production\nc) Ensuring the system is used according to the provider's instructions"
     },
     {
       "id": "wq15",
-      "risk_name": "Feedback Loop Contamination Failure",
-      "question": "Does the AI system use its own historical outputs — directly or indirectly — as future training or reinforcement data?"
+      "risk_id": "RISK-015",
+      "risk_name": "Unverified conformity",
+      "question": "Conformity Assessment: Is the system subject to any of the following pre-launch requirements?\na) Being formally placed on the EU market\nb) Being put into service for its intended use\nc) Requiring a formal conformity assessment"
     },
     {
       "id": "wq16",
-      "risk_name": "Output Reproducibility Failure",
-      "question": "Is reproducibility required for this system — must the same input reliably produce the same output across runs and environments?"
+      "risk_id": "RISK-016",
+      "risk_name": "Undisclosed AI interaction or content",
+      "question": "Transparency & Content Labeling: Does the system do any of the following?\na) Simulate human interaction\nb) Generate synthetic content (text, images, audio, video)\nc) Manipulate content shown to users"
     },
     {
       "id": "wq17",
-      "risk_name": "Input Corruption Propagation Failure",
-      "question": "Could corrupted, spoofed, or low-quality data reach the model without detection by an upstream validation or anomaly-detection layer?"
-    },
-    {
-      "id": "wq18",
-      "risk_name": "Fail-Safe Activation Failure",
-      "question": "Is a fail-safe or fallback mode defined and tested for when the AI system becomes unavailable or produces outputs below an acceptable confidence threshold?"
-    },
-    {
-      "id": "wq19",
-      "risk_name": "AI Disclosure Mechanism Failure",
-      "question": "Are users or individuals affected by the system's outputs notified that they are interacting with, or being assessed by, an AI system?"
-    },
-    {
-      "id": "wq20",
-      "risk_name": "Deployer Instructions and Intended Use Failure",
-      "question": "Has the organisation produced formal instructions for deployers that document the system's intended purpose, known limitations, required oversight measures, and achieved performance levels?"
-    },
-    {
-      "id": "wq21",
-      "risk_name": "Quality Management System Conformity Failure",
-      "question": "Does the organisation have a documented Quality Management System (QMS) covering AI design controls, change management, post-market monitoring, and incident reporting for this AI system?"
-    },
-    {
-      "id": "wq20",
-      "risk_name": "AI Interaction Disclosure Failure",
-      "question": "Does the system interact with people as if human, or produce AI-generated content, without clearly disclosing that it is AI?"
-    },
-    {
-      "id": "wq21",
-      "risk_name": "Risk Management Lifecycle Gap",
-      "question": "Is there no continuous, documented process to identify, evaluate and mitigate the system's risks across its lifecycle?"
-    },
-    {
-      "id": "wq22",
-      "risk_name": "Technical Documentation Deficiency",
-      "question": "Is the system's technical documentation (architecture, training, accuracy, versions) missing or too thin for a regulator to review?"
-    },
-    {
-      "id": "wq23",
-      "risk_name": "Deployer Duty Neglect",
-      "question": "As the deployer, are you not operating the provider's assigned oversight, monitoring and instructions-for-use duties?"
-    },
-    {
-      "id": "wq24",
-      "risk_name": "Conformity Assessment Gap",
-      "question": "Is the system being deployed without a completed, signed-off conformity assessment confirming Articles 9–17 are met?"
-    },
-    {
-      "id": "wq25",
-      "risk_name": "Post-Market Monitoring Failure",
-      "question": "After go-live, is the system's performance not monitored for drift, with no incident channel or corrective-action process?"
+      "risk_id": "RISK-017",
+      "risk_name": "Blind post-market operation",
+      "question": "Post-Market Monitoring: Will the live system require continuous monitoring to detect any of the following?\na) Performance drift or data shifts\nb) System degradation over time\nc) Safety incidents or unexpected risks"
     }
-  ]
+  ],
+  "risks": {
+    "Opaque system to deployers": {
+      "risk_id": "RISK-001",
+      "category": "[18229-1: Trustworthiness]",
+      "article": "Article 13",
+      "article_name": "Article 13: Transparency and Provision of Information to Deployers",
+      "category_question": "User Documentation: Do system operators need documentation to understand any of the following?\na) What the system is capable of doing\nb) The system's known limitations or blind spots\nc) Instructions for proper and safe usage",
+      "risk_description": "Opaque system to deployers — deployers lack the purpose, limitations and instructions needed to use the system correctly.",
+      "areas": [
+        {
+          "subcategory": "Transparency",
+          "treatment_question": "User Instructions: Do the people using the system require any of the following?\na) Clear instructions on what the system is for\nb) Warnings on when not to rely on it\nc) Guidance on how to use it safely",
+          "refs": [
+            {
+              "ref": "[18229-1.1]",
+              "name": "Intended Purpose"
+            },
+            {
+              "ref": "[18229-1.2]",
+              "name": "Limitations"
+            },
+            {
+              "ref": "[18229-1.3]",
+              "name": "Instructions for Use"
+            }
+          ]
+        }
+      ]
+    },
+    "Ineffective human oversight": {
+      "risk_id": "RISK-002",
+      "category": "[18229-1: Trustworthiness]",
+      "article": "Article 14",
+      "article_name": "Article 14: Human Oversight",
+      "category_question": "Human Oversight: Do users interact with the system in a way that requires any of the following?\na) Relying on the system to make or inform decisions\nb) The ability to understand and interpret the outputs\nc) The ability to override decisions or safely halt operations",
+      "risk_description": "Ineffective human oversight — people cannot understand, question or halt the outputs, so they over-rely on the system.",
+      "areas": [
+        {
+          "subcategory": "Human Oversight",
+          "treatment_question": "Human Oversight: Do people acting on the system's outputs need any of the following?\na) Prompts to prevent over-trusting the AI\nb) A mechanism to override decisions or halt operations\nc) Sufficient explanation to understand the system's reasoning",
+          "refs": [
+            {
+              "ref": "[18229-1.6]",
+              "name": "Automation Confidence Warning"
+            },
+            {
+              "ref": "[18229-1.7]",
+              "name": "Intervention Tools"
+            },
+            {
+              "ref": "[18229-1.8]",
+              "name": "Interpretability"
+            }
+          ]
+        }
+      ]
+    },
+    "Security compromise": {
+      "risk_id": "RISK-003",
+      "category": "[18282: Cybersecurity]",
+      "article": "Article 15",
+      "article_name": "Article 15: Accuracy, Robustness and Cybersecurity",
+      "category_question": "Cybersecurity: Is the system exposed to any of the following attack vectors?\na) External or untrusted users\nb) Third-party data or models\nc) Public or networked infrastructure",
+      "risk_description": "Security compromise — the model, its data or its pipelines are attacked, corrupted or accessed without authorisation.",
+      "areas": [
+        {
+          "subcategory": "Threat Mitigation",
+          "treatment_question": "Threat Vulnerability: Is the system vulnerable to attackers attempting any of the following?\na) Feeding crafted inputs to fool the logic (evasion)\nb) Poisoning the training or retrieval data\nc) Probing to steal the model or underlying data",
+          "refs": [
+            {
+              "ref": "[18282.1]",
+              "name": "Adversarial Attacks"
+            },
+            {
+              "ref": "[18282.2]",
+              "name": "Data Poisoning"
+            },
+            {
+              "ref": "[18282.3]",
+              "name": "Model Inversion"
+            }
+          ]
+        },
+        {
+          "subcategory": "System Integrity",
+          "treatment_question": "Supply Chain Integrity: Does the system rely on any of the following that could be tampered with?\na) Custom code or infrastructure\nb) Data or deployment pipelines\nc) Third-party models, components, or libraries",
+          "refs": [
+            {
+              "ref": "[18282.4]",
+              "name": "Secure Development"
+            },
+            {
+              "ref": "[18282.5]",
+              "name": "Supply Chain Security"
+            }
+          ]
+        },
+        {
+          "subcategory": "Infrastructure",
+          "treatment_question": "Access Security: Does the system require any of the following security measures?\na) Locking down access to model weights\nb) Restricting access to underlying data and admin functions\nc) Hardening the model to resist external manipulation",
+          "refs": [
+            {
+              "ref": "[18282.6]",
+              "name": "Access Control"
+            },
+            {
+              "ref": "[18282.7]",
+              "name": "Model Robustness"
+            }
+          ]
+        },
+        {
+          "subcategory": "Defense-in-Depth",
+          "treatment_question": "Active Detection: Does the system need active monitoring to detect any of the following in real-time?\na) Prompt injection attacks\nb) Malicious probing or anomalous behavior\nc) Evasion attempts bypassing preventative controls",
+          "refs": [
+            {
+              "ref": "[18282.8]",
+              "name": "Anomaly Detection"
+            }
+          ]
+        }
+      ]
+    },
+    "Inaccurate or unproven performance": {
+      "risk_id": "RISK-004",
+      "category": "[18229-2: Trustworthiness (Accuracy)]",
+      "article": "Article 15",
+      "article_name": "Article 15: Accuracy, Robustness and Cybersecurity",
+      "category_question": "Accuracy: Do any of the following apply to the system's outputs?\na) Produces predictions\nb) Produces classifications\nc) Supports a task where output correctness is critical",
+      "risk_description": "Inaccurate or unproven performance — accuracy is not measured, validated, declared or monitored, so the system performs worse than believed.",
+      "areas": [
+        {
+          "subcategory": "Metric Requirements",
+          "treatment_question": "Accuracy Testing: Does the system's output accuracy require any of the following?\na) Formal measurement using appropriate statistical metrics\nb) Rigorous testing on unseen validation datasets\nc) Explicit declaration of the achieved accuracy results",
+          "refs": [
+            {
+              "ref": "[18229-2.9]",
+              "name": "Metric Selection"
+            },
+            {
+              "ref": "[18229-2.10]",
+              "name": "Validation"
+            },
+            {
+              "ref": "[18229-2.11]",
+              "name": "Declaration"
+            }
+          ]
+        },
+        {
+          "subcategory": "Lifecycle Performance",
+          "treatment_question": "Performance Drift: Once live, does the system require any of the following to maintain accuracy?\na) Continuous monitoring for performance drift\nb) Ongoing benchmarking against baselines\nc) Alerts when accuracy falls below acceptable thresholds",
+          "refs": [
+            {
+              "ref": "[18229-2.12]",
+              "name": "Consistency"
+            },
+            {
+              "ref": "[18229-2.13]",
+              "name": "Benchmarking"
+            }
+          ]
+        },
+        {
+          "subcategory": "Technical Documentation",
+          "treatment_question": "Validation Documentation: Does the system require formal documentation for any of the following?\na) How the accuracy was statistically tested\nb) The methodology behind the train/test data split\nc) The specific validation methods used to verify results",
+          "refs": [
+            {
+              "ref": "[18229-2.14]",
+              "name": "Verification Methods"
+            }
+          ]
+        }
+      ]
+    },
+    "Fragile or unsafe behaviour under stress": {
+      "risk_id": "RISK-005",
+      "category": "[18229-2: Trustworthiness (Robustness)]",
+      "article": "Article 15",
+      "article_name": "Article 15: Accuracy, Robustness and Cybersecurity",
+      "category_question": "Robustness: Must the system remain stable when facing any of the following?\na) Corrupted or unexpected inputs\nb) Changing environmental conditions\nc) Adversarial inputs or usage",
+      "risk_description": "Fragile or unsafe behaviour under stress — the system fails unpredictably on noisy, shifting or adversarial conditions, or emits unsafe content.",
+      "areas": [
+        {
+          "subcategory": "Resilience Factors",
+          "treatment_question": "Operational Robustness: Must the system continue operating safely when encountering any of the following?\na) Messy, corrupted, or unexpected inputs\nb) Rapidly changing environmental conditions\nc) Feedback loops that could degrade performance",
+          "refs": [
+            {
+              "ref": "[18229-2.15]",
+              "name": "Input Noise"
+            },
+            {
+              "ref": "[18229-2.16]",
+              "name": "Environment Changes"
+            },
+            {
+              "ref": "[18229-2.17]",
+              "name": "Feedback Loops"
+            }
+          ]
+        },
+        {
+          "subcategory": "Fail-Safe Mechanisms",
+          "treatment_question": "Fail-Safe Mechanisms: In the event of a failure, must the system execute any of the following?\na) Graceful degradation of functionality\nb) Fall back to a predefined safe state\nc) Avoid unpredictable or abrupt collapse",
+          "refs": [
+            {
+              "ref": "[18229-2.18]",
+              "name": "Graceful Degradation"
+            },
+            {
+              "ref": "[18229-2.19]",
+              "name": "Technical Redundancy"
+            }
+          ]
+        },
+        {
+          "subcategory": "Reproducibility",
+          "treatment_question": "Reproducibility: Does the system's reliability depend on any of the following?\na) Producing consistent, deterministic outputs\nb) Generating the exact same response for the same input\nc) Eliminating random or unpredictable variations",
+          "refs": [
+            {
+              "ref": "[18229-2.20]",
+              "name": "Output Reliability"
+            }
+          ]
+        },
+        {
+          "subcategory": "Content Safety",
+          "treatment_question": "Content Safety: Does the system require moderation guardrails to prevent any of the following?\na) Displaying toxic or abusive content to users\nb) Generating harmful or dangerous instructions\nc) Bypassing safety filters via prompt injection",
+          "refs": [
+            {
+              "ref": "[18229-2.21]",
+              "name": "Content Moderation Guardrail"
+            }
+          ]
+        }
+      ]
+    },
+    "Poor data quality & governance": {
+      "risk_id": "RISK-006",
+      "category": "[18284: Quality and Governance]",
+      "article": "Article 10",
+      "article_name": "Article 10: Data and Data Governance",
+      "category_question": "Data Quality: Do any of the following apply to the system's datasets?\na) Performance depends on data quality or selection\nb) Uses data for training or fine-tuning\nc) Uses data for retrieval (RAG)\nd) Provenance and origin of the data affect outputs",
+      "risk_description": "Poor data quality & governance — the data driving the system is undocumented, unrepresentative, incomplete, inaccurate or unlawfully retained.",
+      "areas": [
+        {
+          "subcategory": "Governance Practices",
+          "treatment_question": "Data Provenance: Does the data governance process require documentation for any of the following?\na) The origin and provenance of the data\nb) The rationale for choosing specific datasets\nc) The specific methods used for data preparation and cleaning",
+          "refs": [
+            {
+              "ref": "[18284.1]",
+              "name": "Design Choices"
+            },
+            {
+              "ref": "[18284.2]",
+              "name": "Data Origin"
+            },
+            {
+              "ref": "[18284.3]",
+              "name": "Data Preparation Operations"
+            }
+          ]
+        },
+        {
+          "subcategory": "Quality Metrics",
+          "treatment_question": "Data Quality Metrics: Does the system's data quality require measurement of any of the following?\na) How representative the data is of the target environment\nb) The completeness of the records (lack of data gaps)\nc) The accuracy and correctness of the labels and raw data",
+          "refs": [
+            {
+              "ref": "[18284.4]",
+              "name": "Representativeness"
+            },
+            {
+              "ref": "[18284.5]",
+              "name": "Completeness"
+            },
+            {
+              "ref": "[18284.6]",
+              "name": "Accuracy / Correctness"
+            }
+          ]
+        },
+        {
+          "subcategory": "Lifecycle Requirements",
+          "treatment_question": "Data Lifecycle Rules: Does the system require strict rules governing any of the following?\na) How datasets are split (training, validation, testing)\nb) How long the data is retained for compliance\nc) The secure decommissioning of expired data",
+          "refs": [
+            {
+              "ref": "[18284.7]",
+              "name": "Dataset Splitting"
+            },
+            {
+              "ref": "[18284.8]",
+              "name": "Data Retention"
+            }
+          ]
+        },
+        {
+          "subcategory": "Assumptions",
+          "treatment_question": "Data Formulation: Must the project explicitly document any of the following?\na) The core assumptions about what the data represents\nb) What the data is intended to measure or predict\nc) The contextual limitations of the data sources",
+          "refs": [
+            {
+              "ref": "[18284.9]",
+              "name": "Formulation"
+            }
+          ]
+        },
+        {
+          "subcategory": "Privacy Protection",
+          "treatment_question": "Privacy Egress: Does the system require egress filtering to prevent any of the following?\na) Personal data leaking into prompts or outputs\nb) Confidential information leaving your controlled environment\nc) External models retaining or training on your submitted data",
+          "refs": [
+            {
+              "ref": "[18284.10]",
+              "name": "Personal Data Egress & Output Filtering"
+            }
+          ]
+        }
+      ]
+    },
+    "Discriminatory or biased outcomes": {
+      "risk_id": "RISK-007",
+      "category": "[18283: Bias]",
+      "article": "Article 10",
+      "article_name": "Article 10: Data and Data Governance",
+      "category_question": "Bias & Fairness: Do any of the following apply to the system?\na) Processes personal data about individuals\nb) Makes or informs decisions affecting people\nc) Could inadvertently treat demographic groups (age, gender, ethnicity, etc.) differently",
+      "risk_description": "Discriminatory or biased outcomes — unfair results across groups because bias in the data or model is not detected or mitigated.",
+      "areas": [
+        {
+          "subcategory": "Bias Detection",
+          "treatment_question": "Bias & Proxy Detection: Does the system require checks to prevent bias involving any of the following?\na) Disparate impacts on protected demographic groups\nb) Hidden proxy variables (e.g., zip code acting as a stand-in for ethnicity)\nc) Under-representation of specific groups in the data",
+          "refs": [
+            {
+              "ref": "[18283.1]",
+              "name": "Representativeness"
+            },
+            {
+              "ref": "[18283.2]",
+              "name": "Bias Metrics"
+            },
+            {
+              "ref": "[18283.3]",
+              "name": "Proxy Identification"
+            }
+          ]
+        },
+        {
+          "subcategory": "Human & Social Context",
+          "treatment_question": "Fairness Definition: Does defining \"fairness\" for the system require any of the following?\na) Gathering input from diverse, multi-stakeholder teams\nb) Consulting with the people directly affected by the system\nc) Linking mitigation measures directly to fundamental rights",
+          "refs": [
+            {
+              "ref": "[18283.4]",
+              "name": "Multi-stakeholder Input"
+            },
+            {
+              "ref": "[18283.5]",
+              "name": "Fundamental Rights"
+            }
+          ]
+        }
+      ]
+    },
+    "Incomplete event recording": {
+      "risk_id": "RISK-008",
+      "category": "[18229-1: Trustworthiness]",
+      "article": "Article 12",
+      "article_name": "Article 12: Record-Keeping",
+      "category_question": "Logging: Does the system require a secure, unalterable audit trail for any of the following?\na) System inputs and prompts\nb) Automated decisions and outputs\nc) System events and errors",
+      "risk_description": "Incomplete event recording — the system does not immutably record the events needed to reconstruct what happened.",
+      "areas": [
+        {
+          "subcategory": "Logging",
+          "treatment_question": "Event Reconstruction: Must the system maintain permanent records of any of the following?\na) The specific inputs or prompts received\nb) The automated decisions or outputs generated\nc) Sufficient detail to fully reconstruct a past event",
+          "refs": [
+            {
+              "ref": "[18229-1.4]",
+              "name": "Event Recording"
+            },
+            {
+              "ref": "[18229-1.5]",
+              "name": "Traceability"
+            }
+          ]
+        }
+      ]
+    },
+    "Inadequate system logging": {
+      "risk_id": "RISK-009",
+      "category": "[24970: AI System Logging]",
+      "article": "Article 12",
+      "article_name": "Article 12: Record-Keeping",
+      "category_question": "Traceability: Must past system events be reconstructable for any of the following reasons?\na) Routine audits or compliance checks\nb) Incident investigations or failure analysis\nc) Human oversight reviews",
+      "risk_description": "Inadequate system logging — the system does not automatically record the events, inputs, states and errors needed to reconstruct and audit its behaviour.",
+      "areas": [
+        {
+          "subcategory": "Logging Triggers",
+          "treatment_question": "Automated Logging: Does the system require automated logging for any of the following?\na) Key performance benchmarks or safety checks\nb) System errors, crashes, or fallback activations\nc) Every instance where a human overrides or stops the system",
+          "refs": [
+            {
+              "ref": "[24970.1]",
+              "name": "Monitoring Events"
+            },
+            {
+              "ref": "[24970.2]",
+              "name": "Human Intervention"
+            }
+          ]
+        },
+        {
+          "subcategory": "Captured Information",
+          "treatment_question": "Log Completeness: Must the system's logs capture any of the following details?\na) The system's state and active model version at the time\nb) The specific retrieved data or context behind a decision\nc) Detailed diagnostic data and error codes",
+          "refs": [
+            {
+              "ref": "[24970.3]",
+              "name": "System State"
+            },
+            {
+              "ref": "[24970.4]",
+              "name": "Input/Output Data"
+            },
+            {
+              "ref": "[24970.5]",
+              "name": "Errors & Failures"
+            }
+          ]
+        },
+        {
+          "subcategory": "Storage & Governance",
+          "treatment_question": "Log Governance: Do the system's logs require any of the following governance controls?\na) Tamper-proof storage (e.g., cryptographic hashes, WORM storage)\nb) Enforcement of minimum retention periods\nc) Privacy protections (e.g., data minimization or anonymization)",
+          "refs": [
+            {
+              "ref": "[24970.6]",
+              "name": "Tamper Resistance"
+            },
+            {
+              "ref": "[24970.7]",
+              "name": "Retention Periods"
+            },
+            {
+              "ref": "[24970.8]",
+              "name": "Privacy"
+            }
+          ]
+        }
+      ]
+    },
+    "No quality management system": {
+      "risk_id": "RISK-010",
+      "category": "[18286: Quality Management System]",
+      "article": "Article 17",
+      "article_name": "Article 17: Quality Management System",
+      "category_question": "Quality Management (QMS): Does your organization's role include any of the following?\na) Acting as the original provider of a high-risk AI system\nb) Making substantial modifications to an existing AI system\nc) Operating under a formal Quality Management System",
+      "risk_description": "No quality management system — the organisation lacks the documented QMS to keep the AI conformant over its life.",
+      "areas": [
+        {
+          "subcategory": "Organizational Strategy",
+          "treatment_question": "Provider Strategy: As the provider, does your organization require any of the following?\na) A formally documented compliance strategy\nb) Clear accountability and defined management roles\nc) A structured framework for maintaining ongoing conformity",
+          "refs": [
+            {
+              "ref": "[18286.1]",
+              "name": "Compliance Strategy"
+            },
+            {
+              "ref": "[18286.2]",
+              "name": "Accountability Framework"
+            }
+          ]
+        },
+        {
+          "subcategory": "Operational Controls",
+          "treatment_question": "Development Controls: Does your organization require established procedures for any of the following?\na) Controlling system design and development\nb) Verification and validation testing\nc) Managing human and technical resources (e.g., compute power)",
+          "refs": [
+            {
+              "ref": "[18286.3]",
+              "name": "Design & Development"
+            },
+            {
+              "ref": "[18286.4]",
+              "name": "Resource Management"
+            }
+          ]
+        },
+        {
+          "subcategory": "Post-Launch Duties",
+          "treatment_question": "Post-Launch Duties: Once the system is launched, do you require standing procedures for any of the following?\na) Continuous post-market monitoring of the system\nb) Reporting serious incidents to national authorities\nc) Adhering to strict regulatory reporting timelines",
+          "refs": [
+            {
+              "ref": "[18286.5]",
+              "name": "Post-Market Monitoring (PMM)"
+            },
+            {
+              "ref": "[18286.6]",
+              "name": "Incident Reporting"
+            }
+          ]
+        },
+        {
+          "subcategory": "Documentation & Records",
+          "treatment_question": "Record Retention: Are you required to maintain any of the following for the system's lifespan?\na) The comprehensive Technical File (Annex IV)\nb) Version-controlled architecture documentation\nc) Long-term storage of logs and compliance records",
+          "refs": [
+            {
+              "ref": "[18286.7]",
+              "name": "Technical Documentation"
+            },
+            {
+              "ref": "[18286.8]",
+              "name": "Record-Keeping"
+            }
+          ]
+        }
+      ]
+    },
+    "Unmanaged risk lifecycle": {
+      "risk_id": "RISK-011",
+      "category": "[18228: Risk Management]",
+      "article": "Article 9",
+      "article_name": "Article 9: Risk Management System",
+      "category_question": "Risk Management: Does the system require risk management for any of the following phases?\na) Initial design and development\nb) Continuous monitoring during its active lifecycle\nc) Documented mitigation of known and emerging risks",
+      "risk_description": "Unmanaged risk lifecycle — the system's risks are not systematically identified, evaluated and mitigated across its life.",
+      "areas": [
+        {
+          "subcategory": "Key Risk Iterations",
+          "treatment_question": "Risk Iteration: Does this high-risk system require a risk management process that includes any of the following?\na) Identifying known and reasonably foreseeable risks\nb) Estimating and evaluating the severity of those risks\nc) Continuously revisiting the evaluation as new data emerges",
+          "refs": [
+            {
+              "ref": "[18228.1]",
+              "name": "Identification"
+            },
+            {
+              "ref": "[18228.2]",
+              "name": "Estimation"
+            },
+            {
+              "ref": "[18228.3]",
+              "name": "Evaluation"
+            }
+          ]
+        },
+        {
+          "subcategory": "Mitigation Hierarchy",
+          "treatment_question": "Mitigation Hierarchy: Must identified risks be mitigated using any of the following steps?\na) Eliminating the risk entirely through system design\nb) Implementing technical controls to reduce unavoidable risks\nc) Flagging any residual risk through adequate user information",
+          "refs": [
+            {
+              "ref": "[18228.4]",
+              "name": "Elimination"
+            },
+            {
+              "ref": "[18228.5]",
+              "name": "Mitigation"
+            },
+            {
+              "ref": "[18228.6]",
+              "name": "Information"
+            }
+          ]
+        }
+      ]
+    },
+    "Incomplete technical file": {
+      "risk_id": "RISK-012",
+      "category": "[18286: Quality Management System]",
+      "article": "Article 11",
+      "article_name": "Article 11: Technical Documentation",
+      "category_question": "Technical Documentation: Do you need to produce a formal Technical File detailing any of the following?\na) How the system was designed and built\nb) How the system was validated and tested\nc) How the system is version-controlled",
+      "risk_description": "Incomplete technical file — identity, architecture, training, performance and change history are not documented to a reviewable standard.",
+      "areas": [
+        {
+          "subcategory": "System Description",
+          "treatment_question": "System Description: Does the technical documentation need to cover any of the following?\na) A clear declaration of the system's identity and intended purpose\nb) A description of the architecture and component interactions\nc) The specific methodologies and algorithms used for training",
+          "refs": [
+            {
+              "ref": "[18286.9]",
+              "name": "System Identity & Purpose"
+            },
+            {
+              "ref": "[18286.10]",
+              "name": "Architecture & Components"
+            },
+            {
+              "ref": "[18286.11]",
+              "name": "Training Methodology"
+            }
+          ]
+        },
+        {
+          "subcategory": "Performance Evidence",
+          "treatment_question": "Performance Evidence: Must the system's performance records include any of the following?\na) The specific accuracy levels and metrics achieved\nb) A summary of the testing and validation outcomes\nc) The conditions and datasets used during testing",
+          "refs": [
+            {
+              "ref": "[18286.12]",
+              "name": "Accuracy & Metrics Achieved"
+            },
+            {
+              "ref": "[18286.13]",
+              "name": "Testing & Validation Results"
+            }
+          ]
+        },
+        {
+          "subcategory": "Change Management",
+          "treatment_question": "Change Management: Because the system will evolve, do you require any of the following?\na) A strict version control scheme for all releases\nb) Traceability between system versions and their documentation\nc) An auditable log of all modifications made after launch",
+          "refs": [
+            {
+              "ref": "[18286.14]",
+              "name": "Version Control"
+            },
+            {
+              "ref": "[18286.15]",
+              "name": "Modification Log"
+            }
+          ]
+        }
+      ]
+    },
+    "Unmanaged substantial modification": {
+      "risk_id": "RISK-013",
+      "category": "[42001: AI Management System]",
+      "article": "Article 25",
+      "article_name": "Article 25: Substantial Modification",
+      "category_question": "System Modifications: Will the system undergo future updates involving any of the following?\na) New models or significant architecture changes\nb) New retrieval data or training datasets\nc) Changes to the system's intended purpose",
+      "risk_description": "Unmanaged substantial modification — changes aren't evaluated for whether they trigger re-assessment or shift provider responsibility.",
+      "areas": [
+        {
+          "subcategory": "Modification Assessment",
+          "treatment_question": "Modification Assessment: When modifying the system, must you evaluate any of the following?\na) Whether the modification qualifies as \"substantial\" under the AI Act\nb) Whether the change affects the system's core compliance\nc) Whether the modification shifts legal Provider responsibilities to you",
+          "refs": [
+            {
+              "ref": "[42001.1]",
+              "name": "Scope of Change Evaluation"
+            },
+            {
+              "ref": "[42001.2]",
+              "name": "Provider Responsibility Trigger"
+            }
+          ]
+        },
+        {
+          "subcategory": "Re-conformity",
+          "treatment_question": "Re-conformity: If a substantial change occurs, does it require any of the following actions?\na) Triggering a full or partial re-run of the conformity assessment\nb) Updating the Technical File and architecture documentation\nc) Re-evaluating performance evidence and modification logs",
+          "refs": [
+            {
+              "ref": "[42001.3]",
+              "name": "Re-assessment Requirement"
+            },
+            {
+              "ref": "[42001.4]",
+              "name": "Updated Technical Documentation"
+            }
+          ]
+        }
+      ]
+    },
+    "Unmet deployer duties": {
+      "risk_id": "RISK-014",
+      "category": "[42001: AI Management System]",
+      "article": "Article 26",
+      "article_name": "Article 26: Deployer Obligations",
+      "category_question": "Deployer Obligations: Does your organization's responsibility include any of the following?\na) Acting as the deployer of a high-risk AI system\nb) Managing the system's day-to-day operation in production\nc) Ensuring the system is used according to the provider's instructions",
+      "risk_description": "Unmet deployer duties — the deployer doesn't operate per instructions, implement oversight, monitor/log, or assess affected persons.",
+      "areas": [
+        {
+          "subcategory": "Operational Governance",
+          "treatment_question": "Deployer Governance: As the deployer, are you responsible for any of the following?\na) Operating the system strictly within its intended purpose and instructions\nb) Assigning competent personnel to perform human oversight\nc) Monitoring system operation and retaining logs",
+          "refs": [
+            {
+              "ref": "[42001.5]",
+              "name": "Instructions for Use Compliance"
+            },
+            {
+              "ref": "[42001.6]",
+              "name": "Human Oversight Implementation"
+            },
+            {
+              "ref": "[42001.7]",
+              "name": "Monitoring & Logging"
+            }
+          ]
+        },
+        {
+          "subcategory": "Impact Assessment",
+          "treatment_question": "Impact Assessment: Prior to deployment, does your use case require any of the following?\na) Conducting a fundamental rights impact assessment\nb) Documenting the findings and notifying the provider of risks\nc) Identifying the specific categories of people affected by the outputs",
+          "refs": [
+            {
+              "ref": "[42001.8]",
+              "name": "Fundamental Rights Impact Assessment"
+            },
+            {
+              "ref": "[42001.9]",
+              "name": "Affected Persons Identification"
+            }
+          ]
+        }
+      ]
+    },
+    "Unverified conformity": {
+      "risk_id": "RISK-015",
+      "category": "[18286: Quality Management System]",
+      "article": "Article 43",
+      "article_name": "Article 43: Conformity Assessment",
+      "category_question": "Conformity Assessment: Is the system subject to any of the following pre-launch requirements?\na) Being formally placed on the EU market\nb) Being put into service for its intended use\nc) Requiring a formal conformity assessment",
+      "risk_description": "Unverified conformity — the system is deployed without a completed, signed-off conformity assessment.",
+      "areas": [
+        {
+          "subcategory": "Pre-Market Review",
+          "treatment_question": "Pre-Market Review: Before the system goes live, do you require any of the following internal reviews?\na) Verification that all applicable Article 9-17 controls are assessed\nb) Confirmation that evidence exists for every applicable requirement\nc) Formal sign-off by a reviewer with sufficient technical and legal competence",
+          "refs": [
+            {
+              "ref": "[18286.16]",
+              "name": "Articles 9-17 Completion Verification"
+            },
+            {
+              "ref": "[18286.17]",
+              "name": "Competent Reviewer Sign-off"
+            }
+          ]
+        },
+        {
+          "subcategory": "Conformity Conclusion",
+          "treatment_question": "Conformity Conclusion: Must the conformity assessment conclude with any of the following?\na) A formal declaration that no critical compliance gaps remain\nb) Confirmation that all identified gaps were resolved prior to market placement\nc) A documented conclusion statement confirming regulatory compliance",
+          "refs": [
+            {
+              "ref": "[18286.18]",
+              "name": "No Critical Gaps Declaration"
+            },
+            {
+              "ref": "[18286.19]",
+              "name": "Self-Assessment Conclusion Statement"
+            }
+          ]
+        },
+        {
+          "subcategory": "Assessment Record",
+          "treatment_question": "Assessment Record: Must the final conformity record capture any of the following details?\na) The exact date the conformity assessment was completed\nb) The specific version of the system that was assessed\nc) The version of the compliance framework used for the evaluation",
+          "refs": [
+            {
+              "ref": "[18286.20]",
+              "name": "Conformity Review Date & Version"
+            }
+          ]
+        }
+      ]
+    },
+    "Undisclosed AI interaction or content": {
+      "risk_id": "RISK-016",
+      "category": "[12792: AI Transparency Taxonomy]",
+      "article": "Article 50",
+      "article_name": "Article 50: Transparency Obligations for Certain AI Systems",
+      "category_question": "Transparency & Content Labeling: Does the system do any of the following?\na) Simulate human interaction\nb) Generate synthetic content (text, images, audio, video)\nc) Manipulate content shown to users",
+      "risk_description": "Undisclosed AI interaction or content — people aren't told they're dealing with AI, or AI-generated content isn't labelled.",
+      "areas": [
+        {
+          "subcategory": "Disclosure Requirements",
+          "treatment_question": "AI Identity Disclosure: Does the system interact with users in a way that requires any of the following?\na) A clear, timely disclosure that they are interacting with an AI\nb) A notification presented before any consequential output is produced\nc) Disclosures written in plain language accessible to the audience",
+          "refs": [
+            {
+              "ref": "[12792.1]",
+              "name": "AI Identity Disclosure"
+            },
+            {
+              "ref": "[12792.2]",
+              "name": "Disclosure Timing & Clarity"
+            }
+          ]
+        },
+        {
+          "subcategory": "Synthetic Content",
+          "treatment_question": "Synthetic Content Labelling: Does the system generate or manipulate content requiring any of the following?\na) Machine-readable labels identifying it as AI-generated\nb) Visible watermarks or markers for end users\nc) Provenance metadata to support downstream deep fake detection",
+          "refs": [
+            {
+              "ref": "[12792.3]",
+              "name": "AI-Generated Content Labelling"
+            },
+            {
+              "ref": "[12792.4]",
+              "name": "Deep Fake Detection Support"
+            }
+          ]
+        },
+        {
+          "subcategory": "Deployer Duties",
+          "treatment_question": "Deployer Duties (Transparency): As the deployer, are you required to ensure any of the following regarding disclosures?\na) Implementing the provider's transparency instructions\nb) Keeping the AI identity disclosure active in the live production environment\nc) Testing the disclosure mechanism for visibility and accessibility",
+          "refs": [
+            {
+              "ref": "[12792.5]",
+              "name": "Deployer Disclosure Implementation"
+            }
+          ]
+        }
+      ]
+    },
+    "Blind post-market operation": {
+      "risk_id": "RISK-017",
+      "category": "[18286: Quality Management System]",
+      "article": "Article 72",
+      "article_name": "Article 72: Post-Market Monitoring",
+      "category_question": "Post-Market Monitoring: Will the live system require continuous monitoring to detect any of the following?\na) Performance drift or data shifts\nb) System degradation over time\nc) Safety incidents or unexpected risks",
+      "risk_description": "Blind post-market operation — the live system isn't monitored, so drift, degradation and incidents go undetected.",
+      "areas": [
+        {
+          "subcategory": "Monitoring System",
+          "treatment_question": "Post-Market Monitoring (PMM): Once the system is live, does your post-market monitoring require any of the following?\na) A documented plan defining the scope and frequency of reviews\nb) Active collection of accuracy metrics, error rates, and user feedback\nc) Automated checks to detect model drift or data distribution shifts",
+          "refs": [
+            {
+              "ref": "[18286.21]",
+              "name": "PMM Plan & Scope"
+            },
+            {
+              "ref": "[18286.22]",
+              "name": "Performance Data Collection"
+            },
+            {
+              "ref": "[18286.23]",
+              "name": "Drift & Degradation Detection"
+            }
+          ]
+        },
+        {
+          "subcategory": "Feedback Loop",
+          "treatment_question": "Feedback Loops & Correction: Does the system's feedback loop require any of the following?\na) A clear channel for users and affected persons to report incidents\nb) A mechanism for logging and reviewing unexpected behavior or near-misses\nc) A documented corrective action process to remediate reported issues",
+          "refs": [
+            {
+              "ref": "[18286.24]",
+              "name": "User Incident Reporting Channel"
+            },
+            {
+              "ref": "[18286.25]",
+              "name": "Corrective Action Process"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }
