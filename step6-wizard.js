@@ -54,18 +54,17 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    const [risks, controls, hs, testControls] = await WizUtils.fetchAll([
+    const [risks, controls, hs] = await WizUtils.fetchAll([
       'tbl_Risks.json',
       'tbl_Risk_Controls.json',
       'tbl_Harmonised_Standards.json',
-      'tbl_Test_Controls.json',
     ]);
-    if (!risks || !controls || !hs || !testControls) {
+    if (!risks || !controls || !hs) {
       pw.innerHTML = `<p style="padding:24px;color:#ec6a68">Could not load risk data files.</p>`;
       return;
     }
-    _tblData = { risks, controls, hs, testControls };
-    _tcByRC  = new Map(testControls.filter(tc => tc.fk_Risk_Control_ID).map(tc => [tc.fk_Risk_Control_ID, tc]));
+    _tblData = { risks, controls, hs, testControls: [] };
+    _tcByRC  = new Map();
 
     _record = WizUtils.loadRecord();
 

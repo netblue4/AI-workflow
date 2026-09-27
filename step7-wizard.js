@@ -106,16 +106,16 @@
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
     pw.innerHTML = '<p style="padding:32px;color:var(--color-text-secondary)">Loading…</p>';
-    const [risks, riskControls, testControls, hs] = await WizUtils.fetchAll([
+    const [risks, riskControls, hs] = await WizUtils.fetchAll([
       'tbl_Risks.json',
       'tbl_Risk_Controls.json',
-      'tbl_Test_Controls.json',
       'tbl_Harmonised_Standards.json',
     ]);
-    if (!risks || !riskControls || !testControls) {
+    if (!risks || !riskControls) {
       pw.innerHTML = `<p style="padding:24px;color:#ec6a68">Could not load data files.</p>`;
       return;
     }
+    const testControls = [];
     _tblData = { risks, riskControls, testControls, hs: hs || [] };
     _hsByRef = new Map((hs || []).map(h => [h.standard_ref, h]));
     // Framework self-certifications, indexed by the HS requirement they certify.

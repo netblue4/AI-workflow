@@ -154,20 +154,19 @@
   function _buildResidualPane() {
     const wrap = el('div', '');
     wrap.appendChild(_sectionTitle('How do we calculate residual risk'));
-    wrap.appendChild(el('p', 'abt-body', { textContent: 'Residual risk is what remains once controls are in place and proven. Step 7 records it per risk — but only after that risk’s controls have been evidenced or explicitly waived. You cannot record residual risk for a risk whose controls are still unproven.' }));
+    wrap.appendChild(el('p', 'abt-body', { textContent: 'Residual risk is what remains once the harmonised-standard requirements are implemented and evidenced. Step 7 records it per risk — but only after that risk’s requirements have been evidenced or explicitly waived. You cannot record residual risk for a risk whose requirements are still unproven.' }));
 
-    wrap.appendChild(_sectionTitle('The three stages'));
+    wrap.appendChild(_sectionTitle('The two stages'));
     wrap.appendChild(_orderedFlow([
-      ['Activate the controls', 'For each risk, confirm every operational control is live in the deployed system. The developer’s evidence — a Jira ticket, pull request, or configuration link — is attached to each control.'],
-      ['Test the controls', 'For each control verified by a test, record the test result and attach the evidence that proves it passed. Framework self-certifications are pre-filled from Step 6 as the evidence.'],
-      ['Record the residual', 'Once a risk’s controls are all evidenced or waived, its residual assessment unlocks. Rate the likelihood and impact that remain, and record a justification.'],
+      ['Evidence the requirements', 'For each risk, provide evidence that every selected harmonised-standard requirement is implemented — a document reference, a workflow record, or an implementation link. Framework self-certifications are pre-filled from Step 6 as a starting point.'],
+      ['Record the residual', 'Once a risk’s requirements are all evidenced or waived, its residual assessment unlocks. Rate the likelihood and impact that remain, and record a justification.'],
     ]));
 
-    wrap.appendChild(_sectionTitle('Marking a control and capturing evidence'));
+    wrap.appendChild(_sectionTitle('Marking a requirement and capturing evidence'));
     wrap.appendChild(_bullets([
-      ['Evidence provided', 'The control is live or tested and its evidence pointer (ticket, document, or test report) is recorded. This counts the control as proven.'],
-      ['Waived', 'The control does not apply to this system, with a recorded justification. A waived control counts as resolved but is flagged in the report.'],
-      ['Not started / In progress', 'No evidence yet. The risk’s residual assessment stays locked until every control is Evidence provided or Waived.'],
+      ['Evidence provided', 'The requirement is implemented and its evidence pointer (document, record, or implementation link) is recorded. This counts the requirement as proven.'],
+      ['Waived', 'The requirement does not apply to this system, with a recorded justification. A waived requirement counts as resolved but is flagged in the report.'],
+      ['Not started / In progress', 'No evidence yet. The risk’s residual assessment stays locked until every requirement is Evidence provided or Waived.'],
     ]));
 
     wrap.appendChild(_sectionTitle('Recording residual risk'));
@@ -235,7 +234,6 @@
   }
 
   const EVIDENCE = [
-    ['test',     'Test',                'A test control proves the requirement operates as expected.'],
     ['doc',      'Document',            'An external artefact evidences it — QMS, technical file, instructions.'],
     ['workflow', 'Workflow',            'The workflow’s own output is the evidence — the report, DPIA, risk steps.'],
     ['fs',       'Framework Statement', 'The governance workflow self-certifies the requirement (FS-*).'],
@@ -262,16 +260,14 @@
     ['Cover / Identification', "The front page. It names the AI system being assessed, gives it a reference number and date, says who carried out the assessment, and sums up the headline result, so anyone picking it up immediately knows what they're looking at."],
     ['1. System Classification', "The law treats different AI uses very differently. A few are banned outright, some are tightly regulated, most are low-risk. This section shows which category the system falls into and why, including how risky it is and whether the organisation is building the AI or just using someone else's. That classification drives which rules apply for the rest of the report."],
     ['2. Risk Identification', "You can't manage a danger you haven't named. This lists the specific things that could go wrong with this system, for example biased decisions, confidently wrong answers, or misuse of people's personal data, and who is responsible for each. They're drawn from a ready-made library of known AI risks rather than guessed at on the day."],
-    ['3. Compliance & Control Traceability', "The heart of the report, and the part that proves nothing was missed. For each rule the system must follow, it shows the specific safeguard put in place to meet it, and marks whether that safeguard is done, still outstanding, or genuinely not needed. Below it, a register lists the actual safeguards in place, grouped by the risk they address, with their current status. Anything left uncovered shows up here as a gap."],
-    ['4. Verification Evidence', "Saying a safeguard exists isn't the same as proving it works. This shows the tests run against each safeguard and whether they passed, so the reader can see the controls were actually checked, not just written down."],
-    ['5. Conformity Assessment Conclusion', "This shows the assessor's conclusion: based on everything above, the system meets the rules it has to meet. It includes a short checklist confirming the assessment is complete, and is signed by the assessor. This is the recommendation passed to the decision-makers, it is not yet the final approval."],
+    ['3. Compliance & Requirement Traceability', "The heart of the report, and the part that proves nothing was missed. For each rule the system must follow, it shows the specific harmonised-standard requirement selected to meet it, and marks whether that requirement is evidenced, still outstanding, or genuinely not needed. Below it, a register lists the requirements in place, grouped by the risk they address, with the evidence status recorded in Step 7. Anything left uncovered shows up here as a gap."],
+    ['4. Conformity Assessment Conclusion', "This shows the assessor's conclusion: based on everything above, the system meets the rules it has to meet. It includes a short checklist confirming the assessment is complete, and is signed by the assessor. This is the recommendation passed to the decision-makers, it is not yet the final approval."],
     ['— handover —', "A short note marking that the evidence (Part A) is finished and is now going to the internal decision-makers for a verdict."],
   ];
   const _REPORT_PART_B = [
     ['Change Board Sign-off Summary', "The decision-makers need the bottom line, not the whole file. This is a single-page dashboard, a red/amber/green rating, how much of the work is complete, and how much risk is left over, so they can see at a glance whether it's safe to approve."],
-    ['6. Outstanding Items', "Approval often comes with strings attached. This is a plain list of anything still unfinished, so the board knows exactly what must be fixed before, or as a condition of, saying yes."],
-    ['7. Internal Standard Compliance', "Most organisations hold themselves to a higher bar than the legal minimum. This shows whether the system also meets the company's own internal AI rules, including checks the team has confirmed for themselves."],
-    ['8. AI Change Board Decision', "The board's formal verdict: approve, reject, or approve with conditions. Approving it clears the system to go live and triggers the official legal declaration that it complies."],
+    ['5. Outstanding Items', "Approval often comes with strings attached. This is a plain list of anything still unfinished, so the board knows exactly what must be fixed before, or as a condition of, saying yes."],
+    ['6. AI Change Board Decision', "The board's formal verdict: approve, reject, or approve with conditions. Approving it clears the system to go live and triggers the official legal declaration that it complies."],
   ];
 
   function _reportSubhead(title, aud) {
@@ -316,20 +312,16 @@
     Promise.all([
       fetch('tbl_Harmonised_Standards.json').then(r => r.json()).catch(() => []),
       fetch('tbl_Risks.json').then(r => r.json()).catch(() => []),
-      fetch('tbl_Test_Controls.json').then(r => r.json()).catch(() => []),
       fetch('tbl_AI_SR_Controls.json').then(r => r.json()).catch(() => []),
       fetch('tbl_Risk_Controls.json').then(r => r.json()).catch(() => []),
-    ]).then(([hs, risks, tc, sr, rc]) => {
+    ]).then(([hs, risks, sr, rc]) => {
       const arts = (window.WizUtils && WizUtils.ARTICLES) || [];
-      const byType = {};
-      hs.forEach(h => { const t = h.coverage_type || 'Test'; byType[t] = (byType[t] || 0) + 1; });
       const fs = rc.filter(c => c.control_source === 'Framework_Statement');
-      // Ordered to match the chain: article → risk → requirement → evidence.
+      // Ordered to match the chain: article → risk → requirement.
       const cards = [
         ['16', arts.length || 16, 'AI Act Articles', 'Set the objectives', 'act'],
         [null, risks.length, 'Risks', 'Threaten the article objectives', 'risk'],
-        [null, hs.length, 'HS requirements', `Treat the risks · Test ${byType.Test || 0} · Doc ${byType.Document || 0} · Workflow ${byType.Workflow || 0} · N/A ${byType.Not_Applicable || 0}`, 'hs'],
-        [null, tc.length, 'Test controls', 'Prove HS requirements operate', 'test'],
+        [null, hs.length, 'HS requirements', 'Treat the risks, evidenced in Step 7', 'hs'],
         [null, sr.length, 'Internal Std (SR)', 'AI Acceptable Use Standard clauses', 'sr'],
         [null, fs.length, 'Framework Statements', 'Workflow governance self-certifications', 'fs'],
       ];
