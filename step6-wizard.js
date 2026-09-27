@@ -15,6 +15,7 @@
   let _riskData = []; // [{ risk_id, display_name, risk_type, risk_source, risk_description, controls }]
   let _gsRiskData = []; // applicable Internal Standard risks + controls (Internal Standards tab)
   let _tcByRC   = null; // fk_Risk_Control_ID → test control (R→T pairing)
+  let _step5RefsByRisk = new Map(); // risk_id → [HS refs the Step 5 area selections flagged]
 
   const _state = {
     riskSelected: {},       // derived: pk_Risk_Control_ID → bool (bridge for Step 7 / report)
@@ -44,7 +45,6 @@
 
     const shell = _el('div', 'wiz-shell');
     shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle));
-    shell.appendChild(_buildTabStrip());
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
     container.innerHTML = '';
@@ -71,6 +71,15 @@
 
     _riskData = _buildRiskControlData();
     _gsRiskData = _buildGroupStandardControlData();
+
+    // Requirements each risk carries into Step 6 = the HS refs the assessor's
+    // Step 5 area selections flagged (fine-trimmed/confirmed here).
+    _step5RefsByRisk = new Map();
+    ((_record?.['step-5']?.legal_assessment?.risks) || []).forEach(r => {
+      if (r.risk_id && Array.isArray(r.selected_refs) && r.selected_refs.length) {
+        _step5RefsByRisk.set(r.risk_id, r.selected_refs.slice());
+      }
+    });
 
     // Restore / default the HS-level selection (the HS requirement is the
     // selectable unit; control selection is derived from it as a bridge).
@@ -222,17 +231,10 @@
   // ---- Panes --------------------------------------------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
-    const wz  = _el('div', 'wiz-pane');                  wz.dataset.pane = 'wizard';
-    const dp  = _el('div', 'wiz-pane wiz-pane--hidden'); dp.dataset.pane  = 'dpia';
-    const cmp = _el('div', 'wiz-pane wiz-pane--hidden'); cmp.dataset.pane = 'compliance';
-    const gs  = _el('div', 'wiz-pane wiz-pane--hidden'); gs.dataset.pane  = 'groupstd';
-    const ref = _el('div', 'wiz-pane wiz-pane--hidden'); ref.dataset.pane = 'reference';
+    const wz = _el('div', 'wiz-pane'); wz.dataset.pane = 'wizard';
     wz.appendChild(_buildWizardPane());
-    dp.appendChild(_buildDpiaControlsPane());
-    cmp.appendChild(_buildCompliancePane());
-    gs.appendChild(_buildGroupStandardsCompliancePane());
-    ref.appendChild(_buildReferencePane());
-    pw.appendChild(wz); pw.appendChild(dp); pw.appendChild(cmp); pw.appendChild(gs); pw.appendChild(ref);
+    pw.appendChild(wz);
+    if (WizUtils.glossify) { try { WizUtils.glossify(wz); } catch (_) {} }
   }
 
   // ---- Wizard pane --------------------------------------------
@@ -250,10 +252,10 @@
       return card;
     }
 
-    card.appendChild(_sectionLabel('Control Selection'));
+    card.appendChild(_sectionLabel('Requirement Selection'));
 
     const intro = _el('p', 'wiz9-intro');
-    intro.innerHTML = `Review controls grouped by individual risk. <strong>Each risk must have at least one control selected</strong> before saving.`;
+    intro.innerHTML = `Confirm the harmonised-standard requirements that apply to each risk — these come from the requirement areas you selected in Step 5. Untick any that don't apply to your system. <strong>Each risk must keep at least one requirement</strong> before saving.`;
     card.appendChild(intro);
 
     // Validation summary
@@ -320,11 +322,11 @@
     el.innerHTML = '';
     if (uncovered.length === 0) {
       const ok = _el('div', 'wiz9-val-ok');
-      ok.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All ${_riskData.length} risk${_riskData.length !== 1 ? 's' : ''} have at least one control selected.`;
+      ok.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> All ${_riskData.length} risk${_riskData.length !== 1 ? 's' : ''} have at least one requirement selected.`;
       el.appendChild(ok);
     } else {
       const err = _el('div', 'wiz9-val-err');
-      err.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>${uncovered.length} risk${uncovered.length !== 1 ? 's' : ''}</strong> still need${uncovered.length === 1 ? 's' : ''} a control selected: ${uncovered.map(r => r.display_name).join(', ')}.`;
+      err.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>${uncovered.length} risk${uncovered.length !== 1 ? 's' : ''}</strong> still need${uncovered.length === 1 ? 's' : ''} a requirement selected: ${uncovered.map(r => r.display_name).join(', ')}.`;
       el.appendChild(err);
     }
   }
@@ -337,6 +339,10 @@
   // risk↔HS link (tbl_Risks.fk_Harmonised_Standard_IDs); falls back to
   // deriving from the risk's non-FS controls for any risk without it.
   function _riskHsRefs(risk) {
+    // Prefer the requirements the Step 5 area selections flagged for this risk.
+    const sel = _step5RefsByRisk.get(risk.risk_id);
+    if (sel && sel.length) return sel;
+    // Fallback: every HS requirement the risk maps to (Step 5 recorded no areas).
     if (risk.fk_Harmonised_Standard_IDs) {
       return risk.fk_Harmonised_Standard_IDs.split(',').map(s => s.trim()).filter(Boolean);
     }
@@ -368,9 +374,7 @@
   function _deriveRiskSelected() { _riskData.forEach(_deriveRiskSelectedForRisk); }
 
   function _selectedCountForRisk(risk) {
-    const hsSel = _riskHsRefs(risk).filter(ref => _state.hsSelected[_hsKey(risk.risk_id, ref)]).length;
-    const hasFS = risk.controls.some(c => c.control_source === 'Framework_Statement');
-    return hsSel + (hasFS ? 1 : 0);
+    return _riskHsRefs(risk).filter(ref => _state.hsSelected[_hsKey(risk.risk_id, ref)]).length;
   }
 
   // ---- Risk accordion (individual risk) -----------------------
@@ -442,10 +446,16 @@
 
     if (hsRefs.length > 0) {
       const hsByRef = new Map((_tblData.hs || []).map(h => [h.standard_ref, h]));
-      body.appendChild(_el('p', 'wiz9-ctrl-section-label', { textContent: `Harmonised Standard Controls (${hsRefs.length})` }));
+      body.appendChild(_el('p', 'wiz9-ctrl-section-label', { textContent: `Requirements to implement (${hsRefs.length})` }));
 
+      // Group the requirements by their subcategory, mirroring Step 5's areas.
+      let lastSub = null;
       hsRefs.forEach(ref => {
         const h = hsByRef.get(ref);
+        if (h && h.subcategory && h.subcategory !== lastSub) {
+          lastSub = h.subcategory;
+          body.appendChild(_el('p', 'wiz9-sub-label', { textContent: h.subcategory }));
+        }
         const item = _el('label', 'wiz9-hs-item');
         const cb = document.createElement('input');
         cb.type = 'checkbox'; cb.className = 'wiz9-hs-cb'; cb.dataset.ref = ref;
@@ -462,29 +472,11 @@
         hdrRow.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: h?.standard_name || ref }));
         txt.appendChild(hdrRow);
         if (h?.standard_text) txt.appendChild(_el('p', 'wiz9-hs-item-desc', { textContent: h.standard_text }));
-        // Preview the verification tests this control brings — their results are
-        // recorded per-test in Step 7 (Residual Risk → Harmonised Standard Verification).
-        const refTests = (_tblData.testControls || []).filter(tc =>
-          (tc.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean).includes(ref)
-        );
-        if (refTests.length) {
-          const tl = _el('div', ''); tl.style.cssText = 'margin:7px 0 2px;padding:6px 10px;border-left:2px solid var(--color-border);border-radius:2px';
-          const lbl = _el('span', ''); lbl.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-tertiary)';
-          lbl.textContent = (refTests.length > 1 ? `${refTests.length} verification tests` : '1 verification test') + ' — result recorded in Step 7';
-          tl.appendChild(lbl);
-          refTests.forEach(tc => {
-            const row = _el('div', ''); row.style.cssText = 'display:flex;gap:7px;align-items:baseline;margin-top:4px;font-size:12px';
-            row.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(tc.control_ref) }));
-            row.appendChild(_el('span', '', { textContent: tc.jkName || '' }));
-            tl.appendChild(row);
-          });
-          txt.appendChild(tl);
-        }
         item.appendChild(txt);
         body.appendChild(item);
       });
     } else if (fsCtrls.length === 0) {
-      body.appendChild(_el('p', 'wiz9-intro', { textContent: 'No harmonised standard requirements mapped to this risk.' }));
+      body.appendChild(_el('p', 'wiz9-intro', { textContent: 'No harmonised standard requirements were flagged for this risk in Step 5.' }));
     }
 
     if (fsCtrls.length > 0) {
@@ -797,7 +789,7 @@
 
     const right = _el('div');
     const btn = document.createElement('button');
-    btn.className = 'wiz-btn-primary'; btn.textContent = 'Save Control Selection';
+    btn.className = 'wiz-btn-primary'; btn.textContent = 'Save Requirement Selection';
     btn.addEventListener('click', _handleSave);
     right.appendChild(btn); row.appendChild(right);
     return row;
@@ -811,7 +803,7 @@
   function _updateCountBadgeEl(el) {
     const total   = _riskData.length;
     const covered = _riskData.filter(r => _selectedCountForRisk(r) > 0).length;
-    el.textContent = `${covered} / ${total} risks controlled`;
+    el.textContent = `${covered} / ${total} risks covered`;
     el.className   = covered === total
       ? 'wiz9-count-badge wiz9-count-badge--ok'
       : 'wiz9-count-badge wiz9-count-badge--warn';
@@ -841,70 +833,44 @@
     _record._meta.last_modified = new Date().toISOString();
     _record['step-6'] = rec9;
     WizUtils.saveRecord(_record);
-    if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 9 saved ✓');
+    if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 6 saved ✓');
     _renderResults(rec9);
   }
 
   function _buildOutputRecord() {
     const today = new Date().toISOString().slice(0, 10);
     const meta  = _record?._meta || {};
+    const hsByRef = new Map((_tblData.hs || []).map(h => [h.standard_ref, h]));
 
-    // risk team's selections
-    const risk_controls = [];
-    _riskData.forEach(r => {
-      r.controls.forEach(c => {
-        risk_controls.push({
-          control_id:     c.pk_Risk_Control_ID,
-          control_name:   c.jkName,
-          control_source: c.control_source || c._source || '',
-          fk_Harmonised_Standard_IDs: c.fk_Harmonised_Standard_IDs || '',
-          risk_id:        r.risk_id,
-          selected:       !!_state.riskSelected[c.pk_Risk_Control_ID]
-        });
-      });
-    });
-
-    // compliance additions
-    const complianceAdditions = Object.keys(_state.complianceSelected)
-      .filter(id => _state.complianceSelected[id])
-      .map(id => {
-        const ctrl = (_tblData.controls || []).find(c => c.pk_Risk_Control_ID === id);
-        return { control_id: id, control_name: ctrl?.jkName || '', fk_Harmonised_Standard_IDs: ctrl?.fk_Harmonised_Standard_IDs || '', selected: true};
-      });
-
-    // DPIA controls from Step 4
-    const dpiaControls = (_record?.['step-4']?.data_types_identified?.security_measures || [])
-      .map(m => ({ control_name: m, source: 'DPIA_Step4' }));
-
-    // HS-level selection per risk — the selectable unit in the legal tab
-    const selected_hs = {};
+    // HS requirement is the selectable unit: per-risk selection + a flat list.
+    const selected_hs = {};            // risk_id → [refs]
+    const selected_requirements = [];  // flat, for Step 7 (evidence) and the report
     _riskData.forEach(r => {
       const refs = _riskHsRefs(r).filter(ref => ref !== '—' && _state.hsSelected[_hsKey(r.risk_id, ref)]);
       if (refs.length) selected_hs[r.risk_id] = refs;
+      refs.forEach(ref => {
+        const h = hsByRef.get(ref) || {};
+        selected_requirements.push({
+          risk_id:       r.risk_id,
+          risk_name:     r.display_name,
+          standard_ref:  ref,
+          standard_name: h.standard_name || '',
+          subcategory:   h.subcategory || '',
+          coverage_type: h.coverage_type || ''
+        });
+      });
     });
-
-    // counts
-    const selectedCount   = risk_controls.filter(c => c.selected).length;
-    const complianceCount = complianceAdditions.length;
-    const dpiaCount       = dpiaControls.length;
 
     return {
       step_id: 'step-6', step_title: 'Control identification',
       assessment_date: today,
       assessed_by:  meta.assessed_by || '',
       use_case_id:  meta.use_case_id || '',
-      total_risks:              _riskData.length,
-      risks_controlled:         _riskData.filter(r => _selectedCountForRisk(r) > 0).length,
-      total_controls_available: risk_controls.length,
-      selected_controls:        selectedCount,
-      compliance_additions_count: complianceCount,
-      dpia_controls_count:      dpiaCount,
-      risk_controls,
+      total_risks:         _riskData.length,
+      risks_covered:       _riskData.filter(r => _selectedCountForRisk(r) > 0).length,
+      total_requirements:  selected_requirements.length,
       selected_hs,
-      compliance_additions: complianceAdditions,
-      dpia_controls:        dpiaControls,
-      // Preserve the Internal Standards selections so this save does not wipe them
-      group_standard_controls: _buildGroupStandardControlsOutput(today)
+      selected_requirements
     };
   }
 
@@ -913,14 +879,12 @@
     if (!area) return;
     area.innerHTML = '';
     const card = _el('div', 'wiz9-result-card');
-    const h = _el('h3', 'wiz9-result-title'); h.textContent = 'Control Selection Saved'; card.appendChild(h);
+    const h = _el('h3', 'wiz9-result-title'); h.textContent = 'Requirement Selection Saved'; card.appendChild(h);
     const stats = _el('div', 'wiz9-result-stats');
     [
-      [rec9.total_risks,                  'Total risks'],
-      [rec9.risks_controlled,             'Risks controlled'],
-      [rec9.selected_controls,            'Controls selected'],
-      [rec9.dpia_controls_count,          'DPIA controls'],
-      [rec9.compliance_additions_count,   'Compliance additions']
+      [rec9.total_risks,        'Total risks'],
+      [rec9.risks_covered,      'Risks covered'],
+      [rec9.total_requirements, 'Requirements selected']
     ].forEach(([num, lbl]) => {
       const s = _el('div', 'wiz8-stat');
       const n = _el('span', 'wiz8-stat-num'); n.textContent = String(num); s.appendChild(n);
@@ -929,9 +893,7 @@
     });
     card.appendChild(stats);
     const note = _el('p', 'wiz9-result-note');
-    note.innerHTML = `Control selection saved. <strong>${rec9.selected_controls} control${rec9.selected_controls !== 1 ? 's' : ''}</strong> selected across <strong>${rec9.risks_controlled} risk${rec9.risks_controlled !== 1 ? 's' : ''}</strong>` +
-      (rec9.compliance_additions_count > 0 ? ` plus <strong>${rec9.compliance_additions_count} compliance addition${rec9.compliance_additions_count !== 1 ? 's' : ''}</strong>` : '') +
-      `. This feeds into the Approval Gate (Step 11) submission pack.`;
+    note.innerHTML = `Requirement selection saved. <strong>${rec9.total_requirements} requirement${rec9.total_requirements !== 1 ? 's' : ''}</strong> selected across <strong>${rec9.risks_covered} risk${rec9.risks_covered !== 1 ? 's' : ''}</strong>. You now provide evidence for these in <strong>Step 7 (Residual risk)</strong>.`;
     card.appendChild(note);
     area.appendChild(card);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1678,6 +1640,7 @@
 /* Risk body */
 .wiz9-risk-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0;padding:10px 12px;background:#211d15;border-radius:5px;border-left:3px solid var(--color-border)}
 .wiz9-ctrl-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0}
+.wiz9-sub-label{font-size:11.5px;font-weight:700;color:var(--color-text-secondary);margin:12px 0 2px;padding-left:2px;border-left:2px solid rgba(93,202,165,0.4)}
 .wiz9-hs-group-hdr{display:flex;align-items:center;gap:8px;margin:12px 0 6px;padding-left:2px;cursor:pointer}
 .wiz9-hs-cb{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--gold,#0d9488)}
 .wiz9-hs-group-name{font-size:12.5px;font-weight:600;color:var(--color-text-primary)}
