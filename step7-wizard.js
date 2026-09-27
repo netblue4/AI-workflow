@@ -401,7 +401,6 @@
     pane.appendChild(_buildStep7Toolbar());
     pane.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory'));
     pane.appendChild(_buildDpiaResidualPane());
-    pane.appendChild(_buildDomainRiskPane('group_standard', 'Internal Standards'));
     pane.appendChild(_el('div', 's7-shared-results'));
     pw.appendChild(pane);
     if (WizUtils.glossify) { try { WizUtils.glossify(pane); } catch (_) {} }
@@ -541,7 +540,7 @@
   function _buildDomainRiskPane(domain, title) {
     const card = _el('div', 'step-detail-card');
     card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + title }));
-    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk: confirm control activation, record control testing, then assess residual risk. Residual unlocks once that risk’s activation and testing are evidenced or waived.' }));
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk, provide evidence that its selected harmonised-standard requirements are implemented, then assess the residual risk. Residual unlocks once every requirement is evidenced or waived.' }));
 
     const riskIds = domain === 'legal'
       ? Array.from(_legalRiskIds())
@@ -606,15 +605,12 @@
 
     const body = _el('div', 's9-risk-acc-body');
 
-    body.appendChild(_sectionLabel('1 · Control Activation'));
+    body.appendChild(_sectionLabel('1 · Security measures'));
     const dpiaCtrls = _controls.filter(c => c.domain === 'dpia');
     if (dpiaCtrls.length) dpiaCtrls.forEach(c => body.appendChild(_buildActControlCard(c, 'dpia')));
     else body.appendChild(_domainMuted('No security-measure controls were recorded in the DPIA.'));
 
-    body.appendChild(_sectionLabel('2 · Control Testing'));
-    body.appendChild(_domainMuted('Not applicable — DPIA controls are not separately test-evidenced.'));
-
-    body.appendChild(_sectionLabel('3 · Residual Risk'));
+    body.appendChild(_sectionLabel('2 · Residual Risk'));
     const ratings = _el('div', '');
     ratings.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
     const mkPill = (label, rating) => {
@@ -804,64 +800,32 @@
       card.appendChild(objWrap);
     }
 
-    // What evidence to ask for depends on how the requirement is verified.
-    const ctype = h?.coverage_type || 'Test';
-    const tests = _tcByHsRef.get(ref) || [];
-    if (!st.test_results) st.test_results = {}; // { pk_Test_Control_ID → result text }
-
-    // Warning line used by the "Met" guard below.
-    const warn = _el('p', 's9-fs-prefill-hint'); warn.style.color = '#fba4a3'; warn.style.display = 'none';
-
-    if (ctype === 'Test' && tests.length) {
-      // One "Test result" box per verification test; the requirement status is
-      // the single judgment recorded once all test results are in.
-      const tWrap = _el('div', 's9-obj-wrap');
-      tWrap.appendChild(_el('span', 's9-field-label', { textContent: tests.length > 1 ? 'Verification tests' : 'Verification test' }));
-      tests.forEach(tc => {
-        const tid = tc.pk_Test_Control_ID;
-        const line = _el('div', ''); line.style.margin = '10px 0 4px';
-        line.appendChild(_el('span', 's9-src-badge s9-src-badge--framework', { textContent: WizUtils.fmtStdRef(tc.control_ref) }));
-        line.appendChild(_el('span', 's9-ctrl-name', { textContent: ' ' + (tc.jkName || '') }));
-        if (tc.jkObjective) line.appendChild(_el('p', 's9-ctrl-obj', { textContent: tc.jkObjective }));
-        tWrap.appendChild(line);
-        tWrap.appendChild(_el('label', 's9-field-label', { textContent: 'Test result' }));
-        const rta = document.createElement('textarea');
-        rta.className = 's9-ctrl-notes'; rta.rows = 2;
-        rta.placeholder = 'Record the outcome and attach the test report or link proving the test passed…';
-        rta.value = st.test_results[tid] || '';
-        rta.addEventListener('input', () => { st.test_results[tid] = rta.value; });
-        tWrap.appendChild(rta);
-      });
-      card.appendChild(tWrap);
-    } else {
-      // Document / Workflow requirements (and Test-type with no defined tests):
-      // a single evidence field, as before.
-      let evLabel = 'Evidence / Notes';
-      let evPlaceholder = 'Describe how this requirement is implemented and evidenced…';
-      if (ctype === 'Document') {
-        evLabel = 'Document reference';
-        evPlaceholder = 'Reference the external document that evidences this requirement (title, version, link)…';
-      } else if (ctype === 'Workflow') {
-        card.appendChild(_domainMuted('Evidenced by the governance workflow. Add a pointer to the relevant step or record if needed.'));
-        evLabel = 'Evidence pointer';
-        evPlaceholder = 'Optional — point to the workflow step or record that evidences this requirement…';
-      }
-      const notesWrap = _el('div', 's9-notes-wrap');
-      notesWrap.appendChild(_el('label', 's9-field-label', { textContent: evLabel }));
-      if (prefilledFromFs) {
-        notesWrap.appendChild(_el('p', 's9-fs-prefill-hint', {
-          textContent: 'Pre-filled from the framework self-certification shown in Step 6 — edit or confirm.'
-        }));
-      }
-      const ta = document.createElement('textarea');
-      ta.className = 's9-ctrl-notes'; ta.rows = prefilledFromFs ? 4 : 3; ta.value = st.notes;
-      ta.placeholder = evPlaceholder;
-      ta.addEventListener('input', () => { _hsActState[key].notes = ta.value; });
-      notesWrap.appendChild(ta);
-      card.appendChild(notesWrap);
+    // Single evidence field per requirement — the assessor proves it is
+    // implemented. The kind of evidence hints from the requirement's type.
+    const ctype = h?.coverage_type || '';
+    let evLabel = 'Evidence of implementation';
+    let evPlaceholder = 'Describe how this requirement is implemented and where the evidence lives (document, link, record)…';
+    if (ctype === 'Document') {
+      evLabel = 'Document reference';
+      evPlaceholder = 'Reference the document that evidences this requirement (title, version, link)…';
+    } else if (ctype === 'Workflow') {
+      card.appendChild(_domainMuted('Evidenced by the governance workflow. Add a pointer to the relevant step or record if needed.'));
+      evLabel = 'Evidence pointer';
+      evPlaceholder = 'Optional — point to the workflow step or record that evidences this requirement…';
     }
-
-    card.appendChild(warn);
+    const notesWrap = _el('div', 's9-notes-wrap');
+    notesWrap.appendChild(_el('label', 's9-field-label', { textContent: evLabel }));
+    if (prefilledFromFs) {
+      notesWrap.appendChild(_el('p', 's9-fs-prefill-hint', {
+        textContent: 'Pre-filled from the framework self-certification shown in Step 6 — edit or confirm.'
+      }));
+    }
+    const ta = document.createElement('textarea');
+    ta.className = 's9-ctrl-notes'; ta.rows = prefilledFromFs ? 4 : 3; ta.value = st.notes;
+    ta.placeholder = evPlaceholder;
+    ta.addEventListener('input', () => { _hsActState[key].notes = ta.value; });
+    notesWrap.appendChild(ta);
+    card.appendChild(notesWrap);
 
     const statusWrap = _el('div', 's9-status-wrap');
     statusWrap.appendChild(_el('label', 's9-field-label', { textContent: 'Status' }));
@@ -871,18 +835,6 @@
       if (opt.value === st.status) o.selected = true; select.appendChild(o);
     });
     select.addEventListener('change', () => {
-      // "Met" guard: a Test-type requirement can only be Met once every one of its
-      // verification tests has a recorded result.
-      if (select.value === 'evidence_provided' && ctype === 'Test' && tests.length) {
-        const missing = tests.some(tc => !String(st.test_results[tc.pk_Test_Control_ID] || '').trim());
-        if (missing) {
-          select.value = st.status;
-          warn.textContent = 'Record a result for every verification test before marking this requirement “Met”.';
-          warn.style.display = '';
-          return;
-        }
-      }
-      warn.style.display = 'none';
       _hsActState[key].status = select.value;
       _syncHsCard(card, select.value);
       _deriveActFromHs(); _updateActProgress();
@@ -1052,56 +1004,7 @@
     const today = new Date().toISOString().slice(0, 10);
     const meta  = _record?._meta || {};
 
-    // Test plans (Tab 1)
-    const nonLegalPlans = _planData.map(p => ({
-      plan_ref:      p.risk_id,
-      plan_name:     p.risk_name,
-      risk_name:     p.risk_name,
-      test_controls: p.test_controls.map(tc => {
-        const result = _testState.notes[tc.pk_Test_Control_ID] || '';
-        const parentWaived = _actState[tc.fk_Risk_Control_ID]?.status === 'waived';
-        return {
-          test_control_id:            tc.pk_Test_Control_ID,
-          control_ref:                tc.control_ref || '',
-          control_name:               tc.jkName      || '',
-          fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
-          notes:                      result,
-          // A non-legal test is "done" when it has a result, or its control is waived.
-          status:                     parentWaived ? 'waived' : (String(result).trim() ? 'evidence_provided' : 'not_started')
-        };
-      })
-    }));
-    // Legal risks verify their requirements via HS-linked tests recorded in the HS
-    // cards. Emit those as plan entries too, so the report counts and lists them like
-    // any other test (a test is "done" when it has a result, or its requirement is waived).
-    const legalPlans = [];
-    _legalRiskIds().forEach(riskId => {
-      const riskName = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId)?.risk_name || riskId;
-      const tcs = [];
-      _legalRiskHsRefs(riskId).forEach(ref => {
-        const stt = _hsActState[_hsActKey(riskId, ref)];
-        (_tcByHsRef.get(ref) || []).forEach(tc => {
-          const result = String(stt?.test_results?.[tc.pk_Test_Control_ID] || '');
-          const status = stt?.status === 'waived' ? 'waived' : (result.trim() ? 'evidence_provided' : 'not_started');
-          tcs.push({
-            test_control_id:            tc.pk_Test_Control_ID,
-            control_ref:                tc.control_ref || '',
-            control_name:               tc.jkName || '',
-            fk_Harmonised_Standard_IDs: tc.fk_Harmonised_Standard_IDs || '',
-            notes:                      result,
-            status
-          });
-        });
-      });
-      if (tcs.length) legalPlans.push({ plan_ref: riskId, plan_name: riskName, risk_name: riskName, test_controls: tcs });
-    });
-    const plans = nonLegalPlans.concat(legalPlans);
-    const allTests   = plans.reduce((a, p) => a.concat(p.test_controls), []);
-    const evidTests  = allTests.filter(t => t.status === 'evidence_provided').length;
-    const waivedTests = allTests.filter(t => t.status === 'waived').length;
-    const pendTests  = allTests.length - evidTests - waivedTests;
-
-    // Activation controls (Tab 2)
+    // DPIA security-measure controls — kept as evidence context (no tests).
     const controls = _controls.map(c => ({
       key:       c.key,
       name:      c.name,
@@ -1114,19 +1017,35 @@
     }));
     const { evidenced, total } = _actProgressCounts();
 
-    // Legal HS-requirement activation — the treatment unit for legal risks
+    // Legal HS-requirement evidence — the residual-risk unit for legal risks.
     const hs_activation = {};
     Object.keys(_hsActState).forEach(k => {
       const i = k.indexOf('::'); if (i < 0) return;
       const riskId = k.slice(0, i), ref = k.slice(i + 2);
       const st = _hsActState[k];
-      const hasResults = st && st.test_results && Object.values(st.test_results).some(v => String(v || '').trim());
-      if (st && (st.status !== 'not_started' || st.notes || hasResults)) {
-        (hs_activation[riskId] = hs_activation[riskId] || {})[ref] = { status: st.status, notes: st.notes || '', test_results: st.test_results || {} };
+      if (st && (st.status !== 'not_started' || st.notes)) {
+        (hs_activation[riskId] = hs_activation[riskId] || {})[ref] = { status: st.status, notes: st.notes || '' };
       }
     });
 
-    // Residual risk (Tab 3)
+    // Flat per-requirement evidence list + counts (for the report / gate).
+    const requirements = [];
+    let reqTotal = 0, reqEvidenced = 0, reqWaived = 0;
+    _legalRiskIds().forEach(riskId => _legalRiskHsRefs(riskId).forEach(ref => {
+      reqTotal++;
+      const st = _hsActState[_hsActKey(riskId, ref)];
+      const status = st?.status || 'not_started';
+      if (status === 'evidence_provided') reqEvidenced++;
+      else if (status === 'waived') reqWaived++;
+      const h = _hsByRef.get(ref) || {};
+      requirements.push({
+        risk_id: riskId, standard_ref: ref,
+        standard_name: h.standard_name || '',
+        status, notes: st?.notes || ''
+      });
+    }));
+
+    // Residual risk
     const residual_risks = {};
     Object.entries(_residualState).forEach(([riskId, rr]) => {
       if (rr.likelihood && rr.impact) {
@@ -1140,28 +1059,22 @@
     });
 
     return {
-      step_id:                 'step-7',
-      step_title:              'Residual risk',
-      assessment_date:         today,
-      assessed_by:             meta.assessed_by || '',
-      use_case_id:             meta.use_case_id || '',
-      // Tests
-      total_tests:             allTests.length,
-      evidence_provided_tests: evidTests,
-      waived_tests:            waivedTests,
-      pending_tests:           pendTests,
-      plans,
-      uncovered_controls: _uncovered.map(rc => ({
-        control_id:     rc.control_id,
-        control_name:   rc.control_name,
-        control_source: rc.control_source
-      })),
-      // Activation
-      total_controls:          total,
-      evidenced_count:         evidenced,
-      controls,
-      // Legal HS-requirement activation
+      step_id:                'step-7',
+      step_title:             'Residual risk',
+      assessment_date:        today,
+      assessed_by:            meta.assessed_by || '',
+      use_case_id:            meta.use_case_id || '',
+      // Requirement evidence
+      total_requirements:     reqTotal,
+      requirements_evidenced: reqEvidenced,
+      requirements_waived:    reqWaived,
+      requirements_pending:   reqTotal - reqEvidenced - reqWaived,
+      requirements,
       hs_activation,
+      // DPIA security measures
+      total_controls:         total,
+      evidenced_count:        evidenced,
+      controls,
       // Residual
       residual_risks
     };
@@ -1175,10 +1088,10 @@
     const h    = _el('h3', 'wiz10-result-title'); h.textContent = 'Residual Risk Step Saved'; card.appendChild(h);
     const stats = _el('div', 'wiz10-result-stats');
     [
-      [rec.total_tests,             'Total tests'],
-      [rec.evidence_provided_tests, 'Tests evidenced'],
-      [rec.total_controls,          'Total controls'],
-      [rec.evidenced_count,         'Controls evidenced'],
+      [rec.total_requirements,     'Requirements'],
+      [rec.requirements_evidenced, 'Evidenced'],
+      [rec.requirements_waived,    'Waived'],
+      [rec.requirements_pending,   'Pending'],
       [Object.keys(rec.residual_risks).length, 'Residual risks recorded']
     ].forEach(([num, lbl]) => {
       const s = _el('div', 'wiz8-stat');
