@@ -342,36 +342,6 @@ window.WizUtils = (function () {
     if (step.applicability) meta.appendChild(el('span', `badge ${step.applicabilityKey || 'all'}`, { textContent: step.applicability }));
     body.appendChild(meta);
 
-    // internal standard checklist — the SR controls this step discharges, sourced
-    // from tbl_AI_SR_Controls.json (workflow_steps). Ref + name per row; the
-    // csa_checklist_item is revealed on click (and shown as a hover tooltip).
-    const srControls = srControlsForStep(step.id);
-    if (srControls.length) {
-      body.appendChild(sectionLabel('internal standard checklist'));
-      const list = el('ul', 'sr-todo-list');
-      srControls.forEach(c => {
-        const li = el('li', 'sr-todo-item');
-        const row = el('button', 'sr-todo-row', { type: 'button' });
-        row.title = c.csa_checklist_item || '';
-        const ref = el('span', 'sr-todo-ref', { textContent: `${c.groupstandard_ref || c.pk_SR_Control_ID}` });
-        const name = el('span', 'sr-todo-name', { textContent: c.control_name || '' });
-        const chev = el('span', 'sr-todo-chev');
-        chev.innerHTML = '<svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-        row.append(ref, name, chev);
-        const csa = el('p', 'sr-todo-csa');
-        csa.textContent = c.csa_checklist_item || 'No checklist item defined.';
-        csa.style.display = 'none';
-        row.addEventListener('click', () => {
-          const open = csa.style.display === 'none';
-          csa.style.display = open ? '' : 'none';
-          chev.style.transform = open ? 'rotate(180deg)' : '';
-        });
-        li.append(row, csa);
-        list.appendChild(li);
-      });
-      body.appendChild(list);
-    }
-
     if (step.gates && step.gates.length) {
       body.appendChild(sectionLabel('Gates and Notes'));
       step.gates.forEach(g => {
@@ -385,7 +355,7 @@ window.WizUtils = (function () {
     if (body.childElementCount > 1 || (meta.childElementCount > 0)) {
       const toggle = el('button', 'step-header-toggle', { type: 'button' });
       toggle.setAttribute('aria-expanded', 'false');
-      const label   = el('span', 'step-header-toggle-label', { textContent: 'Show group standard checklist' });
+      const label   = el('span', 'step-header-toggle-label', { textContent: 'Show step details' });
       const chevron = el('span', 'step-header-chevron');
       chevron.innerHTML = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       toggle.append(label, chevron);
@@ -393,7 +363,7 @@ window.WizUtils = (function () {
         const open = body.style.display === 'none';
         body.style.display = open ? '' : 'none';
         chevron.style.transform = open ? 'rotate(180deg)' : '';
-        label.textContent = open ? 'Hide group standard checklist' : 'Show group standard checklist';
+        label.textContent = open ? 'Hide step details' : 'Show step details';
         toggle.setAttribute('aria-expanded', String(open));
       });
       sec.appendChild(toggle);
