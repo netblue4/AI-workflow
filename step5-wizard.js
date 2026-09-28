@@ -41,6 +41,7 @@
     rationales: {}, // riskName → string
     challenges: {}, // riskName → string (assessor's objection, drives the re-assessment cycle)
     reqs:       {}, // riskName → { HS ref → bool } (Step B: which requirements to implement)
+    reqReasons: {}, // riskName → { HS ref → string } (why an unselected requirement is Not Applicable)
   };
   let _hsByRef = new Map(); // standard_ref → HS record (name, text, subcategory)
 
@@ -76,6 +77,7 @@
     _wizState.rationales  = {};
     _wizState.challenges  = {};
     _wizState.reqs        = {};
+    _wizState.reqReasons  = {};
     _hsByRef = new Map();
     _exclusionsApproved = false;
     _recChecked.clear();
@@ -147,6 +149,9 @@
     // Restore per-requirement selection. New records carry wizard_req_selections;
     // older ones are migrated from each risk's selected_refs (the old area→refs
     // expansion), so nothing is lost when the flow changed to requirement-level.
+    if (saved8?.legal_assessment?.wizard_req_reasons) {
+      Object.assign(_wizState.reqReasons, saved8.legal_assessment.wizard_req_reasons);
+    }
     if (saved8?.legal_assessment?.wizard_req_selections) {
       Object.assign(_wizState.reqs, saved8.legal_assessment.wizard_req_selections);
     } else if (saved8?.legal_assessment?.risks) {
@@ -1225,6 +1230,8 @@
 
       if (!_wizState.reqs[name]) _wizState.reqs[name] = {};
       const reqState = _wizState.reqs[name];
+      if (!_wizState.reqReasons[name]) _wizState.reqReasons[name] = {};
+      const reqReasons = _wizState.reqReasons[name];
 
       const applies = a => a === 'yes' || a === 'partially';
       // On first apply, default every requirement to selected (trim, not hunt).
@@ -1280,11 +1287,11 @@
         reqGroups.forEach(group => {
           stepB.appendChild(_el('p', 's5-sub-label', { textContent: group.subcategory }));
           group.refs.forEach(rf => {
+            const wrap = _el('div', 's5-req-wrap');
             const row = _el('label', 's5-req-row');
             const cb = document.createElement('input');
             cb.type = 'checkbox'; cb.className = 's5-req-cb';
             cb.checked = !!reqState[rf.ref];
-            cb.addEventListener('change', () => { reqState[rf.ref] = cb.checked; updateCount(); _autosaveSoon(); });
             const main = _el('div', 's5-req-main');
             const h = _el('div', 's5-req-hdr');
             h.appendChild(_el('span', 's5-ref-chip', { textContent: rf.ref }));
@@ -1292,7 +1299,34 @@
             main.appendChild(h);
             if (rf.text) main.appendChild(_el('div', 's5-req-desc', { textContent: rf.text }));
             row.append(cb, main);
-            stepB.appendChild(row);
+            wrap.appendChild(row);
+
+            // Reason (required) — shown only when the requirement is unticked.
+            const reasonWrap = _el('div', 's5-req-reason');
+            reasonWrap.appendChild(_el('label', 's5-req-reason-lbl', { textContent: 'Why is this requirement not applicable to your system? (required)' }));
+            const rta = document.createElement('textarea');
+            rta.className = 's5-req-reason-ta'; rta.rows = 2;
+            rta.placeholder = 'e.g. the system generates no synthetic media, so deep-fake provenance does not apply…';
+            rta.value = reqReasons[rf.ref] || '';
+            const syncReason = () => {
+              const excluded = !cb.checked;
+              reasonWrap.style.display = excluded ? '' : 'none';
+              wrap.classList.toggle('needs-reason', excluded && !(reqReasons[rf.ref] || '').trim());
+            };
+            rta.addEventListener('input', () => { reqReasons[rf.ref] = rta.value; syncReason(); _autosaveSoon(); });
+            reasonWrap.appendChild(rta);
+            wrap.appendChild(reasonWrap);
+
+            cb.addEventListener('change', () => {
+              reqState[rf.ref] = cb.checked;
+              if (cb.checked) delete reqReasons[rf.ref]; // re-selected → clear its exclusion reason
+              syncReason();
+              updateCount();
+              _autosaveSoon();
+              if (!cb.checked) rta.focus();
+            });
+            syncReason();
+            stepB.appendChild(wrap);
           });
         });
       };
@@ -1369,8 +1403,16 @@
       const selected = ans === 'yes' || ans === 'partially';
       const rid = wq.risk_id || _riskIdByName.get(name);
       const reqState = _wizState.reqs[name] || {};
+      const reasons  = _wizState.reqReasons[name] || {};
+      const all = _riskAllRefs(rid);
       // Keep the risk's canonical ref order for a stable record.
-      const selRefs = _riskAllRefs(rid).filter(ref => reqState[ref]);
+      const selRefs = all.filter(ref => reqState[ref]);
+      // Excluded requirements of an applicable risk, each with its N/A reason.
+      const exclRefs = selected ? all.filter(ref => !reqState[ref]).map(ref => ({
+        standard_ref: ref,
+        standard_name: (_hsByRef.get(ref) || {}).standard_name || ref,
+        reason: (reasons[ref] || '').trim()
+      })) : [];
       return {
         risk_id:                rid,
         risk_name:              name,
@@ -1379,6 +1421,7 @@
         wizard_answer:          ans,
         rationale:              _wizState.rationales[name] || '',
         selected_refs:          selected ? selRefs : [],
+        excluded_refs:          exclRefs,
         relevance:              _computeRelevance(name)
       };
     });
@@ -1387,6 +1430,14 @@
     // Per-risk selected_hs (risk_id → refs) — the draft selection Step 6 confirms.
     const selected_hs = {};
     risks.forEach(r => { if (r.selected && r.selected_refs.length) selected_hs[r.risk_id] = r.selected_refs; });
+    // Flat requirement exclusions (ref → reason) for the report's traceability,
+    // plus a count of any left unjustified (excluded with no reason).
+    const requirement_exclusions = {};
+    let unjustifiedExclusions = 0;
+    risks.forEach(r => (r.excluded_refs || []).forEach(x => {
+      requirement_exclusions[x.standard_ref] = x.reason;
+      if (!x.reason) unjustifiedExclusions++;
+    }));
     return {
       completed:             true,
       assessment_date:       today,
@@ -1394,7 +1445,10 @@
       wizard_rationales:     { ..._wizState.rationales },
       wizard_challenges:     { ..._wizState.challenges },
       wizard_req_selections: JSON.parse(JSON.stringify(_wizState.reqs)),
+      wizard_req_reasons:    JSON.parse(JSON.stringify(_wizState.reqReasons)),
       selected_hs,
+      requirement_exclusions,
+      unjustified_exclusions: unjustifiedExclusions,
       total_risks:           risks.length,
       selected_count:        sel,
       excluded_count:        excludedCount,
@@ -2002,6 +2056,12 @@
 .s5-req-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .s5-req-name{font-size:12.5px;font-weight:700;color:var(--color-text-primary)}
 .s5-req-desc{font-size:11.5px;line-height:1.55;color:var(--color-text-secondary)}
+.s5-req-wrap{display:flex;flex-direction:column;gap:6px;border:1px solid transparent;border-radius:8px}
+.s5-req-wrap.needs-reason{border-color:rgba(224,150,80,0.55);background:rgba(224,120,80,0.05);padding:2px}
+.s5-req-reason{display:flex;flex-direction:column;gap:4px;margin:0 0 4px 28px}
+.s5-req-reason-lbl{font-size:11px;font-weight:600;color:#f0b878}
+.s5-req-reason-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid rgba(224,150,80,0.45);border-radius:6px;padding:7px 10px;line-height:1.5;resize:vertical;background:var(--color-surface)}
+.s5-req-reason-ta:focus{outline:none;border-color:#e0964f}
 
 /* Challenge cycle */
 .s5-challenge-wrap{margin-top:8px}
