@@ -44,6 +44,13 @@
   const _FALLBACK_COLOR = { bg: '#262219', text: '#cfc7b2' };
   const _catColor = key => (_legalGuidance?.color_palette?.[key] || _FALLBACK_COLOR);
 
+  // The retired bulk-not-applicable stock phrases — treated as "no justification".
+  function _isBoilerplateRationale(txt) {
+    const t = (txt || '').trim();
+    return /^Not applicable\s*[—–-]\s*outside the scope of this use case\.?$/i.test(t)
+        || /^Not applicable to this use case\.?$/i.test(t);
+  }
+
   // ---- Public API ---------------------------------------------
   window.mountStep5Wizard = function (container, step, detail, colorKey, phaseTitle) {
     _container  = container;
@@ -137,6 +144,15 @@
         _state.group_standard_risks[r.risk_id] = r.selected;
       });
     }
+
+    // One-time cleanup: purge the retired bulk "not applicable" boilerplate so it
+    // no longer appears as a justification in Step 5, the compiled challenge prompt
+    // baseline, or the conformity report. New assessments never produce this text.
+    let _purgedBoilerplate = false;
+    Object.keys(_wizState.rationales).forEach(k => {
+      if (_isBoilerplateRationale(_wizState.rationales[k])) { delete _wizState.rationales[k]; _purgedBoilerplate = true; }
+    });
+    if (_purgedBoilerplate) { try { _writeRisksRecord(); } catch (_) {} }
 
     _filteredFGItems = _buildFGItems();
 
