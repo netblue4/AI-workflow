@@ -131,14 +131,13 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         // Articles were inlined into WizUtils.ARTICLES (tbl_AI_Articles.json was removed)
         Promise.resolve((window.WizUtils && WizUtils.ARTICLES) || []),
         cachedFetch('tbl_Harmonised_Standards.json','_fwHS'),
-        cachedFetch('tbl_Test_Controls.json',       '_fwTC'),
         cachedFetch('tbl_AI_SR_Controls.json',      '_fwSR'),
         cachedFetch('tbl_Risk_Controls.json',       '_fwRC'),
         cachedFetch('tbl_Risks.json',               '_fwRisks'),
-    ]).then(([articles, hs, testControls, srControls, riskControls, risks]) => {
+    ]).then(([articles, hs, srControls, riskControls, risks]) => {
         tableContainer.innerHTML = '';
         tableContainer.appendChild(
-            buildFWTable(articles, hs, testControls, srControls, riskControls, risks)
+            buildFWTable(articles, hs, srControls, riskControls, risks)
         );
     }).catch(err => {
         tableContainer.innerHTML = '';
@@ -151,7 +150,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
     return wrapper;
 
     // ── Table builder (runs after data loads) ──────────────────────────────────
-    function buildFWTable(articles, hs, testControls, srControls, riskControls, risks) {
+    function buildFWTable(articles, hs, srControls, riskControls, risks) {
 
         // Index each contributor by the HS standard_ref it covers.
         const indexByRef = (rows, refField, keep) => {
@@ -165,9 +164,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             }
             return m;
         };
-        const tcByRef = indexByRef(testControls, 'fk_Harmonised_Standard_IDs');
         const srByRef = indexByRef(srControls,   'fk_Harmonised_Standard_IDs');  // internal AI Acceptable Use Standard
-        const fsByRef = indexByRef(riskControls, 'fk_Harmonised_Standard_IDs', rc => rc.control_source === 'Framework_Statement');
         const riskByRef = indexByRef(risks,      'fk_Harmonised_Standard_IDs');  // risks that threaten each HS requirement
 
         // Build nested structure: article → standard_group → HS entries
@@ -194,10 +191,8 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                 groupMap.get(grp).push({
                     hsRef:          h.standard_ref,
                     hsName:         h.standard_name,
-                    coverageType:   h.coverage_type || 'Test',
-                    testControls:   tcByRef.get(h.standard_ref) || [],
+                    subcategory:    h.subcategory || '',
                     srControls:     srByRef.get(h.standard_ref) || [],
-                    fsControls:     fsByRef.get(h.standard_ref) || [],
                     risks:          riskByRef.get(h.standard_ref) || [],
                 });
             }
@@ -216,12 +211,11 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
         const thead     = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const columns   = [
-            { label: 'AI Act Article',         width: '14%' },
-            { label: 'Risk',                   width: '17%' },
-            { label: 'Harmonised Standard',    width: '18%' },
-            { label: 'Harmonised Requirement', width: '19%' },
-            { label: 'Verification',           width: '18%' },
-            { label: 'Internal Std (SR)',      width: '14%' },
+            { label: 'AI Act Article',         width: '16%' },
+            { label: 'Risk',                   width: '20%' },
+            { label: 'Harmonised Standard',    width: '22%' },
+            { label: 'Harmonised Requirement', width: '24%' },
+            { label: 'Internal Std (SR)',      width: '18%' },
         ];
         columns.forEach(col => {
             const th = document.createElement('th');
@@ -248,7 +242,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
             groups.forEach(({ groupName, reqs }) => {
                 let isFirstGroupRow = true;
 
-                reqs.forEach(({ hsRef, hsName, coverageType, testControls: tcs, srControls: srs, fsControls: fss, risks: rks }) => {
+                reqs.forEach(({ hsRef, hsName, subcategory, srControls: srs, risks: rks }) => {
                     const isEven  = rowIndex % 2 === 0;
                     const baseBg  = isEven ? '#1a1a1a' : '#161616';
 
@@ -319,29 +313,7 @@ function createFrameworkMapping(sanitizeForId, fieldStoredValue, webappData = nu
                     reqCell.appendChild(fwBadge(WizUtils.fmtStdRef(hsRef), hsName, '#7eb3ff', '#0d1525', '#1a2a4a'));
                     row.appendChild(reqCell);
 
-                    // 5. Verification — how the requirement is proven, INCLUDING the
-                    // framework self-certification (FS), which is one of the evidence routes.
-                    const tstCell = document.createElement('td');
-                    tstCell.style.cssText = cellBase + 'border-right:1px solid #2a2a2a;';
-                    if (coverageType === 'Workflow') {
-                        tstCell.appendChild(fwBadge('Workflow', 'Evidenced by the governance workflow', '#a9b4ff', '#14152e', '#2c2e5a'));
-                    } else if (coverageType === 'Document') {
-                        tstCell.appendChild(fwBadge('Document', 'Evidenced by an external document', '#e0b060', '#241a06', '#4a3810'));
-                    } else if (coverageType === 'Not_Applicable') {
-                        tstCell.appendChild(fwBadge('N/A', 'Not applicable to this system type', '#8a94a6', '#1a1e26', '#333a47'));
-                    } else if (tcs.length === 0) {
-                        // Test-type with no test control yet — a genuine coverage gap.
-                        tstCell.appendChild(fwBadge('Gap', 'No test control yet', '#f0857a', '#2a1210', '#4a201c'));
-                    } else {
-                        tcs.forEach(tc => {
-                            tstCell.appendChild(fwBadge(tc.control_ref, tc.jkName, '#34d399', '#0f2520', '#1a3830'));
-                        });
-                    }
-                    // Framework self-certification badge(s), merged in from the old FS column.
-                    fss.forEach(fs => tstCell.appendChild(fwBadge(fs.pk_Risk_Control_ID, fs.jkName, '#b79cff', '#181433', '#312a56')));
-                    row.appendChild(tstCell);
-
-                    // 6. Internal Standard (SR) — the AI Acceptable Use Standard clause(s).
+                    // 5. Internal Standard (SR) — the AI Acceptable Use Standard clause(s).
                     const srCell = document.createElement('td');
                     srCell.style.cssText = cellBase;
                     if (srs.length) {

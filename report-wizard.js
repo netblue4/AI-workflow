@@ -21,21 +21,20 @@
   // ---- Data loading -------------------------------------------
   async function _loadData() {
     try {
-      const [rRes, rcRes, hsRes, tcRes, srRes, wfRes, lgRes] = await Promise.all([
+      const [rRes, rcRes, hsRes, srRes, wfRes, lgRes] = await Promise.all([
         fetch('tbl_Risks.json'),
         fetch('tbl_Risk_Controls.json'),
         fetch('tbl_Harmonised_Standards.json'),
-        fetch('tbl_Test_Controls.json'),
         fetch('tbl_AI_SR_Controls.json'),
         fetch('workflow.json'),
         fetch('step5-legal-risk-guidance.json')
       ]);
-      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !tcRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, hs, testControls, srControls, workflow] = await Promise.all([
-        rRes.json(), rcRes.json(), hsRes.json(), tcRes.json(), srRes.json(), wfRes.json()
+      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
+      const [risks, riskControls, hs, srControls, workflow] = await Promise.all([
+        rRes.json(), rcRes.json(), hsRes.json(), srRes.json(), wfRes.json()
       ]);
       const legalGuidance = lgRes.ok ? await lgRes.json() : {};
-      _tbl = { risks, riskControls, hs, testControls, srControls, workflow, legalGuidance };
+      _tbl = { risks, riskControls, hs, testControls: [], srControls, workflow, legalGuidance };
     } catch (_) {
       _container.innerHTML = '<p style="padding:32px;color:#dc2626">Could not load reference data files.</p>';
       return;
@@ -139,17 +138,15 @@ ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_partBanner('A', 'EU AI Act Conformity Dossier', 'The formal EU AI Act conformity assessment for this system — the complete evidence dossier. It is produced first and submitted to the AI Change Board for review, and can be printed and provided to a regulator on its own.')}
 ${_section(1, 'System Classification', 'What the system is and how it is classified under the EU AI Act — which determines exactly which legal obligations apply. Confirms the assessment addressed the right requirements.', _classificationSection(s3))}
 ${_section(2, 'Risk Identification', 'The risks this system poses, identified against the pre-mapped catalogue (the Article&nbsp;9 risk-management step). Shows the hazards were named systematically, not ad hoc.', _riskAssessmentSection(s8, s10))}
-${_section(3, 'Compliance &amp; Control Traceability', 'Maps each applicable AI Act obligation to the harmonised-standard requirement that makes it testable, the control(s) that treat it, and their live operational status. This is the core evidence that every obligation is covered — nothing unaddressed.', _complianceTraceabilitySection(s3, s9, s10) + '<h3 class="sub-heading">Operational Control Register</h3><p class="section-meta">The controls behind the requirements above, grouped by risk, with their operational status. Includes DPIA and internal-standard controls that support — but sit outside — the per-article map.</p>' + _controlScheduleSection(s9, s10))}
-${_section(4, 'Verification Evidence', 'The tests that prove the selected controls actually work — controls are not just named, but evidenced.', _verificationSection(s10))}
-${_section(5, 'Conformity Assessment Conclusion', 'The assessor&rsquo;s conclusion that, on the evidence above, the system meets its applicable requirements — the basis of conformity submitted to the Board for decision.', _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy))}
+${_section(3, 'Compliance &amp; Requirement Traceability', 'Maps each applicable AI Act obligation to the harmonised-standard requirement that makes it testable, and the evidence that the requirement is implemented. This is the core evidence that every obligation is covered — nothing unaddressed.', _complianceTraceabilitySection(s3, s9, s10) + '<h3 class="sub-heading">Requirement Evidence Register</h3><p class="section-meta">The harmonised-standard requirements selected to treat each risk, grouped by risk, with the evidence status recorded in Step 7. Includes the DPIA security measures that support — but sit outside — the per-article map.</p>' + _controlScheduleSection(s9, s10))}
+${_section(4, 'Conformity Assessment Conclusion', 'The assessor&rsquo;s conclusion that, on the evidence above, the system meets its applicable requirements — the basis of conformity submitted to the Board for decision.', _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy))}
 
 ${_partDivider('End of Part&nbsp;A — EU AI Act Conformity Dossier. The assessment above is submitted to the AI Change Board; Part&nbsp;B records the Board&rsquo;s review and decision on it.')}
 
-${_partBanner('B', 'Internal Governance &amp; Sign-off', 'The internal governance layer: the Board&rsquo;s at-a-glance status, the outstanding-items list, internal-standard conformance, and the deployment decision. This rests on Part&nbsp;A and records what the Board did with it.')}
+${_partBanner('B', 'Internal Governance &amp; Sign-off', 'The internal governance layer: the Board&rsquo;s at-a-glance status, the outstanding-items list, and the deployment decision. This rests on Part&nbsp;A and records what the Board did with it.')}
 ${_ragSummaryPage(s9, s10)}
-${_section(6, 'Outstanding Items', 'Anything not yet evidenced or resolved — the specific items that must close before, or as conditions of, approval. The Board&rsquo;s action list.', _outstandingItemsSection(s9, s10))}
-${_section(7, 'Internal Standard Compliance — AI Acceptable Use Standard', 'Conformance with the organisation&rsquo;s own AI Acceptable Use Standard (beyond the legal minimum), including first-line self-assessment.', _srControlsSection())}
-${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and sign-off recorded against this assessment. On approval this authorises deployment and triggers issuance of the formal EU Declaration of Conformity (Article&nbsp;47).', _boardDecisionSection())}
+${_section(5, 'Outstanding Items', 'Anything not yet evidenced or resolved — the specific items that must close before, or as conditions of, approval. The Board&rsquo;s action list.', _outstandingItemsSection(s9, s10))}
+${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and sign-off recorded against this assessment. On approval this authorises deployment and triggers issuance of the formal EU Declaration of Conformity (Article&nbsp;47).', _boardDecisionSection())}
 </body>
 </html>`;
   }
@@ -237,119 +234,56 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
   }
 
   function _hsStatusShort(s) {
-    if (s === 'evidence_provided') return '✓ Activated';
+    if (s === 'evidence_provided') return '✓ Evidenced';
     if (s === 'waived')            return '— Waived';
     if (s === 'in_progress')       return '◑ In progress';
     return '○ Not started';
+  }
+
+  // Per-risk requirement stats from step-6 selection + step-7 evidence.
+  // Returns Map<riskId, { total, done, refs:[{ref,name,status}] }>.
+  function _reqStatsByRisk(s9, s10) {
+    const hsByRef = _hsByRef();
+    const DONE = new Set(['evidence_provided', 'waived']);
+    const out = new Map();
+    Object.entries(_selectedHsByRisk(s9 || {})).forEach(([riskId, refs]) => {
+      const list = (Array.isArray(refs) ? refs : []).map(ref => ({
+        ref, name: hsByRef.get(ref)?.standard_name || ref, status: _hsActStatus(s10, riskId, ref)
+      }));
+      out.set(riskId, { total: list.length, done: list.filter(r => DONE.has(r.status)).length, refs: list });
+    });
+    return out;
   }
 
   // ---- RAG Summary Page (CAB Sign-off) ----------------------
   function _ragSummaryPage(s9, s10) {
     if (!s9) return '';
 
-    // Build lookup maps
     const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
-    const riskIdByName = new Map((_tbl.risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
+    const stats = _reqStatsByRisk(s9, s10);
 
-    // Control statuses from s10 (activation controls now in step-7)
-    const ctrlStatus = new Map();
-    (s10?.controls || []).forEach(c => ctrlStatus.set(c.key, c.status));
+    let totalReq = 0, doneReq = 0;
+    stats.forEach(s => { totalReq += s.total; doneReq += s.done; });
+    const reqStatClass = totalReq === 0 ? 'warn' : (doneReq === totalReq ? 'ok' : (doneReq > 0 ? 'warn' : 'bad'));
 
-    // Legal risks are treated via HS-requirement activation, not controls.
-    const legal        = _legalHsTreatments(s9, s10);
-    const legalCtrlIds = _legalHsControlIds();
-    legal.statusByKey.forEach((v, k) => ctrlStatus.set(k, v));
-
-    // Test plans by risk
-    const testByRisk = new Map();
-    (s10?.plans || []).forEach(plan => {
-      const riskId = riskIdByName.get(plan.risk_name);
-      if (riskId) testByRisk.set(riskId, plan.test_controls || []);
-    });
-
-    // Group treatment units by risk_id: real (non-legal) selected controls plus
-    // the legal HS requirements standing in for the removed HS controls.
-    const byRisk = new Map();
-    [...(s9.risk_controls || []).filter(c => c.selected && c.control_source !== 'Harmonised_Standard'),
-     ...legal.rows].forEach(c => {
-      const key = c.risk_id || 'unknown';
-      if (!byRisk.has(key)) byRisk.set(key, []);
-      byRisk.get(key).push(c);
-    });
-
-    const DONE_STATUSES = new Set(['evidence_provided', 'completed', 'waived', 'not_applicable']);
-
-    // Stats for top boxes
-    let totalCtrls = 0, doneCtrls = 0;
-    let totalTests = 0, doneTests = 0;
-    const compAdds  = s9.compliance_additions || [];
-    const dpiaAdds  = s9.dpia_controls || [];
-    const addlCount = compAdds.length + dpiaAdds.length;
-
-    // Count activation controls from s10 (excluding legacy legal HS controls,
-    // which are represented by the HS requirements below).
-    (s10?.controls || []).forEach(c => {
-      if (legalCtrlIds.has(c.key)) return;
-      totalCtrls++;
-      if (c.status === 'evidence_provided' || c.status === 'waived') doneCtrls++;
-    });
-    legal.rows.forEach(c => {
-      totalCtrls++;
-      const st = ctrlStatus.get(c.control_id);
-      if (st === 'evidence_provided' || st === 'waived') doneCtrls++;
-    });
-
-    // Count all tests
-    (s10?.plans || []).forEach(plan => {
-      (plan.test_controls || []).forEach(tc => {
-        totalTests++;
-        if (DONE_STATUSES.has(tc.status)) doneTests++;
-      });
-    });
-
-    const ctrlStatClass = totalCtrls === 0 ? 'warn' : (doneCtrls === totalCtrls ? 'ok' : (doneCtrls > 0 ? 'warn' : 'bad'));
-    const testStatClass = totalTests === 0 ? 'warn' : (doneTests === totalTests ? 'ok' : (doneTests > 0 ? 'warn' : 'bad'));
-    const addlStatClass = addlCount > 0 ? 'warn' : 'ok';
-
-    // Per-risk RAG rows
     let overallGreen = 0, overallAmber = 0, overallRed = 0;
     const riskRows = [];
-
-    byRisk.forEach((ctrls, riskId) => {
+    stats.forEach((s, riskId) => {
       const riskName = riskNameById.get(riskId) || riskId;
-
-      const ctrlTotal = ctrls.length;
-      const ctrlDone  = ctrls.filter(c => {
-        const st = ctrlStatus.get(c.control_id);
-        return st === 'evidence_provided' || st === 'waived';
-      }).length;
-
-      const tests     = testByRisk.get(riskId) || [];
-      const testTotal = tests.length;
-      const testDone  = tests.filter(tc => DONE_STATUSES.has(tc.status)).length;
-
-      const ctrlAllDone  = ctrlTotal > 0 && ctrlDone === ctrlTotal;
-      const testAllDone  = testTotal === 0 || testDone === testTotal;
-      const anyProgress  = ctrlDone > 0 || testDone > 0;
-
+      const allDone = s.total > 0 && s.done === s.total;
       let rag;
-      if (ctrlAllDone && testAllDone) { rag = 'green'; overallGreen++; }
-      else if (anyProgress)            { rag = 'amber'; overallAmber++; }
-      else                             { rag = 'red';   overallRed++;   }
-
-      const ctrlCls  = ctrlTotal === 0 ? 'na' : (ctrlDone === ctrlTotal ? 'ok' : (ctrlDone > 0 ? 'warn' : 'na'));
-      const testCls  = testTotal === 0 ? 'na' : (testDone === testTotal ? 'ok' : (testDone > 0 ? 'warn' : 'na'));
-
+      if (allDone)          { rag = 'green'; overallGreen++; }
+      else if (s.done > 0)  { rag = 'amber'; overallAmber++; }
+      else                  { rag = 'red';   overallRed++;   }
+      const reqCls = s.total === 0 ? 'na' : (s.done === s.total ? 'ok' : (s.done > 0 ? 'warn' : 'na'));
       const residualLevel = s10?.residual_risks?.[riskId]?.level;
       const residualHtml  = residualLevel
         ? `<span class="rag-residual rag-residual--${_esc(residualLevel)}">${_esc(residualLevel.charAt(0).toUpperCase() + residualLevel.slice(1))}</span>`
         : `<span class="rag-residual rag-residual--na">—</span>`;
-
       riskRows.push(`<tr>
         <td><span class="risk-id-badge">${_esc(riskId)}</span></td>
         <td>${_esc(riskName)}</td>
-        <td class="center"><span class="rag-count rag-count--${ctrlCls}">${ctrlDone}/${ctrlTotal}</span></td>
-        <td class="center"><span class="rag-count rag-count--${testCls}">${testDone}/${testTotal}</span></td>
+        <td class="center"><span class="rag-count rag-count--${reqCls}">${s.done}/${s.total}</span></td>
         <td class="center">${residualHtml}</td>
         <td class="center"><span class="rag-pill rag-pill--${rag}">${rag.charAt(0).toUpperCase() + rag.slice(1)}</span></td>
       </tr>`);
@@ -364,122 +298,63 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
     <div class="rag-page-title">Change Board Sign-off Summary</div>
     <span class="rag-pill rag-pill--${overall} rag-pill--lg">${overallLabel}</span>
   </div>
-  <p class="section-desc">A one-page status view for the decision: overall RAG, how many controls are evidenced, and the residual risk per risk — the Board's go/no-go at a glance.</p>
+  <p class="section-desc">A one-page status view for the decision: overall RAG, how many harmonised-standard requirements are evidenced, and the residual risk per risk — the Board's go/no-go at a glance.</p>
   <div class="rag-stat-row">
-    <div class="rag-stat rag-stat--${ctrlStatClass}">
-      <div class="rag-stat-num">${doneCtrls}/${totalCtrls}</div>
-      <div class="rag-stat-lbl">Controls evidenced</div>
+    <div class="rag-stat rag-stat--${reqStatClass}">
+      <div class="rag-stat-num">${doneReq}/${totalReq}</div>
+      <div class="rag-stat-lbl">Requirements evidenced</div>
     </div>
-    <div class="rag-stat rag-stat--${testStatClass}">
-      <div class="rag-stat-num">${doneTests}/${totalTests}</div>
-      <div class="rag-stat-lbl">Tests resolved</div>
-    </div>
-    <div class="rag-stat rag-stat--${addlStatClass}">
-      <div class="rag-stat-num">${addlCount}</div>
-      <div class="rag-stat-lbl">Additional controls</div>
+    <div class="rag-stat rag-stat--${overall === 'green' ? 'ok' : (overall === 'amber' ? 'warn' : 'bad')}">
+      <div class="rag-stat-num">${stats.size}</div>
+      <div class="rag-stat-lbl">Risks treated</div>
     </div>
   </div>
   <table class="data-table">
-    <thead><tr><th>Risk ID</th><th>Risk Name</th><th class="center">Controls</th><th class="center">Tests</th><th class="center">Residual Risk</th><th class="center">Status</th></tr></thead>
+    <thead><tr><th>Risk ID</th><th>Risk Name</th><th class="center">Requirements</th><th class="center">Residual Risk</th><th class="center">Status</th></tr></thead>
     <tbody>${riskRows.join('')}</tbody>
   </table>
-  <p class="section-meta">Compliance additions and DPIA controls are not shown in the per-risk table above. See §4 Control Schedule for their operational status.</p>
+  <p class="section-meta">DPIA security measures are assessed as a whole in the DPIA and are not shown in the per-risk table above.</p>
 </div>`;
   }
 
   // ---- Outstanding Items Section -----------------------------
   function _outstandingItemsSection(s9, s10) {
     let html = '';
-
-    // Outstanding controls
-    const outstandingCtrls = [];
-    const legal        = _legalHsTreatments(s9, s10);
-    const legalCtrlIds = _legalHsControlIds();
     if (!s9) {
-      html += `<div class="outstanding-warn">Step 6 (Control Identification) not yet completed.</div>`;
-    } else if (!s10 || (!s10.controls?.length && !s10.hs_activation)) {
-      html += `<div class="outstanding-warn">Step 7 (Residual Risk) — Control Activation tab not yet completed.</div>`;
-    } else {
-      const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
-
-      const selectedKeys = new Set([
-        ...(s9.risk_controls || []).filter(c => c.selected).map(c => c.control_id),
-        ...(s9.compliance_additions || []).map(c => c.control_id),
-        ...(s9.dpia_controls || []).map(c => 'DPIA__' + c.control_name),
-        ...((s9.group_standard_controls && s9.group_standard_controls.controls) || []).filter(c => c.selected).map(c => c.control_id)
-      ]);
-
-      // Real (non-legal) activation controls
-      (s10.controls || []).forEach(c => {
-        if (legalCtrlIds.has(c.key)) return;
-        if (!selectedKeys.has(c.key)) return;
-        if (c.status === 'evidence_provided' || c.status === 'waived') return;
-        outstandingCtrls.push(c);
-      });
-
-      // Legal HS requirements not yet activated
-      legal.rows.forEach(c => {
-        const st = legal.statusByKey.get(c.control_id);
-        if (st === 'evidence_provided' || st === 'waived') return;
-        outstandingCtrls.push({ key: c.control_id, name: c.control_name, risk_id: c.risk_id, status: st });
-      });
+      return `<div class="outstanding-warn">Step 6 (Control Identification) not yet completed.</div>`;
+    }
+    if (!s10 || !s10.hs_activation) {
+      return `<div class="outstanding-warn">Step 7 (Residual Risk) not yet completed.</div>`;
     }
 
-    // Outstanding tests
-    const outstandingTests = [];
-    if (!s10) {
-      html += `<div class="outstanding-warn">Step 7 (Control Verification Testing) not yet completed.</div>`;
-    } else {
-      const DONE_STATUSES = new Set(['evidence_provided', 'completed', 'waived', 'not_applicable']);
-      (s10.plans || []).forEach(plan => {
-        (plan.test_controls || []).forEach((tc, idx) => {
-          if (DONE_STATUSES.has(tc.status)) return;
-          outstandingTests.push({
-            planRef:  plan.plan_ref || `Plan ${idx + 1}`,
-            testName: tc.control_name || tc.test_control_id || '—',
-            riskName: plan.risk_name || '—',
-            status:   tc.status || 'not_started'
-          });
-        });
+    const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
+
+    // Outstanding requirements — selected in Step 6 but not yet evidenced/waived.
+    const outstanding = [];
+    _reqStatsByRisk(s9, s10).forEach((s, riskId) => {
+      s.refs.forEach(r => {
+        if (r.status === 'evidence_provided' || r.status === 'waived') return;
+        outstanding.push({ ref: r.ref, name: r.name, riskName: riskNameById.get(riskId) || riskId, status: r.status });
       });
+    });
+
+    if (outstanding.length === 0) {
+      return `<div class="outstanding-clear">✓ Every selected requirement is evidenced or waived. Ready for CAB sign-off.</div>`;
     }
 
-    if (s9 && s10 && outstandingCtrls.length === 0 && outstandingTests.length === 0) {
-      return `<div class="outstanding-clear">✓ All controls evidenced and all tests resolved. Ready for CAB sign-off.</div>`;
-    }
-
-    if (outstandingCtrls.length > 0) {
-      const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
-      html += `<h3 class="sub-heading">Outstanding Controls (${outstandingCtrls.length})</h3>
+    html += `<h3 class="sub-heading">Outstanding Requirements (${outstanding.length})</h3>
 <table class="data-table">
-  <thead><tr><th>Control ID</th><th>Name</th><th>Risk</th><th>Current Status</th></tr></thead>
+  <thead><tr><th>Requirement</th><th>Name</th><th>Risk</th><th>Current Status</th></tr></thead>
   <tbody>
-  ${outstandingCtrls.map(c => `<tr>
-    <td class="mono">${_esc(c.key)}</td>
-    <td>${_esc(c.name || '—')}</td>
-    <td>${_esc(c.risk_name || (riskNameById.get(c.risk_id) || '—'))}</td>
-    <td>${_ctrlStatusPill(c.status)}</td>
+  ${outstanding.map(o => `<tr>
+    <td class="mono">${_esc(o.ref)}</td>
+    <td>${_esc(o.name || '—')}</td>
+    <td>${_esc(o.riskName)}</td>
+    <td>${_ctrlStatusPill(o.status)}</td>
   </tr>`).join('')}
   </tbody>
 </table>`;
-    }
-
-    if (outstandingTests.length > 0) {
-      html += `<h3 class="sub-heading">Outstanding Tests (${outstandingTests.length})</h3>
-<table class="data-table">
-  <thead><tr><th>Plan Ref</th><th>Test Name</th><th>Risk</th><th>Current Status</th></tr></thead>
-  <tbody>
-  ${outstandingTests.map(t => `<tr>
-    <td class="mono">${_esc(t.planRef)}</td>
-    <td>${_esc(t.testName)}</td>
-    <td>${_esc(t.riskName)}</td>
-    <td><span class="status-pill status-pill--${_testStatusKey(t.status)}">${_testStatusLabel(t.status)}</span></td>
-  </tr>`).join('')}
-  </tbody>
-</table>`;
-    }
-
-    return html || `<div class="outstanding-warn">Insufficient data to determine outstanding items.</div>`;
+    return html;
   }
 
   // ---- Cover page --------------------------------------------
@@ -492,22 +367,20 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
     const legalSel   = s8?.legal_assessment?.selected_count ?? '—';
     const legalTotal = s8?.legal_assessment?.total_risks    ?? '—';
 
-    // Legal risks are treated via HS requirements, not the legacy HS controls.
-    const legalHsCount = _legalHsTreatments(s9, s10).rows.length;
-    const riskCtrls = (s9?.risk_controls || []).filter(c => c.selected && c.control_source !== 'Harmonised_Standard').length + legalHsCount;
-    const compAdds  = (s9?.compliance_additions || []).length;
-    const dpiaAdds  = (s9?.dpia_controls || []).length;
-
-    const totalTests = s10?.total_tests ?? '—';
-    const doneTests  = s10?.completed_tests ?? 0;
-    const naTests    = s10?.not_applicable_tests ?? 0;
-    const pendTests  = s10?.pending_tests ?? '—';
+    // Legal risks are treated by implementing harmonised-standard requirements.
+    let reqSelectedCount = 0;
+    _reqStatsByRisk(s9, s10).forEach(s => { reqSelectedCount += s.total; });
+    const reqSelected = s9?.total_requirements ?? reqSelectedCount;
+    const reqTotal    = s10?.total_requirements ?? reqSelected;
+    const reqEvid     = s10?.requirements_evidenced ?? 0;
+    const reqWaived   = s10?.requirements_waived ?? 0;
+    const reqPend     = s10?.requirements_pending ?? '—';
 
     const steps = [
-      ['System Classification', !!s3],
+      ['System Classification',  !!s3],
       ['Risk Identification',    !!s8?.legal_assessment?.completed],
-      ['Control Identification', !!s9],
-      ['Control Verification',   !!s10]
+      ['Requirement Selection',  !!s9],
+      ['Requirement Evidence',   !!s10]
     ];
 
     return `
@@ -533,12 +406,12 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
         <div class="cs-lbl">Risks accepted<br><span class="cs-sub">${legalTotal} legal/regulatory risks assessed</span></div>
       </div>
       <div class="cs-box">
-        <div class="cs-num">${riskCtrls + compAdds + dpiaAdds}</div>
-        <div class="cs-lbl">Controls selected<br><span class="cs-sub">${riskCtrls} risk team · ${compAdds} compliance · ${dpiaAdds} DPIA</span></div>
+        <div class="cs-num">${reqSelected}</div>
+        <div class="cs-lbl">Requirements selected<br><span class="cs-sub">harmonised-standard requirements to implement</span></div>
       </div>
       <div class="cs-box">
-        <div class="cs-num">${doneTests + naTests}${typeof totalTests === 'number' ? `/${totalTests}` : ''}</div>
-        <div class="cs-lbl">Tests resolved<br><span class="cs-sub">${doneTests} completed · ${naTests} N/A · ${pendTests} pending</span></div>
+        <div class="cs-num">${reqEvid + reqWaived}${typeof reqTotal === 'number' ? `/${reqTotal}` : ''}</div>
+        <div class="cs-lbl">Requirements evidenced<br><span class="cs-sub">${reqEvid} evidenced · ${reqWaived} waived · ${reqPend} pending</span></div>
       </div>
     </div>
 
@@ -670,34 +543,6 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
       html += `</tbody></table>`;
     }
 
-    // ---- Internal Standards Risk Assessment ----
-    const gsa = s8.group_standard_assessment;
-    html += `<h3 class="sub-heading">Internal Standards Risk Assessment (Acceptable Use of AI Tools Standard)</h3>`;
-    if (!gsa?.completed) {
-      html += _notComplete('Internal Standards assessment not yet saved.');
-    } else {
-      html += `<p class="section-meta">Completed: ${gsa.assessment_date} &nbsp;|&nbsp; ${gsa.selected_count} of ${gsa.total_risks} risks applicable</p>`;
-      html += `<table class="data-table data-table--risk">
-  <thead><tr><th style="width:20%">Risk</th><th style="width:8%">Applicable</th><th style="width:9%">Residual Risk</th><th>Standard</th></tr></thead>
-  <tbody>`;
-      (gsa.risks || []).forEach(r => {
-        const residual = s10?.residual_risks?.[r.risk_id];
-        const residualHtml = residual?.level
-          ? `<span class="rag-residual rag-residual--${_esc(residual.level)}">${_esc(residual.level.charAt(0).toUpperCase() + residual.level.slice(1))}</span>`
-          : '—';
-        const ansKey = r.selected ? 'yes' : 'no';
-        const ansTxt = r.selected ? 'Yes' : 'No';
-        const rowCls = r.selected ? '' : ' class="row-dim"';
-        html += `<tr${rowCls}>
-      <td><span class="risk-id-badge">${_esc(r.risk_id)}</span> ${_esc(r.risk_name)}</td>
-      <td><span class="ans-pill ans-pill--${ansKey}">${ansTxt}</span></td>
-      <td class="center">${residualHtml}</td>
-      <td class="reason-cell">${_esc(r.groupstandard_ref || '—')}</td>
-    </tr>`;
-      });
-      html += `</tbody></table>`;
-    }
-
     // ---- DPIA Risk Assessment ----
     const s4 = _record?.['step-4'];
     html += `<h3 class="sub-heading">DPIA Risk Assessment</h3>`;
@@ -766,10 +611,11 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
     const s7date = s10?.assessment_date ? ` &nbsp;|&nbsp; Step 7 recorded: ${s10.assessment_date}` : ' &nbsp;|&nbsp; <em>Step 7 — Residual Risk not yet completed</em>';
     let html = `<p class="section-meta">Step 6 date: ${s9.assessment_date || '—'}${s7date}</p>`;
 
-    // ---- Risk Team Controls -----------------------------------------
-    html += `<h3 class="sub-heading">Risk Team Controls</h3>`;
+    // ---- Requirements by risk ---------------------------------------
+    const _reqId = c => c.fk_Harmonised_Standard_IDs ? WizUtils.fmtStdRef(c.fk_Harmonised_Standard_IDs) : c.control_id;
+    html += `<h3 class="sub-heading">Requirements by risk</h3>`;
     if (byRisk.size === 0) {
-      html += _notComplete('No risk controls recorded.');
+      html += _notComplete('No requirements recorded.');
     } else {
       byRisk.forEach((ctrls, riskId) => {
         const selected   = ctrls.filter(c => c.selected);
@@ -779,16 +625,16 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
         html += `<div class="ctrl-group">
           <div class="ctrl-group-hdr">${riskLabel}</div>
           <table class="data-table data-table--sched">
-            <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
+            <thead><tr><th>Requirement</th><th>Name</th><th>Standard</th><th>Evidence Status</th></tr></thead>
             <tbody>
             ${selected.map(c => `<tr>
-              <td class="mono">${_esc(c.control_id)}</td>
+              <td class="mono">${_esc(_reqId(c))}</td>
               <td>${_esc(c.control_name || '—')}</td>
               <td>${_hsCell(c)}</td>
               <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
             </tr>`).join('')}
             ${deselected.map(c => `<tr class="ctrl-row--dim">
-              <td class="mono">${_esc(c.control_id)}</td>
+              <td class="mono">${_esc(_reqId(c))}</td>
               <td>${_esc(c.control_name || '—')}</td>
               <td>${_hsCell(c)}</td>
               <td><span class="status-pill status-pill--excl">✗ Not selected</span></td>
@@ -829,36 +675,6 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
         </tr>`).join('')}
         </tbody>
       </table>`;
-    }
-
-    // ---- Internal Standards Controls -----------------------------------
-    const gsCtrls = ((s9.group_standard_controls && s9.group_standard_controls.controls) || []).filter(c => c.selected);
-    if (gsCtrls.length > 0) {
-      html += `<h3 class="sub-heading">Internal Standards Controls</h3>`;
-      const gsByRisk = new Map();
-      gsCtrls.forEach(c => {
-        const k = c.risk_id || 'unknown';
-        if (!gsByRisk.has(k)) gsByRisk.set(k, []);
-        gsByRisk.get(k).push(c);
-      });
-      gsByRisk.forEach((ctrls, riskId) => {
-        const riskName  = riskNameById.get(riskId);
-        const riskLabel = riskName ? `${_esc(riskId)} — ${_esc(riskName)}` : _esc(riskId);
-        html += `<div class="ctrl-group">
-          <div class="ctrl-group-hdr">${riskLabel}</div>
-          <table class="data-table data-table--sched">
-            <thead><tr><th>Control ID</th><th>Name</th><th>Standards</th><th>Operational Status</th></tr></thead>
-            <tbody>
-            ${ctrls.map(c => `<tr>
-              <td class="mono">${_esc(c.control_id)}</td>
-              <td>${_esc(c.control_name || '—')}</td>
-              <td>${_hsCell(c)}</td>
-              <td>${_ctrlStatusPill(ctrlStatus.get(c.control_id))}</td>
-            </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`;
-      });
     }
 
     return html;
@@ -1069,17 +885,16 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
   // ---- Section 6: Conformity Declaration ---------------------
   function _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy) {
     const artCount   = s3?.axis_b?.applicable_articles?.length ?? 0;
-    // Legal risks are treated via HS requirements, not the legacy HS controls.
-    const legalHsCount = _legalHsTreatments(s9, s10).rows.length;
-    const riskCtrlSel = (s9?.risk_controls || []).filter(c => c.selected && c.control_source !== 'Harmonised_Standard').length + legalHsCount;
-    const compAdds    = (s9?.compliance_additions || []).length;
-    const dpiaAdds    = (s9?.dpia_controls || []).length;
-    const doneTests   = s10?.evidence_provided_tests ?? s10?.completed_tests ?? '—';
-    const naTests     = s10?.waived_tests ?? s10?.not_applicable_tests ?? '—';
-    const pendTests   = s10?.pending_tests ?? '—';
+    // Legal risks are treated by implementing harmonised-standard requirements.
+    let reqSelected = 0;
+    _reqStatsByRisk(s9, s10).forEach(s => { reqSelected += s.total; });
+    if (s9?.total_requirements != null) reqSelected = s9.total_requirements;
+    const reqEvid   = s10?.requirements_evidenced ?? '—';
+    const reqWaived = s10?.requirements_waived ?? '—';
+    const reqPend   = s10?.requirements_pending ?? '—';
 
     const allDone = !!s3 && !!s9 && !!s10;
-    const noPendingTests = typeof pendTests === 'number' && pendTests === 0;
+    const noPending = typeof reqPend === 'number' && reqPend === 0;
 
     return `
 <h3 class="sub-heading">Article 43 HS Requirements — Completion Checklist</h3>
@@ -1123,17 +938,14 @@ ${_section(8, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
 <table class="data-table">
   <tr><td class="dt-label">Use Case / System ID</td><td>${_esc(useCase)}</td></tr>
   <tr><td class="dt-label">Applicable EU AI Act Articles</td><td>${artCount}</td></tr>
-  <tr><td class="dt-label">Risk-Team Treatments (HS requirements + controls)</td><td>${riskCtrlSel}</td></tr>
-  <tr><td class="dt-label">Controls Added (Compliance Team)</td><td>${compAdds}</td></tr>
-  <tr><td class="dt-label">Controls Committed (DPIA)</td><td>${dpiaAdds}</td></tr>
-  <tr><td class="dt-label">Total Controls</td><td>${riskCtrlSel + compAdds + dpiaAdds}</td></tr>
-  <tr><td class="dt-label">Tests — Evidence Provided</td><td>${doneTests}</td></tr>
-  <tr><td class="dt-label">Tests — Waived</td><td>${naTests}</td></tr>
-  <tr><td class="dt-label">Tests Pending</td><td>${pendTests}</td></tr>
+  <tr><td class="dt-label">Harmonised-Standard Requirements Selected</td><td>${reqSelected}</td></tr>
+  <tr><td class="dt-label">Requirements — Evidence Provided</td><td>${reqEvid}</td></tr>
+  <tr><td class="dt-label">Requirements — Waived</td><td>${reqWaived}</td></tr>
+  <tr><td class="dt-label">Requirements Pending</td><td>${reqPend}</td></tr>
   <tr><td class="dt-label">Report Generated</td><td>${today}</td></tr>
 </table>
 
-${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pendTests !== 1 ? 's' : ''} remain pending. All tests must be resolved (completed or marked not applicable) before this report can be used as the conformity assessment submission.</div>` : ''}
+${!noPending && s10 ? `<div class="warn-banner">⚠ ${reqPend} requirement${reqPend !== 1 ? 's' : ''} remain pending. Every selected requirement must be evidenced or waived before this report can be used as the conformity assessment submission.</div>` : ''}
 
 <h3 class="sub-heading">Basis of Conformity</h3>
 <div class="declaration-block">
@@ -1144,9 +956,8 @@ ${!noPendingTests && s10 ? `<div class="warn-banner">⚠ ${pendTests} test${pend
     risk-treatment measures and traced in Section 3 (Compliance &amp; Control Traceability). This report records each
     requirement, its activation status and its implementing evidence; the technical implementation of each HS
     requirement is carried out by the development team.</li>
-    <li><strong>internal standard requirements</strong> are evidenced by the organisation's workflow controls,
-    recorded with their operational status in the Operational Control Register (Section 3) and in Internal
-    Standard Compliance (Part B).</li>
+    <li>each requirement's <strong>evidence of implementation</strong> is recorded with its status in the
+    Requirement Evidence Register (Section 3), and any residual risk is assessed per risk in Part B.</li>
   </ul>
   <p><strong>Presumption of conformity.</strong> Under <strong>Article 40</strong> of Regulation (EU) 2024/1689,
   an AI system that conforms to harmonised standards — or parts thereof — whose references are published in the
