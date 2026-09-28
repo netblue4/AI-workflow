@@ -28,6 +28,14 @@
   const _recChecked = new Set();    // keys of Recommended risks ticked for bulk "not applicable"
   let _savedNoteEl    = null;      // Wave 2: live "Saved ✓" indicator in the risk header
   let _riskheadSummaryEl = null;   // Wave 2: risk-count summary, updated in place on autosave
+  let _uiOpen = {};                // per-panel open state, preserved across in-step re-renders
+
+  // Shared gold StepDIV whose open/closed state survives a _renderConsolidated().
+  function _makePanel(key, title, description, status, statusKind, body) {
+    const p = WizUtils.buildStepPanel({ title, description, status, statusKind, body, open: _uiOpen[key] === true });
+    p.header.addEventListener('click', () => { _uiOpen[key] = p.el.classList.contains('is-open'); });
+    return p.el;
+  }
 
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
@@ -81,6 +89,7 @@
     _hsByRef = new Map();
     _exclusionsApproved = false;
     _recChecked.clear();
+    _uiOpen = {};
 
     _injectStyles();
 
@@ -521,77 +530,70 @@
   // chip on each — no tabs.
   function _buildConsolidatedCard() {
     const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Risk identification' }));
-    card.appendChild(_el('p', 'step-detail-summary', {
-      textContent: 'Risks are split by priority. The Required set is derived from your Step 3 classification and Step 4 DPIA — these must be treated for compliance. Everything else is recommended/technical: treat what matters for your system.'
+    card.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'Risks are split by priority. The Required set is derived from your Step 3 classification and Step 4 DPIA — these must be treated for compliance. Everything else is recommended: treat what matters for your system.'
     }));
 
-    card.appendChild(_buildAskAiCollapsible());
-    card.appendChild(_buildLoadRaSection());
-    card.appendChild(_buildChallengeCompileSection());
+    // ── AI support — one panel for the ask / load / challenge sections ──
+    const aiBody = _el('div', '');
+    aiBody.appendChild(_buildAskAiCollapsible());
+    aiBody.appendChild(_buildLoadRaSection());
+    aiBody.appendChild(_buildChallengeCompileSection());
+    card.appendChild(_makePanel('ai', 'AI support',
+      'Optional. Draft the risk assessment with your AI tool, load its reply, or compile a challenge prompt to justify what you exclude.',
+      'Optional', 'muted', aiBody));
 
     const { mandatory, recommended, excluded, mandN, recN, exclN, step3Done } = _buildConsolidatedList();
 
-    card.appendChild(_buildRiskToolbar(mandN, recN, exclN));
-
-    // Wire a group header's chevron + body to a collapse-state getter/setter.
-    const wireCollapse = (hdr, body, get, set) => {
-      const chev = hdr.querySelector('.s5-group-chev');
-      const apply = () => { body.style.display = get() ? '' : 'none'; if (chev) chev.style.transform = get() ? 'rotate(180deg)' : ''; };
-      apply();
-      hdr.addEventListener('click', () => { set(!get()); apply(); });
-    };
-
-    // ── Required (mandatory) group — collapsible, expanded by default ──
+    // ── Required (mandatory) ──
     if (mandN) {
-      const reqHdr = _groupHeader('req', 'Required for compliance', mandN,
-        'Mapped to the EU AI Act articles your Step 3 classification found apply, plus your DPIA privacy risks. These must be treated.', true);
-      const reqBody = _el('div', 's5-req-body');
-      reqBody.appendChild(mandatory);
-      wireCollapse(reqHdr, reqBody, () => _showRequired, v => { _showRequired = v; });
-      card.appendChild(reqHdr);
-      card.appendChild(reqBody);
+      card.appendChild(_makePanel('req', 'Required for compliance',
+        'Mapped to the EU AI Act articles your Step 3 classification found apply, plus your DPIA privacy risks. These must be treated.',
+        String(mandN), 'progress', mandatory));
     } else if (step3Done) {
       card.appendChild(_el('div', 's5-empty-note', { textContent: 'Your classification did not trigger any risk-bearing articles, and the DPIA recorded no privacy risks — so there is no mandatory set. Review the recommended risks below.' }));
     } else {
       const note = _el('div', 'wiz8-info');
-      note.style.cssText = 'margin:6px 0 4px;padding:10px 14px;border-radius:6px';
+      note.style.cssText = 'margin:6px 0 12px;padding:10px 14px;border-radius:6px';
       note.innerHTML = '<strong>Complete Step 3 (System classification) to see which risks are mandatory.</strong> Until then every risk is shown as recommended.';
       card.appendChild(note);
-      card.appendChild(mandatory); // empty
     }
 
-    // ── Recommended (optional) group — collapsible, collapsed by default ──
-    const recHdr = _groupHeader('rec', 'Recommended / technical (optional)', recN,
-      'Good-practice and NIST-surfaced risks beyond the mandatory set. Treat the ones that matter — or tick and bulk-dismiss the rest.', true);
-    const recBody = _el('div', 's5-rec-body');
+    // ── Recommended (optional) ──
+    const recBody = _el('div', '');
     if (recN) recBody.appendChild(_buildRecBulkBar());
     recBody.appendChild(recommended);
-    wireCollapse(recHdr, recBody, () => _showRecommended, v => { _showRecommended = v; });
-    card.appendChild(recHdr);
-    card.appendChild(recBody);
+    card.appendChild(_makePanel('rec', 'Recommended / technical (optional)',
+      'Good-practice and NIST-surfaced risks beyond the mandatory set. Treat the ones that matter — or tick and bulk-dismiss the rest.',
+      String(recN), recN ? 'info' : 'muted', recBody));
 
-    // ── Excluded group — risks marked Not applicable; needs explicit oversight ──
+    // ── Excluded — risks marked Not applicable; needs explicit oversight ──
     if (exclN) {
-      const exHdr = _groupHeader('excl', 'Excluded — needs review', exclN,
-        'Risks marked Not applicable. Review each exclusion and its justification, then approve — this is the human-oversight record for what was left out.', true);
-      const exBody = _el('div', 's5-excl-body');
+      const exBody = _el('div', '');
       exBody.appendChild(_buildExclusionApprovalBar(exclN));
       exBody.appendChild(excluded);
-      wireCollapse(exHdr, exBody, () => _showExcludedGrp, v => { _showExcludedGrp = v; });
-      card.appendChild(exHdr);
-      card.appendChild(exBody);
+      card.appendChild(_makePanel('excl', 'Excluded — needs review',
+        'Risks marked Not applicable. Review each exclusion and its justification, then approve — this is the human-oversight record for what was left out.',
+        String(exclN), _exclusionsApproved ? 'done' : 'progress', exBody));
     }
 
     // Bottom actions
     const actRow = _el('div', 'wiz-action-row');
+    const acceptBtn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Accept all remaining' });
+    acceptBtn.title = 'Marks every unanswered risk as applicable, then saves.';
+    acceptBtn.addEventListener('click', _acceptAllRemaining);
     const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear legal answers' });
     clearBtn.addEventListener('click', () => { _wizState.answers = {}; _wizState.rationales = {}; _autosave(); _renderConsolidated(); });
-    actRow.append(clearBtn);
+    actRow.append(acceptBtn, clearBtn);
     card.appendChild(actRow);
 
-    // Preserve the old Review tab's context (classification + DPIA inputs).
-    card.appendChild(_buildInputsCollapsible());
+    // Classification + DPIA inputs this list is derived from.
+    const inBody = _el('div', '');
+    inBody.appendChild(_buildStep3Card());
+    inBody.appendChild(_buildDpiaCard());
+    card.appendChild(_makePanel('inputs', 'Classification & DPIA inputs',
+      'The Step 3 classification and Step 4 DPIA this risk list is derived from.',
+      '', '', inBody));
     return card;
   }
 

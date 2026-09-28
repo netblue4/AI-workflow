@@ -401,9 +401,25 @@
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const pane = _el('div', 'wiz-pane'); pane.dataset.pane = 'all';
-    pane.appendChild(_buildStep7Toolbar());
-    pane.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory'));
-    pane.appendChild(_buildDpiaResidualPane());
+    pane.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'Provide evidence that each selected requirement is implemented, then assess the residual risk. Residual unlocks once every requirement for a risk is evidenced or waived.'
+    }));
+
+    const legal = _buildDomainRiskBody('legal', 'Legal / EU AI Act');
+    pane.appendChild(WizUtils.buildStepPanel({
+      title: 'Requirements & residual risk',
+      description: 'For each risk, evidence its selected harmonised-standard requirements, then assess the residual risk.',
+      status: legal.count ? String(legal.count) : '', statusKind: 'progress',
+      body: legal.el
+    }).el);
+
+    const dpia = _buildDpiaResidualBody();
+    if (dpia) pane.appendChild(WizUtils.buildStepPanel({
+      title: 'DPIA — residual risk',
+      description: 'The DPIA is assessed as a whole in Step 4. Confirm the security-measure controls are live; the residual rating is carried from the DPIA.',
+      body: dpia
+    }).el);
+
     pane.appendChild(WizUtils.buildSaveBlock({ label: 'Approve & Save', onSave: _handleSave }).el);
     pw.appendChild(pane);
     if (WizUtils.glossify) { try { WizUtils.glossify(pane); } catch (_) {} }
@@ -424,17 +440,14 @@
     pane.querySelectorAll('.s9-risk-acc-chevron').forEach(c => c.style.transform = open ? '' : 'rotate(-90deg)');
   }
   function _buildStep7Toolbar() {
-    const { total, done, risks } = _verificationCounts();
     const bar = _el('div', 's7-toolbar');
-    const sum = _el('div', 's7-toolbar-summary');
-    sum.innerHTML = `<strong>${total}</strong> control${total !== 1 ? 's' : ''} to verify across <strong>${risks}</strong> risk${risks !== 1 ? 's' : ''} · <span class="s7-toolbar-done">${done} evidenced or waived</span>`;
     const acts = _el('div', 's7-toolbar-actions');
     const ex = _el('button', 's7-toolbar-btn', { type: 'button', textContent: '⤢ Expand all' });
     ex.addEventListener('click', () => _setAllExpanded(true));
     const co = _el('button', 's7-toolbar-btn', { type: 'button', textContent: '⤡ Collapse all' });
     co.addEventListener('click', () => _setAllExpanded(false));
     acts.append(ex, co);
-    bar.append(sum, acts);
+    bar.append(acts);
     return bar;
   }
 
@@ -540,35 +553,32 @@
     return sec;
   }
 
-  function _buildDomainRiskPane(domain, title) {
-    const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — ' + title }));
-    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'For each risk, provide evidence that its selected harmonised-standard requirements are implemented, then assess the residual risk. Residual unlocks once every requirement is evidenced or waived.' }));
-
+  // Returns { el, count } — the body content for the Requirements panel.
+  function _buildDomainRiskBody(domain, title) {
+    const wrap = _el('div', '');
     const riskIds = domain === 'legal'
       ? Array.from(_legalRiskIds())
       : Array.from(new Set(_controls.filter(c => c.domain === domain && c.risk_id).map(c => c.risk_id)));
     if (!riskIds.length) {
       const warn = _el('div', 's9-warn');
       warn.innerHTML = `<strong>No ${title} risk controls found.</strong> Select controls for ${title} risks in Steps 5 and 6 first.`;
-      card.appendChild(warn);
-      return card;
+      wrap.appendChild(warn);
+      return { el: wrap, count: 0 };
     }
     const riskNameById = new Map((_tblData.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
-
-    card.appendChild(_buildDomainRollup(riskIds));
+    wrap.appendChild(_buildStep7Toolbar());
     const list = _el('div', '');
     riskIds.forEach(id => list.appendChild(_buildRiskBlock(id, riskNameById.get(id) || id, domain)));
-    card.appendChild(list);
-    return card;
+    wrap.appendChild(list);
+    return { el: wrap, count: riskIds.length };
   }
 
   // DPIA residual — the DPIA is assessed as a whole in Step 4, so this is a
   // single block: security measures as activation controls, no test controls,
   // and the residual rating carried (read-only) from Step 4.
-  function _buildDpiaResidualPane() {
-    const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('h2', 'step-detail-title', { textContent: 'Residual Risk — DPIA' }));
+  // Returns the DPIA residual body, or null when there's no Step 4 record.
+  function _buildDpiaResidualBody() {
+    const card = _el('div', '');
 
     const step4 = _record?.['step-4'];
     if (!step4) {
@@ -577,7 +587,6 @@
       card.appendChild(warn);
       return card;
     }
-    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'The DPIA is assessed as a whole in Step 4. Confirm the security-measure controls are live; the residual rating is carried from the DPIA.' }));
 
     const di = step4.data_types_identified || {};
     const privacyRisks = di.privacy_risks || [];
