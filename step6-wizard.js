@@ -261,8 +261,7 @@
       legalRisks.forEach((r, i) => ll.appendChild(_buildRiskAccordion(r, i)));
       card.appendChild(ll);
     }
-    card.appendChild(_buildActionRow());
-    card.appendChild(_el('div', 'wiz9-results'));
+    card.appendChild(WizUtils.buildSaveBlock({ label: 'Approve & Save', onSave: _handleSave }).el);
     return card;
   }
 
@@ -771,7 +770,7 @@
 
   // ---- Save ---------------------------------------------------
   function _handleSave() {
-    // Validate: every risk must have ≥1 control selected
+    // Validate: every risk must have ≥1 requirement selected
     const uncovered = _riskData.filter(r => _selectedCountForRisk(r) === 0);
     if (uncovered.length > 0) {
       _updateValidationBanner();
@@ -783,7 +782,7 @@
         firstSec.classList.add('wiz9-risk-sec--error');
         setTimeout(() => firstSec.classList.remove('wiz9-risk-sec--error'), 2500);
       }
-      return;
+      return null; // validation failed — no summary
     }
 
     const rec9 = _buildOutputRecord();
@@ -794,7 +793,15 @@
     _record['step-6'] = rec9;
     WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 6 saved ✓');
-    _renderResults(rec9);
+    return {
+      title: 'Requirement selection approved & saved ✓',
+      stats: [
+        [rec9.total_risks,        'Risks'],
+        [rec9.risks_covered,      'Risks covered'],
+        [rec9.total_requirements, 'Requirements']
+      ],
+      note: `<strong>${rec9.total_requirements}</strong> requirement${rec9.total_requirements !== 1 ? 's' : ''} confirmed across <strong>${rec9.risks_covered}</strong> risk${rec9.risks_covered !== 1 ? 's' : ''}. You now provide evidence for these in <strong>Step 7 (Residual risk)</strong>.`
+    };
   }
 
   function _buildOutputRecord() {

@@ -22,6 +22,9 @@
   let _riskIdByName   = new Map(); // risk_name → pk_Risk_ID
   let _showExcluded   = false;     // Wave 1: hide risks marked Not applicable behind a toggle
   let _showRecommended = false;    // Priority tiers: recommended/technical group collapsed by default
+  let _showRequired    = true;     // Required group — collapsible, expanded by default
+  let _showExcludedGrp = true;     // Excluded group — expanded by default so exclusions get oversight
+  let _exclusionsApproved = false; // human sign-off that the excluded risks were reviewed
   const _recChecked = new Set();    // keys of Recommended risks ticked for bulk "not applicable"
   let _savedNoteEl    = null;      // Wave 2: live "Saved ✓" indicator in the risk header
   let _riskheadSummaryEl = null;   // Wave 2: risk-count summary, updated in place on autosave
@@ -38,6 +41,7 @@
     rationales: {}, // riskName → string
     challenges: {}, // riskName → string (assessor's objection, drives the re-assessment cycle)
     reqs:       {}, // riskName → { HS ref → bool } (Step B: which requirements to implement)
+    reqReasons: {}, // riskName → { HS ref → string } (why an unselected requirement is Not Applicable)
   };
   let _hsByRef = new Map(); // standard_ref → HS record (name, text, subcategory)
 
@@ -73,7 +77,9 @@
     _wizState.rationales  = {};
     _wizState.challenges  = {};
     _wizState.reqs        = {};
+    _wizState.reqReasons  = {};
     _hsByRef = new Map();
+    _exclusionsApproved = false;
     _recChecked.clear();
 
     _injectStyles();
@@ -143,6 +149,9 @@
     // Restore per-requirement selection. New records carry wizard_req_selections;
     // older ones are migrated from each risk's selected_refs (the old area→refs
     // expansion), so nothing is lost when the flow changed to requirement-level.
+    if (saved8?.legal_assessment?.wizard_req_reasons) {
+      Object.assign(_wizState.reqReasons, saved8.legal_assessment.wizard_req_reasons);
+    }
     if (saved8?.legal_assessment?.wizard_req_selections) {
       Object.assign(_wizState.reqs, saved8.legal_assessment.wizard_req_selections);
     } else if (saved8?.legal_assessment?.risks) {
@@ -158,6 +167,7 @@
         _state.group_standard_risks[r.risk_id] = r.selected;
       });
     }
+    _exclusionsApproved = !!saved8?.legal_assessment?.exclusions_approved;
 
     // One-time cleanup: purge the retired bulk "not applicable" boilerplate so it
     // no longer appears as a justification in Step 5, the compiled challenge prompt
@@ -520,15 +530,27 @@
     card.appendChild(_buildLoadRaSection());
     card.appendChild(_buildChallengeCompileSection());
 
-    const { mandatory, recommended, mandN, recN, step3Done } = _buildConsolidatedList();
+    const { mandatory, recommended, excluded, mandN, recN, exclN, step3Done } = _buildConsolidatedList();
 
-    card.appendChild(_buildRiskToolbar(mandN, recN));
+    card.appendChild(_buildRiskToolbar(mandN, recN, exclN));
 
-    // ── Required (mandatory) group ──
+    // Wire a group header's chevron + body to a collapse-state getter/setter.
+    const wireCollapse = (hdr, body, get, set) => {
+      const chev = hdr.querySelector('.s5-group-chev');
+      const apply = () => { body.style.display = get() ? '' : 'none'; if (chev) chev.style.transform = get() ? 'rotate(180deg)' : ''; };
+      apply();
+      hdr.addEventListener('click', () => { set(!get()); apply(); });
+    };
+
+    // ── Required (mandatory) group — collapsible, expanded by default ──
     if (mandN) {
-      card.appendChild(_groupHeader('req', 'Required for compliance', mandN,
-        'Mapped to the EU AI Act articles your Step 3 classification found apply, plus your DPIA privacy risks. These must be treated.'));
-      card.appendChild(mandatory);
+      const reqHdr = _groupHeader('req', 'Required for compliance', mandN,
+        'Mapped to the EU AI Act articles your Step 3 classification found apply, plus your DPIA privacy risks. These must be treated.', true);
+      const reqBody = _el('div', 's5-req-body');
+      reqBody.appendChild(mandatory);
+      wireCollapse(reqHdr, reqBody, () => _showRequired, v => { _showRequired = v; });
+      card.appendChild(reqHdr);
+      card.appendChild(reqBody);
     } else if (step3Done) {
       card.appendChild(_el('div', 's5-empty-note', { textContent: 'Your classification did not trigger any risk-bearing articles, and the DPIA recorded no privacy risks — so there is no mandatory set. Review the recommended risks below.' }));
     } else {
@@ -545,16 +567,21 @@
     const recBody = _el('div', 's5-rec-body');
     if (recN) recBody.appendChild(_buildRecBulkBar());
     recBody.appendChild(recommended);
-    recBody.style.display = _showRecommended ? '' : 'none';
-    const chev = recHdr.querySelector('.s5-group-chev');
-    if (chev) chev.style.transform = _showRecommended ? 'rotate(180deg)' : '';
-    recHdr.addEventListener('click', () => {
-      _showRecommended = !_showRecommended;
-      recBody.style.display = _showRecommended ? '' : 'none';
-      if (chev) chev.style.transform = _showRecommended ? 'rotate(180deg)' : '';
-    });
+    wireCollapse(recHdr, recBody, () => _showRecommended, v => { _showRecommended = v; });
     card.appendChild(recHdr);
     card.appendChild(recBody);
+
+    // ── Excluded group — risks marked Not applicable; needs explicit oversight ──
+    if (exclN) {
+      const exHdr = _groupHeader('excl', 'Excluded — needs review', exclN,
+        'Risks marked Not applicable. Review each exclusion and its justification, then approve — this is the human-oversight record for what was left out.', true);
+      const exBody = _el('div', 's5-excl-body');
+      exBody.appendChild(_buildExclusionApprovalBar(exclN));
+      exBody.appendChild(excluded);
+      wireCollapse(exHdr, exBody, () => _showExcludedGrp, v => { _showExcludedGrp = v; });
+      card.appendChild(exHdr);
+      card.appendChild(exBody);
+    }
 
     // Bottom actions
     const actRow = _el('div', 'wiz-action-row');
@@ -636,6 +663,30 @@
     _autosave();
     _renderConsolidated();
   }
+  // Human-oversight sign-off for the excluded risks: an explicit approval that
+  // the assessor reviewed the exclusions. Persisted in the Step 5 record.
+  function _buildExclusionApprovalBar(exclN) {
+    const bar = _el('div', 's5-excl-approve' + (_exclusionsApproved ? ' is-approved' : ''));
+    const row = _el('label', 's5-excl-approve-row');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 's5-excl-approve-cb'; cb.checked = _exclusionsApproved;
+    const txt = _el('span', 's5-excl-approve-txt', {
+      textContent: `I have reviewed all ${exclN} excluded risk${exclN !== 1 ? 's' : ''} and their justifications, and approve leaving them out of scope.`
+    });
+    cb.addEventListener('change', () => {
+      _exclusionsApproved = cb.checked;
+      bar.classList.toggle('is-approved', cb.checked);
+      status.textContent = cb.checked ? '✓ Exclusions approved' : '⚠ Exclusions not yet approved';
+      status.className = 's5-excl-approve-status ' + (cb.checked ? 'is-ok' : 'is-warn');
+      _autosave();
+    });
+    row.append(cb, txt);
+    const status = _el('span', 's5-excl-approve-status ' + (_exclusionsApproved ? 'is-ok' : 'is-warn'), {
+      textContent: _exclusionsApproved ? '✓ Exclusions approved' : '⚠ Exclusions not yet approved'
+    });
+    bar.append(row, status);
+    return bar;
+  }
   function _buildRecBulkBar() {
     const bar = _el('div', 's5-recbulk');
     const sel = _el('div', 's5-recbulk-sel');
@@ -655,7 +706,8 @@
   function _buildConsolidatedList() {
     const mandatory = _el('div', 's5-consol-list');
     const recommended = _el('div', 's5-consol-list');
-    let mandN = 0, recN = 0;
+    const excluded = _el('div', 's5-consol-list');
+    let mandN = 0, recN = 0, exclN = 0;
     const step3Done = !!_step3Data?.axis_b?.applicable_articles?.length;
 
     // Legal / Regulatory. Pre-select required (article-triggered) risks BEFORE
@@ -670,7 +722,12 @@
     legalSecs.forEach((sec, i) => {
       const name = wqs[i]?.risk_name;
       _addSourceChip(sec, 'Legal', 'legal');
-      if (_isArticleApplicable(name) === true) {
+      const artApplicable = _isArticleApplicable(name) === true;
+      // Excluded (marked Not applicable) → its own oversight group, regardless of tier.
+      if (_wizState.answers[name] === 'no') {
+        if (artApplicable) _addRequiredBadge(sec); // flag: excluding a mandated risk
+        excluded.appendChild(sec); exclN++;
+      } else if (artApplicable) {
         _addRequiredBadge(sec);
         mandatory.appendChild(sec); mandN++;
       } else {
@@ -689,14 +746,14 @@
       mandatory.appendChild(el); mandN++;
     });
 
-    return { mandatory, recommended, mandN, recN, step3Done };
+    return { mandatory, recommended, excluded, mandN, recN, exclN, step3Done };
   }
 
-  function _buildRiskToolbar(mandN, recN) {
+  function _buildRiskToolbar(mandN, recN, exclN) {
     const head = _el('div', 's5-riskhead');
     const left = _el('div', 's5-riskhead-left');
     const summary = _el('div', 's5-riskhead-summary');
-    summary.innerHTML = `<strong>${mandN}</strong> required · <strong>${recN}</strong> recommended`;
+    summary.innerHTML = `<strong>${mandN}</strong> required · <strong>${recN}</strong> recommended` + (exclN ? ` · <strong>${exclN}</strong> excluded` : '');
     _riskheadSummaryEl = summary;
     _savedNoteEl = _el('span', 's5-saved-flag', { textContent: 'Saved ✓' });
     const hint = _el('span', 's5-autosave-hint', { textContent: 'Answers save automatically' });
@@ -1173,6 +1230,8 @@
 
       if (!_wizState.reqs[name]) _wizState.reqs[name] = {};
       const reqState = _wizState.reqs[name];
+      if (!_wizState.reqReasons[name]) _wizState.reqReasons[name] = {};
+      const reqReasons = _wizState.reqReasons[name];
 
       const applies = a => a === 'yes' || a === 'partially';
       // On first apply, default every requirement to selected (trim, not hunt).
@@ -1228,11 +1287,11 @@
         reqGroups.forEach(group => {
           stepB.appendChild(_el('p', 's5-sub-label', { textContent: group.subcategory }));
           group.refs.forEach(rf => {
+            const wrap = _el('div', 's5-req-wrap');
             const row = _el('label', 's5-req-row');
             const cb = document.createElement('input');
             cb.type = 'checkbox'; cb.className = 's5-req-cb';
             cb.checked = !!reqState[rf.ref];
-            cb.addEventListener('change', () => { reqState[rf.ref] = cb.checked; updateCount(); _autosaveSoon(); });
             const main = _el('div', 's5-req-main');
             const h = _el('div', 's5-req-hdr');
             h.appendChild(_el('span', 's5-ref-chip', { textContent: rf.ref }));
@@ -1240,7 +1299,34 @@
             main.appendChild(h);
             if (rf.text) main.appendChild(_el('div', 's5-req-desc', { textContent: rf.text }));
             row.append(cb, main);
-            stepB.appendChild(row);
+            wrap.appendChild(row);
+
+            // Reason (required) — shown only when the requirement is unticked.
+            const reasonWrap = _el('div', 's5-req-reason');
+            reasonWrap.appendChild(_el('label', 's5-req-reason-lbl', { textContent: 'Why is this requirement not applicable to your system? (required)' }));
+            const rta = document.createElement('textarea');
+            rta.className = 's5-req-reason-ta'; rta.rows = 2;
+            rta.placeholder = 'e.g. the system generates no synthetic media, so deep-fake provenance does not apply…';
+            rta.value = reqReasons[rf.ref] || '';
+            const syncReason = () => {
+              const excluded = !cb.checked;
+              reasonWrap.style.display = excluded ? '' : 'none';
+              wrap.classList.toggle('needs-reason', excluded && !(reqReasons[rf.ref] || '').trim());
+            };
+            rta.addEventListener('input', () => { reqReasons[rf.ref] = rta.value; syncReason(); _autosaveSoon(); });
+            reasonWrap.appendChild(rta);
+            wrap.appendChild(reasonWrap);
+
+            cb.addEventListener('change', () => {
+              reqState[rf.ref] = cb.checked;
+              if (cb.checked) delete reqReasons[rf.ref]; // re-selected → clear its exclusion reason
+              syncReason();
+              updateCount();
+              _autosaveSoon();
+              if (!cb.checked) rta.focus();
+            });
+            syncReason();
+            stepB.appendChild(wrap);
           });
         });
       };
@@ -1251,14 +1337,18 @@
         const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer === val ? ' s5-answer-btn--active' : ''}`);
         btn.textContent = lbl;
         btn.addEventListener('click', () => {
+          const prev = _wizState.answers[name];
           _wizState.answers[name] = val;
+          if (applies(val)) defaultSelectAll();
+          _autosave();
+          // Moving a risk into/out of "Not applicable" changes its group, so
+          // re-render to reflect the Excluded group; otherwise update in place.
+          if (val === 'no' || prev === 'no') { _renderConsolidated(); return; }
           btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
           btn.classList.add('s5-answer-btn--active');
           badge.textContent = BADGE[val];
           badge.className   = `wiz-item-badge wiz-item-badge--${ANS_MOD[val]}`;
-          if (applies(val)) defaultSelectAll();
           buildStepB();
-          _autosave();
         });
         btnRow.appendChild(btn);
       });
@@ -1313,8 +1403,16 @@
       const selected = ans === 'yes' || ans === 'partially';
       const rid = wq.risk_id || _riskIdByName.get(name);
       const reqState = _wizState.reqs[name] || {};
+      const reasons  = _wizState.reqReasons[name] || {};
+      const all = _riskAllRefs(rid);
       // Keep the risk's canonical ref order for a stable record.
-      const selRefs = _riskAllRefs(rid).filter(ref => reqState[ref]);
+      const selRefs = all.filter(ref => reqState[ref]);
+      // Excluded requirements of an applicable risk, each with its N/A reason.
+      const exclRefs = selected ? all.filter(ref => !reqState[ref]).map(ref => ({
+        standard_ref: ref,
+        standard_name: (_hsByRef.get(ref) || {}).standard_name || ref,
+        reason: (reasons[ref] || '').trim()
+      })) : [];
       return {
         risk_id:                rid,
         risk_name:              name,
@@ -1323,13 +1421,23 @@
         wizard_answer:          ans,
         rationale:              _wizState.rationales[name] || '',
         selected_refs:          selected ? selRefs : [],
+        excluded_refs:          exclRefs,
         relevance:              _computeRelevance(name)
       };
     });
     const sel = risks.filter(r => r.selected).length;
+    const excludedCount = risks.filter(r => r.wizard_answer === 'no').length;
     // Per-risk selected_hs (risk_id → refs) — the draft selection Step 6 confirms.
     const selected_hs = {};
     risks.forEach(r => { if (r.selected && r.selected_refs.length) selected_hs[r.risk_id] = r.selected_refs; });
+    // Flat requirement exclusions (ref → reason) for the report's traceability,
+    // plus a count of any left unjustified (excluded with no reason).
+    const requirement_exclusions = {};
+    let unjustifiedExclusions = 0;
+    risks.forEach(r => (r.excluded_refs || []).forEach(x => {
+      requirement_exclusions[x.standard_ref] = x.reason;
+      if (!x.reason) unjustifiedExclusions++;
+    }));
     return {
       completed:             true,
       assessment_date:       today,
@@ -1337,9 +1445,14 @@
       wizard_rationales:     { ..._wizState.rationales },
       wizard_challenges:     { ..._wizState.challenges },
       wizard_req_selections: JSON.parse(JSON.stringify(_wizState.reqs)),
+      wizard_req_reasons:    JSON.parse(JSON.stringify(_wizState.reqReasons)),
       selected_hs,
+      requirement_exclusions,
+      unjustified_exclusions: unjustifiedExclusions,
       total_risks:           risks.length,
       selected_count:        sel,
+      excluded_count:        excludedCount,
+      exclusions_approved:   _exclusionsApproved,
       risks
     };
   }
@@ -1943,6 +2056,12 @@
 .s5-req-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .s5-req-name{font-size:12.5px;font-weight:700;color:var(--color-text-primary)}
 .s5-req-desc{font-size:11.5px;line-height:1.55;color:var(--color-text-secondary)}
+.s5-req-wrap{display:flex;flex-direction:column;gap:6px;border:1px solid transparent;border-radius:8px}
+.s5-req-wrap.needs-reason{border-color:rgba(224,150,80,0.55);background:rgba(224,120,80,0.05);padding:2px}
+.s5-req-reason{display:flex;flex-direction:column;gap:4px;margin:0 0 4px 28px}
+.s5-req-reason-lbl{font-size:11px;font-weight:600;color:#f0b878}
+.s5-req-reason-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid rgba(224,150,80,0.45);border-radius:6px;padding:7px 10px;line-height:1.5;resize:vertical;background:var(--color-surface)}
+.s5-req-reason-ta:focus{outline:none;border-color:#e0964f}
 
 /* Challenge cycle */
 .s5-challenge-wrap{margin-top:8px}
@@ -1980,6 +2099,15 @@
 .s5-group-hdr{display:flex;align-items:center;gap:12px;margin:20px 0 10px;padding:10px 14px;border-radius:8px;border-left:4px solid}
 .s5-group-hdr--req{background:rgba(226,90,88,0.08);border-left-color:#e25a58}
 .s5-group-hdr--rec{background:var(--color-bg-subtle,#211d15);border-left-color:var(--color-border-mid,#4a4636)}
+.s5-group-hdr--excl{background:rgba(224,150,80,0.08);border-left-color:#e0964f}
+.s5-excl-approve{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:11px 14px;border:1px solid rgba(224,150,80,0.4);border-radius:8px;background:rgba(224,120,80,0.06)}
+.s5-excl-approve.is-approved{border-color:rgba(52,199,120,0.45);background:rgba(52,199,120,0.07)}
+.s5-excl-approve-row{display:flex;align-items:flex-start;gap:9px;cursor:pointer;min-width:0}
+.s5-excl-approve-cb{flex-shrink:0;width:16px;height:16px;margin-top:1px;cursor:pointer;accent-color:var(--teal-400,#5dcaa5)}
+.s5-excl-approve-txt{font-size:12.5px;line-height:1.5;color:var(--color-text-primary)}
+.s5-excl-approve-status{font-size:11.5px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.s5-excl-approve-status.is-ok{color:#8cebb0}
+.s5-excl-approve-status.is-warn{color:#f0b878}
 .s5-group-hdr--btn{cursor:pointer;user-select:none}
 .s5-group-hdr--btn:hover{filter:brightness(1.04)}
 .s5-group-main{flex:1;min-width:0}
