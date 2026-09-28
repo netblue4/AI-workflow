@@ -528,7 +528,9 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
         const ansKey  = ans === 'yes' ? 'yes' : ans === 'no' ? 'no' : ans === 'partially' ? 'partial' : 'na';
         const ansTxt  = ans === 'yes' ? 'Yes' : ans === 'no' ? 'No' : ans === 'partially' ? 'Partially' : _esc(r.wizard_answer || '—');
         const rowCls  = r.selected ? '' : ' class="row-dim"';
-        const rationale = r.rationale
+        // Treat the retired bulk-not-applicable stock phrase as "no justification".
+        const _boiler = t => /^Not applicable\s*[—–-]\s*outside the scope of this use case\.?$/i.test((t||'').trim()) || /^Not applicable to this use case\.?$/i.test((t||'').trim());
+        const rationale = (r.rationale && !_boiler(r.rationale))
           ? _esc(r.rationale)
           : `<span class="trace-none">—</span>`;
 
