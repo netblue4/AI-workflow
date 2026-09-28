@@ -13,6 +13,7 @@
   let _container = null, _detail = null, _record = null;
   const _answers = {}; // fieldId → string | string[]
   let _rationale = ''; // free-text DPIA rationale (holds your AI tool's reasoning)
+  let _saveBlock = null; // shared Approve & Save block (WizUtils.buildSaveBlock)
 
   // ---- Public API ---------------------------------------------
   window.mountStep4Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -58,10 +59,8 @@
     // Persist the saved DPIA summary across navigation, the way Step 3 shows a
     // saved classification result. A completed save carries completion_date +
     // data_types_identified; an AI-tool-loaded draft (answers only) does not.
-    if (s7 && s7.completion_date && s7.data_types_identified) {
-      _renderResults(s7);
-      const prog = _container.querySelector('#dpia-progress');
-      if (prog) prog.textContent = _computeProgress();
+    if (s7 && s7.completion_date && s7.data_types_identified && _saveBlock) {
+      _saveBlock.renderSummary(_dpiaSummary(s7));
     }
   }
 
@@ -180,8 +179,12 @@
     }
 
     card.appendChild(_buildRationaleSection());
-    card.appendChild(_buildActionRow());
-    card.appendChild(_el('div', 'dpia-results'));
+    _saveBlock = WizUtils.buildSaveBlock({
+      label: 'Approve & Save',
+      secondary: { label: '↺ Clear all answers', onClick: _clearAll },
+      onSave: _handleSave
+    });
+    card.appendChild(_saveBlock.el);
     return card;
   }
 
@@ -438,6 +441,20 @@
   }
 
   // ---- Save ---------------------------------------------------
+  function _dpiaSummary(rec7) {
+    const di = rec7.data_types_identified || {};
+    const dt = (di.standard_personal_data || []).length + (di.special_category_data || []).length;
+    return {
+      title: 'DPIA approved & saved ✓',
+      stats: [
+        [dt,                                  'Data types'],
+        [(di.special_category_data || []).length, 'Special categories'],
+        [(di.privacy_risks || []).length,     'Privacy risks'],
+        [rec7.residual_risk_rating || '—',    'Residual risk']
+      ],
+      note: `<strong>${dt} data type${dt !== 1 ? 's' : ''}</strong> identified will scope the Risk Assessment in <strong>Step 5</strong>. Use <strong>Save Record</strong> in the sidebar to download the full system record.`
+    };
+  }
   function _handleSave() {
     const rec7 = _buildOutputRecord();
     if (!_record) {
@@ -447,9 +464,7 @@
     _record['step-4'] = rec7;
     WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('DPIA saved ✓');
-    _renderResults(rec7);
-    const prog = _container.querySelector('#dpia-progress');
-    if (prog) prog.textContent = _computeProgress();
+    return _dpiaSummary(rec7);
   }
 
   function _buildOutputRecord() {

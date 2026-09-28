@@ -486,6 +486,17 @@ window.WizUtils = (function () {
 .wiz-btn-primary:hover{background:var(--teal-700,#8ce3c6)}
 .wiz-btn-secondary{padding:9px 20px;background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer}
 .wiz-btn-secondary:hover{background:var(--color-bg-hover,#262219)}
+/* Shared Approve & Save block (all steps) */
+.wiz-save-block{margin:24px 0 0;border-top:1px solid var(--color-border);padding-top:16px}
+.wiz-save-row{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.wiz-save-btn{font-size:13px}
+.wiz-save-summary{margin-top:14px;border:1px solid rgba(52,199,120,0.4);background:rgba(52,199,120,0.08);border-radius:8px;padding:14px 16px}
+.wiz-save-summary-title{font-size:13px;font-weight:700;color:#8cebb0;margin-bottom:10px}
+.wiz-save-summary-stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px}
+.wiz-save-stat{display:flex;flex-direction:column;gap:2px}
+.wiz-save-stat-num{font-size:20px;font-weight:700;color:var(--color-text-primary)}
+.wiz-save-stat-lbl{font-size:11px;color:var(--color-text-tertiary)}
+.wiz-save-summary-note{font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);margin:0}
 .wiz-attest{border:1px solid var(--color-border,#2e2a1f);border-radius:var(--radius-md,8px);padding:16px 18px;margin:20px 24px;background:var(--color-bg-subtle,#211d15)}
 .wiz-attest--done{border-color:#86efac;background:rgba(52,199,120,0.10)}
 .wiz-attest-title{font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px}
@@ -519,5 +530,50 @@ window.WizUtils = (function () {
 .wiz-gate-chevron{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
+  // Shared "Approve & Save" block for every step: a right-aligned primary button
+  // (consistent label + CSS) plus a summary panel that renders what was saved.
+  // opts: { label?, secondary?:{label,onClick}, onSave: () => ({title, stats:[[n,label]], note}) | null }
+  // onSave returns a summary descriptor to display, or null to show nothing
+  // (e.g. on a validation failure the handler surfaces its own message).
+  function buildSaveBlock(opts) {
+    opts = opts || {};
+    const wrap = el('div', 'wiz-save-block');
+    const row  = el('div', 'wiz-save-row');
+    if (opts.secondary) {
+      const sb = el('button', 'wiz-btn-secondary', { type: 'button', textContent: opts.secondary.label });
+      sb.addEventListener('click', opts.secondary.onClick);
+      row.appendChild(sb);
+    }
+    const btn = el('button', 'wiz-btn-primary wiz-save-btn', { type: 'button', textContent: opts.label || 'Approve & Save' });
+    row.appendChild(btn);
+    wrap.appendChild(row);
+    const summary = el('div', 'wiz-save-summary'); summary.style.display = 'none';
+    wrap.appendChild(summary);
+    function renderSummary(res) {
+      summary.innerHTML = '';
+      if (!res) { summary.style.display = 'none'; return; }
+      summary.style.display = '';
+      summary.appendChild(el('div', 'wiz-save-summary-title', { textContent: res.title || 'Saved ✓' }));
+      if (Array.isArray(res.stats) && res.stats.length) {
+        const stats = el('div', 'wiz-save-summary-stats');
+        res.stats.forEach(([num, lbl]) => {
+          const s = el('div', 'wiz-save-stat');
+          s.appendChild(el('span', 'wiz-save-stat-num', { textContent: String(num) }));
+          s.appendChild(el('span', 'wiz-save-stat-lbl', { textContent: lbl }));
+          stats.appendChild(s);
+        });
+        summary.appendChild(stats);
+      }
+      if (res.note) { const n = el('p', 'wiz-save-summary-note'); n.innerHTML = res.note; summary.appendChild(n); }
+      try { summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
+    }
+    btn.addEventListener('click', () => {
+      let res = null;
+      try { res = opts.onSave ? opts.onSave() : null; } catch (e) { res = { title: 'Save failed', note: String((e && e.message) || e) }; }
+      if (res && typeof res.then === 'function') res.then(renderSummary); else renderSummary(res);
+    });
+    return { el: wrap, button: btn, renderSummary };
+  }
+
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
 })();

@@ -401,7 +401,7 @@
     pane.appendChild(_buildStep7Toolbar());
     pane.appendChild(_buildDomainRiskPane('legal', 'Legal/Regulatory'));
     pane.appendChild(_buildDpiaResidualPane());
-    pane.appendChild(_el('div', 's7-shared-results'));
+    pane.appendChild(WizUtils.buildSaveBlock({ label: 'Approve & Save', onSave: _handleSave }).el);
     pw.appendChild(pane);
     if (WizUtils.glossify) { try { WizUtils.glossify(pane); } catch (_) {} }
   }
@@ -557,7 +557,6 @@
     const list = _el('div', '');
     riskIds.forEach(id => list.appendChild(_buildRiskBlock(id, riskNameById.get(id) || id, domain)));
     card.appendChild(list);
-    card.appendChild(_buildSaveRow('Save Residual Risk', _handleSave));
     return card;
   }
 
@@ -634,7 +633,6 @@
     });
     card.appendChild(sec);
 
-    card.appendChild(_buildSaveRow('Save Activation Record', _handleSave));
     return card;
   }
 
@@ -997,7 +995,17 @@
     _record['step-7'] = rec;
     WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 7 saved ✓');
-    _renderSaveResults(rec);
+    return {
+      title: 'Residual risk approved & saved ✓',
+      stats: [
+        [rec.total_requirements,     'Requirements'],
+        [rec.requirements_evidenced, 'Evidenced'],
+        [rec.requirements_waived,    'Waived'],
+        [rec.requirements_pending,   'Pending'],
+        [Object.keys(rec.residual_risks).length, 'Residual risks']
+      ],
+      note: `Evidence recorded for <strong>${rec.requirements_evidenced + rec.requirements_waived}</strong> of <strong>${rec.total_requirements}</strong> requirement${rec.total_requirements !== 1 ? 's' : ''}, with <strong>${Object.keys(rec.residual_risks).length}</strong> residual risk assessment${Object.keys(rec.residual_risks).length !== 1 ? 's' : ''} recorded.`
+    };
   }
 
   function _buildOutputRecord() {
