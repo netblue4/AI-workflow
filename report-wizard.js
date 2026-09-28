@@ -720,9 +720,13 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
     });
 
     let html = '';
-    let gapCount = 0;
-    let coveredCount = 0;
-    let byTypeCount = 0;
+    let coveredCount = 0;   // activated (selected) or evidenced by type
+    let byTypeCount = 0;     // workflow/document evidence
+    let naCount2 = 0;        // resolved as not applicable (structural or justified exclusion)
+    let openCount = 0;       // applies but not addressed and no exclusion recorded
+    let unjustifiedCount = 0;// excluded without a recorded reason
+    // Per-requirement exclusion reasons captured in Step 5 (ref → reason).
+    const reqExcl = _record?.['step-5']?.legal_assessment?.requirement_exclusions || {};
 
     applicableNums.forEach(artNum => {
       const artDef = artByNum.get(artNum);
@@ -757,19 +761,33 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
           // mechanism (the report's own output, or an external artefact), so they
           // are covered even without a legal-risk activation — not gaps.
           const byType     = !activated && !isNA && (ctype === 'Workflow' || ctype === 'Document');
-          const covered    = activated || byType;
+          // Excluded in Step 5: a recorded exclusion entry, justified when it has a reason.
+          const hasExcl    = !activated && !isNA && !byType && Object.prototype.hasOwnProperty.call(reqExcl, ref);
+          const exclReason = hasExcl ? String(reqExcl[ref] || '').trim() : '';
+          const justifiedNA = hasExcl && !!exclReason;         // excluded with a reason → resolved
+          const unjustified = hasExcl && !exclReason;          // excluded, no reason → the real flag
+          const open        = !activated && !isNA && !byType && !hasExcl; // applies, not addressed
+          const covered     = activated || byType;
 
-          if (covered) coveredCount++; else if (!isNA) gapCount++;
+          if (activated || byType) coveredCount++;
+          else if (isNA || justifiedNA) naCount2++;
+          else if (unjustified) unjustifiedCount++;
+          else if (open) openCount++;
           if (byType) byTypeCount++;
 
           let badgeKey, badgeTxt;
           if (activated)            { badgeKey = hsRisks.length > 0 ? 'ok' : 'fs'; badgeTxt = hsRisks.length > 0 ? '✓ Activated' : '✓ Self-certified'; }
           else if (isNA)            { badgeKey = 'na';  badgeTxt = '⊘ N/A'; }
+          else if (justifiedNA)     { badgeKey = 'na';  badgeTxt = '⊘ Not applicable'; }
           else if (ctype === 'Workflow') { badgeKey = 'wf';  badgeTxt = '⚙ Workflow'; }
           else if (ctype === 'Document') { badgeKey = 'doc'; badgeTxt = '▤ Document'; }
-          else                      { badgeKey = 'gap'; badgeTxt = '⚠ Gap'; }
-          const naReason = isNA ? (hsNA[ref] ? hsNA[ref].reason : 'Not applicable to this system type') : '';
-          const rowCls   = covered ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
+          else if (unjustified)     { badgeKey = 'gap'; badgeTxt = '⚠ Unjustified exclusion'; }
+          else                      { badgeKey = 'open'; badgeTxt = '● Open'; }
+          const naReason = isNA ? (hsNA[ref] ? hsNA[ref].reason : 'Not applicable to this system type')
+                         : justifiedNA ? exclReason
+                         : unjustified ? 'Excluded in Step 5 without a recorded reason — add one before sign-off.'
+                         : '';
+          const rowCls   = (covered || justifiedNA) ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
 
           // Treatment cell: the legal risk(s) activating this HS requirement,
           // else the self-certifying control / compliance addition, else the
@@ -802,15 +820,26 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
       html += `</div>`;
     });
 
-    const naCount      = Object.keys(hsNA).length;
-    const totalHS      = coveredCount + gapCount + naCount;
-    const summaryClass = gapCount === 0 ? 'trace-summary--ok' : 'trace-summary--warn';
+    const blockers     = openCount + unjustifiedCount;
+    const summaryClass = blockers === 0 ? 'trace-summary--ok' : 'trace-summary--warn';
     const byTypeNote = byTypeCount > 0 ? ` (${byTypeCount} evidenced by workflow or document)` : '';
-    const summaryText  = gapCount === 0
-      ? `✓ ${coveredCount} HS requirement${coveredCount !== 1 ? 's' : ''} covered${byTypeNote}${naCount > 0 ? `, ${naCount} marked Not Applicable` : ''}. No unresolved gaps.`
-      : `⚠ ${gapCount} gap${gapCount !== 1 ? 's' : ''} identified across ${totalHS} HS requirements${byTypeNote}. Gaps must be resolved before conformity sign-off.${naCount > 0 ? ` (${naCount} marked Not Applicable)` : ''}`;
+    const summaryText  = blockers === 0
+      ? `✓ ${coveredCount} requirement${coveredCount !== 1 ? 's' : ''} met${byTypeNote}${naCount2 > 0 ? `, ${naCount2} justified as not applicable` : ''}. No open items.`
+      : `⚠ ${blockers} item${blockers !== 1 ? 's' : ''} to resolve before conformity sign-off — ${openCount} open, ${unjustifiedCount} excluded without a reason.${naCount2 > 0 ? ` (${naCount2} justified as not applicable.)` : ''}`;
 
-    return `<div class="trace-summary ${summaryClass}">${summaryText}</div>` + html;
+    const legend = `<details class="trace-legend">
+  <summary>What do these statuses mean?</summary>
+  <ul class="trace-legend-list">
+    <li><span class="trace-cov-badge trace-cov-badge--ok">✓ Activated</span> A risk selected this requirement to treat it; its implementation is evidenced in Step 7.</li>
+    <li><span class="trace-cov-badge trace-cov-badge--na">⊘ Not applicable</span> Deliberately excluded with a recorded reason — legitimately out of scope, so it does not affect presumption of conformity.</li>
+    <li><span class="trace-cov-badge trace-cov-badge--wf">⚙ Workflow</span> / <span class="trace-cov-badge trace-cov-badge--doc">▤ Document</span> Evidenced by the governance workflow or an external document.</li>
+    <li><span class="trace-cov-badge trace-cov-badge--open">● Open</span> Applies to this system but not yet addressed — treat it, or mark it Not applicable with a reason.</li>
+    <li><span class="trace-cov-badge trace-cov-badge--gap">⚠ Unjustified exclusion</span> Left out with no reason recorded — the only item that must be fixed before sign-off.</li>
+  </ul>
+  <p class="trace-legend-note">The legal requirement is the EU AI Act article; each harmonised-standard requirement applies conditionally. Address every requirement whose "applies if" condition is true — evidence it, or record why it is Not applicable. You do not have to meet every clause unconditionally, and satisfying one requirement in a subcategory does not excuse another that applies.</p>
+</details>`;
+
+    return legend + `<div class="trace-summary ${summaryClass}">${summaryText}</div>` + html;
   }
 
   // ---- Section 5: Verification Evidence ----------------------
@@ -918,7 +947,7 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
     <tr>
       <td class="mono">[18286.18]</td>
       <td>No Critical Gaps Declaration</td>
-      <td>Compliance &amp; Control Traceability — all applicable HS requirements must show ✓ Activated or ✓ Self-certified</td>
+      <td>Compliance &amp; Requirement Traceability — every applicable HS requirement is Activated/evidenced or justified as Not applicable; no Open or Unjustified-exclusion items remain</td>
       <td><span class="status-pill status-pill--${allDone ? 'accept' : 'pend'}">${allDone ? '✓ See Section 3' : '○ Pending'}</span></td>
     </tr>
     <tr>
@@ -1378,7 +1407,13 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .trace-cov-badge--na{background:#f1f5f9;color:#475569}
 .trace-cov-badge--wf{background:#e0e7ff;color:#3730a3}
 .trace-cov-badge--doc{background:#fef3c7;color:#92620e}
+.trace-cov-badge--open{background:#ffedd5;color:#9a3412}
 .trace-na-reason{font-size:8.5pt;color:#64748b;font-style:italic;padding:3px 4px 5px;border-left:2px solid #cbd5e1;margin-top:4px}
+.trace-legend{margin:0 0 12px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;padding:8px 12px}
+.trace-legend>summary{cursor:pointer;font-size:9.5pt;font-weight:700;color:#334155}
+.trace-legend-list{list-style:none;margin:10px 0 6px;padding:0;display:flex;flex-direction:column;gap:6px}
+.trace-legend-list li{font-size:9pt;line-height:1.5;color:#475569}
+.trace-legend-note{font-size:8.5pt;line-height:1.5;color:#64748b;margin:6px 0 0;padding-top:6px;border-top:1px solid #e2e8f0}
 .trace-ctrl-list{display:flex;gap:4px;flex-wrap:wrap;padding-top:4px}
 .trace-ctrl-chip{font-size:8pt;padding:1px 5px;border-radius:3px;background:#e0e7ff;color:#3730a3;font-family:monospace}
 .trace-ctrl-chip--fs{background:#ede9fe;color:#7c3aed}
