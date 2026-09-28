@@ -666,7 +666,7 @@ function _ucShowStatus(msg) {
 }
 
 // ---- Bootstrap ---------------------------------------------
-(async () => {
+async function _bootstrap() {
   try {
     _workflow = await loadWorkflow();
     await Promise.all([
@@ -696,7 +696,17 @@ function _ucShowStatus(msg) {
     document.getElementById('nav-scroll').innerHTML =
       `<p style="padding:12px;font-size:12px;color:var(--color-text-tertiary)">Could not load workflow.json: ${e.message}</p>`;
   }
-})();
+}
+// Run the bootstrap only after the whole document — including the wizard
+// scripts below (wizard-utils.js defines WizUtils) — has been parsed and
+// executed. Those are classic scripts, so they all run before DOMContentLoaded.
+// This removes a race where a cached workflow.json could resolve before
+// WizUtils was defined, wiping the nav with "Can't find variable: WizUtils".
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _bootstrap);
+} else {
+  _bootstrap();
+}
 </script>
 
 <script src="fieldHandler_frameworkMapping.js"></script>
