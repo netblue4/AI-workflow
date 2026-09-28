@@ -225,10 +225,6 @@
   function _buildWizardPane() {
     const card = _el('div', 'step-detail-card');
 
-    // Source card — step 5 summary (input context at the top of content)
-    card.appendChild(_sectionLabel('Input Source'));
-    card.appendChild(_buildSourceCard());
-
     if (_riskData.length === 0) {
       const warn = _el('div', 'wiz9-warn');
       warn.innerHTML = '<strong>No risks selected in Step 5.</strong> Complete the Risk Identification (Step 5) and confirm at least one risk before returning to this step.';
@@ -236,33 +232,41 @@
       return card;
     }
 
-    card.appendChild(_sectionLabel('Final Review & Confirmation'));
+    card.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'Final review. These are the applicable risks and the requirements you selected in Step 5. Approve & Save to confirm — this is the record Step 7 and the report use. To change what’s selected, go back to Step 5.'
+    }));
 
-    const intro = _el('p', 'wiz9-intro');
-    intro.innerHTML = `This is the final review. Below are the applicable risks and the harmonised-standard requirements you selected in <strong>Step 5</strong>. Review them and <strong>Save</strong> to confirm — this is the record the evidencing step (Step 7) and the report use. To change what's selected, go back to Step 5.`;
-    card.appendChild(intro);
-
-    // Validation summary
-    card.appendChild(_buildValidationBanner());
-
-    // Risk lists grouped by type
+    // ── Risks & requirements — one gold panel ──
+    const riskBody = _el('div', '');
+    riskBody.appendChild(_buildValidationBanner());
     const techRisks  = _riskData.filter(r => r.risk_type === 'technical');
     const legalRisks = _riskData.filter(r => r.risk_type === 'legal');
-
-    if (techRisks.length > 0) {
-      card.appendChild(_sectionLabel(`Technical Risks (${techRisks.length})`));
-      const tl = _el('div', 'wiz9-risk-list');
-      techRisks.forEach((r, i) => tl.appendChild(_buildRiskAccordion(r, i)));
-      card.appendChild(tl);
-    }
     if (legalRisks.length > 0) {
-      card.appendChild(_sectionLabel(`Legal / EU AI Act Risks (${legalRisks.length})`));
+      riskBody.appendChild(_sectionLabel(`Legal / EU AI Act risks (${legalRisks.length})`));
       const ll = _el('div', 'wiz9-risk-list');
       legalRisks.forEach((r, i) => ll.appendChild(_buildRiskAccordion(r, i)));
-      card.appendChild(ll);
+      riskBody.appendChild(ll);
     }
+    if (techRisks.length > 0) {
+      riskBody.appendChild(_sectionLabel(`Technical risks (${techRisks.length})`));
+      const tl = _el('div', 'wiz9-risk-list');
+      techRisks.forEach((r, i) => tl.appendChild(_buildRiskAccordion(r, i)));
+      riskBody.appendChild(tl);
+    }
+    card.appendChild(WizUtils.buildStepPanel({
+      title: 'Risks & requirements',
+      description: 'The applicable risks and the harmonised-standard requirements selected in Step 5. Review each, then approve below.',
+      status: String(_riskData.length), statusKind: 'progress',
+      body: riskBody
+    }).el);
+
+    // ── DPIA — carried from Step 4 ──
     const dpia = _buildDpiaReviewBlock();
-    if (dpia) card.appendChild(dpia);
+    if (dpia) card.appendChild(WizUtils.buildStepPanel({
+      title: 'DPIA — privacy risks & security measures',
+      description: 'Carried from your Step 4 DPIA. The privacy risks are treated by the security measures, which you evidence in Step 7. To change these, edit the DPIA in Step 4.',
+      body: dpia
+    }).el);
 
     card.appendChild(WizUtils.buildSaveBlock({ label: 'Approve & Save', onSave: _handleSave }).el);
     return card;
@@ -277,10 +281,6 @@
     if (!privacy.length && !measures.length) return null;
 
     const wrap = _el('div', '');
-    wrap.appendChild(_sectionLabel('DPIA — privacy risks & security measures'));
-    const intro = _el('p', 'wiz9-intro');
-    intro.innerHTML = 'Carried from your Step 4 DPIA. The privacy risks are treated by the security measures below, which you evidence in <strong>Step 7</strong>. To change these, edit the DPIA in Step 4.';
-    wrap.appendChild(intro);
 
     if (privacy.length) {
       wrap.appendChild(_el('p', 'wiz9-sub-label', { textContent: `Privacy risks (${privacy.length})` }));

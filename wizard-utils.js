@@ -575,5 +575,81 @@ window.WizUtils = (function () {
     return { el: wrap, button: btn, renderSummary };
   }
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
+  // ---- StepDIV: the one panel every step section uses ------------------
+  // A gold-bordered collapsible card, styled like the Assessment-home rows:
+  // a title on the left, a status/progress chip in the right corner, and a
+  // chevron. Collapsed by default; the body opens to reveal a short one-line
+  // description followed by the section's content. Using this everywhere is
+  // what makes the steps read as one calm, consistent screen.
+  // opts: { title, description?, status?, statusKind?, num?, open?, body?, id? }
+  //   statusKind: 'done' | 'todo' | 'progress' | 'info' | 'muted'
+  // Returns { el, body, header, setStatus(text,kind), open(), close() }.
+  function buildStepPanel(opts) {
+    opts = opts || {};
+    const panel = el('div', 'wiz-panel');
+    if (opts.id) panel.id = opts.id;
+
+    const header = el('button', 'wiz-panel-head', { type: 'button' });
+    const hLeft = el('div', 'wiz-panel-head-left');
+    if (opts.num != null) hLeft.appendChild(el('span', 'wiz-panel-num', { textContent: String(opts.num) }));
+    hLeft.appendChild(el('span', 'wiz-panel-title', { textContent: opts.title || '' }));
+    const hRight = el('div', 'wiz-panel-head-right');
+    const statusEl = el('span', 'wiz-panel-status');
+    const chev = el('span', 'wiz-panel-chev');
+    chev.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    hRight.append(statusEl, chev);
+    header.append(hLeft, hRight);
+
+    const body = el('div', 'wiz-panel-body');
+    if (opts.description) body.appendChild(el('p', 'wiz-panel-desc', { textContent: opts.description }));
+    const content = el('div', 'wiz-panel-content');
+    if (opts.body) content.appendChild(opts.body);
+    body.appendChild(content);
+
+    panel.append(header, body);
+
+    function setOpen(open) {
+      body.style.display = open ? '' : 'none';
+      panel.classList.toggle('is-open', open);
+    }
+    setOpen(!!opts.open);
+    header.addEventListener('click', () => setOpen(body.style.display === 'none'));
+
+    function setStatus(text, kind) {
+      statusEl.textContent = text || '';
+      statusEl.className = 'wiz-panel-status' + (kind ? ' wiz-panel-status--' + kind : '');
+      statusEl.style.display = text ? '' : 'none';
+    }
+    setStatus(opts.status, opts.statusKind);
+
+    return { el: panel, body: content, header, setStatus, open: () => setOpen(true), close: () => setOpen(false) };
+  }
+
+  injectStyles('wiz-panel-styles', `
+.wiz-panel{border:1px solid rgba(212,184,96,0.34);border-radius:10px;margin-bottom:12px;background:var(--color-surface,#1c1810);overflow:hidden;transition:border-color .15s}
+.wiz-panel:hover{border-color:rgba(212,184,96,0.5)}
+.wiz-panel.is-open{border-color:rgba(212,184,96,0.62)}
+.wiz-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:14px 18px;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit;color:inherit}
+.wiz-panel-head:hover{background:rgba(212,184,96,0.05)}
+.wiz-panel-head-left{display:flex;align-items:center;gap:11px;min-width:0}
+.wiz-panel-num{width:24px;height:24px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--font-mono);background:rgba(212,184,96,0.16);color:#ecd489}
+.wiz-panel-title{font-size:14.5px;font-weight:700;color:var(--color-text-primary);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.wiz-panel-head-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.wiz-panel-status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:10px;white-space:nowrap}
+.wiz-panel-status--done{background:rgba(52,199,120,0.16);color:#8cebb0}
+.wiz-panel-status--todo{background:var(--color-bg);color:var(--color-text-tertiary);border:1px solid var(--color-border)}
+.wiz-panel-status--progress{background:rgba(212,184,96,0.16);color:#ecd489}
+.wiz-panel-status--info{background:rgba(80,150,225,0.16);color:#a4ccf6}
+.wiz-panel-status--muted{background:var(--color-bg-subtle,#211d15);color:var(--color-text-tertiary)}
+.wiz-panel-chev{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
+.wiz-panel.is-open .wiz-panel-chev{transform:rotate(180deg)}
+.wiz-panel-body{padding:0 18px 18px;border-top:1px solid rgba(212,184,96,0.16)}
+.wiz-panel-desc{font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);margin:14px 0 2px;max-width:78ch}
+.wiz-panel-content{margin-top:14px}
+.wiz-panel-content>.wiz-collapsible-section:last-child,.wiz-panel-content>*:last-child{margin-bottom:0}
+/* Section intro line used at the top of a panel's content (replaces scattered coloured summary boxes) */
+.wiz-panel-lead{font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);margin:0 0 14px;max-width:78ch}
+`);
+
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
 })();

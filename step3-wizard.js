@@ -45,21 +45,31 @@
 
     // AI prompt + load-output sections (moved here from Step 2) — draft the
     // classification with your AI tool, then load its reply to fill this screen.
+    // Grouped into a single collapsed "AI support" panel.
     if (window.AiPromptSections) {
-      const ai = WizUtils.el('div', 'step-content-section');
-      ai.appendChild(window.AiPromptSections.askClassification(detail));
-      ai.appendChild(window.AiPromptSections.loadClassification({ onApplied: () => window.selectStep && window.selectStep('step-3') }));
-      container.appendChild(ai);
+      const aiBody = WizUtils.el('div', '');
+      aiBody.appendChild(window.AiPromptSections.askClassification(detail));
+      aiBody.appendChild(window.AiPromptSections.loadClassification({ onApplied: () => window.selectStep && window.selectStep('step-3') }));
+      container.appendChild(WizUtils.buildStepPanel({
+        title: 'AI support',
+        description: 'Optional. Draft the classification with your AI tool, then load its reply to fill this screen automatically.',
+        status: 'Optional', statusKind: 'muted',
+        body: aiBody
+      }).el);
     }
 
-    // White content section — classification wizard. The reference/methodology
-    // content now lives in the About the framework training area, so the step
-    // itself is a single wizard pane (no tab strip).
-    const card = _el('div', 'step-content-section');
+    // Classification wizard — one collapsed panel. The reference/methodology
+    // content lives in the About the framework training area.
     const wizardPane = _buildWizardPane(detail);
     wizardPane.id = 'wiz-pane-wizard';
-    card.append(wizardPane);
-    container.appendChild(card);
+    const isClassified = !!(_state.result && _state.result.axis_b && _state.result.axis_b.ai_act_outcome);
+    container.appendChild(WizUtils.buildStepPanel({
+      title: 'Classify the system',
+      description: 'Set your governance tier, answer the EU AI Act gates G1–G5, then run the classification.',
+      status: isClassified ? 'Done' : 'To do',
+      statusKind: isClassified ? 'done' : 'todo',
+      body: wizardPane
+    }).el);
 
     _updateGateVisibility();
 
