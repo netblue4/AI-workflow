@@ -37,8 +37,9 @@
     answers:    {}, // riskName → 'yes'|'partially'|'no'
     rationales: {}, // riskName → string
     challenges: {}, // riskName → string (assessor's objection, drives the re-assessment cycle)
-    areas:      {}, // riskName → { subcategory → bool } (Step B: which requirement areas apply)
+    reqs:       {}, // riskName → { HS ref → bool } (Step B: which requirements to implement)
   };
+  let _hsByRef = new Map(); // standard_ref → HS record (name, text, subcategory)
 
   // Category color palette — populated from step5-legal-risk-guidance.json after load
   const _FALLBACK_COLOR = { bg: '#262219', text: '#cfc7b2' };
@@ -71,7 +72,8 @@
     _wizState.answers     = {};
     _wizState.rationales  = {};
     _wizState.challenges  = {};
-    _wizState.areas       = {};
+    _wizState.reqs        = {};
+    _hsByRef = new Map();
     _recChecked.clear();
 
     _injectStyles();
@@ -88,11 +90,12 @@
 
   // ---- Data loading -------------------------------------------
   async function _loadData(pw) {
-    const [risks, controls, guidance, detail] = await WizUtils.fetchAll([
+    const [risks, controls, guidance, detail, hs] = await WizUtils.fetchAll([
       'tbl_Risks.json',
       'tbl_Risk_Controls.json',
       'step5-legal-risk-guidance.json',
       'step-5.json',
+      'tbl_Harmonised_Standards.json',
     ]);
 
     if (!risks) {
@@ -101,6 +104,7 @@
     }
     _tblRisks = risks;
     _riskIdByName = new Map((risks || []).map(r => [r.risk_name, r.pk_Risk_ID]));
+    _hsByRef = new Map((hs || []).map(h => [h.standard_ref, h]));
 
     if (controls) {
       _tblControls = controls;
@@ -136,8 +140,18 @@
     if (saved8?.legal_assessment?.wizard_challenges) {
       Object.assign(_wizState.challenges, saved8.legal_assessment.wizard_challenges);
     }
-    if (saved8?.legal_assessment?.wizard_area_selections) {
-      Object.assign(_wizState.areas, saved8.legal_assessment.wizard_area_selections);
+    // Restore per-requirement selection. New records carry wizard_req_selections;
+    // older ones are migrated from each risk's selected_refs (the old area→refs
+    // expansion), so nothing is lost when the flow changed to requirement-level.
+    if (saved8?.legal_assessment?.wizard_req_selections) {
+      Object.assign(_wizState.reqs, saved8.legal_assessment.wizard_req_selections);
+    } else if (saved8?.legal_assessment?.risks) {
+      saved8.legal_assessment.risks.forEach(r => {
+        if (Array.isArray(r.selected_refs) && r.selected_refs.length) {
+          _wizState.reqs[r.risk_name] = {};
+          r.selected_refs.forEach(ref => { _wizState.reqs[r.risk_name][ref] = true; });
+        }
+      });
     }
     if (saved8?.group_standard_assessment?.risks) {
       saved8.group_standard_assessment.risks.forEach(r => {
@@ -787,6 +801,26 @@
     return cat;
   }
 
+  // A risk's requirements, ordered and grouped by subcategory, with HS detail:
+  // [{ subcategory, refs:[{ ref, name, text }] }]. Drives Step B selection.
+  function _riskReqGroups(riskId) {
+    const r = (_tblRisks || []).find(x => x.pk_Risk_ID === riskId);
+    const refs = (r?.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean);
+    const groups = []; const byName = new Map();
+    refs.forEach(ref => {
+      const h = _hsByRef.get(ref) || {};
+      const sub = h.subcategory || '—';
+      if (!byName.has(sub)) { const g = { subcategory: sub, refs: [] }; byName.set(sub, g); groups.push(g); }
+      byName.get(sub).refs.push({ ref, name: h.standard_name || ref, text: h.standard_text || '' });
+    });
+    return groups;
+  }
+  // All HS refs a risk maps to (for default-select-all on first apply).
+  function _riskAllRefs(riskId) {
+    const r = (_tblRisks || []).find(x => x.pk_Risk_ID === riskId);
+    return (r?.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean);
+  }
+
   // ── Challenge cycle ────────────────────────────────────────────────────────
   // The assessor disputes a risk's answer/justification; the challenge is a
   // written objection. Challenges from every tab are compiled into one prompt
@@ -879,7 +913,7 @@
       'Return ONLY the complete risk_assessment JSON in the shape below, including EVERY risk. Do NOT omit challenged risks — represent an excluded risk as "no" with its new justification in "reasoning":',
       '',
       '```json',
-      '{ "risk_assessment": { "risks": { "RISK-XXX": "yes|partially|no" }, "reasoning": { "RISK-XXX": "…" }, "applicable_subcategories": { "RISK-XXX": ["requirement-area name"] } } }',
+      '{ "risk_assessment": { "risks": { "RISK-XXX": "yes|partially|no" }, "reasoning": { "RISK-XXX": "…" }, "selected_requirements": { "RISK-XXX": ["[HS.ref]"] } } }',
       '```',
       '',
       '=== CURRENT ASSESSMENT (baseline — keep these unless challenged) ===',
@@ -977,12 +1011,12 @@
       if (!ra) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>risk_assessment</code> JSON block in the pasted text.</span>'; return; }
       _res = _validateRa(ra);
       preview.innerHTML = _renderRaPreview(_res);
-      if (_res.riskCount + _res.areaCount > 0) applyBtn.style.display = '';
+      if (_res.riskCount + _res.reqRiskCount > 0) applyBtn.style.display = '';
     });
     applyBtn.addEventListener('click', () => {
       if (!_res) return;
       _applyRa(_res);
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and requirement areas for ${_res.areaCount} risk${_res.areaCount !== 1 ? 's' : ''} as a draft. Review the list below, then click <strong>Save all risks</strong>. Selected requirements appear in <strong>Step 6</strong>.</span>`;
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and requirement selections for ${_res.reqRiskCount} risk${_res.reqRiskCount !== 1 ? 's' : ''} as a draft. Review below, then <strong>Save all risks</strong>; confirm in <strong>Step 6</strong>.</span>`;
       applyBtn.style.display = 'none';
       _renderConsolidated();
     });
@@ -1012,8 +1046,9 @@
 
   function _validateRa(ra) {
     const cat = _riskCatalog();
-    const legalAnswers = {}; const areaSel = {}; const controls = {}; const rationales = {}; const warnings = [];
-    let riskCount = 0; let areaCount = 0;
+    const _canonRef = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9.]+/g, '');
+    const legalAnswers = {}; const reqSel = {}; const rationales = {}; const warnings = [];
+    let riskCount = 0; let reqRiskCount = 0;
     Object.entries(ra.risks || {}).forEach(([id, v]) => {
       const r = cat[id];
       if (!r) { warnings.push(`Unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
@@ -1029,25 +1064,24 @@
       if (!r || _rEmpty(txt)) return;
       rationales[r.name] = String(txt).trim();
     });
-    // applicable_subcategories → Step B area selections + derived HS refs for Step 6
-    Object.entries(ra.applicable_subcategories || {}).forEach(([id, subs]) => {
+    // selected_requirements → per-risk HS ref selection (validated against the risk)
+    Object.entries(ra.selected_requirements || ra.applicable_subcategories || {}).forEach(([id, refs]) => {
       const r = cat[id];
-      if (!r) { warnings.push(`Requirement areas for unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
-      const arr = Array.isArray(subs) ? subs : (subs ? [subs] : []);
-      const sel = {}; const refs = [];
-      arr.forEach(s => {
-        const hitName = r.areaNames.find(n => _rCanon(n) === _rCanon(s));
-        if (hitName) { sel[hitName] = true; (r.areaRefs[_rCanon(hitName)] || []).forEach(x => refs.push(x)); }
-        else warnings.push(`<code>${_rEsc(id)}</code>: area "${_rEsc(String(s)).slice(0, 28)}" is not a requirement area for this risk — skipped.`);
+      if (!r) { warnings.push(`Requirements for unknown risk <code>${_rEsc(id)}</code> — skipped.`); return; }
+      const arr = Array.isArray(refs) ? refs : (refs ? [refs] : []);
+      const sel = {};
+      arr.forEach(ref => {
+        const hit = r.refs.find(x => _canonRef(x) === _canonRef(ref));
+        if (hit) sel[hit] = true;
+        else warnings.push(`<code>${_rEsc(id)}</code>: "${_rEsc(String(ref)).slice(0, 24)}" is not a requirement of this risk — skipped.`);
       });
-      if (Object.keys(sel).length) { areaSel[r.name] = sel; areaCount++; }
-      if (refs.length) controls[id] = [...new Set(refs)];
+      if (Object.keys(sel).length) { reqSel[r.name] = sel; reqRiskCount++; }
     });
-    return { legalAnswers, areaSel, controls, rationales, warnings, riskCount, areaCount };
+    return { legalAnswers, reqSel, rationales, warnings, riskCount, reqRiskCount };
   }
 
   function _renderRaPreview(res) {
-    let html = `<div style="color:#8cebb0;font-weight:600;margin-bottom:6px">✓ ${res.riskCount} risk answer${res.riskCount !== 1 ? 's' : ''} and requirement-area selections for ${res.areaCount} risk${res.areaCount !== 1 ? 's' : ''} recognised.</div>`;
+    let html = `<div style="color:#8cebb0;font-weight:600;margin-bottom:6px">✓ ${res.riskCount} risk answer${res.riskCount !== 1 ? 's' : ''} and requirement selections for ${res.reqRiskCount} risk${res.reqRiskCount !== 1 ? 's' : ''} recognised.</div>`;
     if (res.warnings.length) {
       html += `<div style="color:#ecd489;margin-bottom:4px">${res.warnings.length} item${res.warnings.length !== 1 ? 's' : ''} need attention:</div>`;
       html += '<ul style="margin:0 0 0 16px;padding:0;color:var(--color-text-secondary)">' +
@@ -1062,22 +1096,25 @@
     _record = WizUtils.loadRecord() || {};
     if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString() };
     _record._meta.last_modified = new Date().toISOString();
-    // Reflect the loaded answers/rationales/areas into live state first…
+    // Reflect the loaded answers/rationales/requirement picks into live state first.
+    // For a risk the AI marked applicable but gave no explicit requirements, default
+    // to all of the risk's requirements so nothing is silently dropped.
     Object.assign(_wizState.answers, res.legalAnswers);
     Object.assign(_wizState.rationales, res.rationales);
-    Object.entries(res.areaSel).forEach(([n, sel]) => { _wizState.areas[n] = Object.assign({}, _wizState.areas[n] || {}, sel); });
+    Object.entries(res.reqSel).forEach(([n, sel]) => { _wizState.reqs[n] = Object.assign({}, _wizState.reqs[n] || {}, sel); });
+    Object.entries(res.legalAnswers).forEach(([n, a]) => {
+      if ((a === 'yes' || a === 'partially') && (!_wizState.reqs[n] || Object.keys(_wizState.reqs[n]).length === 0)) {
+        const rid = _riskIdByName.get(n);
+        _wizState.reqs[n] = {};
+        _riskAllRefs(rid).forEach(ref => { _wizState.reqs[n][ref] = true; });
+      }
+    });
     // A challenge is resolved once the AI returns a fresh answer/justification for it.
     Object.keys(res.legalAnswers).forEach(n => { delete _wizState.challenges[n]; });
     Object.keys(res.rationales).forEach(n => { delete _wizState.challenges[n]; });
-    // …then rebuild the full Step 5 record so risks[] + derived refs stay coherent.
+    // …then rebuild the full Step 5 record so risks[] + selected_hs stay coherent.
     if (!_record['step-5']) _record['step-5'] = {};
     _record['step-5'].legal_assessment = _buildLegalOutputRecord();
-    // Step 6 requirement selection (HS refs derived from the applicable areas)
-    if (Object.keys(res.controls).length) {
-      const s6 = _record['step-6'] || {};
-      s6.selected_hs = Object.assign({}, s6.selected_hs || {}, res.controls);
-      _record['step-6'] = s6;
-    }
     WizUtils.saveRecord(_record);
   }
 
@@ -1130,17 +1167,19 @@
       const riskG      = _legalGuidance.risks?.[name] || {};
       const answer     = _wizState.answers[name] || null;
       const article    = _getArticleForRisk(name);
-      const areas      = riskG.areas || [];
+      const riskId     = _riskIdByName.get(name) || wq.risk_id || '';
+      const reqGroups  = _riskReqGroups(riskId);
+      const allRefs    = _riskAllRefs(riskId);
 
-      if (!_wizState.areas[name]) _wizState.areas[name] = {};
-      const areaState = _wizState.areas[name];
+      if (!_wizState.reqs[name]) _wizState.reqs[name] = {};
+      const reqState = _wizState.reqs[name];
 
-      // Auto-tick the sole area of a single-area risk once it applies, so its
-      // requirements flow to Step 6 without an extra click.
       const applies = a => a === 'yes' || a === 'partially';
-      if (applies(answer) && areas.length === 1 && areaState[areas[0].subcategory] === undefined) {
-        areaState[areas[0].subcategory] = true;
-      }
+      // On first apply, default every requirement to selected (trim, not hunt).
+      const defaultSelectAll = () => {
+        if (Object.keys(reqState).length === 0) allRefs.forEach(ref => { reqState[ref] = true; });
+      };
+      if (applies(answer)) defaultSelectAll();
 
       const badge = _el('span', `wiz-item-badge${answer ? ' wiz-item-badge--' + ANS_MOD[answer] : ''}`);
       badge.textContent = answer ? BADGE[answer] : 'Unanswered';
@@ -1162,36 +1201,47 @@
         body.appendChild(q);
       }
 
-      // ── STEP B — which requirement areas apply? (revealed on Yes/Partial) ──
+      // ── STEP B — requirements to implement (revealed on Yes/Partial) ──
+      // The individual HS requirements are shown with detail and pre-ticked;
+      // untick any that don't apply. This selection is what Step 6 confirms.
       const stepB = _el('div', 's5-stepb');
+      const selCount = () => allRefs.filter(r => reqState[r]).length;
+      const updateCount = () => {
+        const l = stepB.querySelector('.s5-stepb-count');
+        if (l) l.textContent = `Requirements to implement (${selCount()}/${allRefs.length})`;
+      };
       const buildStepB = () => {
         stepB.innerHTML = '';
         if (!applies(_wizState.answers[name])) { stepB.style.display = 'none'; return; }
         stepB.style.display = '';
-        stepB.appendChild(_el('p', 's5-applies-label', { textContent: 'Step B — Which requirement areas apply?' }));
-        if (!areas.length) {
-          stepB.appendChild(_el('p', 's5-area-hint', { textContent: 'No requirement areas defined for this risk.' }));
-          return;
-        }
-        areas.forEach(area => {
-          const row = _el('label', 's5-area-row');
-          const cb  = document.createElement('input');
-          cb.type = 'checkbox';
-          cb.className = 's5-area-cb';
-          cb.checked = !!areaState[area.subcategory];
-          cb.addEventListener('change', () => { areaState[area.subcategory] = cb.checked; _autosaveSoon(); });
-          const main = _el('div', 's5-area-main');
-          main.appendChild(_el('div', 's5-area-name', { textContent: area.subcategory }));
-          if (area.treatment_question) {
-            main.appendChild(_el('div', 's5-area-q', { textContent: area.treatment_question }));
-          }
-          const chips = _el('div', 's5-area-refs');
-          (area.refs || []).forEach(rf => {
-            chips.appendChild(_el('span', 's5-ref-chip', { textContent: rf.ref + ' ' + rf.name }));
+        const hdr = _el('div', 's5-stepb-hdr');
+        hdr.appendChild(_el('p', 's5-applies-label s5-stepb-count', { textContent: `Requirements to implement (${selCount()}/${allRefs.length})` }));
+        const tools = _el('div', 's5-stepb-tools');
+        const selAll = _el('button', 's5-recbulk-link', { type: 'button', textContent: 'Select all' });
+        selAll.addEventListener('click', () => { allRefs.forEach(r => reqState[r] = true); buildStepB(); _autosave(); });
+        const selNone = _el('button', 's5-recbulk-link', { type: 'button', textContent: 'Clear' });
+        selNone.addEventListener('click', () => { allRefs.forEach(r => reqState[r] = false); buildStepB(); _autosave(); });
+        tools.append(selAll, _el('span', '', { textContent: '·', style: 'color:var(--color-text-tertiary)' }), selNone);
+        hdr.appendChild(tools);
+        stepB.appendChild(hdr);
+        if (!reqGroups.length) { stepB.appendChild(_el('p', 's5-area-hint', { textContent: 'No requirements mapped to this risk.' })); return; }
+        reqGroups.forEach(group => {
+          stepB.appendChild(_el('p', 's5-sub-label', { textContent: group.subcategory }));
+          group.refs.forEach(rf => {
+            const row = _el('label', 's5-req-row');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 's5-req-cb';
+            cb.checked = !!reqState[rf.ref];
+            cb.addEventListener('change', () => { reqState[rf.ref] = cb.checked; updateCount(); _autosaveSoon(); });
+            const main = _el('div', 's5-req-main');
+            const h = _el('div', 's5-req-hdr');
+            h.appendChild(_el('span', 's5-ref-chip', { textContent: rf.ref }));
+            h.appendChild(_el('span', 's5-req-name', { textContent: rf.name }));
+            main.appendChild(h);
+            if (rf.text) main.appendChild(_el('div', 's5-req-desc', { textContent: rf.text }));
+            row.append(cb, main);
+            stepB.appendChild(row);
           });
-          main.appendChild(chips);
-          row.append(cb, main);
-          stepB.appendChild(row);
         });
       };
       buildStepB();
@@ -1206,9 +1256,7 @@
           btn.classList.add('s5-answer-btn--active');
           badge.textContent = BADGE[val];
           badge.className   = `wiz-item-badge wiz-item-badge--${ANS_MOD[val]}`;
-          if (applies(val) && areas.length === 1 && areaState[areas[0].subcategory] === undefined) {
-            areaState[areas[0].subcategory] = true;
-          }
+          if (applies(val)) defaultSelectAll();
           buildStepB();
           _autosave();
         });
@@ -1263,12 +1311,10 @@
       const name = wq.risk_name;
       const ans  = _wizState.answers[name] || 'skipped';
       const selected = ans === 'yes' || ans === 'partially';
-      const areaState = _wizState.areas[name] || {};
-      const selectedAreas = Object.keys(areaState).filter(k => areaState[k]);
       const rid = wq.risk_id || _riskIdByName.get(name);
-      const c = cat[rid] || { areaRefs: {} };
-      const refs = [];
-      selectedAreas.forEach(sub => (c.areaRefs[_rCanon(sub)] || []).forEach(x => refs.push(x)));
+      const reqState = _wizState.reqs[name] || {};
+      // Keep the risk's canonical ref order for a stable record.
+      const selRefs = _riskAllRefs(rid).filter(ref => reqState[ref]);
       return {
         risk_id:                rid,
         risk_name:              name,
@@ -1276,21 +1322,24 @@
         selected,
         wizard_answer:          ans,
         rationale:              _wizState.rationales[name] || '',
-        selected_subcategories: selected ? selectedAreas : [],
-        selected_refs:          selected ? [...new Set(refs)] : [],
+        selected_refs:          selected ? selRefs : [],
         relevance:              _computeRelevance(name)
       };
     });
     const sel = risks.filter(r => r.selected).length;
+    // Per-risk selected_hs (risk_id → refs) — the draft selection Step 6 confirms.
+    const selected_hs = {};
+    risks.forEach(r => { if (r.selected && r.selected_refs.length) selected_hs[r.risk_id] = r.selected_refs; });
     return {
-      completed:              true,
-      assessment_date:        today,
-      wizard_answers:         { ..._wizState.answers },
-      wizard_rationales:      { ..._wizState.rationales },
-      wizard_challenges:      { ..._wizState.challenges },
-      wizard_area_selections: JSON.parse(JSON.stringify(_wizState.areas)),
-      total_risks:            risks.length,
-      selected_count:         sel,
+      completed:             true,
+      assessment_date:       today,
+      wizard_answers:        { ..._wizState.answers },
+      wizard_rationales:     { ..._wizState.rationales },
+      wizard_challenges:     { ..._wizState.challenges },
+      wizard_req_selections: JSON.parse(JSON.stringify(_wizState.reqs)),
+      selected_hs,
+      total_risks:           risks.length,
+      selected_count:        sel,
       risks
     };
   }
@@ -1883,6 +1932,17 @@
 .s5-area-q{white-space:pre-wrap;font-size:11.5px;line-height:1.55;color:var(--color-text-secondary)}
 .s5-area-refs{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
 .s5-ref-chip{font-size:10.5px;font-weight:600;background:rgba(80,150,225,0.14);color:#a4ccf6;border-radius:5px;padding:2px 7px;white-space:nowrap}
+/* Step B — requirement selection */
+.s5-stepb-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.s5-stepb-tools{display:flex;align-items:center;gap:6px;font-size:11.5px}
+.s5-sub-label{font-size:11.5px;font-weight:700;color:var(--color-text-secondary);margin:8px 0 2px;padding-left:2px;border-left:2px solid rgba(93,202,165,0.4)}
+.s5-req-row{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--color-border);border-radius:7px;padding:9px 12px;background:var(--color-surface);cursor:pointer}
+.s5-req-row:hover{border-color:rgba(93,202,165,0.45)}
+.s5-req-cb{flex-shrink:0;width:16px;height:16px;margin-top:2px;cursor:pointer;accent-color:var(--teal-400,#5dcaa5)}
+.s5-req-main{display:flex;flex-direction:column;gap:4px;min-width:0}
+.s5-req-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.s5-req-name{font-size:12.5px;font-weight:700;color:var(--color-text-primary)}
+.s5-req-desc{font-size:11.5px;line-height:1.55;color:var(--color-text-secondary)}
 
 /* Challenge cycle */
 .s5-challenge-wrap{margin-top:8px}

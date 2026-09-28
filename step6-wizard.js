@@ -80,25 +80,10 @@
       }
     });
 
-    // Restore / default the HS-level selection (the HS requirement is the
-    // selectable unit; control selection is derived from it as a bridge).
+    // Step 6 is now a read-only confirmation of Step 5's selection: always mirror
+    // the current Step 5 requirement picks (do not restore a stale Step 6 record).
     const saved9 = _record?.['step-6'];
-    if (saved9?.selected_hs) {
-      Object.entries(saved9.selected_hs).forEach(([riskId, refs]) => {
-        (refs || []).forEach(ref => { _state.hsSelected[_hsKey(riskId, ref)] = true; });
-      });
-    } else if (saved9?.risk_controls) {
-      // Legacy record (pre-HS): derive HS selection from selected controls
-      const selById = new Set(saved9.risk_controls.filter(c => c.selected).map(c => c.control_id));
-      _riskData.forEach(risk => risk.controls.forEach(c => {
-        if (selById.has(c.pk_Risk_Control_ID)) {
-          (_ctrlRefs(c).length ? _ctrlRefs(c) : ['—']).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = true; });
-        }
-      }));
-    } else {
-      // Default: all HS requirements selected
-      _riskData.forEach(risk => _riskHsRefs(risk).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = true; }));
-    }
+    _riskData.forEach(risk => _riskHsRefs(risk).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = true; }));
     _deriveRiskSelected(); // populate _state.riskSelected (incl. always-on Framework_Statement)
     if (saved9?.compliance_additions) {
       saved9.compliance_additions.forEach(c => {
@@ -251,10 +236,10 @@
       return card;
     }
 
-    card.appendChild(_sectionLabel('Requirement Selection'));
+    card.appendChild(_sectionLabel('Final Review & Confirmation'));
 
     const intro = _el('p', 'wiz9-intro');
-    intro.innerHTML = `Confirm the harmonised-standard requirements that apply to each risk — these come from the requirement areas you selected in Step 5. Untick any that don't apply to your system. <strong>Each risk must keep at least one requirement</strong> before saving.`;
+    intro.innerHTML = `This is the final review. Below are the applicable risks and the harmonised-standard requirements you selected in <strong>Step 5</strong>. Review them and <strong>Save</strong> to confirm — this is the record the evidencing step (Step 7) and the report use. To change what's selected, go back to Step 5.`;
     card.appendChild(intro);
 
     // Validation summary
@@ -398,24 +383,8 @@
 
     hdr.appendChild(left);
 
-    // Right: selection count + select-all/none + chevron
+    // Right: selection count + chevron (read-only — editing happens in Step 5)
     const right = _el('div', 'wiz9-risk-hdr-right');
-
-    const selAll   = document.createElement('button'); selAll.className   = 'wiz9-sel-btn'; selAll.textContent   = 'Select all';
-    const deselAll = document.createElement('button'); deselAll.className = 'wiz9-sel-btn'; deselAll.textContent = 'Deselect all';
-    selAll.addEventListener('click', e => {
-      e.stopPropagation();
-      _riskHsRefs(risk).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = true; });
-      _deriveRiskSelectedForRisk(risk);
-      _syncRisk(sec, risk);
-    });
-    deselAll.addEventListener('click', e => {
-      e.stopPropagation();
-      _riskHsRefs(risk).forEach(ref => { _state.hsSelected[_hsKey(risk.risk_id, ref)] = false; });
-      _deriveRiskSelectedForRisk(risk);
-      _syncRisk(sec, risk);
-    });
-    right.appendChild(selAll); right.appendChild(deselAll);
 
     const selBadge = _el('span', 'wiz-item-badge');
     selBadge.id = `wiz9-rb-${_safeId(risk.risk_id)}`;
@@ -455,16 +424,8 @@
           lastSub = h.subcategory;
           body.appendChild(_el('p', 'wiz9-sub-label', { textContent: h.subcategory }));
         }
-        const item = _el('label', 'wiz9-hs-item');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.className = 'wiz9-hs-cb'; cb.dataset.ref = ref;
-        cb.checked = !!_state.hsSelected[_hsKey(risk.risk_id, ref)];
-        cb.addEventListener('change', e => {
-          _state.hsSelected[_hsKey(risk.risk_id, ref)] = e.target.checked;
-          _deriveRiskSelectedForRisk(risk);
-          _syncRisk(sec, risk);
-        });
-        item.appendChild(cb);
+        const item = _el('div', 'wiz9-hs-item');
+        item.appendChild(_el('span', 'wiz9-hs-tick', { textContent: '✓' }));
         const txt = _el('div', 'wiz9-hs-item-txt');
         const hdrRow = _el('div', 'wiz9-hs-item-hdr');
         hdrRow.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(ref) }));
@@ -788,7 +749,7 @@
 
     const right = _el('div');
     const btn = document.createElement('button');
-    btn.className = 'wiz-btn-primary'; btn.textContent = 'Save Requirement Selection';
+    btn.className = 'wiz-btn-primary'; btn.textContent = 'Confirm & Save Selection ✓';
     btn.addEventListener('click', _handleSave);
     right.appendChild(btn); row.appendChild(right);
     return row;
@@ -1644,8 +1605,9 @@
 .wiz9-hs-cb{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--gold,#0d9488)}
 .wiz9-hs-group-name{font-size:12.5px;font-weight:600;color:var(--color-text-primary)}
 .wiz9-ctrl-card--nested{margin-left:23px}
-.wiz9-hs-item{display:flex;align-items:flex-start;gap:10px;padding:9px 4px;cursor:pointer;border-top:1px solid var(--color-border)}
+.wiz9-hs-item{display:flex;align-items:flex-start;gap:10px;padding:9px 4px;border-top:1px solid var(--color-border)}
 .wiz9-hs-item:first-of-type{border-top:none}
+.wiz9-hs-tick{flex-shrink:0;color:#8cebb0;font-weight:700;font-size:13px;line-height:1.5;margin-top:1px}
 .wiz9-hs-item-txt{min-width:0}
 .wiz9-hs-item-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .wiz9-hs-item-desc{margin:3px 0 0;font-size:12px;line-height:1.5;color:var(--color-text-secondary)}
