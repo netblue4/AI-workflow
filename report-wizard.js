@@ -572,7 +572,9 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
 
     const riskCtrls = s9.risk_controls || [];
     const compAdds  = s9.compliance_additions || [];
-    const dpiaAdds  = s9.dpia_controls || [];
+    // DPIA security measures come from Step 4; their evidence status is in Step 7.
+    const dpiaAdds  = ((_record?.['step-4']?.data_types_identified?.security_measures) || [])
+      .map(m => ({ control_name: m }));
 
     const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
 

@@ -203,8 +203,6 @@
   // ---- Build control list (Tab 2) ----------------------------
   function _buildControlList() {
     const s6 = _record?.['step-6'];
-    if (!s6) return;
-
     const rcById       = new Map((_tblData.riskControls || []).map(c => [c.pk_Risk_Control_ID, c]));
     const riskNameById = new Map((_tblData.risks        || []).map(r => [r.pk_Risk_ID, r.risk_name]));
     const seen         = new Set();
@@ -226,20 +224,25 @@
       });
     };
 
-    (s6.risk_controls || []).filter(c => c.selected).forEach(c =>
-      push(c.control_id, c.control_name, c.control_source || 'EU AI Act', c.risk_id, 'legal')
-    );
-    (s6.compliance_additions || []).forEach(c =>
-      push(c.control_id, c.control_name, 'Compliance', null, 'compliance')
-    );
-    ((s6.group_standard_controls?.controls) || []).filter(c => c.selected).forEach(c =>
-      push(c.control_id, c.control_name, 'Internal Standard', c.risk_id, 'group_standard')
-    );
-    (s6.dpia_controls || []).forEach(c => {
-      const key = 'DPIA__' + c.control_name;
+    if (s6) {
+      (s6.risk_controls || []).filter(c => c.selected).forEach(c =>
+        push(c.control_id, c.control_name, c.control_source || 'EU AI Act', c.risk_id, 'legal')
+      );
+      (s6.compliance_additions || []).forEach(c =>
+        push(c.control_id, c.control_name, 'Compliance', null, 'compliance')
+      );
+      ((s6.group_standard_controls?.controls) || []).filter(c => c.selected).forEach(c =>
+        push(c.control_id, c.control_name, 'Internal Standard', c.risk_id, 'group_standard')
+      );
+    }
+
+    // DPIA security measures come straight from Step 4 (independent of Step 6);
+    // they are evidenced here like any other control.
+    (_record?.['step-4']?.data_types_identified?.security_measures || []).forEach(name => {
+      const key = 'DPIA__' + name;
       if (seen.has(key)) return;
       seen.add(key);
-      _controls.push({ key, name: c.control_name, objective: '', source: 'DPIA', domain: 'dpia', risk_id: '', risk_name: '', implementationEvidence: '' });
+      _controls.push({ key, name, objective: '', source: 'DPIA', domain: 'dpia', risk_id: '', risk_name: '', implementationEvidence: '' });
     });
   }
 
@@ -1018,6 +1021,7 @@
       name:      c.name,
       objective: c.objective,
       source:    c.source,
+      domain:    c.domain,
       risk_id:   c.risk_id,
       risk_name: c.risk_name,
       notes:     _actState[c.key]?.notes  || '',
