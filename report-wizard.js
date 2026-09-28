@@ -756,18 +756,20 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
           const hasCompAdd = compAddRefs.has(ref);
           const selfCert   = fsCtrls.length > 0 || hasCompAdd;
           const activated  = hsRisks.length > 0 || selfCert;
-          // Not Applicable: either a per-deployment N/A decision, or a requirement
-          // marked structurally out of scope for this system type (coverage_type).
+          // Not Applicable: a per-assessment N/A decision recorded against the ref.
           const isNA       = !activated && (!!hsNA[ref] || ctype === 'Not_Applicable');
-          // Workflow- and Document-type requirements are evidenced by their own
-          // mechanism (the report's own output, or an external artefact), so they
-          // are covered even without a legal-risk activation — not gaps.
-          const byType     = !activated && !isNA && (ctype === 'Workflow' || ctype === 'Document');
-          // Excluded in Step 5: a recorded exclusion entry, justified when it has a reason.
-          const hasExcl    = !activated && !isNA && !byType && Object.prototype.hasOwnProperty.call(reqExcl, ref);
+          // Excluded in Step 5: a recorded exclusion entry, justified when it has a
+          // reason. An explicit exclusion is a deliberate human decision, so it is
+          // honoured ahead of the Workflow/Document "covered by its own mechanism"
+          // default below — otherwise the assessor's N/A call would be silently lost.
+          const hasExcl    = !activated && !isNA && Object.prototype.hasOwnProperty.call(reqExcl, ref);
           const exclReason = hasExcl ? String(reqExcl[ref] || '').trim() : '';
           const justifiedNA = hasExcl && !!exclReason;         // excluded with a reason → resolved
           const unjustified = hasExcl && !exclReason;          // excluded, no reason → the real flag
+          // Workflow- and Document-type requirements are evidenced by their own
+          // mechanism (the workflow's own output, or an external artefact), so they
+          // are covered even without a legal-risk activation — unless explicitly excluded.
+          const byType     = !activated && !isNA && !hasExcl && (ctype === 'Workflow' || ctype === 'Document');
           const open        = !activated && !isNA && !byType && !hasExcl; // applies, not addressed
           const covered     = activated || byType;
 

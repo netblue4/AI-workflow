@@ -1089,7 +1089,7 @@
     "standard_name": "Deep Fake Detection Support",
     "standard_text": "Where the system generates synthetic audio, image, or video content depicting real persons or events, technical measures are in place to embed provenance metadata or watermarking to support downstream detection.",
     "treatment_question": "Synthetic Content Labelling: Does the system generate or manipulate content requiring any of the following?\na) Machine-readable labels identifying it as AI-generated\nb) Visible watermarks or markers for end users\nc) Provenance metadata to support downstream deep fake detection",
-    "coverage_type": "Not_Applicable"
+    "coverage_type": "Document"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-090",
