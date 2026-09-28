@@ -261,8 +261,47 @@
       legalRisks.forEach((r, i) => ll.appendChild(_buildRiskAccordion(r, i)));
       card.appendChild(ll);
     }
+    const dpia = _buildDpiaReviewBlock();
+    if (dpia) card.appendChild(dpia);
+
     card.appendChild(WizUtils.buildSaveBlock({ label: 'Approve & Save', onSave: _handleSave }).el);
     return card;
+  }
+
+  // ---- DPIA review (read-only, carried from Step 4) -----------
+  function _buildDpiaReviewBlock() {
+    const di = _record?.['step-4']?.data_types_identified;
+    if (!di) return null;
+    const privacy  = di.privacy_risks || [];
+    const measures = di.security_measures || [];
+    if (!privacy.length && !measures.length) return null;
+
+    const wrap = _el('div', '');
+    wrap.appendChild(_sectionLabel('DPIA — privacy risks & security measures'));
+    const intro = _el('p', 'wiz9-intro');
+    intro.innerHTML = 'Carried from your Step 4 DPIA. The privacy risks are treated by the security measures below, which you evidence in <strong>Step 7</strong>. To change these, edit the DPIA in Step 4.';
+    wrap.appendChild(intro);
+
+    if (privacy.length) {
+      wrap.appendChild(_el('p', 'wiz9-sub-label', { textContent: `Privacy risks (${privacy.length})` }));
+      const ul = _el('ul', ''); ul.style.cssText = 'margin:0 0 8px;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--color-text-primary)';
+      privacy.forEach(p => { const li = document.createElement('li'); li.textContent = p; ul.appendChild(li); });
+      wrap.appendChild(ul);
+    }
+    wrap.appendChild(_el('p', 'wiz9-sub-label', { textContent: `Security measures (${measures.length})` }));
+    if (measures.length) {
+      measures.forEach(m => {
+        const item = _el('div', 'wiz9-hs-item');
+        item.appendChild(_el('span', 'wiz9-hs-tick', { textContent: '✓' }));
+        const txt = _el('div', 'wiz9-hs-item-txt');
+        txt.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: m }));
+        item.appendChild(txt);
+        wrap.appendChild(item);
+      });
+    } else {
+      wrap.appendChild(_el('p', 'wiz9-intro', { textContent: 'No security measures were recorded in the DPIA — add them in Step 4 so they can be evidenced in Step 7.' }));
+    }
+    return wrap;
   }
 
   // ---- Source card --------------------------------------------
