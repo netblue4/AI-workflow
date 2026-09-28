@@ -590,14 +590,16 @@
       if (check) _recChecked.add(cb.dataset.key); else _recChecked.delete(cb.dataset.key);
     });
   }
-  function _bulkMarkRecNotApplicable(reason) {
+  // Mark the ticked recommended risks as Not applicable. The justification is
+  // left untouched — the assessor writes a proper reason per risk (or lets the
+  // challenge cycle produce one), rather than stamping a generic phrase.
+  function _bulkMarkRecNotApplicable() {
     if (!_recChecked.size) return;
-    reason = (reason || '').trim() || 'Not applicable to this use case.';
     _recChecked.forEach(key => {
       const idx = key.indexOf('::');
       const type = key.slice(0, idx), id = key.slice(idx + 2);
-      if (type === 'legal') { _wizState.answers[id] = 'no'; _wizState.rationales[id] = reason; }
-      else if (type === 'nist') { _state.nist_risks[id] = false; _wizState.rationales[id] = reason; }
+      if (type === 'legal') { _wizState.answers[id] = 'no'; }
+      else if (type === 'nist') { _state.nist_risks[id] = false; }
       else if (type === 'internal') { _state.group_standard_risks[id] = false; }
     });
     _recChecked.clear();
@@ -612,11 +614,9 @@
     const clr = _el('button', 's5-recbulk-link', { type: 'button', textContent: 'Clear' });
     clr.addEventListener('click', () => _selectAllRecommended(false));
     sel.append(selAll, _el('span', '', { textContent: '·', style: 'color:var(--color-text-tertiary)' }), clr);
-    const reason = _el('input', 's5-recbulk-reason', { type: 'text', value: 'Not applicable — outside the scope of this use case.' });
-    reason.placeholder = 'Reason recorded as the justification…';
     const btn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Mark selected as Not applicable' });
-    btn.addEventListener('click', () => _bulkMarkRecNotApplicable(reason.value));
-    bar.append(sel, reason, btn);
+    btn.addEventListener('click', () => _bulkMarkRecNotApplicable());
+    bar.append(sel, btn);
     return bar;
   }
 
@@ -850,8 +850,13 @@
       '',
       'For EACH challenged risk:',
       '- Reconsider your answer in light of the assessor’s objection and the system context.',
-      '- If the objection is valid, change the answer (an excluded risk becomes "no") and REWRITE the justification to reflect the corrected reasoning.',
+      '- If the objection is valid, change the answer (an excluded risk becomes "no") and REWRITE the justification.',
       '- If the objection is not valid, keep the answer but strengthen the justification to directly address the objection.',
+      '',
+      'JUSTIFICATION RULES (the "reasoning" text is published verbatim in the conformity report):',
+      '- Write a specific, substantive justification of 1–3 sentences for THIS system and THIS risk, grounded in the assessor’s challenge and the classification/DPIA context.',
+      '- For an excluded risk, state the concrete reason it does not apply (e.g. which conditions are absent, what the system does not do) — do NOT use generic boilerplate such as "outside the scope of this use case".',
+      '- Never reuse the same sentence across different risks.',
       '',
       'Leave every non-challenged risk unchanged.',
       '',
