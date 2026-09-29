@@ -65,7 +65,7 @@
     // saved classification result. A completed save carries completion_date +
     // data_types_identified; an AI-tool-loaded draft (answers only) does not.
     if (s7 && s7.completion_date && s7.data_types_identified && _saveBlock) {
-      _saveBlock.renderSummary(_dpiaSummary(s7));
+      _dpiaSummary(s7).then(d => _saveBlock.renderSummary(d));
     }
   }
 
@@ -438,19 +438,11 @@
   }
 
   // ---- Save ---------------------------------------------------
+  // Summary = the exact "DPIA Risk Assessment" table from the conformity report.
+  // Returns a promise (the report section renders in an auto-sized frame).
   function _dpiaSummary(rec7) {
-    const di = rec7.data_types_identified || {};
-    const dt = (di.standard_personal_data || []).length + (di.special_category_data || []).length;
-    return {
-      title: 'DPIA approved & saved ✓',
-      stats: [
-        [dt,                                  'Data types'],
-        [(di.special_category_data || []).length, 'Special categories'],
-        [(di.privacy_risks || []).length,     'Privacy risks'],
-        [rec7.residual_risk_rating || '—',    'Residual risk']
-      ],
-      note: `<strong>${dt} data type${dt !== 1 ? 's' : ''}</strong> identified will scope the Risk Assessment in <strong>Step 5</strong>. Use <strong>Save Record</strong> in the sidebar to download the full system record.`
-    };
+    return window.ReportSections.frame('dpia', _record)
+      .then(f => ({ title: 'DPIA Result', el: f }));
   }
   function _handleSave() {
     const rec7 = _buildOutputRecord();

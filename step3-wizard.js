@@ -913,95 +913,16 @@
   function _renderResults(container, record) {
     container.innerHTML = '';
     container.style.cssText = 'margin-top:28px;padding-top:24px;border-top:2px solid var(--color-border)';
-
-    const classification = record.axis_b.ai_act_outcome;
-    const STYLES = {
-      PROHIBITED:             { cls: 'danger',  label: 'PROHIBITED' },
-      OUT_OF_SCOPE:           { cls: 'info',    label: 'OUT OF SCOPE' },
-      HIGH_RISK:              { cls: 'warning', label: 'HIGH RISK' },
-      LIMITED_RISK:           { cls: 'info',    label: 'LIMITED RISK' },
-      MINIMAL_RISK:           { cls: 'all',     label: 'MINIMAL RISK' },
-      LIMITED_OR_MINIMAL_RISK:{ cls: 'all',     label: 'LIMITED / MINIMAL RISK' },
-    };
-    const s = STYLES[classification] || STYLES.MINIMAL_RISK;
-
-    const headerRow = _el('div', '', { style: 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px' });
-    headerRow.append(
-      _el('h3', '', { style: 'font-size:16px;font-weight:500;color:var(--color-text-primary);margin:0', textContent: 'Classification Result' }),
-      _el('span', `badge ${record.axis_a.tier === 'tier_1' ? 'all' : 'tier2'}`, { textContent: record.axis_a.tier_label || record.axis_a.tier }),
-      _el('span', `wiz-result-badge ${s.cls}`, { textContent: s.label })
-    );
-    if (record.axis_b.organisation_role) {
-      const roleLabel = record.axis_b.organisation_role === 'provider' ? 'Provider (builder)' : 'Deployer (subscriber)';
-      const roleCls   = record.axis_b.organisation_role === 'provider' ? 'warning' : 'info';
-      headerRow.appendChild(_el('span', `wiz-result-badge ${roleCls}`, { textContent: roleLabel }));
+    container.appendChild(_el('h3', '', { style: 'font-size:16px;font-weight:600;color:var(--color-text-primary);margin:0 0 14px', textContent: 'Classification Result' }));
+    // Render the exact "System Classification" table from the conformity report,
+    // so the assessor sees precisely what will be submitted to the regulator.
+    const holder = _el('div', '');
+    container.appendChild(holder);
+    if (window.ReportSections) {
+      window.ReportSections.frame('classification', WizUtils.loadRecord())
+        .then(f => holder.appendChild(f))
+        .catch(() => holder.appendChild(_el('p', '', { style: 'font-size:13px;color:var(--color-text-secondary)', textContent: 'Classification recorded. Open the report to view the full table.' })));
     }
-    container.appendChild(headerRow);
-
-    if (classification === 'PROHIBITED') {
-      container.appendChild(_el('div', 'gate-note danger', { textContent: 'One or more answers indicate a use prohibited under Article 5 of the EU AI Act. This system cannot be deployed. AI Governance Team must record this determination and notify the AI Change Board.' }));
-      _appendSaveRow(container, record); return;
-    }
-    if (classification === 'OUT_OF_SCOPE') {
-      container.appendChild(_el('div', 'gate-note info', { textContent: 'The system does not meet the Article 3(1) definition of an AI system. The EU AI Act does not apply. Internal governance tier (Axis A) still determines the workflow path.' }));
-      _appendSaveRow(container, record); return;
-    }
-
-    // Combined outcome card
-    if (record.combined_outcome) {
-      const co = record.combined_outcome;
-      const coCard = _el('div', 'wiz-outcome-card');
-      coCard.appendChild(_el('p', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:12px', textContent: co.outcome_label }));
-      const flagGrid = _el('div', 'wiz-flag-grid');
-      [
-        { label: 'Change Board approval', value: co.change_board_required },
-        { label: 'Conformity assessment', value: co.requires_conformity_assessment },
-        { label: 'DPIA required',         value: co.requires_dpia === true ? true : co.requires_dpia === false ? false : null },
-        { label: 'Article 14 oversight',  value: co.article_14_human_oversight },
-        { label: 'Article 50 disclosure', value: co.article_50_transparency === true ? true : co.article_50_transparency === false ? false : null },
-      ].forEach(({ label, value }) => {
-        const flag = _el('div', 'wiz-flag');
-        const dot  = _el('span', 'wiz-flag-dot');
-        dot.style.background = value === true ? 'var(--danger-border)' : value === false ? 'var(--success-border)' : 'var(--color-border-mid)';
-        flag.append(
-          dot,
-          _el('span', '', { style: 'color:var(--color-text-secondary)', textContent: label }),
-          _el('span', '', { style: `font-weight:500;color:${value === true ? 'var(--danger-text)' : value === false ? 'var(--success-text)' : 'var(--color-text-tertiary)'}`, textContent: value === true ? 'Required' : value === false ? 'Not required' : 'Context-dependent' })
-        );
-        flagGrid.appendChild(flag);
-      });
-      coCard.appendChild(flagGrid);
-      coCard.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-top:12px;padding-top:10px;border-top:1px solid var(--color-border);font-style:italic', textContent: `AI SR9 oversight: ${co.sr9_oversight_mechanism}` }));
-      container.appendChild(coCard);
-    }
-
-    // Applicable articles
-    if (record.axis_b.applicable_articles.length > 0) {
-      const lbl = _sectionLabel(`Applicable articles (${record.axis_b.applicable_articles.length})`);
-      lbl.style.marginTop = '16px';
-      container.appendChild(lbl);
-      record.axis_b.applicable_articles.forEach(art => {
-        const artCard = _el('div', 'wiz-article-card');
-        const head = _el('div', '', { style: 'display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px' });
-        head.append(
-          _el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: `${art.article_number}: ${art.title}` }),
-          _el('span', 'badge pdata', { textContent: `${(art.requirement_control_numbers || []).length} controls` })
-        );
-        artCard.append(head, _el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);line-height:1.5', textContent: art.trigger_reason }));
-        container.appendChild(artCard);
-      });
-    }
-
-    // Control numbers
-    if (record.all_requirement_control_numbers.length > 0) {
-      const cnLbl = _sectionLabel(`All requirement control numbers (${record.all_requirement_control_numbers.length})`);
-      cnLbl.style.marginTop = '16px';
-      container.appendChild(cnLbl);
-      const cnWrap = _el('div', '', { style: 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px' });
-      record.all_requirement_control_numbers.forEach(cn => cnWrap.appendChild(_el('span', 'wiz-cn-badge', { textContent: cn })));
-      container.appendChild(cnWrap);
-    }
-
     _appendSaveRow(container, record);
   }
 

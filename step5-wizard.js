@@ -587,6 +587,19 @@
     actRow.append(acceptBtn, clearBtn);
     card.appendChild(actRow);
 
+    // Save → shows the exact "Risk Identification" section from the conformity
+    // report as a "Risk Result" summary (what will be submitted).
+    const saveBlock = WizUtils.buildSaveBlock({
+      label: 'Save',
+      onSave: () => {
+        _writeRisksRecord();
+        if (typeof _ucShowStatus === 'function') _ucShowStatus('Risk identification saved ✓');
+        return window.ReportSections.frame('risk', WizUtils.loadRecord())
+          .then(f => ({ title: 'Risk Result', el: f }));
+      }
+    });
+    card.appendChild(saveBlock.el);
+
     // Classification + DPIA inputs this list is derived from.
     const inBody = _el('div', '');
     inBody.appendChild(_buildStep3Card());

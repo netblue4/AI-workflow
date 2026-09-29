@@ -18,23 +18,71 @@
     _loadData();
   };
 
+  // ---- Public: reuse a report section as a step's save summary ----
+  // Each step renders the EXACT report section (same builder + same CSS) so the
+  // assessor sees what will be submitted, and any later change to a section — or
+  // its styling — reflects in both the report and the step summary automatically.
+  let _sectionsDataP = null;
+  function _readRecordFromStore() {
+    try { const s = sessionStorage.getItem('ai_workflow_system_record'); return s ? JSON.parse(s) : {}; } catch (_) { return {}; }
+  }
+  window.ReportSections = {
+    // Ensure the reference tables are loaded (idempotent, cached).
+    ready() {
+      if (!_sectionsDataP) _sectionsDataP = _fetchTables().catch(e => { _sectionsDataP = null; throw e; });
+      return _sectionsDataP;
+    },
+    // Returns an auto-sized <iframe> rendering the named section with the report's
+    // own CSS. kind: 'classification' | 'dpia' | 'risk' | 'traceability'.
+    async frame(kind, record) {
+      await this.ready();
+      _record = record || _readRecordFromStore();
+      const s3 = _record?.['step-3'] || null;
+      const s8 = _record?.['step-5'] || null;
+      const s9 = _record?.['step-6'] || null;
+      const s10 = _record?.['step-7'] || null;
+      let inner = '';
+      if (kind === 'classification')    inner = _classificationSection(s3);
+      else if (kind === 'dpia')         inner = _dpiaRiskSubsection();
+      else if (kind === 'risk')         inner = _riskAssessmentSection(s8, s10);
+      else if (kind === 'traceability') inner = _complianceTraceabilitySection(s3, s9, s10);
+      const f = document.createElement('iframe');
+      f.className = 'rpt-embed-frame';
+      f.setAttribute('scrolling', 'no');
+      f.style.cssText = 'width:100%;border:0;display:block;background:#fff;border-radius:8px';
+      f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>${_reportCSS()}</style>`
+        + `<style>html,body{margin:0;padding:14px 16px;background:#fff}</style></head>`
+        + `<body>${inner || '<p class="section-meta">Nothing recorded yet.</p>'}</body></html>`;
+      const size = () => { try { f.style.height = (f.contentDocument.documentElement.scrollHeight + 2) + 'px'; } catch (_) {} };
+      f.addEventListener('load', () => { size(); setTimeout(size, 50); setTimeout(size, 250); });
+      return f;
+    }
+  };
+
   // ---- Data loading -------------------------------------------
+  // Fetch the reference tables into _tbl. Shared by the full report mount and by
+  // the ReportSections API (so a step can render a report section on its own).
+  async function _fetchTables() {
+    const [rRes, rcRes, hsRes, srRes, wfRes, lgRes] = await Promise.all([
+      fetch('tbl_Risks.json'),
+      fetch('tbl_Risk_Controls.json'),
+      fetch('tbl_Harmonised_Standards.json'),
+      fetch('tbl_AI_SR_Controls.json'),
+      fetch('workflow.json'),
+      fetch('step5-legal-risk-guidance.json')
+    ]);
+    if (!rRes.ok || !rcRes.ok || !hsRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
+    const [risks, riskControls, hs, srControls, workflow] = await Promise.all([
+      rRes.json(), rcRes.json(), hsRes.json(), srRes.json(), wfRes.json()
+    ]);
+    const legalGuidance = lgRes.ok ? await lgRes.json() : {};
+    _tbl = { risks, riskControls, hs, testControls: [], srControls, workflow, legalGuidance };
+    return _tbl;
+  }
+
   async function _loadData() {
     try {
-      const [rRes, rcRes, hsRes, srRes, wfRes, lgRes] = await Promise.all([
-        fetch('tbl_Risks.json'),
-        fetch('tbl_Risk_Controls.json'),
-        fetch('tbl_Harmonised_Standards.json'),
-        fetch('tbl_AI_SR_Controls.json'),
-        fetch('workflow.json'),
-        fetch('step5-legal-risk-guidance.json')
-      ]);
-      if (!rRes.ok || !rcRes.ok || !hsRes.ok || !srRes.ok || !wfRes.ok) throw new Error('fetch failed');
-      const [risks, riskControls, hs, srControls, workflow] = await Promise.all([
-        rRes.json(), rcRes.json(), hsRes.json(), srRes.json(), wfRes.json()
-      ]);
-      const legalGuidance = lgRes.ok ? await lgRes.json() : {};
-      _tbl = { risks, riskControls, hs, testControls: [], srControls, workflow, legalGuidance };
+      await _fetchTables();
     } catch (_) {
       _container.innerHTML = '<p style="padding:32px;color:#dc2626">Could not load reference data files.</p>';
       return;
@@ -494,7 +542,14 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
   }
 
   // ---- Section 2: Risk Assessment ----------------------------
+  // Section 2 = risk identification + the DPIA risk assessment. Split into two
+  // reusable subsections so Step 5 (risk) and Step 4 (DPIA) can render the exact
+  // same tables in their save summaries.
   function _riskAssessmentSection(s8, s10) {
+    return _riskIdentificationSubsection(s8, s10) + _dpiaRiskSubsection();
+  }
+
+  function _riskIdentificationSubsection(s8, s10) {
     if (!s8) return _notComplete('Step 5 — Risk Identification has not yet been completed.');
 
     let html = '';
@@ -545,9 +600,13 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
       html += `</tbody></table>`;
     }
 
-    // ---- DPIA Risk Assessment ----
+    return html;
+  }
+
+  // ---- DPIA Risk Assessment (also the Step 4 save summary) ----
+  function _dpiaRiskSubsection() {
     const s4 = _record?.['step-4'];
-    html += `<h3 class="sub-heading">DPIA Risk Assessment</h3>`;
+    let html = `<h3 class="sub-heading">DPIA Risk Assessment</h3>`;
     if (!s4) {
       html += _notComplete('Step 4 — DPIA not yet completed.');
     } else {
@@ -562,7 +621,6 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
         html += _notComplete('No privacy risks recorded in the DPIA.');
       }
     }
-
     return html;
   }
 
@@ -766,27 +824,31 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
           const exclReason = hasExcl ? String(reqExcl[ref] || '').trim() : '';
           const justifiedNA = hasExcl && !!exclReason;         // excluded with a reason → resolved
           const unjustified = hasExcl && !exclReason;          // excluded, no reason → the real flag
-          // Workflow- and Document-type requirements are evidenced by their own
-          // mechanism (the workflow's own output, or an external artefact), so they
-          // are covered even without a legal-risk activation — unless explicitly excluded.
-          const byType     = !activated && !isNA && !hasExcl && (ctype === 'Workflow' || ctype === 'Document');
-          const open        = !activated && !isNA && !byType && !hasExcl; // applies, not addressed
-          const covered     = activated || byType;
+          const open        = !activated && !isNA && !hasExcl; // applies, not addressed
+          const covered     = activated;
+          // Workflow/Document requirements are met by claiming them like any other
+          // requirement (selected in Step 5, evidenced in Step 7). coverage_type no
+          // longer grants coverage on its own — it only changes how a *claimed*
+          // requirement reads: a distinct badge naming its evidence route.
+          const evByType    = activated && (ctype === 'Workflow' || ctype === 'Document');
 
-          if (activated || byType) coveredCount++;
+          if (activated)                coveredCount++;
           else if (isNA || justifiedNA) naCount2++;
-          else if (unjustified) unjustifiedCount++;
-          else if (open) openCount++;
-          if (byType) byTypeCount++;
+          else if (unjustified)         unjustifiedCount++;
+          else if (open)                openCount++;
+          if (evByType)                 byTypeCount++;
 
           let badgeKey, badgeTxt;
-          if (activated)            { badgeKey = hsRisks.length > 0 ? 'ok' : 'fs'; badgeTxt = hsRisks.length > 0 ? '✓ Activated' : '✓ Self-certified'; }
-          else if (isNA)            { badgeKey = 'na';  badgeTxt = '⊘ N/A'; }
-          else if (justifiedNA)     { badgeKey = 'na';  badgeTxt = '⊘ Not applicable'; }
-          else if (ctype === 'Workflow') { badgeKey = 'wf';  badgeTxt = '⚙ Workflow'; }
-          else if (ctype === 'Document') { badgeKey = 'doc'; badgeTxt = '▤ Document'; }
-          else if (unjustified)     { badgeKey = 'gap'; badgeTxt = '⚠ Unjustified exclusion'; }
-          else                      { badgeKey = 'open'; badgeTxt = '● Open'; }
+          if (activated) {
+            if (ctype === 'Workflow')      { badgeKey = 'wf';  badgeTxt = '⚙ Workflow'; }
+            else if (ctype === 'Document') { badgeKey = 'doc'; badgeTxt = '▤ Document'; }
+            else if (hsRisks.length > 0)   { badgeKey = 'ok';  badgeTxt = '✓ Activated'; }
+            else                           { badgeKey = 'fs';  badgeTxt = '✓ Self-certified'; }
+          }
+          else if (isNA)        { badgeKey = 'na';  badgeTxt = '⊘ N/A'; }
+          else if (justifiedNA) { badgeKey = 'na';  badgeTxt = '⊘ Not applicable'; }
+          else if (unjustified) { badgeKey = 'gap'; badgeTxt = '⚠ Unjustified exclusion'; }
+          else                  { badgeKey = 'open'; badgeTxt = '● Open'; }
           const naReason = isNA ? (hsNA[ref] ? hsNA[ref].reason : 'Not applicable to this system type')
                          : justifiedNA ? exclReason
                          : unjustified ? 'Excluded in Step 5 without a recorded reason — add one before sign-off.'
@@ -807,10 +869,6 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
             ).join('');
           } else if (hasCompAdd) {
             ctrlCell += `<span class="trace-ctrl-chip">Compliance addition</span>`;
-          } else if (ctype === 'Workflow') {
-            ctrlCell += `<span class="trace-ctrl-chip">Evidenced by the governance workflow</span>`;
-          } else if (ctype === 'Document') {
-            ctrlCell += `<span class="trace-ctrl-chip">Evidenced by an external document</span>`;
           }
 
           html += `<tr class="${rowCls}">

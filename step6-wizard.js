@@ -428,15 +428,10 @@
     _record['step-6'] = rec9;
     WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 6 saved ✓');
-    return {
-      title: 'Requirement selection approved & saved ✓',
-      stats: [
-        [rec9.total_risks,        'Risks'],
-        [rec9.risks_covered,      'Risks covered'],
-        [rec9.total_requirements, 'Requirements']
-      ],
-      note: `<strong>${rec9.total_requirements}</strong> requirement${rec9.total_requirements !== 1 ? 's' : ''} confirmed across <strong>${rec9.risks_covered}</strong> risk${rec9.risks_covered !== 1 ? 's' : ''}. You now provide evidence for these in <strong>Step 7 (Residual risk)</strong>.`
-    };
+    // Summary = the exact "Compliance & Requirement Traceability" table from the
+    // conformity report, so the assessor sees what will be submitted.
+    return window.ReportSections.frame('traceability', _record)
+      .then(f => ({ title: 'Requirement selection Result', el: f }));
   }
 
   function _buildOutputRecord() {
