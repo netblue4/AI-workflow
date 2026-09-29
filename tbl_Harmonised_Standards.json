@@ -729,7 +729,9 @@
     "standard_name": "Identification",
     "standard_text": "Identification and analysis of known and reasonably foreseeable risks the AI system may pose to health, safety, or fundamental rights.",
     "treatment_question": "Risk Iteration: Does this high-risk system require a risk management process that includes any of the following?\na) Identifying known and reasonably foreseeable risks\nb) Estimating and evaluating the severity of those risks\nc) Continuously revisiting the evaluation as new data emerges",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-5",
+    "workflow_step_label": "Step 5 — Risk identification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-060",
@@ -741,7 +743,9 @@
     "standard_name": "Estimation",
     "standard_text": "Estimation and evaluation of the risks that may emerge when the high-risk AI system is used in accordance with its intended purpose or under conditions of reasonably foreseeable misuse.",
     "treatment_question": "Risk Iteration: Does this high-risk system require a risk management process that includes any of the following?\na) Identifying known and reasonably foreseeable risks\nb) Estimating and evaluating the severity of those risks\nc) Continuously revisiting the evaluation as new data emerges",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-7",
+    "workflow_step_label": "Step 7 — Residual risk"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-061",
@@ -753,7 +757,9 @@
     "standard_name": "Evaluation",
     "standard_text": "Evaluation of other emerging risks based on the analysis of data gathered from the post-market monitoring system.",
     "treatment_question": "Risk Iteration: Does this high-risk system require a risk management process that includes any of the following?\na) Identifying known and reasonably foreseeable risks\nb) Estimating and evaluating the severity of those risks\nc) Continuously revisiting the evaluation as new data emerges",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-7",
+    "workflow_step_label": "Step 7 — Residual risk"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-062",
@@ -765,7 +771,9 @@
     "standard_name": "Elimination",
     "standard_text": "Elimination or reduction of risks as far as possible through adequate design and development.",
     "treatment_question": "Mitigation Hierarchy: Must identified risks be mitigated using any of the following steps?\na) Eliminating the risk entirely through system design\nb) Implementing technical controls to reduce unavoidable risks\nc) Flagging any residual risk through adequate user information",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-6",
+    "workflow_step_label": "Step 6 — Control identification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-063",
@@ -777,7 +785,9 @@
     "standard_name": "Mitigation",
     "standard_text": "Implementation of appropriate mitigation and control measures in relation to risks that cannot be eliminated.",
     "treatment_question": "Mitigation Hierarchy: Must identified risks be mitigated using any of the following steps?\na) Eliminating the risk entirely through system design\nb) Implementing technical controls to reduce unavoidable risks\nc) Flagging any residual risk through adequate user information",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-6",
+    "workflow_step_label": "Step 6 — Control identification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-064",
@@ -789,7 +799,9 @@
     "standard_name": "Information",
     "standard_text": "Provision of adequate information to deployers and, where appropriate, to persons likely to be affected by the system.",
     "treatment_question": "Mitigation Hierarchy: Must identified risks be mitigated using any of the following steps?\na) Eliminating the risk entirely through system design\nb) Implementing technical controls to reduce unavoidable risks\nc) Flagging any residual risk through adequate user information",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-10",
+    "workflow_step_label": "Step 10 — User obligations briefing"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-065",
@@ -885,7 +897,9 @@
     "standard_name": "Scope of Change Evaluation",
     "standard_text": "A documented process exists to evaluate whether a proposed change to the AI system constitutes a substantial modification that affects the system's compliance with Chapter III Section 2 requirements.",
     "treatment_question": "Modification Assessment: When modifying the system, must you evaluate any of the following?\na) Whether the modification qualifies as \"substantial\" under the AI Act\nb) Whether the change affects the system's core compliance\nc) Whether the modification shifts legal Provider responsibilities to you",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-12",
+    "workflow_step_label": "Step 12 — Periodic and triggered review"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-073",
@@ -897,7 +911,9 @@
     "standard_name": "Provider Responsibility Trigger",
     "standard_text": "Where a deployer makes a substantial modification outside the original provider's intended purpose, the process confirms that the modifier assumes provider responsibilities under Article 25.",
     "treatment_question": "Modification Assessment: When modifying the system, must you evaluate any of the following?\na) Whether the modification qualifies as \"substantial\" under the AI Act\nb) Whether the change affects the system's core compliance\nc) Whether the modification shifts legal Provider responsibilities to you",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-3",
+    "workflow_step_label": "Step 3 — System classification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-074",
@@ -909,7 +925,9 @@
     "standard_name": "Re-assessment Requirement",
     "standard_text": "A substantial modification triggers a full or partial re-run of the conformity assessment process under Article 43 before the modified system is redeployed.",
     "treatment_question": "Re-conformity: If a substantial change occurs, does it require any of the following actions?\na) Triggering a full or partial re-run of the conformity assessment\nb) Updating the Technical File and architecture documentation\nc) Re-evaluating performance evidence and modification logs",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-12",
+    "workflow_step_label": "Step 12 — Periodic and triggered review"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-075",
@@ -921,7 +939,9 @@
     "standard_name": "Updated Technical Documentation",
     "standard_text": "The technical documentation under Article 11 is updated to reflect the modification, including revised architecture, performance evidence, and modification log entries.",
     "treatment_question": "Re-conformity: If a substantial change occurs, does it require any of the following actions?\na) Triggering a full or partial re-run of the conformity assessment\nb) Updating the Technical File and architecture documentation\nc) Re-evaluating performance evidence and modification logs",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-11",
+    "workflow_step_label": "Step 11 — Central inventory registration and record keeping"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-076",
@@ -969,7 +989,9 @@
     "standard_name": "Fundamental Rights Impact Assessment",
     "standard_text": "Prior to deployment in a public authority or regulated context, the deployer has conducted a fundamental rights impact assessment as required by Article 26(7), documented the findings, and notified the provider of any identified risks.",
     "treatment_question": "Impact Assessment: Prior to deployment, does your use case require any of the following?\na) Conducting a fundamental rights impact assessment\nb) Documenting the findings and notifying the provider of risks\nc) Identifying the specific categories of people affected by the outputs",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-4",
+    "workflow_step_label": "Step 4 — Data identification and DPIA"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-080",
@@ -993,7 +1015,9 @@
     "standard_name": "Articles 9-17 Completion Verification",
     "standard_text": "A structured internal review confirms that all applicable Article 9-17 controls in this framework have been assessed, that no controls remain in a Not Met status, and that evidence is available for each Applicable control.",
     "treatment_question": "Pre-Market Review: Before the system goes live, do you require any of the following internal reviews?\na) Verification that all applicable Article 9-17 controls are assessed\nb) Confirmation that evidence exists for every applicable requirement\nc) Formal sign-off by a reviewer with sufficient technical and legal competence",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-8",
+    "workflow_step_label": "Step 8 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-082",
@@ -1005,7 +1029,9 @@
     "standard_name": "Competent Reviewer Sign-off",
     "standard_text": "The self-assessment has been reviewed and approved by a person with sufficient technical and legal competence to evaluate conformity with the AI Act requirements, whose identity and qualifications are recorded.",
     "treatment_question": "Pre-Market Review: Before the system goes live, do you require any of the following internal reviews?\na) Verification that all applicable Article 9-17 controls are assessed\nb) Confirmation that evidence exists for every applicable requirement\nc) Formal sign-off by a reviewer with sufficient technical and legal competence",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-8",
+    "workflow_step_label": "Step 8 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-083",
@@ -1017,7 +1043,9 @@
     "standard_name": "No Critical Gaps Declaration",
     "standard_text": "A formal written declaration confirms that no critical compliance gaps have been identified, or that all identified gaps have been resolved and re-assessed prior to market placement.",
     "treatment_question": "Conformity Conclusion: Must the conformity assessment conclude with any of the following?\na) A formal declaration that no critical compliance gaps remain\nb) Confirmation that all identified gaps were resolved prior to market placement\nc) A documented conclusion statement confirming regulatory compliance",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-8",
+    "workflow_step_label": "Step 8 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-084",
@@ -1029,7 +1057,9 @@
     "standard_name": "Self-Assessment Conclusion Statement",
     "standard_text": "A documented conclusion statement is produced confirming that the system meets all applicable requirements of Chapter III Section 2 of the AI Act and is ready for market placement or deployment.",
     "treatment_question": "Conformity Conclusion: Must the conformity assessment conclude with any of the following?\na) A formal declaration that no critical compliance gaps remain\nb) Confirmation that all identified gaps were resolved prior to market placement\nc) A documented conclusion statement confirming regulatory compliance",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-8",
+    "workflow_step_label": "Step 8 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-085",
@@ -1041,7 +1071,9 @@
     "standard_name": "Conformity Review Date & Version",
     "standard_text": "The date the conformity assessment was completed, the version of the system assessed, and the version of this compliance framework used are recorded and retained as part of the technical documentation.",
     "treatment_question": "Assessment Record: Must the final conformity record capture any of the following details?\na) The exact date the conformity assessment was completed\nb) The specific version of the system that was assessed\nc) The version of the compliance framework used for the evaluation",
-    "coverage_type": "Workflow"
+    "coverage_type": "Workflow",
+    "workflow_step": "step-8",
+    "workflow_step_label": "Step 8 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-086",

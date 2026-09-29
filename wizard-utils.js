@@ -652,6 +652,8 @@ window.WizUtils = (function () {
 .wiz-panel-content>.wiz-collapsible-section:last-child,.wiz-panel-content>*:last-child{margin-bottom:0}
 /* Section intro line used at the top of a panel's content (replaces scattered coloured summary boxes) */
 .wiz-panel-lead{font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);margin:0 0 14px;max-width:78ch}
+/* "⚙ Step N" chip naming the workflow step that meets a requirement */
+.wiz-wf-step{font-size:10.5px;font-weight:600;background:rgba(212,184,96,0.16);color:#ecd489;border-radius:5px;padding:2px 8px;white-space:nowrap;margin-left:auto}
 `);
 
   return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
