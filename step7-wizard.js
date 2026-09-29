@@ -299,10 +299,20 @@
     const legalRiskIds = _legalRiskIds();
     legalRiskIds.forEach(riskId => {
       _legalRiskHsRefs(riskId).forEach(ref => {
-        // Default the evidence note to the framework self-certification for this HS
-        // requirement (shown in Step 6). Saved notes below override this default.
-        const fs = _fsByRef.get(_canonRef(ref)) || '';
-        _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: fs, test_results: {} };
+        const h = _hsByRef.get(ref) || {};
+        if (h.coverage_type === 'Workflow') {
+          // Already met by the workflow: default to evidenced, pointer = mapped step.
+          _hsActState[_hsActKey(riskId, ref)] = {
+            status: 'evidence_provided',
+            notes: 'Met by the governance workflow — ' + (h.workflow_step_label || h.workflow_step || 'this workflow') + '.',
+            test_results: {}
+          };
+        } else {
+          // Default the evidence note to the framework self-certification for this HS
+          // requirement (shown in Step 6). Saved notes below override this default.
+          const fs = _fsByRef.get(_canonRef(ref)) || '';
+          _hsActState[_hsActKey(riskId, ref)] = { status: 'not_started', notes: fs, test_results: {} };
+        }
       });
     });
     const savedHsAct = saved7?.hs_activation || {};
@@ -350,6 +360,10 @@
     });
     return [...set];
   }
+
+  // ── "Already Met By Workflow" support ──
+  function _isWfRef7(ref) { return (_hsByRef.get(ref) || {}).coverage_type === 'Workflow'; }
+  function _riskWfRefs7(riskId) { return _legalRiskHsRefs(riskId).filter(_isWfRef7); }
   // Bridge: derive control activation status from HS activation so the report's
   // control schedule keeps working until it is repointed to HS activation.
   function _deriveActFromHs() {
@@ -397,6 +411,36 @@
     }
   }
 
+  // "Already Met By Workflow" panel — the workflow-coverage requirements,
+  // defaulted to Evidenced with the pointer set to the mapped step. Editable here
+  // (the cards share _hsActState with the residual-completeness check).
+  function _buildWorkflowPanel7() {
+    const groups = [];
+    Array.from(_legalRiskIds()).forEach(riskId => {
+      const refs = _riskWfRefs7(riskId);
+      if (refs.length) {
+        const name = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId)?.risk_name || riskId;
+        groups.push({ riskId, name, refs });
+      }
+    });
+    if (!groups.length) return null;
+    const body = _el('div', '');
+    body.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'These requirements are met by completing this governance workflow. They default to Evidenced, with the evidence pointer set to the step that meets each one. Change any that don’t apply to your system.'
+    }));
+    let total = 0;
+    groups.forEach(g => {
+      body.appendChild(_sectionLabel(`${g.riskId} — ${g.name}`));
+      g.refs.forEach(ref => { total++; body.appendChild(_buildHsActCard(g.riskId, ref)); });
+    });
+    return WizUtils.buildStepPanel({
+      title: 'Already Met By Workflow',
+      description: 'Requirements the governance workflow satisfies — evidenced by default, each pointing to the step that meets it.',
+      status: String(total), statusKind: 'done',
+      body
+    }).el;
+  }
+
   // ---- Panes (consolidated: one scroll, no tabs) -------------
   function _renderPanes(pw) {
     pw.innerHTML = '';
@@ -404,6 +448,9 @@
     pane.appendChild(_el('p', 'wiz-panel-lead', {
       textContent: 'Provide evidence that each selected requirement is implemented, then assess the residual risk. Residual unlocks once every requirement for a risk is evidenced or waived.'
     }));
+
+    const wfPanel = _buildWorkflowPanel7();
+    if (wfPanel) pane.appendChild(wfPanel);
 
     const legal = _buildDomainRiskBody('legal', 'Legal / EU AI Act');
     pane.appendChild(WizUtils.buildStepPanel({
@@ -517,9 +564,17 @@
       // the evidence is the test result; for Document/Workflow it is the artefact
       // or workflow record. No separate risk-control test section.
       body.appendChild(_sectionLabel('1 · Harmonised Standard Verification'));
-      const refs = _legalRiskHsRefs(riskId);
-      if (refs.length) refs.forEach(ref => body.appendChild(_buildHsActCard(riskId, ref)));
-      else body.appendChild(_domainMuted('No harmonised standard requirements selected for this risk in Step 6.'));
+      const allRefs = _legalRiskHsRefs(riskId);
+      const refs    = allRefs.filter(r => !_isWfRef7(r)); // workflow-met refs live in their own panel
+      const wfN     = allRefs.length - refs.length;
+      if (refs.length) {
+        refs.forEach(ref => body.appendChild(_buildHsActCard(riskId, ref)));
+        if (wfN) body.appendChild(_domainMuted(wfN + ' further requirement' + (wfN !== 1 ? 's' : '') + ' for this risk ' + (wfN !== 1 ? 'are' : 'is') + ' met by the workflow — see “Already Met By Workflow”.'));
+      } else if (allRefs.length) {
+        body.appendChild(_domainMuted('All requirements for this risk are met by the governance workflow — see “Already Met By Workflow”.'));
+      } else {
+        body.appendChild(_domainMuted('No harmonised standard requirements selected for this risk in Step 6.'));
+      }
 
       body.appendChild(_sectionLabel('2 · Residual Risk'));
       body.appendChild(_buildResidualPanel(riskId));

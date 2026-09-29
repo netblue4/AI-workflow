@@ -204,6 +204,8 @@
         .forEach(r => { _state.nist_risks[r.risk_name] = true; });
     }
 
+    _claimWorkflowDefaults();
+
     _renderPanes(pw);
   }
 
@@ -543,6 +545,10 @@
       'Optional. Draft the risk assessment with your AI tool, load its reply, or compile a challenge prompt to justify what you exclude.',
       'Optional', 'muted', aiBody));
 
+    // ── Already Met By Workflow ──
+    const wfPanel = _buildWorkflowPanel();
+    if (wfPanel) card.appendChild(wfPanel);
+
     const { mandatory, recommended, excluded, mandN, recN, exclN, step3Done } = _buildConsolidatedList();
 
     // ── Required (mandatory) ──
@@ -713,6 +719,68 @@
     return bar;
   }
 
+  // "Already Met By Workflow" panel — the workflow-coverage requirements, grouped
+  // by risk, claimed by default and mapped to the step that meets them. Each is
+  // overridable: untick (with a reason) if it genuinely doesn't apply.
+  function _buildWorkflowPanel() {
+    const groups = _wfRefsByRiskName();
+    if (!groups.length) return null;
+    const body = _el('div', '');
+    body.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'These requirements are satisfied by completing this governance workflow itself, so they are claimed for you and mapped to the step that meets each one. Untick one only if it genuinely does not apply to your system.'
+    }));
+    let total = 0, met = 0;
+    groups.forEach(g => {
+      if (!_wizState.reqs[g.riskName]) _wizState.reqs[g.riskName] = {};
+      if (!_wizState.reqReasons[g.riskName]) _wizState.reqReasons[g.riskName] = {};
+      const reqState = _wizState.reqs[g.riskName];
+      const reqReasons = _wizState.reqReasons[g.riskName];
+      body.appendChild(_el('p', 's5-sub-label', { textContent: `${g.riskId} — ${g.riskName}` }));
+      g.refs.forEach(rf => {
+        total++;
+        const wrap = _el('div', 's5-req-wrap');
+        const row  = _el('label', 's5-req-row');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 's5-req-cb';
+        cb.checked = reqState[rf.ref] !== false;
+        if (cb.checked) met++;
+        const main = _el('div', 's5-req-main');
+        const hd = _el('div', 's5-req-hdr');
+        hd.appendChild(_el('span', 's5-ref-chip', { textContent: rf.ref }));
+        hd.appendChild(_el('span', 's5-req-name', { textContent: rf.name }));
+        if (rf.stepLabel) hd.appendChild(_el('span', 'wiz-wf-step', { textContent: '⚙ ' + rf.stepLabel }));
+        main.appendChild(hd);
+        row.append(cb, main);
+        wrap.appendChild(row);
+
+        const reasonWrap = _el('div', 's5-req-reason');
+        reasonWrap.appendChild(_el('label', 's5-req-reason-lbl', { textContent: 'Why is this not met by the workflow for your system? (required)' }));
+        const rta = document.createElement('textarea');
+        rta.className = 's5-req-reason-ta'; rta.rows = 2;
+        rta.placeholder = 'e.g. this system is not high-risk, so the Article 9 risk-management lifecycle does not apply…';
+        rta.value = reqReasons[rf.ref] || '';
+        const sync = () => {
+          const excl = !cb.checked;
+          reasonWrap.style.display = excl ? '' : 'none';
+          wrap.classList.toggle('needs-reason', excl && !(reqReasons[rf.ref] || '').trim());
+        };
+        rta.addEventListener('input', () => { reqReasons[rf.ref] = rta.value; sync(); _autosaveSoon(); });
+        reasonWrap.appendChild(rta);
+        wrap.appendChild(reasonWrap);
+        cb.addEventListener('change', () => {
+          reqState[rf.ref] = cb.checked;
+          if (cb.checked) delete reqReasons[rf.ref];
+          sync(); _autosave();
+        });
+        sync();
+        body.appendChild(wrap);
+      });
+    });
+    return _makePanel('workflow', 'Already Met By Workflow',
+      'Requirements the governance workflow itself satisfies — claimed by default and mapped to the step that meets them.',
+      `${met}/${total}`, met === total ? 'done' : 'progress', body);
+  }
+
   // Split risks into Required (mandatory) and Recommended (optional). Mandatory =
   // legal risks whose article Step 3 marked applicable, plus DPIA privacy risks.
   function _buildConsolidatedList() {
@@ -733,6 +801,8 @@
     const legalSecs = [...(_buildRiskList(wqs).children)];
     legalSecs.forEach((sec, i) => {
       const name = wqs[i]?.risk_name;
+      // Fully-workflow risks are claimed in the "Already Met By Workflow" panel.
+      if (_isFullyWorkflowRisk(_riskIdByName.get(name))) return;
       _addSourceChip(sec, 'Legal', 'legal');
       const artApplicable = _isArticleApplicable(name) === true;
       // Excluded (marked Not applicable) → its own oversight group, regardless of tier.
@@ -844,7 +914,8 @@
   // [{ subcategory, refs:[{ ref, name, text }] }]. Drives Step B selection.
   function _riskReqGroups(riskId) {
     const r = (_tblRisks || []).find(x => x.pk_Risk_ID === riskId);
-    const refs = (r?.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean);
+    const refs = (r?.fk_Harmonised_Standard_IDs || '').split(',').map(s => s.trim()).filter(Boolean)
+      .filter(ref => !_isWfRef(ref)); // workflow requirements live in their own panel
     const groups = []; const byName = new Map();
     refs.forEach(ref => {
       const h = _hsByRef.get(ref) || {};
@@ -854,6 +925,40 @@
     });
     return groups;
   }
+  // ── "Already Met By Workflow" — coverage_type: "Workflow" requirements ──
+  // These are satisfied by completing this governance workflow itself, so they
+  // are claimed by default and shown in their own panel, mapped to the step that
+  // meets them. Identified purely by coverage_type, so the set follows the data.
+  function _isWfRef(ref) { return (_hsByRef.get(ref) || {}).coverage_type === 'Workflow'; }
+  // Claim the workflow-met requirements by default (overridable). The governance
+  // workflow itself satisfies them, so mark the risk applicable and pre-tick each
+  // workflow requirement unless the assessor has already recorded a choice.
+  function _claimWorkflowDefaults() {
+    _wfRefsByRiskName().forEach(({ riskName, refs }) => {
+      if (_wizState.answers[riskName] === undefined) _wizState.answers[riskName] = 'yes';
+      if (!_wizState.reqs[riskName]) _wizState.reqs[riskName] = {};
+      refs.forEach(({ ref }) => { if (_wizState.reqs[riskName][ref] === undefined) _wizState.reqs[riskName][ref] = true; });
+    });
+  }
+  const _wfRiskNames = () => new Set(_wfRefsByRiskName().map(g => g.riskName));
+  function _isFullyWorkflowRisk(riskId) {
+    const all = _riskAllRefs(riskId);
+    return all.length > 0 && all.every(_isWfRef);
+  }
+  // [{ riskId, riskName, refs:[{ ref, name, step, stepLabel }] }] for every risk
+  // that carries any workflow requirement.
+  function _wfRefsByRiskName() {
+    const out = [];
+    (_tblRisks || []).forEach(r => {
+      const refs = _riskAllRefs(r.pk_Risk_ID).filter(_isWfRef).map(ref => {
+        const h = _hsByRef.get(ref) || {};
+        return { ref, name: h.standard_name || ref, step: h.workflow_step || '', stepLabel: h.workflow_step_label || '' };
+      });
+      if (refs.length) out.push({ riskId: r.pk_Risk_ID, riskName: r.risk_name, refs });
+    });
+    return out;
+  }
+
   // All HS refs a risk maps to (for default-select-all on first apply).
   function _riskAllRefs(riskId) {
     const r = (_tblRisks || []).find(x => x.pk_Risk_ID === riskId);
@@ -1135,13 +1240,18 @@
     _record = WizUtils.loadRecord() || {};
     if (!_record._meta) _record._meta = { schema_version: '1.0', created: new Date().toISOString() };
     _record._meta.last_modified = new Date().toISOString();
+    // Workflow-met risks are always claimed by the workflow — the AI's answer for
+    // them is ignored so its output can never un-claim them.
+    const wfNames = _wfRiskNames();
+    const legalAnswers = Object.fromEntries(Object.entries(res.legalAnswers).filter(([n]) => !wfNames.has(n)));
+    const reqSel       = Object.fromEntries(Object.entries(res.reqSel).filter(([n]) => !wfNames.has(n)));
     // Reflect the loaded answers/rationales/requirement picks into live state first.
     // For a risk the AI marked applicable but gave no explicit requirements, default
     // to all of the risk's requirements so nothing is silently dropped.
-    Object.assign(_wizState.answers, res.legalAnswers);
+    Object.assign(_wizState.answers, legalAnswers);
     Object.assign(_wizState.rationales, res.rationales);
-    Object.entries(res.reqSel).forEach(([n, sel]) => { _wizState.reqs[n] = Object.assign({}, _wizState.reqs[n] || {}, sel); });
-    Object.entries(res.legalAnswers).forEach(([n, a]) => {
+    Object.entries(reqSel).forEach(([n, sel]) => { _wizState.reqs[n] = Object.assign({}, _wizState.reqs[n] || {}, sel); });
+    Object.entries(legalAnswers).forEach(([n, a]) => {
       if ((a === 'yes' || a === 'partially') && (!_wizState.reqs[n] || Object.keys(_wizState.reqs[n]).length === 0)) {
         const rid = _riskIdByName.get(n);
         _wizState.reqs[n] = {};
@@ -1151,6 +1261,7 @@
     // A challenge is resolved once the AI returns a fresh answer/justification for it.
     Object.keys(res.legalAnswers).forEach(n => { delete _wizState.challenges[n]; });
     Object.keys(res.rationales).forEach(n => { delete _wizState.challenges[n]; });
+    _claimWorkflowDefaults(); // keep the workflow-met requirements claimed
     // …then rebuild the full Step 5 record so risks[] + selected_hs stay coherent.
     if (!_record['step-5']) _record['step-5'] = {};
     _record['step-5'].legal_assessment = _buildLegalOutputRecord();
@@ -1208,7 +1319,7 @@
       const article    = _getArticleForRisk(name);
       const riskId     = _riskIdByName.get(name) || wq.risk_id || '';
       const reqGroups  = _riskReqGroups(riskId);
-      const allRefs    = _riskAllRefs(riskId);
+      const allRefs    = _riskAllRefs(riskId).filter(r => !_isWfRef(r)); // workflow refs shown in their own panel
 
       if (!_wizState.reqs[name]) _wizState.reqs[name] = {};
       const reqState = _wizState.reqs[name];

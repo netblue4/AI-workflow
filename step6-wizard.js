@@ -28,6 +28,7 @@
     _colorKey   = colorKey;
     _phaseTitle = phaseTitle;
     _tblData    = null;
+    _hsMap6     = null;
     _record     = null;
     _riskData   = [];
     _tcByRC     = null;
@@ -145,11 +146,16 @@
       textContent: 'Final review. These are the applicable risks and the requirements you selected in Step 5. Approve & Save to confirm — this is the record Step 7 and the report use. To change what’s selected, go back to Step 5.'
     }));
 
-    // ── Risks & requirements — one gold panel ──
+    // ── Already Met By Workflow (read-only) ──
+    const wfPanel = _buildWorkflowPanelRO();
+    if (wfPanel) card.appendChild(wfPanel);
+
+    // ── Risks & requirements — one gold panel (workflow-met risks live above) ──
     const riskBody = _el('div', '');
     riskBody.appendChild(_buildValidationBanner());
-    const techRisks  = _riskData.filter(r => r.risk_type === 'technical');
-    const legalRisks = _riskData.filter(r => r.risk_type === 'legal');
+    const normalRisks = _riskData.filter(r => !_riskIsFullyWf(r));
+    const techRisks  = normalRisks.filter(r => r.risk_type === 'technical');
+    const legalRisks = normalRisks.filter(r => r.risk_type === 'legal');
     if (legalRisks.length > 0) {
       riskBody.appendChild(_sectionLabel(`Legal / EU AI Act risks (${legalRisks.length})`));
       const ll = _el('div', 'wiz9-risk-list');
@@ -165,7 +171,7 @@
     card.appendChild(WizUtils.buildStepPanel({
       title: 'Risks & requirements',
       description: 'The applicable risks and the harmonised-standard requirements selected in Step 5. Review each, then approve below.',
-      status: String(_riskData.length), statusKind: 'progress',
+      status: String(normalRisks.length), statusKind: 'progress',
       body: riskBody
     }).el);
 
@@ -261,6 +267,20 @@
     return order;
   }
 
+  // ── "Already Met By Workflow" support ──
+  let _hsMap6 = null;
+  function _hs6map() { if (!_hsMap6) _hsMap6 = new Map((_tblData?.hs || []).map(h => [h.standard_ref, h])); return _hsMap6; }
+  function _isWfRef6(ref) { return (_hs6map().get(ref) || {}).coverage_type === 'Workflow'; }
+  // Selected workflow refs for a risk (in Step 5's selection order).
+  function _riskWfRefs(risk) {
+    return _riskHsRefs(risk).filter(r => r !== '—' && _isWfRef6(r) && _state.hsSelected[_hsKey(risk.risk_id, r)]);
+  }
+  // A risk whose every selected requirement is workflow-met → shown only in the panel.
+  function _riskIsFullyWf(risk) {
+    const refs = _riskHsRefs(risk).filter(r => r !== '—' && _state.hsSelected[_hsKey(risk.risk_id, r)]);
+    return refs.length > 0 && refs.every(_isWfRef6);
+  }
+
   // Derive control selection from the HS selection: a control is selected when
   // any HS requirement it satisfies is selected. Framework_Statement is always on.
   function _deriveRiskSelectedForRisk(risk) {
@@ -274,6 +294,46 @@
 
   function _selectedCountForRisk(risk) {
     return _riskHsRefs(risk).filter(ref => _state.hsSelected[_hsKey(risk.risk_id, ref)]).length;
+  }
+
+  // Read-only "Already Met By Workflow" panel — the claimed workflow requirements
+  // grouped by risk, each mapped to the step that meets it. Editing is in Step 5.
+  function _buildWorkflowPanelRO() {
+    const map = _hs6map();
+    const groups = [];
+    _riskData.forEach(risk => {
+      const refs = _riskWfRefs(risk);
+      if (refs.length) groups.push({ risk, refs });
+    });
+    if (!groups.length) return null;
+    const body = _el('div', '');
+    body.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'Requirements satisfied by completing this governance workflow. Claimed in Step 5 and evidenced in Step 7, each mapped to the step that meets it. To change what is claimed, go back to Step 5.'
+    }));
+    let total = 0;
+    groups.forEach(g => {
+      body.appendChild(_el('p', 'wiz9-sub-label', { textContent: `${g.risk.risk_id} — ${g.risk.display_name}` }));
+      g.refs.forEach(ref => {
+        total++;
+        const h = map.get(ref) || {};
+        const item = _el('div', 'wiz9-hs-item');
+        item.appendChild(_el('span', 'wiz9-hs-tick', { textContent: '✓' }));
+        const txt = _el('div', 'wiz9-hs-item-txt');
+        const hd = _el('div', 'wiz9-hs-item-hdr');
+        hd.appendChild(_el('span', 'wiz9-cmp-ref-tag', { textContent: WizUtils.fmtStdRef(ref) }));
+        hd.appendChild(_el('span', 'wiz9-hs-group-name', { textContent: h.standard_name || ref }));
+        if (h.workflow_step_label) hd.appendChild(_el('span', 'wiz-wf-step', { textContent: '⚙ ' + h.workflow_step_label }));
+        txt.appendChild(hd);
+        item.appendChild(txt);
+        body.appendChild(item);
+      });
+    });
+    return WizUtils.buildStepPanel({
+      title: 'Already Met By Workflow',
+      description: 'Requirements the governance workflow itself satisfies — claimed and mapped to the step that meets them.',
+      status: String(total), statusKind: 'done',
+      body
+    }).el;
   }
 
   // ---- Risk accordion (individual risk) -----------------------
@@ -325,7 +385,8 @@
     // Harmonised standard requirements this risk addresses — the selectable
     // treatment units, sourced from the direct risk↔HS link (no controls shown).
     const fsCtrls = risk.controls.filter(c => c.control_source === 'Framework_Statement');
-    const hsRefs  = _riskHsRefs(risk).filter(r => r !== '—');
+    // Workflow-met requirements are shown in the "Already Met By Workflow" panel.
+    const hsRefs  = _riskHsRefs(risk).filter(r => r !== '—' && !_isWfRef6(r));
 
     if (hsRefs.length > 0) {
       const hsByRef = new Map((_tblData.hs || []).map(h => [h.standard_ref, h]));
