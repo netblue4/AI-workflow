@@ -579,12 +579,9 @@
 
     // Bottom actions
     const actRow = _el('div', 'wiz-action-row');
-    const acceptBtn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Accept all remaining' });
-    acceptBtn.title = 'Marks every unanswered risk as applicable, then saves.';
-    acceptBtn.addEventListener('click', _acceptAllRemaining);
     const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear legal answers' });
     clearBtn.addEventListener('click', () => { _wizState.answers = {}; _wizState.rationales = {}; _autosave(); _renderConsolidated(); });
-    actRow.append(acceptBtn, clearBtn);
+    actRow.append(clearBtn);
     card.appendChild(actRow);
 
     // Save → shows the exact "Risk Identification" section from the conformity
@@ -764,26 +761,6 @@
     return { mandatory, recommended, excluded, mandN, recN, exclN, step3Done };
   }
 
-  function _buildRiskToolbar(mandN, recN, exclN) {
-    const head = _el('div', 's5-riskhead');
-    const left = _el('div', 's5-riskhead-left');
-    const summary = _el('div', 's5-riskhead-summary');
-    summary.innerHTML = `<strong>${mandN}</strong> required · <strong>${recN}</strong> recommended` + (exclN ? ` · <strong>${exclN}</strong> excluded` : '');
-    _riskheadSummaryEl = summary;
-    _savedNoteEl = _el('span', 's5-saved-flag', { textContent: 'Saved ✓' });
-    const hint = _el('span', 's5-autosave-hint', { textContent: 'Answers save automatically' });
-    left.append(summary, hint, _savedNoteEl);
-    head.appendChild(left);
-
-    const actions = _el('div', 's5-riskhead-actions');
-    const acceptBtn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Accept all remaining' });
-    acceptBtn.title = 'Marks every unanswered risk as applicable, then saves.';
-    acceptBtn.addEventListener('click', _acceptAllRemaining);
-    actions.appendChild(acceptBtn);
-    head.appendChild(actions);
-    return head;
-  }
-
   function _buildInputsCollapsible() {
     const body = _el('div', '');
     body.appendChild(_buildStep3Card());
@@ -795,11 +772,6 @@
     if (b) b.style.display = 'none';
     const chev = section.querySelector('.wiz-collapsible-header .wiz-gate-chevron, .wiz-collapsible-header svg');
     return section;
-  }
-
-  function _acceptAllRemaining() {
-    (_legalGuidance?.wizard_questions || []).forEach(wq => { if (!_wizState.answers[wq.risk_name]) _wizState.answers[wq.risk_name] = 'yes'; });
-    _saveAllRisks();
   }
 
   // Persist every source at once (legal + NIST fold into legal_assessment;
@@ -818,11 +790,6 @@
     WizUtils.saveRecord(_record);
   }
 
-  function _saveAllRisks() {
-    _writeRisksRecord();
-    if (typeof _ucShowStatus === 'function') _ucShowStatus('All risks saved ✓');
-    _renderConsolidated();
-  }
 
   // Auto-save: persist on every change without re-rendering (so expanded cards
   // and scroll position are undisturbed), and flash a "Saved" indicator.
