@@ -565,6 +565,9 @@ window.WizUtils = (function () {
         summary.appendChild(stats);
       }
       if (res.note) { const n = el('p', 'wiz-save-summary-note'); n.innerHTML = res.note; summary.appendChild(n); }
+      // A caller can supply a DOM node (res.el) to embed in the summary — used to
+      // render the exact conformity-report section for this step.
+      if (res.el instanceof Node) summary.appendChild(res.el);
       try { summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
     }
     btn.addEventListener('click', () => {

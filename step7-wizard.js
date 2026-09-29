@@ -1007,17 +1007,10 @@
     _record['step-7'] = rec;
     WizUtils.saveRecord(_record);
     if (typeof _ucShowStatus === 'function') _ucShowStatus('Step 7 saved ✓');
-    return {
-      title: 'Residual risk approved & saved ✓',
-      stats: [
-        [rec.total_requirements,     'Requirements'],
-        [rec.requirements_evidenced, 'Evidenced'],
-        [rec.requirements_waived,    'Waived'],
-        [rec.requirements_pending,   'Pending'],
-        [Object.keys(rec.residual_risks).length, 'Residual risks']
-      ],
-      note: `Evidence recorded for <strong>${rec.requirements_evidenced + rec.requirements_waived}</strong> of <strong>${rec.total_requirements}</strong> requirement${rec.total_requirements !== 1 ? 's' : ''}, with <strong>${Object.keys(rec.residual_risks).length}</strong> residual risk assessment${Object.keys(rec.residual_risks).length !== 1 ? 's' : ''} recorded.`
-    };
+    // Summary = the exact "Compliance & Requirement Traceability" table from the
+    // conformity report, reflecting the evidence just recorded.
+    return window.ReportSections.frame('traceability', _record)
+      .then(f => ({ title: 'Residual risk Result', el: f }));
   }
 
   function _buildOutputRecord() {
