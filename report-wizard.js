@@ -45,13 +45,15 @@
       if (kind === 'classification')    inner = _classificationSection(s3);
       else if (kind === 'dpia')         inner = _dpiaRiskSubsection();
       else if (kind === 'risk')         inner = _riskAssessmentSection(s8, s10);
-      else if (kind === 'traceability') inner = _complianceTraceabilitySection(s3, s9, s10);
+      else if (kind === 'traceability') inner = _section3Content(s3, s9, s10);
       const f = document.createElement('iframe');
       f.className = 'rpt-embed-frame';
       f.setAttribute('scrolling', 'no');
-      f.style.cssText = 'width:100%;border:0;display:block;background:#fff;border-radius:8px';
+      // No background override — inherit the report's own theme (dark or light,
+      // via its prefers-color-scheme rules) so the embed matches the report.
+      f.style.cssText = 'width:100%;border:0;display:block;border-radius:8px';
       f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>${_reportCSS()}</style>`
-        + `<style>html,body{margin:0;padding:14px 16px;background:#fff}</style></head>`
+        + `<style>html,body{margin:0;padding:14px 16px}</style></head>`
         + `<body>${inner || '<p class="section-meta">Nothing recorded yet.</p>'}</body></html>`;
       const size = () => { try { f.style.height = (f.contentDocument.documentElement.scrollHeight + 2) + 'px'; } catch (_) {} };
       f.addEventListener('load', () => { size(); setTimeout(size, 50); setTimeout(size, 250); });
@@ -186,7 +188,7 @@ ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_partBanner('A', 'EU AI Act Conformity Dossier', 'The formal EU AI Act conformity assessment for this system — the complete evidence dossier. It is produced first and submitted to the AI Change Board for review, and can be printed and provided to a regulator on its own.')}
 ${_section(1, 'System Classification', 'What the system is and how it is classified under the EU AI Act — which determines exactly which legal obligations apply. Confirms the assessment addressed the right requirements.', _classificationSection(s3))}
 ${_section(2, 'Risk Identification', 'The risks this system poses, identified against the pre-mapped catalogue (the Article&nbsp;9 risk-management step). Shows the hazards were named systematically, not ad hoc.', _riskAssessmentSection(s8, s10))}
-${_section(3, 'Compliance &amp; Requirement Traceability', 'Maps each applicable AI Act obligation to the harmonised-standard requirement that makes it testable, and the evidence that the requirement is implemented. This is the core evidence that every obligation is covered — nothing unaddressed.', _complianceTraceabilitySection(s3, s9, s10) + '<h3 class="sub-heading">Requirement Evidence Register</h3><p class="section-meta">The harmonised-standard requirements selected to treat each risk, grouped by risk, with the evidence status recorded in Step 7. Includes the DPIA security measures that support — but sit outside — the per-article map.</p>' + _controlScheduleSection(s9, s10))}
+${_section(3, 'Compliance &amp; Requirement Traceability', 'Maps each applicable AI Act obligation to the harmonised-standard requirement that makes it testable, and the evidence that the requirement is implemented. This is the core evidence that every obligation is covered — nothing unaddressed.', _section3Content(s3, s9, s10))}
 ${_section(4, 'Conformity Assessment Conclusion', 'The assessor&rsquo;s conclusion that, on the evidence above, the system meets its applicable requirements — the basis of conformity submitted to the Board for decision.', _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy))}
 
 ${_partDivider('End of Part&nbsp;A — EU AI Act Conformity Dossier. The assessment above is submitted to the AI Change Board; Part&nbsp;B records the Board&rsquo;s review and decision on it.')}
@@ -625,6 +627,16 @@ ${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and
   }
 
   // ---- Section 3: Control Schedule ---------------------------
+  // Full content of report Section 3: the traceability table, then the
+  // Requirement Evidence Register (Requirements by risk + DPIA Controls).
+  // Shared by the report and the Step 6/7 save summaries so they stay identical.
+  function _section3Content(s3, s9, s10) {
+    return _complianceTraceabilitySection(s3, s9, s10)
+      + '<h3 class="sub-heading">Requirement Evidence Register</h3>'
+      + '<p class="section-meta">The harmonised-standard requirements selected to treat each risk, grouped by risk, with the evidence status recorded in Step 7. Includes the DPIA security measures that support — but sit outside — the per-article map.</p>'
+      + _controlScheduleSection(s9, s10);
+  }
+
   function _controlScheduleSection(s9, s10) {
     if (!s9) return _notComplete('Step 6 — Control Identification has not yet been completed.');
 
