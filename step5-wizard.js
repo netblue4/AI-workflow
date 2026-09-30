@@ -842,7 +842,7 @@
     const answer0 = _wizState.answers[name] || null;
     if (applies(answer0)) defaultSelectAll();
 
-    let _panel = null;
+    let _panel = null, _challenge = null;
     const body = _el('div', 's5-risk-body');
 
     // Risk statement
@@ -865,6 +865,24 @@
     const updateCount = () => {
       const l = stepB.querySelector('.s5-stepb-count');
       if (l) l.textContent = `Requirements to implement (${selCount()}/${allRefs.length})`;
+    };
+    // Reflect an answer in the header/buttons without a full re-render, so a
+    // risk stays put (and any open challenge stays visible) until the next Save.
+    const setAnswerInPlace = (val) => {
+      btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
+      const active = btnRow.querySelector('.s5-answer-btn--' + val);
+      if (active) active.classList.add('s5-answer-btn--active');
+      if (_panel) { _panel.setStatus(BADGE[val], KIND[val]); if (_panel.check) _panel.check.checked = applies(val); }
+    };
+    // Deselecting a requirement makes the risk Partial (only some apply); ticking
+    // them all back makes it Applicable again. Refinement only — no challenge.
+    const syncApplicabilityFromReqs = () => {
+      const cur = _wizState.answers[name];
+      if (cur !== 'yes' && cur !== 'partially') return; // only while applicable
+      if (!allRefs.length) return;
+      const sel = selCount();
+      if (sel === allRefs.length) { if (cur !== 'yes') { _wizState.answers[name] = 'yes'; setAnswerInPlace('yes'); } }
+      else { if (cur !== 'partially') { _wizState.answers[name] = 'partially'; setAnswerInPlace('partially'); } }
     };
     const buildStepB = () => {
       stepB.innerHTML = '';
@@ -918,6 +936,7 @@
             if (cb.checked) delete reqReasons[rf.ref];
             syncReason();
             updateCount();
+            syncApplicabilityFromReqs(); // Applies ⇄ Partial as requirements are (de)selected
             _autosaveSoon();
             if (!cb.checked) rta.focus();
           });
@@ -928,25 +947,38 @@
     };
     buildStepB();
 
+    // Set an applicability answer in place. When the user OVERRIDES the AI —
+    // flips to Not applicable from an applicable state, or up to Applies from
+    // Partial/Not applicable — the challenge box opens directly under the
+    // buttons so the objection is captured and sent back to the AI. The risk
+    // does NOT jump groups here; it regroups on the next Save / step re-entry.
+    const applyAnswer = (val) => {
+      const prev = _wizState.answers[name] || null;
+      if (val === prev) return;
+      _wizState.answers[name] = val;
+      if (applies(val)) defaultSelectAll();
+      setAnswerInPlace(val);
+      buildStepB();
+      const disputeFlip = (val === 'no' && applies(prev))
+                       || (val === 'yes' && (prev === 'no' || prev === 'partially'));
+      if (disputeFlip && _challenge) _challenge.open();
+      _autosave();
+    };
+
     const btnRow = _el('div', 's5-answer-row');
     [['yes', '✓ Applies'], ['partially', '~ Partial'], ['no', '✗ Not applicable']].forEach(([val, lbl]) => {
       const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer0 === val ? ' s5-answer-btn--active' : ''}`);
       btn.textContent = lbl;
-      btn.addEventListener('click', () => {
-        const prev = _wizState.answers[name];
-        _wizState.answers[name] = val;
-        if (applies(val)) defaultSelectAll();
-        _autosave();
-        // Moving a risk into/out of "Not applicable" changes its group → re-render.
-        if (val === 'no' || prev === 'no') { _renderConsolidated(); return; }
-        btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
-        btn.classList.add('s5-answer-btn--active');
-        if (_panel) { _panel.setStatus(BADGE[val], KIND[val]); if (_panel.check) _panel.check.checked = applies(val); }
-        buildStepB();
-      });
+      btn.addEventListener('click', () => applyAnswer(val));
       btnRow.appendChild(btn);
     });
     body.appendChild(btnRow);
+
+    // Challenge control — directly under the answer buttons, so it's visible the
+    // moment an override opens it.
+    _challenge = _buildChallengeUI(name, () => _wizState.answers[name]);
+    body.appendChild(_challenge.el);
+
     body.appendChild(stepB);
 
     const ta = document.createElement('textarea');
@@ -956,7 +988,6 @@
     ta.value       = _wizState.rationales[name] || '';
     ta.addEventListener('input', () => { _wizState.rationales[name] = ta.value; _autosaveSoon(); });
     body.appendChild(ta);
-    body.appendChild(_buildChallengeUI(name, () => _wizState.answers[name]));
 
     const artId = article?.pk_AI_Article_ID || null;
     _panel = WizUtils.buildStepPanel({
@@ -969,11 +1000,12 @@
         checked: applies(answer0),
         title: required ? 'Required by your classification — untick to exclude (needs a reason)' : 'Include this risk',
         onChange: (checked) => {
+          // Checking includes the risk (Applies); unchecking excludes it (Not
+          // applicable). Both route through applyAnswer, so an override opens the
+          // challenge and the risk stays put until Save — same as the buttons.
           const cur = _wizState.answers[name];
-          _wizState.answers[name] = checked ? (applies(cur) ? cur : 'yes') : 'no';
-          if (applies(_wizState.answers[name])) defaultSelectAll();
-          _autosave();
-          _renderConsolidated();
+          if (checked) applyAnswer(applies(cur) ? cur : 'yes');
+          else applyAnswer('no');
         }
       },
       body
@@ -1133,18 +1165,21 @@
     return 'unanswered';
   }
 
-  // Pre-fill contradiction — polarity flips with the current answer.
+  // Pre-fill the objection to argue FOR the answer the assessor just chose (the
+  // override), so the AI re-assesses toward that position and rewrites the
+  // justification. Polarity follows the current (chosen) answer.
   function _challengeSeed(name, getAns) {
     const ans  = getAns();
     const just = (_wizState.rationales[name] || '').trim();
     const jq   = just ? `The justification states: "${just}" — ` : '';
     if (ans === 'no') {
-      return `I dispute this. ${jq}but for this system this risk SHOULD apply, because [state which of the conditions are actually met]. Reassess as applicable and write a justification accordingly.`;
+      return `I dispute this. ${jq}for this system this risk does NOT apply, because [state which of the conditions are not met]. Reassess as Not applicable and rewrite the justification accordingly.`;
     }
-    return `I dispute this. ${jq}but for this system that does not hold, because [state why the conditions are not actually met]. Reassess as Not applicable and rewrite the justification accordingly.`;
+    return `I dispute this. ${jq}for this system this risk DOES apply${ans === 'partially' ? ' (in part)' : ''}, because [state which of the conditions are met]. Reassess as applicable and write a justification accordingly.`;
   }
 
-  // Reusable challenge control appended under a risk's justification box.
+  // Reusable challenge control. Returns { el, open } — open() reveals the panel
+  // and seeds the objection, so an answer override can surface it automatically.
   function _buildChallengeUI(name, getAns) {
     const wrap = _el('div', 's5-challenge-wrap');
     const has  = () => !!(_wizState.challenges[name] || '').trim();
@@ -1163,18 +1198,34 @@
     ta.addEventListener('input', () => { _wizState.challenges[name] = ta.value; btn.classList.toggle('is-active', has()); _autosaveSoon(); });
 
     const clear = _el('button', 's5-challenge-clear', { type: 'button', textContent: 'Clear challenge' });
-    clear.addEventListener('click', () => { delete _wizState.challenges[name]; ta.value = ''; panel.style.display = 'none'; setBtn(); });
+    clear.addEventListener('click', () => { delete _wizState.challenges[name]; ta.value = ''; _lastSeed = ''; panel.style.display = 'none'; setBtn(); });
 
     panel.append(lbl, ta, clear);
-    btn.addEventListener('click', () => {
-      const hidden = panel.style.display === 'none';
-      panel.style.display = hidden ? '' : 'none';
-      if (hidden && !ta.value.trim()) { ta.value = _challengeSeed(name, getAns); _wizState.challenges[name] = ta.value; }
+    // Seed the objection only while it is still an unedited auto-seed, so a
+    // direction change refreshes it but a hand-written challenge is preserved.
+    let _lastSeed = '';
+    const seedIfAuto = () => {
+      if (!ta.value.trim() || ta.value === _lastSeed) {
+        _lastSeed = _challengeSeed(name, getAns);
+        ta.value = _lastSeed;
+        _wizState.challenges[name] = ta.value;
+        _autosaveSoon();
+      }
+    };
+    const open = () => {
+      const wasHidden = panel.style.display === 'none';
+      panel.style.display = '';
+      seedIfAuto();
       setBtn();
+      if (wasHidden) { try { wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {} }
+    };
+    btn.addEventListener('click', () => {
+      if (panel.style.display === 'none') open();
+      else { panel.style.display = 'none'; setBtn(); }
     });
     setBtn();
     wrap.append(btn, panel);
-    return wrap;
+    return { el: wrap, open };
   }
 
   // Compile every pending challenge into a re-assessment prompt.
@@ -1605,7 +1656,7 @@
       ta.value       = _wizState.rationales[name] || '';
       ta.addEventListener('input', () => { _wizState.rationales[name] = ta.value; _autosaveSoon(); });
       body.appendChild(ta);
-      body.appendChild(_buildChallengeUI(name, () => _wizState.answers[name]));
+      body.appendChild(_buildChallengeUI(name, () => _wizState.answers[name]).el);
 
       const artId = article?.pk_AI_Article_ID || null;
       const riskNum = _riskIdByName.get(name) || '';
@@ -1803,7 +1854,7 @@
     nta.value       = _wizState.rationales[key] || '';
     nta.addEventListener('input', () => { _wizState.rationales[key] = nta.value; _autosaveSoon(); });
     body.appendChild(nta);
-    body.appendChild(_buildChallengeUI(key, () => (_state.nist_risks[key] === true ? 'yes' : _state.nist_risks[key] === false ? 'no' : undefined)));
+    body.appendChild(_buildChallengeUI(key, () => (_state.nist_risks[key] === true ? 'yes' : _state.nist_risks[key] === false ? 'no' : undefined)).el);
 
     const { section } = WizUtils.buildCollapsible({ title: risk.risk_name, number: risk.pk_Risk_ID, icon: false, body });
     section.querySelector('.wiz-collapsible-header-right').prepend(badge);
