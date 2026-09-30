@@ -17,6 +17,8 @@
 
   let _detail = null;
   let _wizardPane = null;
+  let _gatePanels = {};   // gate_id → buildStepPanel handle (status updates)
+  let _axisAPanel = null; // Axis A tier panel handle (status updates)
 
   let _state = {
     axis_a_tier: null,         // 'tier_1' | 'tier_2'
@@ -41,7 +43,7 @@
     container.innerHTML = '';
 
     // Standard full-width title section (from workflow.json)
-    container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
+    container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle, { hideDetails: true }));
 
     // AI prompt + load-output sections (moved here from Step 2) — draft the
     // classification with your AI tool, then load its reply to fill this screen.
@@ -58,18 +60,11 @@
       }).el);
     }
 
-    // Classification wizard — one collapsed panel. The reference/methodology
-    // content lives in the About the framework training area.
+    // Classification wizard — the parent "screen content" card holding the Axis A
+    // and Axis B task groups, the rationale, the actions and the result.
     const wizardPane = _buildWizardPane(detail);
     wizardPane.id = 'wiz-pane-wizard';
-    const isClassified = !!(_state.result && _state.result.axis_b && _state.result.axis_b.ai_act_outcome);
-    container.appendChild(WizUtils.buildStepPanel({
-      title: 'Classify the system',
-      description: 'Set your governance tier, answer the EU AI Act gates G1–G5, then run the classification.',
-      status: isClassified ? 'Done' : 'To do',
-      statusKind: isClassified ? 'done' : 'todo',
-      body: wizardPane
-    }).el);
+    container.appendChild(wizardPane);
 
     _updateGateVisibility();
 
@@ -106,26 +101,57 @@
   // place — preserving the tab listeners bound to it at mount.
   function _populateWizardPane(pane, detail) {
     pane.innerHTML = '';
+    _gatePanels = {};
+    _axisAPanel = null;
 
-    pane.appendChild(_buildAxisASection(detail.axis_a_classification));
-    pane.appendChild(_buildAxisBSection(detail.axis_b_classification));
-    pane.appendChild(_buildRationaleSection());
+    // Parent "screen content" card — full width, no title, a single lead line.
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'Set your governance tier, answer the EU AI Act gates G1–G5, then run the classification.'
+    }));
 
-    // Action row
-    const actionRow = _el('div', 'wiz-action-row');
+    // ── Axis A group (holds the governance-tier task) ──
+    _axisAPanel = _buildAxisAPanel(detail.axis_a_classification);
+    card.appendChild(WizUtils.buildStepGroup({
+      title: 'Axis A — Select your governance tier',
+      description: 'Your internal governance tier sets the oversight path (fast-track vs Change Board).',
+      body: _axisAPanel.el
+    }).el);
 
-    const classifyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Classify System' });
-    classifyBtn.addEventListener('click', () => _handleClassify(pane, detail));
+    // ── Axis B group (holds the five EU AI Act gate tasks) ──
+    const gatesBody = _el('div', '');
+    detail.axis_b_classification.gates.forEach((gate, i) => {
+      const p = _buildGatePanel(gate, i + 1);
+      _gatePanels[gate.gate_id] = p;
+      gatesBody.appendChild(p.el);
+    });
+    card.appendChild(WizUtils.buildStepGroup({
+      title: 'Axis B — Complete EU AI Act gates G1–G5',
+      description: 'Answer each gate in sequence. G1 and G2 may short-circuit the assessment — read each gate before answering.',
+      body: gatesBody
+    }).el);
 
+    // ── Classification rationale (gold task panel) ──
+    card.appendChild(WizUtils.buildStepPanel({
+      title: 'Classification rationale',
+      description: 'Why this classification was reached. Loaded from your AI tool’s reasoning, or add your own notes. Saved with the classification.',
+      body: _buildRationaleSection()
+    }).el);
+
+    // Action row — right-aligned, Clear then Classify (matches the template).
+    const actionRow = _el('div', 'wiz-action-row', { style: 'justify-content:flex-end' });
     const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear all answers' });
     clearBtn.addEventListener('click', _clearAll);
-
-    actionRow.append(classifyBtn, clearBtn);
-    pane.appendChild(actionRow);
+    const classifyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Classify System' });
+    classifyBtn.addEventListener('click', () => _handleClassify(pane, detail));
+    actionRow.append(clearBtn, classifyBtn);
+    card.appendChild(actionRow);
 
     const resultsContainer = _el('div', '');
     resultsContainer.id = 'wiz-results';
-    pane.appendChild(resultsContainer);
+    card.appendChild(resultsContainer);
+
+    pane.appendChild(card);
   }
 
   // Reset in-memory answers and re-render the wizard pane. Matches Step 5's
@@ -144,11 +170,7 @@
   // Assessment-rationale textbox — holds the reasoning your AI tool returns (or the
   // assessor's own notes) so the "why" is saved in the record, not separately.
   function _buildRationaleSection() {
-    const wrap = _el('div', 's3-rationale-wrap');
-    wrap.appendChild(_sectionLabel('Assessment rationale'));
-    const hint = _el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin:0 0 8px' });
-    hint.textContent = 'Why this classification was reached. Loaded from your AI tool’s reasoning, or add your own notes. Saved with the classification.';
-    wrap.appendChild(hint);
+    const wrap = _el('div', '');
     const ta = _el('textarea', 's3-rationale-ta');
     ta.rows = 5;
     ta.placeholder = 'Rationale for the tier and EU AI Act gate answers…';
@@ -272,25 +294,8 @@
 
   // ── Axis A interactive ────────────────────────────────────────────────────────
 
-  function _buildAxisASection(axisA) {
-    const section = _el('div', 'wiz-collapsible-section');
-
-    const header  = _el('div', 'wiz-collapsible-header');
-    const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_el('span', 'wiz-item-name', { textContent: 'Axis A — Select your governance tier' }));
-    const hRight  = _el('div', 'wiz-collapsible-header-right');
-    const initTier = _state.axis_a_tier;
-    const aBadge  = _el('span', 'wiz-item-badge ' + (initTier ? 'wiz-item-badge--ok' : 'wiz-item-badge--none'));
-    aBadge.id     = 'wiz-axis-a-status';
-    aBadge.textContent = initTier === 'tier_1' ? 'Tier 1 selected' : initTier === 'tier_2' ? 'Tier 2 selected' : 'Not selected';
-    const aChevron = _el('span', 'wiz-gate-chevron');
-    aChevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    hRight.append(aBadge, aChevron);
-    header.append(hLeft, hRight);
-    section.appendChild(header);
-
-    const body = _el('div', 'wiz-collapsible-body');
-    body.style.display = 'none';
+  function _buildAxisAPanel(axisA) {
+    const body = _el('div', '');
 
     body.appendChild(_el('p', '', {
       style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:12px',
@@ -332,29 +337,19 @@
     });
 
     body.appendChild(_el('div', 'gate-note warning', { style: 'margin-top:4px', textContent: `Escalation rule: ${axisA.escalation_rule}` }));
-    section.appendChild(body);
 
-    header.addEventListener('click', () => {
-      const isHidden = body.style.display === 'none';
-      body.style.display = isHidden ? '' : 'none';
-      aChevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+    const tier = _state.axis_a_tier;
+    return WizUtils.buildStepPanel({
+      num: 1,
+      title: 'Governance tier',
+      description: 'Choose the internal governance tier that applies to this use case.',
+      status: tier === 'tier_1' ? 'Tier 1' : tier === 'tier_2' ? 'Tier 2' : 'Not selected',
+      statusKind: tier ? 'done' : 'todo',
+      body
     });
-
-    return section;
   }
 
   // ── Axis B gates ──────────────────────────────────────────────────────────────
-
-  function _buildAxisBSection(axisB) {
-    const section = _el('div', '', { style: 'margin-top:24px;margin-bottom:4px' });
-    section.appendChild(_sectionLabel('Axis B — Complete EU AI Act gates G1–G5'));
-    section.appendChild(_el('p', '', {
-      style: 'font-size:12px;color:var(--color-text-secondary);margin-bottom:14px',
-      textContent: 'Answer each gate in sequence. G1 and G2 may short-circuit the assessment — read each gate header before answering.'
-    }));
-    axisB.gates.forEach(gate => section.appendChild(_buildGateSection(gate)));
-    return section;
-  }
 
   // G1 and G3 are collapsed to a single Yes/No — the individual items are shown as
   // a compact reference list. The answer is stored under 'G1_any' / 'G3_any'.
@@ -363,36 +358,11 @@
     G3: { key: 'G3_any', question: 'Does this system fall within any Annex III high-risk domain?' },
   };
 
-  function _buildGateSection(gate) {
-    const section = _el('div', 'wiz-gate-section');
-    section.id = `wiz-gate-${gate.gate_id}`;
-
-    const header  = _el('div', 'wiz-gate-header wiz-gate-header--clickable');
-    const hLeft   = _el('div', 'wiz-gate-header-left');
-    const titleRow = _el('div', '', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:4px' });
-    titleRow.append(
-      _el('span', 'badge pdata', { textContent: gate.gate_id }),
-      _el('span', '', { style: 'font-size:13px;font-weight:500;color:var(--color-text-primary)', textContent: gate.gate_name })
-    );
-    hLeft.appendChild(titleRow);
-    hLeft.appendChild(_el('p', '', { style: 'font-size:12px;color:var(--color-text-secondary);margin-top:2px', textContent: gate.gate_purpose }));
-    if (gate.short_circuit) hLeft.appendChild(_el('p', 'gate-note danger', { style: 'margin-top:8px;font-size:11px', textContent: gate.short_circuit }));
-    if (gate.note)          hLeft.appendChild(_el('p', 'gate-note info',   { style: 'margin-top:6px;font-size:11px',  textContent: gate.note }));
-
-    const hRight  = _el('div', 'wiz-gate-header-right');
-    const { answered: initAns, total: initTot } = _gateAnsweredCount(gate);
-    const gBadge  = _el('span', 'wiz-item-badge ' + (initAns === 0 ? 'wiz-item-badge--none' : initAns === initTot ? 'wiz-item-badge--ok' : 'wiz-item-badge--partial'));
-    gBadge.id     = `wiz-gate-status-${gate.gate_id}`;
-    gBadge.textContent = `${initAns} / ${initTot}`;
-    const gChevron = _el('span', 'wiz-gate-chevron');
-    gChevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    hRight.append(gBadge, gChevron);
-
-    header.append(hLeft, hRight);
-    section.appendChild(header);
-
-    const body = _el('div', 'wiz-gate-body');
-    body.style.display = 'none';
+  // The gate's question content (no header) — placed inside a gold task panel.
+  function _buildGateBody(gate) {
+    const body = _el('div', '');
+    if (gate.short_circuit) body.appendChild(_el('p', 'gate-note danger', { style: 'margin:0 0 8px;font-size:11px', textContent: gate.short_circuit }));
+    if (gate.note)          body.appendChild(_el('p', 'gate-note info',   { style: 'margin:0 0 8px;font-size:11px', textContent: gate.note }));
 
     const collapsed = COLLAPSED_GATES[gate.gate_id];
     if (collapsed) {
@@ -404,15 +374,23 @@
         else                            body.appendChild(_buildQuestionRow(q));
       });
     }
-    section.appendChild(body);
+    return body;
+  }
 
-    header.addEventListener('click', () => {
-      const isHidden = body.style.display === 'none';
-      body.style.display = isHidden ? '' : 'none';
-      gChevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+  // A gate as a gold "question/task" panel (numbered, article-referenced, status
+  // in the corner). The panel root keeps id `wiz-gate-<id>` so the short-circuit
+  // visibility logic can still dim/disable it.
+  function _buildGatePanel(gate, num) {
+    const { answered, total } = _gateAnsweredCount(gate);
+    return WizUtils.buildStepPanel({
+      id: `wiz-gate-${gate.gate_id}`,
+      num,
+      title: `${gate.gate_id} — ${gate.gate_name}`,
+      description: gate.gate_purpose,
+      status: `${answered} / ${total}`,
+      statusKind: answered === 0 ? 'todo' : answered === total ? 'done' : 'progress',
+      body: _buildGateBody(gate)
     });
-
-    return section;
   }
 
   function _gateAnsweredCount(gate) {
@@ -438,24 +416,17 @@
   function _updateGateStatusBadges() {
     if (!_detail) return;
     _detail.axis_b_classification.gates.forEach(gate => {
-      const badge = document.getElementById(`wiz-gate-status-${gate.gate_id}`);
-      if (!badge) return;
+      const p = _gatePanels[gate.gate_id];
+      if (!p) return;
       const { answered, total } = _gateAnsweredCount(gate);
-      badge.textContent = `${answered} / ${total}`;
-      badge.className = answered === 0
-        ? 'wiz-item-badge wiz-item-badge--none'
-        : answered === total
-          ? 'wiz-item-badge wiz-item-badge--ok'
-          : 'wiz-item-badge wiz-item-badge--partial';
+      p.setStatus(`${answered} / ${total}`, answered === 0 ? 'todo' : answered === total ? 'done' : 'progress');
     });
   }
 
   function _updateAxisAStatusBadge() {
-    const badge = document.getElementById('wiz-axis-a-status');
-    if (!badge) return;
+    if (!_axisAPanel) return;
     const tier = _state.axis_a_tier;
-    badge.textContent = tier === 'tier_1' ? 'Tier 1 selected' : tier === 'tier_2' ? 'Tier 2 selected' : 'Not selected';
-    badge.className = 'wiz-item-badge ' + (tier ? 'wiz-item-badge--ok' : 'wiz-item-badge--none');
+    _axisAPanel.setStatus(tier === 'tier_1' ? 'Tier 1' : tier === 'tier_2' ? 'Tier 2' : 'Not selected', tier ? 'done' : 'todo');
   }
 
   function _buildCollapsedQuestion(answerKey, questionText, subItems) {
@@ -912,27 +883,23 @@
 
   function _renderResults(container, record) {
     container.innerHTML = '';
-    container.style.cssText = 'margin-top:28px;padding-top:24px;border-top:2px solid var(--color-border)';
-    container.appendChild(_el('h3', '', { style: 'font-size:16px;font-weight:600;color:var(--color-text-primary);margin:0 0 14px', textContent: 'Classification Result' }));
-    // Render the exact "System Classification" table from the conformity report,
-    // so the assessor sees precisely what will be submitted to the regulator.
+    container.style.cssText = '';
+    // Result panel — a green-bordered results_div showing the exact "System
+    // Classification" table from the conformity report.
+    const box = _el('div', 'wiz-save-summary');
+    box.appendChild(_el('div', 'wiz-save-summary-title', { textContent: 'Classification Result' }));
     const holder = _el('div', '');
-    container.appendChild(holder);
+    box.appendChild(holder);
     if (window.ReportSections) {
       window.ReportSections.frame('classification', WizUtils.loadRecord())
         .then(f => holder.appendChild(f))
         .catch(() => holder.appendChild(_el('p', '', { style: 'font-size:13px;color:var(--color-text-secondary)', textContent: 'Classification recorded. Open the report to view the full table.' })));
     }
-    _appendSaveRow(container, record);
-  }
-
-  function _appendSaveRow(container, record) {
-    // Step result is already in sessionStorage — instruct user to use the central Save Record button
-    const note = _el('div', '', {
-      style: 'margin-top:16px;padding:10px 14px;background:var(--success-50,rgba(52,199,120,0.10));border:1px solid var(--success-200,rgba(52,199,120,0.40));border-radius:6px;font-size:12px;color:var(--success-700,#8cebb0);'
-    });
-    note.innerHTML = '<strong>Classification saved to record.</strong> Use the <strong>Save Record</strong> button in the sidebar to download the full system record JSON.';
-    container.appendChild(note);
+    box.appendChild(_el('p', 'wiz-save-summary-note', {
+      style: 'margin-top:12px',
+      innerHTML: '<strong>Classification saved to record.</strong> Use the <strong>Save Record</strong> button in the sidebar to download the full system record JSON.'
+    }));
+    container.appendChild(box);
   }
 
   // ── Download ──────────────────────────────────────────────────────────────────
