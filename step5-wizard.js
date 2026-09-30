@@ -1237,11 +1237,21 @@
     const push = (n, a) => { if (seen.has(n)) return; seen.add(n); baseline.push(`  ${_riskIdByName.get(n) || '?'} — ${n}: ${a}`); };
     Object.keys(_wizState.answers).forEach(n => push(n, _wizState.answers[n]));
 
+    // The closed set of valid risk keys (and each risk's valid HS requirement
+    // refs), so the AI reuses our exact RISK-IDs instead of inventing finer risks.
+    const cat = _riskCatalog();
+    const catalogLines = Object.keys(cat).map(id => {
+      const refs = (cat[id].refs || []).join(', ');
+      return `  ${id} — ${cat[id].name}${refs ? `   [valid requirement refs: ${refs}]` : ''}`;
+    });
+
     const lines = [];
     lines.push(
       'RE-ASSESSMENT REQUEST',
       '',
       'You previously produced a risk assessment for this AI system. The assessor has reviewed it and formally challenged the risks listed below.',
+      '',
+      'CRITICAL — FIXED RISK SET: This framework has a fixed catalogue of risks, listed under "VALID RISK KEYS" below. Every key in "risks", "reasoning" and "selected_requirements" MUST be one of those exact RISK-IDs. Do NOT invent, split, merge, rename or add risks, and do NOT return any key that is not in that list — such keys are discarded. Likewise, each risk\'s requirement refs must come from that risk\'s own "valid requirement refs".',
       '',
       'For EACH challenged risk:',
       '- Reconsider your answer in light of the assessor’s objection and the system context.',
@@ -1255,11 +1265,14 @@
       '',
       'Leave every non-challenged risk unchanged.',
       '',
-      'Return ONLY the complete risk_assessment JSON in the shape below, including EVERY risk. Do NOT omit challenged risks — represent an excluded risk as "no" with its new justification in "reasoning":',
+      'Return ONLY the complete risk_assessment JSON in the shape below, including EVERY risk from the catalogue. Do NOT omit challenged risks — represent an excluded risk as "no" with its new justification in "reasoning":',
       '',
       '```json',
-      '{ "risk_assessment": { "risks": { "RISK-XXX": "yes|partially|no" }, "reasoning": { "RISK-XXX": "…" }, "selected_requirements": { "RISK-XXX": ["[HS.ref]"] } } }',
+      '{ "risk_assessment": { "risks": { "RISK-001": "yes|partially|no" }, "reasoning": { "RISK-001": "…" }, "selected_requirements": { "RISK-001": ["[HS.ref]"] } } }',
       '```',
+      '',
+      '=== VALID RISK KEYS (use these EXACT ids — the ONLY risks that exist) ===',
+      ...catalogLines,
       '',
       '=== CURRENT ASSESSMENT (baseline — keep these unless challenged) ===',
       ...baseline,
@@ -1451,7 +1464,14 @@
     // to all of the risk's requirements so nothing is silently dropped.
     Object.assign(_wizState.answers, legalAnswers);
     Object.assign(_wizState.rationales, res.rationales);
-    Object.entries(reqSel).forEach(([n, sel]) => { _wizState.reqs[n] = Object.assign({}, _wizState.reqs[n] || {}, sel); });
+    // Requirement selection is the assessor's to own: adopt the AI's picks only
+    // for a risk the assessor has not yet chosen requirements for. For a risk
+    // already refined (e.g. deselected to Partial), keep the assessor's selection
+    // through the re-assessment — the AI must not silently re-tick what they cut.
+    Object.entries(reqSel).forEach(([n, sel]) => {
+      const existing = _wizState.reqs[n];
+      if (!existing || Object.keys(existing).length === 0) _wizState.reqs[n] = Object.assign({}, sel);
+    });
     Object.entries(legalAnswers).forEach(([n, a]) => {
       if ((a === 'yes' || a === 'partially') && (!_wizState.reqs[n] || Object.keys(_wizState.reqs[n]).length === 0)) {
         const rid = _riskIdByName.get(n);
