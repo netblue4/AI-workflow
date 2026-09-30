@@ -303,7 +303,8 @@ window.WizUtils = (function () {
   // Full-width header shared by every step. Reads its content from the step's
   // workflow.json entry. Layout: phase eyebrow, "number — title", owners,
   // Summary (deliverables-style box), Deliverables, Gates and Notes.
-  function buildStepHeader(step, colorKey, phaseTitle) {
+  function buildStepHeader(step, colorKey, phaseTitle, opts) {
+    const hideDetails = !!(opts && opts.hideDetails);
     const icons = (typeof ICONS !== 'undefined') ? ICONS : (typeof window !== 'undefined' && window.ICONS) || {};
     const sec = el('div', 'step-title-section');
 
@@ -351,8 +352,9 @@ window.WizUtils = (function () {
       });
     }
 
-    // Only add the toggle when there is something to reveal.
-    if (body.childElementCount > 1 || (meta.childElementCount > 0)) {
+    // Only add the toggle when there is something to reveal — and only when the
+    // step hasn't opted out of the collapsible step-details block entirely.
+    if (!hideDetails && (body.childElementCount > 1 || (meta.childElementCount > 0))) {
       const toggle = el('button', 'step-header-toggle', { type: 'button' });
       toggle.setAttribute('aria-expanded', 'false');
       const label   = el('span', 'step-header-toggle-label', { textContent: 'Show step details' });
@@ -490,8 +492,9 @@ window.WizUtils = (function () {
 .wiz-save-block{margin:24px 0 0;border-top:1px solid var(--color-border);padding-top:16px}
 .wiz-save-row{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .wiz-save-btn{font-size:13px}
-.wiz-save-summary{margin-top:14px;border:1px solid rgba(52,199,120,0.4);background:rgba(52,199,120,0.08);border-radius:8px;padding:14px 16px}
-.wiz-save-summary-title{font-size:13px;font-weight:700;color:#8cebb0;margin-bottom:10px}
+/* Result panel — shaped like a question/task div but with a green border and no green fill */
+.wiz-save-summary{margin-top:14px;border:1px solid rgba(52,199,120,0.55);background:var(--color-surface,#1c1810);border-radius:10px;padding:16px 18px}
+.wiz-save-summary-title{font-size:14.5px;font-weight:700;color:#8cebb0;margin-bottom:12px}
 .wiz-save-summary-stats{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px}
 .wiz-save-stat{display:flex;flex-direction:column;gap:2px}
 .wiz-save-stat-num{font-size:20px;font-weight:700;color:var(--color-text-primary)}
@@ -592,10 +595,28 @@ window.WizUtils = (function () {
     const panel = el('div', 'wiz-panel');
     if (opts.id) panel.id = opts.id;
 
+    // Optional leading checkbox — used by the risk panels in Steps 5–7 to
+    // select/deselect a risk. Rendered as a real input outside the header button
+    // so toggling it never expands/collapses the panel.
+    const useCheck = opts.check && typeof opts.check === 'object';
+    let checkEl = null;
+    let headRow = null;
+    if (useCheck) {
+      headRow = el('div', 'wiz-panel-headrow');
+      checkEl = el('input', 'wiz-panel-check', { type: 'checkbox' });
+      checkEl.checked = !!opts.check.checked;
+      if (opts.check.disabled) checkEl.disabled = true;
+      if (opts.check.title) checkEl.title = opts.check.title;
+      checkEl.addEventListener('click', e => e.stopPropagation());
+      checkEl.addEventListener('change', () => { if (opts.check.onChange) opts.check.onChange(checkEl.checked); });
+      headRow.appendChild(checkEl);
+    }
+
     const header = el('button', 'wiz-panel-head', { type: 'button' });
     const hLeft = el('div', 'wiz-panel-head-left');
     if (opts.num != null) hLeft.appendChild(el('span', 'wiz-panel-num', { textContent: String(opts.num) }));
     hLeft.appendChild(el('span', 'wiz-panel-title', { textContent: opts.title || '' }));
+    if (opts.ref) hLeft.appendChild(el('span', 'wiz-panel-ref', { textContent: opts.ref }));
     const hRight = el('div', 'wiz-panel-head-right');
     const statusEl = el('span', 'wiz-panel-status');
     const chev = el('span', 'wiz-panel-chev');
@@ -609,7 +630,8 @@ window.WizUtils = (function () {
     if (opts.body) content.appendChild(opts.body);
     body.appendChild(content);
 
-    panel.append(header, body);
+    if (useCheck) { headRow.appendChild(header); panel.append(headRow, body); }
+    else panel.append(header, body);
 
     function setOpen(open) {
       body.style.display = open ? '' : 'none';
@@ -625,7 +647,51 @@ window.WizUtils = (function () {
     }
     setStatus(opts.status, opts.statusKind);
 
-    return { el: panel, body: content, header, setStatus, open: () => setOpen(true), close: () => setOpen(false) };
+    return { el: panel, body: content, header, check: checkEl, setStatus, open: () => setOpen(true), close: () => setOpen(false) };
+  }
+
+  // ---- StepGroup: the "question/task group header" --------------------
+  // A collapsible section that GROUPS several StepDIV panels under one heading
+  // (e.g. Step 5's Required / Recommended / Excluded, Step 3's Axis A / Axis B).
+  // Visually distinct from the gold panels it contains: a quiet uppercase header
+  // bar with a status chip, collapsed by default.
+  // opts: { title, description?, status?, statusKind?, open?, body?, id? }
+  // Returns { el, body, header, setStatus, open(), close() }.
+  function buildStepGroup(opts) {
+    opts = opts || {};
+    const grp = el('div', 'wiz-group');
+    if (opts.id) grp.id = opts.id;
+
+    const header = el('button', 'wiz-group-head', { type: 'button' });
+    const hLeft = el('div', 'wiz-group-head-left');
+    hLeft.appendChild(el('span', 'wiz-group-title', { textContent: opts.title || '' }));
+    const hRight = el('div', 'wiz-group-head-right');
+    const statusEl = el('span', 'wiz-group-status');
+    const chev = el('span', 'wiz-group-chev');
+    chev.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    hRight.append(statusEl, chev);
+    header.append(hLeft, hRight);
+
+    const bodyWrap = el('div', 'wiz-group-body');
+    if (opts.description) bodyWrap.appendChild(el('p', 'wiz-group-desc', { textContent: opts.description }));
+    const content = el('div', 'wiz-group-content');
+    if (opts.body) content.appendChild(opts.body);
+    bodyWrap.appendChild(content);
+
+    grp.append(header, bodyWrap);
+
+    function setOpen(open) { bodyWrap.style.display = open ? '' : 'none'; grp.classList.toggle('is-open', open); }
+    setOpen(!!opts.open);
+    header.addEventListener('click', () => setOpen(bodyWrap.style.display === 'none'));
+
+    function setStatus(text, kind) {
+      statusEl.textContent = text || '';
+      statusEl.className = 'wiz-group-status' + (kind ? ' wiz-group-status--' + kind : '');
+      statusEl.style.display = text ? '' : 'none';
+    }
+    setStatus(opts.status, opts.statusKind);
+
+    return { el: grp, body: content, header, setStatus, open: () => setOpen(true), close: () => setOpen(false) };
   }
 
   injectStyles('wiz-panel-styles', `
@@ -637,6 +703,7 @@ window.WizUtils = (function () {
 .wiz-panel-head-left{display:flex;align-items:center;gap:11px;min-width:0}
 .wiz-panel-num{width:24px;height:24px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--font-mono);background:rgba(212,184,96,0.16);color:#ecd489}
 .wiz-panel-title{font-size:14.5px;font-weight:700;color:var(--color-text-primary);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.wiz-panel-ref{font-size:11px;color:var(--color-text-tertiary);font-style:italic;white-space:nowrap;flex-shrink:0}
 .wiz-panel-head-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .wiz-panel-status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:10px;white-space:nowrap}
 .wiz-panel-status--done{background:rgba(52,199,120,0.16);color:#8cebb0}
@@ -654,7 +721,30 @@ window.WizUtils = (function () {
 .wiz-panel-lead{font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);margin:0 0 14px;max-width:78ch}
 /* "⚙ Step N" chip naming the workflow step that meets a requirement */
 .wiz-wf-step{font-size:10.5px;font-weight:600;background:rgba(212,184,96,0.16);color:#ecd489;border-radius:5px;padding:2px 8px;white-space:nowrap;margin-left:auto}
+/* Leading select checkbox on a risk panel (Steps 5–7) */
+.wiz-panel-headrow{display:flex;align-items:stretch}
+.wiz-panel-headrow>.wiz-panel-head{flex:1;min-width:0}
+.wiz-panel-check{flex-shrink:0;align-self:center;width:16px;height:16px;margin:0 0 0 16px;cursor:pointer;accent-color:var(--teal-600,#8ce3c6)}
+.wiz-panel-check:disabled{cursor:default;opacity:.8}
+/* StepGroup — the question/task group header that holds StepDIV panels */
+.wiz-group{border:1px solid var(--color-border);border-radius:10px;margin-bottom:14px;background:var(--color-bg);overflow:hidden}
+.wiz-group.is-open{border-color:var(--color-border-mid,rgba(240,232,208,0.30))}
+.wiz-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:13px 18px;background:var(--color-bg-subtle,#211d15);border:none;cursor:pointer;text-align:left;font-family:inherit;color:inherit}
+.wiz-group-head:hover{background:var(--color-bg-hover,#262219)}
+.wiz-group-head-left{display:flex;align-items:center;gap:10px;min-width:0}
+.wiz-group-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-secondary)}
+.wiz-group-head-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.wiz-group-status{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;background:var(--color-surface,#1c1810);color:var(--color-text-secondary);border:1px solid var(--color-border)}
+.wiz-group-status--progress{background:rgba(212,184,96,0.16);color:#ecd489;border-color:transparent}
+.wiz-group-status--done{background:rgba(52,199,120,0.16);color:#8cebb0;border-color:transparent}
+.wiz-group-status--info{background:rgba(80,150,225,0.16);color:#a4ccf6;border-color:transparent}
+.wiz-group-status--muted{background:var(--color-bg-subtle,#211d15);color:var(--color-text-tertiary)}
+.wiz-group-chev{display:flex;color:var(--color-text-tertiary);transition:transform .2s}
+.wiz-group.is-open .wiz-group-chev{transform:rotate(180deg)}
+.wiz-group-body{padding:14px 16px 4px;border-top:1px solid var(--color-border)}
+.wiz-group-desc{font-size:12px;line-height:1.6;color:var(--color-text-secondary);margin:0 0 12px;max-width:78ch}
+.wiz-group-content>.wiz-panel:last-child{margin-bottom:8px}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
+  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildStepGroup, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
 })();

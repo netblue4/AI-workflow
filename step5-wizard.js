@@ -37,6 +37,13 @@
     return p.el;
   }
 
+  // Shared "question/task group header" whose open state survives a re-render.
+  function _makeGroup(key, title, description, status, statusKind, body) {
+    const g = WizUtils.buildStepGroup({ title, description, status, statusKind, body, open: _uiOpen[key] === true });
+    g.header.addEventListener('click', () => { _uiOpen[key] = g.el.classList.contains('is-open'); });
+    return g.el;
+  }
+
   const _state = {
     legal_risks: {}, // riskName → boolean (EU AI Act risks from guidance)
     group_standard_risks: {}, // pk_Risk_ID → boolean (Internal Standard risks, assessor-marked)
@@ -94,7 +101,7 @@
     _injectStyles();
 
     const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
+    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle, { hideDetails: true }));
     // Wave 1: the five source tabs are consolidated into one risk list (below).
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
@@ -531,29 +538,32 @@
   // (Legal, NIST, Internal Standards, and DPIA privacy risks) with a source
   // chip on each — no tabs.
   function _buildConsolidatedCard() {
-    const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('p', 'wiz-panel-lead', {
-      textContent: 'Risks are split by priority. The Required set is derived from your Step 3 classification and Step 4 DPIA — these must be treated for compliance. Everything else is recommended: treat what matters for your system.'
-    }));
+    const wrap = _el('div', '');
 
-    // ── AI support — one panel for the ask / load / challenge sections ──
+    // ── AI support — lifted out of the parent card and placed on top ──
     const aiBody = _el('div', '');
     aiBody.appendChild(_buildAskAiCollapsible());
     aiBody.appendChild(_buildLoadRaSection());
     aiBody.appendChild(_buildChallengeCompileSection());
-    card.appendChild(_makePanel('ai', 'AI support',
+    wrap.appendChild(_makePanel('ai', 'AI support',
       'Optional. Draft the risk assessment with your AI tool, load its reply, or compile a challenge prompt to justify what you exclude.',
       'Optional', 'muted', aiBody));
 
-    // ── Already Met By Workflow ──
+    // ── Parent "screen content" card ──
+    const card = _el('div', 'step-detail-card');
+    card.appendChild(_el('p', 'wiz-panel-lead', {
+      textContent: 'Risks are split by priority. The Required set is derived from your Step 3 classification and Step 4 DPIA — these must be treated for compliance. Everything else is recommended: treat what matters for your system. Use the checkbox on each risk to include or exclude it.'
+    }));
+
+    // ── Already Met By Workflow (stays a gold panel — no user action needed) ──
     const wfPanel = _buildWorkflowPanel();
     if (wfPanel) card.appendChild(wfPanel);
 
     const { mandatory, recommended, excluded, mandN, recN, exclN, step3Done } = _buildConsolidatedList();
 
-    // ── Required (mandatory) ──
+    // ── Required (mandatory) — group header ──
     if (mandN) {
-      card.appendChild(_makePanel('req', 'Required for compliance',
+      card.appendChild(_makeGroup('req', 'Required for compliance',
         'Mapped to the EU AI Act articles your Step 3 classification found apply, plus your DPIA privacy risks. These must be treated.',
         String(mandN), 'progress', mandatory));
     } else if (step3Done) {
@@ -565,35 +575,27 @@
       card.appendChild(note);
     }
 
-    // ── Recommended (optional) ──
-    const recBody = _el('div', '');
-    if (recN) recBody.appendChild(_buildRecBulkBar());
-    recBody.appendChild(recommended);
-    card.appendChild(_makePanel('rec', 'Recommended / technical (optional)',
-      'Good-practice and NIST-surfaced risks beyond the mandatory set. Treat the ones that matter — or tick and bulk-dismiss the rest.',
-      String(recN), recN ? 'info' : 'muted', recBody));
+    // ── Recommended (optional) — group header ──
+    card.appendChild(_makeGroup('rec', 'Recommended / technical (optional)',
+      'Good-practice and NIST-surfaced risks beyond the mandatory set. Treat the ones that matter — untick any that do not apply.',
+      String(recN), recN ? 'info' : 'muted', recommended));
 
     // ── Excluded — risks marked Not applicable; needs explicit oversight ──
     if (exclN) {
       const exBody = _el('div', '');
       exBody.appendChild(_buildExclusionApprovalBar(exclN));
       exBody.appendChild(excluded);
-      card.appendChild(_makePanel('excl', 'Excluded — needs review',
+      card.appendChild(_makeGroup('excl', 'Excluded — needs review',
         'Risks marked Not applicable. Review each exclusion and its justification, then approve — this is the human-oversight record for what was left out.',
         String(exclN), _exclusionsApproved ? 'done' : 'progress', exBody));
     }
 
-    // Bottom actions
-    const actRow = _el('div', 'wiz-action-row');
-    const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear legal answers' });
-    clearBtn.addEventListener('click', () => { _wizState.answers = {}; _wizState.rationales = {}; _autosave(); _renderConsolidated(); });
-    actRow.append(clearBtn);
-    card.appendChild(actRow);
-
+    // ── Actions (after the Excluded group) + Risk Result ──
     // Save → shows the exact "Risk Identification" section from the conformity
     // report as a "Risk Result" summary (what will be submitted).
     const saveBlock = WizUtils.buildSaveBlock({
-      label: 'Save',
+      label: 'Approve & Save',
+      secondary: { label: '↺ Clear all answers', onClick: () => { _wizState.answers = {}; _wizState.rationales = {}; _autosave(); _renderConsolidated(); } },
       onSave: () => {
         _writeRisksRecord();
         if (typeof _ucShowStatus === 'function') _ucShowStatus('Risk identification saved ✓');
@@ -603,14 +605,8 @@
     });
     card.appendChild(saveBlock.el);
 
-    // Classification + DPIA inputs this list is derived from.
-    const inBody = _el('div', '');
-    inBody.appendChild(_buildStep3Card());
-    inBody.appendChild(_buildDpiaCard());
-    card.appendChild(_makePanel('inputs', 'Classification & DPIA inputs',
-      'The Step 3 classification and Step 4 DPIA this risk list is derived from.',
-      '', '', inBody));
-    return card;
+    wrap.appendChild(card);
+    return wrap;
   }
 
   // Priority group header. cls 'req' | 'rec'; collapsible adds a chevron.
@@ -790,32 +786,23 @@
     let mandN = 0, recN = 0, exclN = 0;
     const step3Done = !!_step3Data?.axis_b?.applicable_articles?.length;
 
-    // Legal / Regulatory. Pre-select required (article-triggered) risks BEFORE
-    // building, so their badge shows "Yes" rather than "Unanswered".
+    // Pre-select required (article-triggered) risks BEFORE building, so their
+    // checkbox/badge show "Applies" rather than "Unanswered".
     const wqs = _legalGuidance?.wizard_questions || [];
     wqs.forEach(wq => {
       if (_isArticleApplicable(wq.risk_name) === true && _wizState.answers[wq.risk_name] === undefined) {
         _wizState.answers[wq.risk_name] = 'yes';
       }
     });
-    const legalSecs = [...(_buildRiskList(wqs).children)];
-    legalSecs.forEach((sec, i) => {
-      const name = wqs[i]?.risk_name;
+    wqs.forEach(wq => {
+      const name = wq.risk_name;
       // Fully-workflow risks are claimed in the "Already Met By Workflow" panel.
       if (_isFullyWorkflowRisk(_riskIdByName.get(name))) return;
-      _addSourceChip(sec, 'Legal', 'legal');
       const artApplicable = _isArticleApplicable(name) === true;
-      // Excluded (marked Not applicable) → its own oversight group, regardless of tier.
-      if (_wizState.answers[name] === 'no') {
-        if (artApplicable) _addRequiredBadge(sec); // flag: excluding a mandated risk
-        excluded.appendChild(sec); exclN++;
-      } else if (artApplicable) {
-        _addRequiredBadge(sec);
-        mandatory.appendChild(sec); mandN++;
-      } else {
-        _addRecCheckbox(sec, 'legal::' + name);
-        recommended.appendChild(sec); recN++;
-      }
+      const panel = _buildRiskPanel(wq, artApplicable);
+      if (_wizState.answers[name] === 'no') { excluded.appendChild(panel); exclN++; }
+      else if (artApplicable) { mandatory.appendChild(panel); mandN++; }
+      else { recommended.appendChild(panel); recN++; }
     });
 
     // DPIA privacy risks → required (identified facts from Step 4)
@@ -829,6 +816,169 @@
     });
 
     return { mandatory, recommended, excluded, mandN, recN, exclN, step3Done };
+  }
+
+  // One risk as a gold "question/task" panel: leading select checkbox, risk
+  // number, name, article ref, and an applicability status chip. The body is the
+  // existing two-step risk assessment (Step A applies? → Step B requirements).
+  // `required` flags an article-mandated risk (surfaced in its status chip).
+  function _buildRiskPanel(wq, required) {
+    const name      = wq.risk_name;
+    const riskG     = _legalGuidance.risks?.[name] || {};
+    const article   = _getArticleForRisk(name);
+    const riskId    = _riskIdByName.get(name) || wq.risk_id || '';
+    const reqGroups = _riskReqGroups(riskId);
+    const allRefs   = _riskAllRefs(riskId).filter(r => !_isWfRef(r)); // workflow refs live in their own panel
+
+    if (!_wizState.reqs[name]) _wizState.reqs[name] = {};
+    const reqState = _wizState.reqs[name];
+    if (!_wizState.reqReasons[name]) _wizState.reqReasons[name] = {};
+    const reqReasons = _wizState.reqReasons[name];
+
+    const BADGE = { yes: '✓ Applies', partially: '~ Partial', no: '✗ Not applicable' };
+    const KIND  = { yes: 'done', partially: 'progress', no: 'muted' };
+    const applies = a => a === 'yes' || a === 'partially';
+    const defaultSelectAll = () => { if (Object.keys(reqState).length === 0) allRefs.forEach(ref => { reqState[ref] = true; }); };
+    const answer0 = _wizState.answers[name] || null;
+    if (applies(answer0)) defaultSelectAll();
+
+    let _panel = null;
+    const body = _el('div', 's5-risk-body');
+
+    // Risk statement
+    if (riskG.risk_description) {
+      const d = _el('p', '', { style: 'margin:0;font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)' });
+      d.textContent = riskG.risk_description;
+      body.appendChild(d);
+    }
+
+    // ── STEP A — does this risk apply? ──
+    body.appendChild(_el('p', 's5-applies-label', { textContent: 'Step A — Does this risk apply?' }));
+    if (riskG.category_question) {
+      const q = _el('div', 's5-qblock'); q.textContent = riskG.category_question;
+      body.appendChild(q);
+    }
+
+    // ── STEP B — requirements to implement (revealed on Yes/Partial) ──
+    const stepB = _el('div', 's5-stepb');
+    const selCount = () => allRefs.filter(r => reqState[r]).length;
+    const updateCount = () => {
+      const l = stepB.querySelector('.s5-stepb-count');
+      if (l) l.textContent = `Requirements to implement (${selCount()}/${allRefs.length})`;
+    };
+    const buildStepB = () => {
+      stepB.innerHTML = '';
+      if (!applies(_wizState.answers[name])) { stepB.style.display = 'none'; return; }
+      stepB.style.display = '';
+      const hdr = _el('div', 's5-stepb-hdr');
+      hdr.appendChild(_el('p', 's5-applies-label s5-stepb-count', { textContent: `Requirements to implement (${selCount()}/${allRefs.length})` }));
+      const tools = _el('div', 's5-stepb-tools');
+      const selAll = _el('button', 's5-recbulk-link', { type: 'button', textContent: 'Select all' });
+      selAll.addEventListener('click', () => { allRefs.forEach(r => reqState[r] = true); buildStepB(); _autosave(); });
+      const selNone = _el('button', 's5-recbulk-link', { type: 'button', textContent: 'Clear' });
+      selNone.addEventListener('click', () => { allRefs.forEach(r => reqState[r] = false); buildStepB(); _autosave(); });
+      tools.append(selAll, _el('span', '', { textContent: '·', style: 'color:var(--color-text-tertiary)' }), selNone);
+      hdr.appendChild(tools);
+      stepB.appendChild(hdr);
+      if (!reqGroups.length) { stepB.appendChild(_el('p', 's5-area-hint', { textContent: 'No requirements mapped to this risk.' })); return; }
+      reqGroups.forEach(group => {
+        stepB.appendChild(_el('p', 's5-sub-label', { textContent: group.subcategory }));
+        group.refs.forEach(rf => {
+          const w = _el('div', 's5-req-wrap');
+          const row = _el('label', 's5-req-row');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.className = 's5-req-cb';
+          cb.checked = !!reqState[rf.ref];
+          const main = _el('div', 's5-req-main');
+          const h = _el('div', 's5-req-hdr');
+          h.appendChild(_el('span', 's5-ref-chip', { textContent: rf.ref }));
+          h.appendChild(_el('span', 's5-req-name', { textContent: rf.name }));
+          main.appendChild(h);
+          if (rf.text) main.appendChild(_el('div', 's5-req-desc', { textContent: rf.text }));
+          row.append(cb, main);
+          w.appendChild(row);
+
+          const reasonWrap = _el('div', 's5-req-reason');
+          reasonWrap.appendChild(_el('label', 's5-req-reason-lbl', { textContent: 'Why is this requirement not applicable to your system? (required)' }));
+          const rta = document.createElement('textarea');
+          rta.className = 's5-req-reason-ta'; rta.rows = 2;
+          rta.placeholder = 'e.g. the system generates no synthetic media, so deep-fake provenance does not apply…';
+          rta.value = reqReasons[rf.ref] || '';
+          const syncReason = () => {
+            const excludedR = !cb.checked;
+            reasonWrap.style.display = excludedR ? '' : 'none';
+            w.classList.toggle('needs-reason', excludedR && !(reqReasons[rf.ref] || '').trim());
+          };
+          rta.addEventListener('input', () => { reqReasons[rf.ref] = rta.value; syncReason(); _autosaveSoon(); });
+          reasonWrap.appendChild(rta);
+          w.appendChild(reasonWrap);
+
+          cb.addEventListener('change', () => {
+            reqState[rf.ref] = cb.checked;
+            if (cb.checked) delete reqReasons[rf.ref];
+            syncReason();
+            updateCount();
+            _autosaveSoon();
+            if (!cb.checked) rta.focus();
+          });
+          syncReason();
+          stepB.appendChild(w);
+        });
+      });
+    };
+    buildStepB();
+
+    const btnRow = _el('div', 's5-answer-row');
+    [['yes', '✓ Applies'], ['partially', '~ Partial'], ['no', '✗ Not applicable']].forEach(([val, lbl]) => {
+      const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer0 === val ? ' s5-answer-btn--active' : ''}`);
+      btn.textContent = lbl;
+      btn.addEventListener('click', () => {
+        const prev = _wizState.answers[name];
+        _wizState.answers[name] = val;
+        if (applies(val)) defaultSelectAll();
+        _autosave();
+        // Moving a risk into/out of "Not applicable" changes its group → re-render.
+        if (val === 'no' || prev === 'no') { _renderConsolidated(); return; }
+        btnRow.querySelectorAll('.s5-answer-btn').forEach(b => b.classList.remove('s5-answer-btn--active'));
+        btn.classList.add('s5-answer-btn--active');
+        if (_panel) { _panel.setStatus(BADGE[val], KIND[val]); if (_panel.check) _panel.check.checked = applies(val); }
+        buildStepB();
+      });
+      btnRow.appendChild(btn);
+    });
+    body.appendChild(btnRow);
+    body.appendChild(stepB);
+
+    const ta = document.createElement('textarea');
+    ta.className   = 's5-rationale-ta';
+    ta.placeholder = 'Rationale…';
+    ta.rows        = 2;
+    ta.value       = _wizState.rationales[name] || '';
+    ta.addEventListener('input', () => { _wizState.rationales[name] = ta.value; _autosaveSoon(); });
+    body.appendChild(ta);
+    body.appendChild(_buildChallengeUI(name, () => _wizState.answers[name]));
+
+    const artId = article?.pk_AI_Article_ID || null;
+    _panel = WizUtils.buildStepPanel({
+      num: riskId,
+      title: name,
+      ref: artId ? WizUtils.artLabel(artId) : '',
+      status: answer0 ? BADGE[answer0] : 'Unanswered',
+      statusKind: answer0 ? KIND[answer0] : 'todo',
+      check: {
+        checked: applies(answer0),
+        title: required ? 'Required by your classification — untick to exclude (needs a reason)' : 'Include this risk',
+        onChange: (checked) => {
+          const cur = _wizState.answers[name];
+          _wizState.answers[name] = checked ? (applies(cur) ? cur : 'yes') : 'no';
+          if (applies(_wizState.answers[name])) defaultSelectAll();
+          _autosave();
+          _renderConsolidated();
+        }
+      },
+      body
+    });
+    return _panel.el;
   }
 
   function _buildInputsCollapsible() {

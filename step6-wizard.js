@@ -38,7 +38,7 @@
     _injectStyles();
 
     const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle));
+    shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle, { hideDetails: true }));
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
     container.innerHTML = '';
@@ -150,7 +150,7 @@
     const wfPanel = _buildWorkflowPanelRO();
     if (wfPanel) card.appendChild(wfPanel);
 
-    // ── Risks & requirements — one gold panel (workflow-met risks live above) ──
+    // ── Risks & requirements — group header holding one task panel per risk ──
     const riskBody = _el('div', '');
     riskBody.appendChild(_buildValidationBanner());
     const normalRisks = _riskData.filter(r => !_riskIsFullyWf(r));
@@ -158,26 +158,22 @@
     const legalRisks = normalRisks.filter(r => r.risk_type === 'legal');
     if (legalRisks.length > 0) {
       riskBody.appendChild(_sectionLabel(`Legal / EU AI Act risks (${legalRisks.length})`));
-      const ll = _el('div', 'wiz9-risk-list');
-      legalRisks.forEach((r, i) => ll.appendChild(_buildRiskAccordion(r, i)));
-      riskBody.appendChild(ll);
+      legalRisks.forEach((r, i) => riskBody.appendChild(_buildRiskAccordion(r, i)));
     }
     if (techRisks.length > 0) {
       riskBody.appendChild(_sectionLabel(`Technical risks (${techRisks.length})`));
-      const tl = _el('div', 'wiz9-risk-list');
-      techRisks.forEach((r, i) => tl.appendChild(_buildRiskAccordion(r, i)));
-      riskBody.appendChild(tl);
+      techRisks.forEach((r, i) => riskBody.appendChild(_buildRiskAccordion(r, i)));
     }
-    card.appendChild(WizUtils.buildStepPanel({
+    card.appendChild(WizUtils.buildStepGroup({
       title: 'Risks & requirements',
       description: 'The applicable risks and the harmonised-standard requirements selected in Step 5. Review each, then approve below.',
       status: String(normalRisks.length), statusKind: 'progress',
       body: riskBody
     }).el);
 
-    // ── DPIA — carried from Step 4 ──
+    // ── DPIA — carried from Step 4 (group header) ──
     const dpia = _buildDpiaReviewBlock();
-    if (dpia) card.appendChild(WizUtils.buildStepPanel({
+    if (dpia) card.appendChild(WizUtils.buildStepGroup({
       title: 'DPIA — privacy risks & security measures',
       description: 'Carried from your Step 4 DPIA. The privacy risks are treated by the security measures, which you evidence in Step 7. To change these, edit the DPIA in Step 4.',
       body: dpia
@@ -338,42 +334,8 @@
 
   // ---- Risk accordion (individual risk) -----------------------
   function _buildRiskAccordion(risk, idx) {
-    const sec = _el('div', 'wiz9-risk-sec');
-    sec.dataset.riskId = risk.risk_id;
-
-    const hdr = _el('div', 'wiz9-risk-hdr');
-
-    // Left: risk heading
-    const left = _el('div', 'wiz9-risk-hdr-left');
-
-    left.appendChild(_el('span', 'wiz-item-num', { textContent: risk.risk_id }));
-
-    const rName = _el('span', 'wiz-item-name');
-    rName.textContent = risk.display_name;
-    left.appendChild(rName);
-
-    if (risk.fk_AI_Article_ID) {
-      left.appendChild(_el('span', 'wiz-art-tag', { textContent: WizUtils.artLabel(risk.fk_AI_Article_ID) }));
-    }
-
-    hdr.appendChild(left);
-
-    // Right: selection count + chevron (read-only — editing happens in Step 5)
-    const right = _el('div', 'wiz9-risk-hdr-right');
-
-    const selBadge = _el('span', 'wiz-item-badge');
-    selBadge.id = `wiz9-rb-${_safeId(risk.risk_id)}`;
-    right.appendChild(selBadge);
-
-    const chevron = _el('span', 'wiz9-chevron');
-    chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chevron.style.transform = 'rotate(-90deg)';
-    right.appendChild(chevron);
-    hdr.appendChild(right);
-    sec.appendChild(hdr);
-
-    // Body (collapsed by default, first risk open)
-    const body = _el('div', 'wiz9-risk-body wiz9-collapsed');
+    // Body (built first so the panel can wrap it)
+    const body = _el('div', '');
 
     // Risk description
     if (risk.risk_description) {
@@ -437,31 +399,23 @@
       });
     }
 
-    sec.appendChild(body);
-
-    hdr.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('wiz9-collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
-    });
-
-    // Initial badge
-    _updateRiskBadge(sec, risk);
-    return sec;
-  }
-
-  function _updateRiskBadge(secEl, risk) {
-    // The HS requirement is the selectable unit — tally selected HS.
+    // Selection status (read-only — the requirement picks are made in Step 5).
     const refs  = _riskHsRefs(risk);
     const total = refs.length;
     const sel   = refs.filter(ref => _state.hsSelected[_hsKey(risk.risk_id, ref)]).length;
-    const badge = secEl.querySelector(`#wiz9-rb-${_safeId(risk.risk_id)}`);
-    if (!badge) return;
-    badge.textContent = total ? `${sel} / ${total}` : 'self-cert';
-    badge.className = (total === 0 || sel === total)
-      ? 'wiz-item-badge wiz-item-badge--ok'
-      : sel === 0
-        ? 'wiz-item-badge wiz-item-badge--none'
-        : 'wiz-item-badge wiz-item-badge--partial';
+    const statusTxt  = total ? `${sel} / ${total}` : 'self-cert';
+    const statusKind = (total === 0 || sel === total) ? 'done' : sel === 0 ? 'todo' : 'progress';
+
+    const panel = WizUtils.buildStepPanel({
+      num: risk.risk_id,
+      title: risk.display_name,
+      ref: risk.fk_AI_Article_ID ? WizUtils.artLabel(risk.fk_AI_Article_ID) : '',
+      status: statusTxt, statusKind,
+      check: { checked: true, disabled: true, title: 'Selected in Step 5 — change what applies there' },
+      body
+    });
+    panel.el.dataset.riskId = risk.risk_id;
+    return panel.el;
   }
 
   // ---- Save ---------------------------------------------------
@@ -471,7 +425,7 @@
     if (uncovered.length > 0) {
       _updateValidationBanner();
       const firstSec = _container.querySelector(
-        `.wiz9-risk-sec[data-risk-id="${CSS.escape(uncovered[0].risk_id)}"]`
+        `[data-risk-id="${CSS.escape(uncovered[0].risk_id)}"]`
       );
       if (firstSec) {
         firstSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

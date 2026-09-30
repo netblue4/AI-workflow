@@ -94,7 +94,7 @@
     _injectStyles();
 
     const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle));
+    shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle, { hideDetails: true }));
     // Consolidated: the three domain tabs are stacked into one scroll (below).
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
@@ -453,7 +453,7 @@
     if (wfPanel) pane.appendChild(wfPanel);
 
     const legal = _buildDomainRiskBody('legal', 'Legal / EU AI Act');
-    pane.appendChild(WizUtils.buildStepPanel({
+    pane.appendChild(WizUtils.buildStepGroup({
       title: 'Requirements & residual risk',
       description: 'For each risk, evidence its selected harmonised-standard requirements, then assess the residual risk.',
       status: legal.count ? String(legal.count) : '', statusKind: 'progress',
@@ -461,7 +461,7 @@
     }).el);
 
     const dpia = _buildDpiaResidualBody();
-    if (dpia) pane.appendChild(WizUtils.buildStepPanel({
+    if (dpia) pane.appendChild(WizUtils.buildStepGroup({
       title: 'DPIA — residual risk',
       description: 'The DPIA is assessed as a whole in Step 4. Confirm the security-measure controls are live; the residual rating is carried from the DPIA.',
       body: dpia
@@ -483,8 +483,11 @@
   function _setAllExpanded(open) {
     const pane = _container.querySelector('[data-pane="all"]');
     if (!pane) return;
-    pane.querySelectorAll('.s9-risk-acc-body').forEach(b => b.classList.toggle('s9-collapsed', !open));
-    pane.querySelectorAll('.s9-risk-acc-chevron').forEach(c => c.style.transform = open ? '' : 'rotate(-90deg)');
+    // Risk task panels live inside the group headers — open/close each one.
+    pane.querySelectorAll('.wiz-group .wiz-panel').forEach(p => {
+      const body = p.querySelector('.wiz-panel-body');
+      if (body) { body.style.display = open ? '' : 'none'; p.classList.toggle('is-open', open); }
+    });
   }
   function _buildStep7Toolbar() {
     const bar = _el('div', 's7-toolbar');
@@ -537,27 +540,13 @@
   }
 
   function _buildRiskBlock(riskId, riskName, domain) {
-    const sec = _el('div', 's9-risk-acc');
-
-    const hdr  = _el('div', 's9-risk-acc-hdr');
-    const left = _el('div', 's9-risk-acc-left');
-    left.appendChild(_el('span', 's9-risk-acc-id',   { textContent: riskId }));
-    left.appendChild(_el('span', 's9-risk-acc-name', { textContent: riskName }));
     const artId = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId)?.fk_AI_Article_ID;
-    if (artId) left.appendChild(_el('span', 'wiz-art-tag', { textContent: WizUtils.artLabel(artId) }));
-    hdr.appendChild(left);
     const rr = _residualState[riskId] || {};
-    const lvlPill = _el('span', 's9-risk-acc-id');
-    lvlPill.title = 'Residual level';
-    _applyResidualLevel(lvlPill, rr.likelihood, rr.impact);
-    hdr.appendChild(lvlPill);
-    const chevron = _el('span', 's9-risk-acc-chevron');
-    chevron.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chevron.style.transform = 'rotate(-90deg)';
-    hdr.appendChild(chevron);
-    sec.appendChild(hdr);
+    const level = (rr.likelihood && rr.impact) ? (_config.risk_matrix[rr.likelihood]?.[rr.impact] || '') : '';
+    const statusTxt  = level ? level.charAt(0).toUpperCase() + level.slice(1) : 'Not assessed';
+    const statusKind = level === 'low' ? 'done' : level ? 'progress' : 'todo';
 
-    const body = _el('div', 's9-risk-acc-body s9-collapsed');
+    const body = _el('div', '');
 
     if (domain === 'legal') {
       // Legal/Regulatory: verify each HS requirement — for Test-type requirements
@@ -600,12 +589,16 @@
       body.appendChild(_buildResidualPanel(riskId));
     }
 
-    sec.appendChild(body);
-    hdr.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('s9-collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
+    const panel = WizUtils.buildStepPanel({
+      num: riskId,
+      title: riskName,
+      ref: artId ? WizUtils.artLabel(artId) : '',
+      status: statusTxt, statusKind,
+      check: { checked: true, disabled: true, title: 'Selected in Steps 5 & 6 — change what applies there' },
+      body
     });
-    return sec;
+    panel.el.dataset.riskId = riskId;
+    return panel.el;
   }
 
   // Returns { el, count } — the body content for the Requirements panel.
@@ -657,19 +650,9 @@
       card.appendChild(_domainMuted('No privacy risks were recorded in the DPIA.'));
     }
 
-    // Single DPIA block
-    const sec  = _el('div', 's9-risk-acc');
-    const hdr  = _el('div', 's9-risk-acc-hdr');
-    const left = _el('div', 's9-risk-acc-left');
-    left.appendChild(_el('span', 's9-risk-acc-id',   { textContent: 'DPIA' }));
-    left.appendChild(_el('span', 's9-risk-acc-name', { textContent: 'Data Protection Impact Assessment' }));
-    hdr.appendChild(left);
-    const chevron = _el('span', 's9-risk-acc-chevron');
-    chevron.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    hdr.appendChild(chevron);
-    sec.appendChild(hdr);
-
-    const body = _el('div', 's9-risk-acc-body');
+    // Single DPIA block — a gold task panel (no select checkbox: not a
+    // per-risk selectable item; the residual rating is owned by Step 4).
+    const body = _el('div', '');
 
     body.appendChild(_sectionLabel('1 · Security measures'));
     const dpiaCtrls = _controls.filter(c => c.domain === 'dpia');
@@ -693,12 +676,12 @@
     body.appendChild(ratings);
     body.appendChild(_domainMuted('Residual rating is owned by the Step 4 DPIA. Update it there if it changes.'));
 
-    sec.appendChild(body);
-    hdr.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('s9-collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
-    });
-    card.appendChild(sec);
+    card.appendChild(WizUtils.buildStepPanel({
+      title: 'Data Protection Impact Assessment',
+      ref: 'GDPR Art.35',
+      status: step4.residual_risk_rating || '—', statusKind: 'info',
+      body
+    }).el);
 
     return card;
   }

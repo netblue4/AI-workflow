@@ -30,7 +30,7 @@
     _injectStyles();
 
     const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
+    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle, { hideDetails: true }));
     // AI prompt + load-output sections (moved here from Step 2) — draft the DPIA
     // with your AI tool, then load its reply to fill this screen.
     if (window.AiPromptSections) {
