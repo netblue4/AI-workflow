@@ -38,12 +38,13 @@
       await this.ready();
       _record = record || _readRecordFromStore();
       const s3 = _record?.['step-3'] || null;
+      const s4 = _record?.['step-4'] || null;
       const s8 = _record?.['step-5'] || null;
       const s9 = _record?.['step-6'] || null;
       const s10 = _record?.['step-7'] || null;
       let inner = '';
       if (kind === 'classification')    inner = _classificationSection(s3);
-      else if (kind === 'dpia')         inner = _dpiaRiskSubsection();
+      else if (kind === 'dpia')         inner = _dpiaSummarySection(s4);
       else if (kind === 'risk')         inner = _riskAssessmentSection(s8, s10);
       else if (kind === 'traceability') inner = _section3Content(s3, s9, s10);
       const f = document.createElement('iframe');
