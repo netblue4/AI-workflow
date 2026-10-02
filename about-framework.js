@@ -266,8 +266,7 @@
   ];
   const _REPORT_PART_B = [
     ['Change Board Sign-off Summary', "The decision-makers need the bottom line, not the whole file. This is a single-page dashboard, a red/amber/green rating, how much of the work is complete, and how much risk is left over, so they can see at a glance whether it's safe to approve."],
-    ['5. Outstanding Items', "Approval often comes with strings attached. This is a plain list of anything still unfinished, so the board knows exactly what must be fixed before, or as a condition of, saying yes."],
-    ['6. AI Change Board Decision', "The board's formal verdict: approve, reject, or approve with conditions. Approving it clears the system to go live and triggers the official legal declaration that it complies."],
+    ['5. AI Tool & Use Case Approval Form', "The organisation's own approval form, pre-filled from this assessment. It carries the requester, InfoSec Governance and AI Change Board sign-off — including the outstanding-items list and the board's verdict (approve, reject, or approve with conditions). Approving it clears the system to go live and triggers the official legal declaration that it complies."],
   ];
 
   function _reportSubhead(title, aud) {

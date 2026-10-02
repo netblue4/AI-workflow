@@ -193,10 +193,9 @@ ${_section(4, 'Conformity Assessment Conclusion', 'The assessor&rsquo;s conclusi
 
 ${_partDivider('End of Part&nbsp;A — EU AI Act Conformity Dossier. The assessment above is submitted to the AI Change Board; Part&nbsp;B records the Board&rsquo;s review and decision on it.')}
 
-${_partBanner('B', 'Internal Governance &amp; Sign-off', 'The internal governance layer: the Board&rsquo;s at-a-glance status, the outstanding-items list, and the deployment decision. This rests on Part&nbsp;A and records what the Board did with it.')}
+${_partBanner('B', 'Internal Governance &amp; Sign-off', 'The internal governance layer: the Board&rsquo;s at-a-glance status, then the AI Tool &amp; Use Case Approval Form — the organisation&rsquo;s own approval record, populated from this assessment and signed off by the requester, InfoSec Governance and the Change Board.')}
 ${_ragSummaryPage(s9, s10)}
-${_section(5, 'Outstanding Items', 'Anything not yet evidenced or resolved — the specific items that must close before, or as conditions of, approval. The Board&rsquo;s action list.', _outstandingItemsSection(s9, s10))}
-${_section(6, 'AI Change Board Decision', 'The Board&rsquo;s formal decision and sign-off recorded against this assessment. On approval this authorises deployment and triggers issuance of the formal EU Declaration of Conformity (Article&nbsp;47).', _boardDecisionSection())}
+${_section(5, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s internal approval form, pre-filled from this assessment. It carries the requester, InfoSec Governance and AI Change Board sign-off, and its approval status records the Board&rsquo;s decision — which on approval authorises deployment and triggers the formal EU Declaration of Conformity (Article&nbsp;47).', _approvalFormSection(s3, s8, s9, s10, meta, today))}
 </body>
 </html>`;
   }
@@ -1244,6 +1243,188 @@ ${rows.join('')}`;
   }
 
   // ---- Helpers ------------------------------------------------
+  // ---- Part B: Utmost AI Tool & Use Case Approval Form --------
+  // Renders the company AICB approval form, populated from the record where the
+  // workflow already holds the answer, and with blank printable fields for the
+  // identity / routing / sign-off items a person fills in before printing.
+  function _approvalFormSection(s3, s8, s9, s10, meta, today) {
+    const s2 = _record?.['step-2'] || {};
+    const s4 = _record?.['step-4'] || null;
+    const s1 = _record?.['step-1'] || null;
+    const s11 = _record?.['step-8'] || null; // AI Change Board decision attestation
+    const b  = s3?.axis_b || {};
+    const useCaseName = meta.use_case_name || '—';
+    const useCaseId   = meta.use_case_id || s3?.use_case_id || '';
+
+    const blank  = (h) => `<div class="af-blank" style="min-height:${h || 22}px"></div>`;
+    const line   = () => `<span class="af-line"></span>`;
+    const box    = (html) => html && String(html).trim() ? `<div class="af-val">${html}</div>` : blank(40);
+    const row    = (label, valueHtml) => `<tr><td class="af-label">${label}</td><td>${valueHtml}</td></tr>`;
+    const secBanner = (t) => `<div class="af-sec">${t}</div>`;
+    const subBanner = (t) => `<div class="af-sub">${t}</div>`;
+    const ul = (items) => items && items.length ? `<ul class="af-ul">${items.map(x => `<li>${_esc(x)}</li>`).join('')}</ul>` : '';
+
+    const OUT = { HIGH_RISK: 'High Risk', LIMITED_RISK: 'Limited Risk', MINIMAL_RISK: 'Minimal Risk', PROHIBITED: 'Potentially Prohibited', OUT_OF_SCOPE: 'Out of scope', NOT_HIGH_RISK: 'Not high-risk' };
+    const outcome = OUT[String(b.ai_act_outcome || '').toUpperCase()] || (b.ai_act_outcome || '—');
+    const role = b.organisation_role === 'provider' ? 'Provider / Developer'
+      : (b.organisation_role === 'deployer' && b.substantial_modification_applies) ? 'Hybrid (Provider &amp; Deployer)'
+      : b.organisation_role === 'deployer' ? 'Deployer' : '—';
+
+    const di = s4?.data_types_identified || {};
+    const personal = (di.standard_personal_data || []).filter(x => !/^none/i.test(x));
+    const special  = (di.special_category_data || []).filter(x => !/^none/i.test(x));
+    const subjects = (di.data_subjects || []).filter(x => !/^none/i.test(x));
+    const measures = di.security_measures || [];
+    const privacyRisks = di.privacy_risks || [];
+    const hasPersonal = personal.length || special.length || subjects.length;
+
+    // Selected risks bucketed into the form's risk categories.
+    const selRisks = (s8?.legal_assessment?.risks || []).filter(r => r.selected);
+    const ETH = new Set(['RISK-001', 'RISK-002', 'RISK-007']);
+    const bucketOf = id => ETH.has(String(id || '').toUpperCase()) ? 'ethical' : 'operational';
+    const names = bucket => selRisks.filter(r => bucketOf(r.risk_id) === bucket).map(r => r.risk_name);
+    const riskCell = items => items.length
+      ? `${ul(items)}<p class="af-note">Mitigations &amp; residual status: see Part&nbsp;A §2–§3 (risk register and requirement traceability).</p>`
+      : blank(40);
+
+    // Data used
+    const dataUsed = [];
+    if (personal.length) dataUsed.push('Personal data: ' + personal.join(', '));
+    if (special.length)  dataUsed.push('Special-category data: ' + special.join(', '));
+    if (subjects.length) dataUsed.push('Data subjects: ' + subjects.join(', '));
+    if (!hasPersonal && s4) dataUsed.push('No personal data processed (per DPIA).');
+
+    // AI interaction & content (derived signals)
+    const interact = [];
+    if (subjects.length) interact.push('Processes data about: ' + subjects.join(', '));
+    if (b.transparency_obligations_apply) interact.push('Generates or manipulates content subject to transparency obligations (Art. 50).');
+    if (di.automated_decision_making && !/^no/i.test(di.automated_decision_making)) interact.push('Automated decision-making: ' + di.automated_decision_making);
+
+    // DPIA evidence
+    let dpiaEvidence = '';
+    if (s4 && s4.completion_date) {
+      dpiaEvidence = `DPIA completed ${_esc(s4.completion_date)}. Inherent risk: ${_esc(s4.inherent_risk_rating || '—')}; residual: ${_esc(s4.residual_risk_rating || '—')}. DPO consulted: ${_esc(s4.dpo_consulted || '—')}.${useCaseId ? ` Reference: ${_esc(useCaseId)}.` : ''}`;
+    }
+
+    // Training
+    const training = (s1 && s1.attested)
+      ? `Confirmed — AI literacy / training prerequisite completed${s1.attested_by ? ' (' + _esc(s1.attested_by) + ')' : ''}. Describe training provided: ${blank(18)}`
+      : blank(40);
+
+    // Outstanding items → Section 3.1 "Additional Information Required"
+    let outstanding = [];
+    if (s9 && s10 && s10.hs_activation) {
+      const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
+      _reqStatsByRisk(s9, s10).forEach((st, riskId) => st.refs.forEach(r => {
+        if (r.status !== 'evidence_provided' && r.status !== 'waived') outstanding.push(`${WizUtils.fmtStdRef(r.ref)} — ${r.name} (${riskNameById.get(riskId) || riskId})`);
+      }));
+    }
+    const outstandingHtml = outstanding.length
+      ? `${ul(outstanding)}<p class="af-note">These must close before, or as conditions of, approval.</p>`
+      : (s9 && s10 ? '<p class="af-note">None — every selected requirement is evidenced or waived.</p>' : blank(30));
+
+    // Board decision prefill from the digital attestation, if recorded.
+    const decided = s11 && s11.attested;
+    const approverName = decided ? _esc(s11.attested_by || '') : '';
+    const approvalDate = decided ? _esc((s11.attested_at || '').slice(0, 10)) : '';
+
+    return `<style>
+/* Neutral translucent palette + inherited text so the form reads correctly in
+   both the dark in-app preview and the light printed page. */
+.af-form{border:1px solid rgba(150,140,110,0.5);margin-top:4px}
+.af-sec{background:#6b5d3e;color:#fff;font-weight:700;font-size:11pt;padding:7px 10px;margin:0}
+.af-sec .af-sub2{display:block;font-weight:400;font-size:8.5pt;margin-top:2px;color:#efe9d8}
+.af-sub{background:#5a5648;color:#fff;font-weight:700;font-size:9pt;padding:4px 10px}
+.af-table{width:100%;border-collapse:collapse}
+.af-table td{border:1px solid rgba(150,140,110,0.45);padding:6px 9px;vertical-align:top;font-size:9pt;color:inherit}
+.af-label{font-weight:700;width:30%;background:rgba(150,140,110,0.14)}
+.af-val{font-size:9pt;color:inherit}
+.af-blank{border:1px dashed rgba(150,140,110,0.65);border-radius:3px;background:rgba(150,140,110,0.06);min-height:22px}
+.af-line{display:inline-block;min-width:160px;border-bottom:1px solid rgba(150,140,110,0.7);height:14px}
+.af-ul{margin:0 0 0 16px;padding:0}.af-ul li{margin:1px 0}
+.af-note{margin:5px 0 0;font-size:8pt;opacity:.72;font-style:italic}
+.af-fill{font-weight:700}
+.af-grid3 td{width:33%}
+</style>
+<p class="section-desc" style="margin-bottom:8px">Populated from this assessment where the workflow holds the answer. Fields shown as empty boxes (identity, entity, authorisers and the Board decision) are completed by hand before printing.</p>
+
+<div class="af-form">
+  <div class="af-sec">Section 1 — To be completed by the Requester / Business Owner<span class="af-sub2">Form Completed By (name / job title / date):&nbsp; ${line()} &nbsp; ${line()} &nbsp; ${line()}</span></div>
+
+  <div class="af-sub">Section 1.1 — User Details</div>
+  <table class="af-table">
+    ${row('Department Name', blank(22))}
+    ${row('Full Name(s) of user(s)', blank(22))}
+    ${row('Full Names &amp; Emails (multiple users)', blank(30))}
+  </table>
+
+  <div class="af-sub">Section 1.2 — AI Tool Details</div>
+  <table class="af-table">
+    ${row('Title', box(_esc(useCaseName)))}
+    ${row('Full Description / intended purpose', box(_esc(s2.business_case || '')))}
+    ${row('Business Justification', box(_esc(s2.business_case || '')))}
+    ${row('Entity Scope (Group-wide / LUX / UPE / IOM / UW …)', blank(22))}
+    ${row('AI Interaction &amp; Content', interact.length ? box(ul(interact)) : blank(40))}
+  </table>
+
+  <div class="af-sub">Section 1.3 — Data Privacy &amp; Security</div>
+  <table class="af-table">
+    ${row('Data Used', dataUsed.length ? box(ul(dataUsed)) : blank(40))}
+    ${row('DPIA Evidence', box(dpiaEvidence))}
+    ${row('Technology Risk Assessment (TRA) Evidence', box('Residual-risk verification completed in the workflow (Part&nbsp;A §3). Attach / reference a formal TRA if required: ' + line()))}
+    ${row('Data Protection Measures', measures.length ? box(ul(measures)) : blank(40))}
+  </table>
+
+  <div class="af-sub">Section 1.4 — Additional Information</div>
+  <table class="af-table">
+    ${row('Documentation', s2.business_case_url ? box('Reference: ' + _esc(s2.business_case_url)) : blank(30))}
+  </table>
+
+  <div class="af-sub">Section 1.5 — Management Authorisation &amp; Acceptance</div>
+  <table class="af-table">
+    ${row('Manager providing initial approval (name)', blank(22))}
+  </table>
+
+  <div class="af-sub">Section 1.6 — Declaration</div>
+  <table class="af-table">
+    ${row('Requester name &amp; date of declaration', `${line()} &nbsp;&nbsp; ${line()}`)}
+  </table>
+
+  <div class="af-sub">Training</div>
+  <table class="af-table">
+    ${row('Training / awareness required before use', box(training))}
+  </table>
+
+  <div class="af-sec" style="margin-top:0">Section 2 — To be completed by InfoSec Governance<span class="af-sub2">Form Completed By (name / role / date):&nbsp; ${line()} &nbsp; ${line()} &nbsp; ${line()}</span></div>
+
+  <div class="af-sub">Section 2.1 — Compliance</div>
+  <table class="af-table">
+    ${row('Compliance with the AI Standard', box('Assessed against the EU AI Act and the ISO/IEC&nbsp;42001-aligned internal standard through this governance workflow (Steps&nbsp;1–7). Full conformity evidence is in Part&nbsp;A.'))}
+    ${row('Utmost Role', box(role))}
+  </table>
+
+  <div class="af-sub">Section 2.2 — Risk Assessment</div>
+  <table class="af-table">
+    ${row('EU AI Act Risk Category', box(`${_esc(outcome)}${s3?.rationale ? ' — ' + _esc(s3.rationale) : ''}`))}
+    ${row('Operational Risks (Cyber / IT / DevOps)', riskCell(names('operational')))}
+    ${row('Data Protection Risks', privacyRisks.length ? box(`${ul(privacyRisks)}<p class="af-note">Mitigations: the security measures above and the controls evidenced in Part&nbsp;A §3.</p>`) : blank(40))}
+    ${row('Ethical Risks (bias, fairness, explainability, reliance)', riskCell(names('ethical')))}
+    ${row('Legal Risks', box(`EU AI Act classification: ${_esc(outcome)}; transparency obligations: ${b.transparency_obligations_apply ? 'Yes (Art&nbsp;50)' : 'No'}. IP / copyright / contractual risks — review and complete: ${line()}`))}
+  </table>
+
+  <div class="af-sec" style="margin-top:0">Section 3 — To be completed by the Change Board (AICB)<span class="af-sub2">Form Completed By (name / role / date):&nbsp; ${line()} &nbsp; ${line()} &nbsp; ${line()}</span></div>
+
+  <div class="af-sub">Section 3.1 — Approval Status</div>
+  <table class="af-table">
+    ${row('Additional Information Required / Outstanding Items', outstandingHtml)}
+    ${row('Decision', `<div class="af-val">☐ Approved &nbsp;&nbsp; ☐ Approved subject to conditions &nbsp;&nbsp; ☐ Not approved &nbsp;&nbsp; ☐ Pending / review in progress</div>`)}
+    ${row('Reason (if not approved) / conditions', blank(30))}
+    ${row('Approver name', approverName ? box('<span class="af-fill">' + approverName + '</span>') : blank(22))}
+    ${row('Decision date', approvalDate ? box('<span class="af-fill">' + approvalDate + '</span>') : blank(22))}
+  </table>
+</div>`;
+  }
+
   function _section(num, title, desc, content) {
     return `<div class="section ${num === 1 ? '' : 'page-break'}">
       <div class="section-hdr">
