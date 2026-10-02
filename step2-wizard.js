@@ -26,6 +26,7 @@
 
   window.mountStep2Wizard = function (container, step, detail, colorKey, phaseTitle) {
     _detail = detail;
+    _questions = (detail && detail.use_case_builder && detail.use_case_builder.questions) || [];
     _injectStyles();
 
     _record = WizUtils.loadRecord();
@@ -109,64 +110,15 @@
   // The order and vocabulary deliberately mirror the Step 3 tier gates and Step
   // 4 DPIA fields so the downstream AI draft has the signal it needs.
 
-  const _EXCL = o => /^none\b|^no significant/i.test(o); // mutually-exclusive option
+  const _EXCL = o => /^none\b|^no significant/i.test(o); // mutually-exclusive option (by text)
+  const _isExcl = (q, o) => _EXCL(o) || !!(q && q.exclusive_option && o === q.exclusive_option);
 
-  const QUESTIONS = [
-    { id: 'tasks', group: 'Purpose', type: 'multi', other: true, otherPh: 'Other task…',
-      q: 'What does {sys} help people do?', help: 'Select all that apply.',
-      options: ['Summarise documents', 'Answer questions from documents', 'Draft text or content', 'Translate', 'Extract or structure data', 'Classify or categorise', 'Generate or review code', 'Analyse data or produce reports', 'Search and retrieve information', 'Support decisions'],
-      compose: (s, sys, o) => { const it = s.concat(o ? [o] : []); return it.length ? `${sys} is an AI system used to ${_listJoin(it.map(_lc1))}.` : `${sys} is an AI system.`; } },
-
-    { id: 'hosting', group: 'Provenance', type: 'single',
-      q: 'Where does {sys} run?', help: 'This tells the assessment whether a third party is in the picture.',
-      options: ['In-house / self-hosted', 'Third-party SaaS product', 'Foundation-model API (e.g. a hosted LLM)', 'Not sure'],
-      compose: s => ({ 'In-house / self-hosted': 'It runs on infrastructure the organisation hosts itself.', 'Third-party SaaS product': 'It runs on a third-party SaaS platform.', 'Foundation-model API (e.g. a hosted LLM)': 'It is built on a third-party foundation-model API.' }[s[0]] || '') },
-
-    { id: 'role', group: 'Provenance', type: 'single',
-      q: 'Is your organisation building {sys}, or using someone else’s?', help: 'Provider = you build or substantially modify it. Deployer = you use it under your own authority.',
-      options: ['Provider — we build or substantially modify it', 'Deployer — we use it under our authority', 'Not sure'],
-      compose: s => ({ 'Provider — we build or substantially modify it': 'Our organisation acts as the provider of the system (we build or substantially modify it).', 'Deployer — we use it under our authority': 'Our organisation acts as the deployer of the system (we use it under our own authority).' }[s[0]] || '') },
-
-    { id: 'users', group: 'Users', type: 'multi', other: true, otherPh: 'Which department(s)?',
-      q: 'Who is allowed to use {sys}?', help: 'Select all that apply.',
-      options: ['All staff', 'A specific department', 'Executive leadership', 'Contractors', 'External users or customers'],
-      compose: (s, sys, o) => { let it = s.slice(); if (o) { it = it.filter(x => x !== 'A specific department'); it.push(`the ${o} department`); } return it.length ? `It is available to ${_listJoin(it.map(_lc1))}.` : ''; } },
-
-    { id: 'reach', group: 'Users', type: 'single',
-      q: 'Where do {sys}’s outputs go?',
-      options: ['Internal use only', 'Shared with clients', 'Shared with vendors or partners', 'Public-facing'],
-      compose: s => ({ 'Internal use only': 'Its outputs are used internally only.', 'Shared with clients': 'Its outputs are shared with clients.', 'Shared with vendors or partners': 'Its outputs are shared with vendors or partners.', 'Public-facing': 'Its outputs are public-facing.' }[s[0]] || '') },
-
-    { id: 'data_types', group: 'Data', type: 'multi', other: true, otherPh: 'Other data type…',
-      q: 'What kinds of documents or data does {sys} process?', help: 'Select all that apply.',
-      options: ['Employee handbooks or policies', 'Technical designs or IP', 'Customer contracts', 'Financial records', 'Personnel or HR records', 'Customer personal data', 'Health data', 'Public or marketing content', 'Source code', 'Emails or correspondence'],
-      compose: (s, sys, o) => { const it = s.concat(o ? [o] : []); return it.length ? `It processes ${_listJoin(it.map(_lc1))}.` : ''; } },
-
-    { id: 'sensitive', group: 'Data', type: 'multi',
-      q: 'Does that data include any sensitive information?', help: 'Select all that apply.',
-      options: ['Personal data (PII)', 'Special-category data (e.g. health, biometric)', 'Trade secrets or confidential IP', 'Financial or payment data', 'None of these'],
-      compose: s => { const it = s.filter(x => x !== 'None of these'); if (!it.length) return s.includes('None of these') ? 'The data is not expected to contain personal, special-category, or confidential information.' : ''; return `This data includes ${_listJoin(it.map(_lc1))}.`; } },
-
-    { id: 'application', group: 'Oversight', type: 'multi',
-      q: 'How are {sys}’s outputs used?', help: 'Select all that apply.',
-      options: ['Read for general understanding', 'Copied into external communications', 'Used as the basis for a decision', 'Used to approve or trigger a workflow', 'Published without human edits'],
-      compose: s => s.length ? `Its outputs are ${_listJoin(s.map(_lc1))}.` : '' },
-
-    { id: 'oversight', group: 'Oversight', type: 'single',
-      q: 'Is there a human check before {sys}’s output is acted on?',
-      options: ['Yes — formal verification is required', 'Informal or ad-hoc checking', 'No — outputs are used directly'],
-      compose: s => ({ 'Yes — formal verification is required': 'A formal human verification step is required before outputs are acted on.', 'Informal or ad-hoc checking': 'Human checking of outputs is informal or ad-hoc.', 'No — outputs are used directly': 'There is no human verification step; outputs are used directly.' }[s[0]] || '') },
-
-    { id: 'impact', group: 'Consequences', type: 'single',
-      q: 'If {sys} is wrong or hallucinates, how serious is it?',
-      options: ['Negligible', 'Minor', 'Moderate', 'Severe'],
-      compose: s => s[0] ? `If the system produces an incorrect or hallucinated output, the assessed business impact is ${_lc1(s[0])}.` : '' },
-
-    { id: 'consequences', group: 'Consequences', type: 'multi',
-      q: 'A wrong answer could lead to…', help: 'Select all that apply.',
-      options: ['Regulatory or compliance breach', 'Physical safety hazard', 'Financial loss', 'Reputational harm', 'Discrimination or unfair outcome', 'No significant consequence'],
-      compose: s => { const it = s.filter(x => x !== 'No significant consequence'); if (!it.length) return s.includes('No significant consequence') ? 'A wrong output is not expected to cause significant harm.' : ''; return `A wrong output could result in ${_listJoin(it.map(_lc1))}.`; } }
-  ];
+  // The use-case builder question set is data-driven: it is loaded from
+  // step-2.json (use_case_builder.questions) in mountStep2Wizard, so the
+  // questions can be changed without touching this code. Each question composes
+  // a narrative sentence from the answer via string templates (see
+  // _composeFromData) rather than JavaScript — tokens: {sys} {list} {value} {other}.
+  let _questions = [];
 
   // Text helpers for narrative assembly.
   function _lc1(s) { return s ? s.charAt(0).toLowerCase() + s.slice(1) : s; }
@@ -175,13 +127,53 @@
   function _narrSys() { const n = (_record._meta && _record._meta.use_case_name || '').trim(); return n || 'The system'; }
 
   function _assembleNarrative(answers) {
-    const sys = _narrSys(); const parts = [];
-    QUESTIONS.forEach(q => {
+    const parts = [];
+    _questions.forEach(q => {
       const a = answers[q.id] || { sel: [], other: '' };
-      const sentence = q.compose(a.sel || [], sys, (a.other || '').trim());
+      const sentence = _composeFromData(q, a.sel || [], (a.other || '').trim());
       if (sentence) parts.push(sentence);
     });
     return parts.join(' ');
+  }
+
+  // Compose a narrative sentence for one answered question from its templates.
+  // single  → option_sentences[choice], or compose_template with {value}.
+  // multi   → compose_template with {list}; exclusive_option → exclusive_sentence;
+  //           nothing selected → compose_empty; "other" is appended (other_template)
+  //           and may replace one option (other_replaces).
+  // Tokens: {sys} use-case name · {list} chosen options joined · {value} the choice
+  //         · {other} the free-text entry.
+  function _composeFromData(q, sel, other) {
+    const sys = _narrSys();
+    const fill = s => String(s == null ? '' : s).replace(/\{sys\}/g, sys);
+    sel = sel || []; other = (other || '').trim();
+
+    if (q.type === 'single') {
+      const choice = sel[0];
+      if (!choice) return '';
+      if (q.compose_template && q.compose_template.indexOf('{value}') > -1) {
+        return fill(q.compose_template.replace('{value}', _lc1(choice)));
+      }
+      return fill((q.option_sentences || {})[choice] || '');
+    }
+
+    // multi
+    let items = sel.slice();
+    if (q.exclusive_option) {
+      const rest = items.filter(x => x !== q.exclusive_option);
+      if (rest.length === 0) {
+        return items.indexOf(q.exclusive_option) > -1
+          ? fill(q.exclusive_sentence || '')
+          : fill(q.compose_empty || '');
+      }
+      items = rest;
+    }
+    if (q.allow_other && other) {
+      if (q.other_replaces) items = items.filter(x => x !== q.other_replaces);
+      items.push((q.other_template || '{other}').replace('{other}', other));
+    }
+    if (items.length === 0) return fill(q.compose_empty || '');
+    return fill((q.compose_template || '').replace('{list}', _listJoin(items.map(_lc1))));
   }
 
   // ── Business case form (toggle: type it, or use the guided builder) ────────
@@ -276,10 +268,11 @@
     return _state.wizard.answers[id];
   }
   function _answered(k) {
-    const a = _state.wizard.answers[QUESTIONS[k].id];
+    const q = _questions[k]; if (!q) return false;
+    const a = _state.wizard.answers[q.id];
     return !!(a && ((a.sel && a.sel.length) || (a.other && a.other.trim())));
   }
-  function _answeredAny() { return QUESTIONS.some((_, k) => _answered(k)); }
+  function _answeredAny() { return _questions.some((_, k) => _answered(k)); }
 
   function _toggleOpt(q, opt) {
     const a = _ensureAns(q.id);
@@ -288,10 +281,10 @@
     } else {
       const i = a.sel.indexOf(opt);
       if (i > -1) a.sel.splice(i, 1); else a.sel.push(opt);
-      const excl = q.options.filter(_EXCL);
+      const excl = q.options.filter(o => _isExcl(q, o));
       if (excl.length) {
-        if (_EXCL(opt)) a.sel = a.sel.includes(opt) ? [opt] : [];
-        else a.sel = a.sel.filter(x => !_EXCL(x));
+        if (_isExcl(q, opt)) a.sel = a.sel.includes(opt) ? [opt] : [];
+        else a.sel = a.sel.filter(x => !_isExcl(q, x));
       }
     }
     _saveState();
@@ -299,17 +292,18 @@
 
   function _buildWizardView() {
     const wrap = _el('div', 's2-wiz');
-    const N = QUESTIONS.length;
+    const N = _questions.length;
+    if (!N) { wrap.appendChild(_el('p', 's2-wiz-help', { textContent: 'No guided questions are configured.' })); return wrap; }
     const i = Math.max(0, Math.min(_state.wizard.idx, N - 1));
     _state.wizard.idx = i;
-    const q = QUESTIONS[i];
+    const q = _questions[i];
     const sys = _qSys();
 
     // Progress: label + jump dots
     const prog = _el('div', 's2-wiz-prog');
     prog.appendChild(_el('div', 's2-wiz-meta', { textContent: `${q.group} · Question ${i + 1} of ${N}` }));
     const dots = _el('div', 's2-wiz-dots');
-    QUESTIONS.forEach((_, k) => {
+    _questions.forEach((_, k) => {
       const d = _el('span', 's2-wiz-dot' + (k === i ? ' is-active' : '') + (_answered(k) ? ' is-done' : ''));
       d.title = 'Go to question ' + (k + 1);
       d.addEventListener('click', () => { _state.wizard.idx = k; _renderDesc(); });
@@ -319,7 +313,7 @@
     wrap.appendChild(prog);
 
     // Question + help
-    wrap.appendChild(_el('p', 's2-wiz-q', { textContent: q.q.replace('{sys}', sys) }));
+    wrap.appendChild(_el('p', 's2-wiz-q', { textContent: (q.question || '').replace(/\{sys\}/g, sys) }));
     if (q.help) wrap.appendChild(_el('p', 's2-wiz-help', { textContent: q.help }));
 
     // Options
@@ -334,10 +328,10 @@
     wrap.appendChild(opts);
 
     // Optional free text
-    if (q.other) {
+    if (q.allow_other) {
       const oi = _el('input', 's2-wiz-other');
       oi.type = 'text';
-      oi.placeholder = q.otherPh || 'Other (optional)…';
+      oi.placeholder = q.other_placeholder || 'Other (optional)…';
       oi.value = ans.other || '';
       oi.addEventListener('input', () => { ans.other = oi.value; _saveState(); });
       wrap.appendChild(oi);
