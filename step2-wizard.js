@@ -10,7 +10,7 @@
   const _sectionLabel = WizUtils.sectionLabel;
 
   let _state = {
-    business_case: '', business_case_url: '',
+    business_case: '', business_case_url: '', business_justification: '',
     input_mode: 'text',                              // 'text' | 'wiz'
     wizard: { answers: {}, idx: 0, completed: false } // use-case builder state
   };
@@ -32,9 +32,10 @@
     _record = WizUtils.loadRecord();
 
     if (_record['step-2']) {
-      _state.business_case     = _record['step-2'].business_case     || '';
-      _state.business_case_url = _record['step-2'].business_case_url || '';
-      _state.input_mode        = _record['step-2'].input_mode        || 'text';
+      _state.business_case         = _record['step-2'].business_case         || '';
+      _state.business_case_url     = _record['step-2'].business_case_url     || '';
+      _state.business_justification = _record['step-2'].business_justification || '';
+      _state.input_mode            = _record['step-2'].input_mode            || 'text';
       const w = _record['step-2'].use_case_wizard;
       if (w && typeof w === 'object') {
         _state.wizard = Object.assign({ answers: {}, idx: 0, completed: false }, w);
@@ -195,6 +196,25 @@
     _descHost = _el('div', 's2-desc-host');
     section.appendChild(_descHost);
     _renderDesc();
+
+    // Business justification — a separate box under the description. Can be
+    // written by hand, or populated by the Step 3 classification draft (its
+    // "business_justification" field) when you Validate & preview there.
+    const bjWrap = _el('div', '', { style: 'margin-top:16px' });
+    const bjLabel = _el('label', 's2-field-label');
+    bjLabel.htmlFor = 's2-business-justification';
+    bjLabel.textContent = 'Business justification';
+    const bjHint = _el('p', 's2-field-hint', {
+      textContent: 'The business need for this AI tool / use case and its expected benefits. Written for the approval form. The Step 3 classification draft can fill this in for you.'
+    });
+    const bjArea = _el('textarea', 's2-textarea');
+    bjArea.id = 's2-business-justification';
+    bjArea.placeholder = 'Explain the clear business need and the expected operational, efficiency, service or control benefits…';
+    bjArea.value = _state.business_justification;
+    bjArea.rows = 4;
+    bjArea.addEventListener('input', () => { _state.business_justification = bjArea.value; _saveState(); });
+    bjWrap.append(bjLabel, bjHint, bjArea);
+    section.appendChild(bjWrap);
 
     const urlWrap = _el('div', '', { style: 'margin-top:14px' });
     const urlLabel = _el('label', 's2-field-label');
@@ -479,9 +499,10 @@
     });
     applyBtn.addEventListener('click', () => {
       if (!_res) return;
-      const n = _applyClf(_res.tier, _res.gate, _res.reasoning);
+      const n = _applyClf(_res.tier, _res.gate, _res.reasoning, _res.businessJustification);
       const rNote = _res.reasoning ? ' Its rationale was loaded into the Assessment rationale box.' : '';
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} classification answer${n !== 1 ? 's' : ''} as a draft.${rNote} Review the gates below, then run the classification to finalise the outcome and articles.</span>`;
+      const bjNote = _res.businessJustification ? ' The business justification was saved to Step 2.' : '';
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} classification answer${n !== 1 ? 's' : ''} as a draft.${rNote}${bjNote} Review the gates below, then run the classification to finalise the outcome and articles.</span>`;
       applyBtn.style.display = 'none';
       if (typeof cfg.onApplied === 'function') setTimeout(cfg.onApplied, 400);
     });
@@ -529,6 +550,7 @@
   function _validateClf(clf) {
     const warnings = []; const gate = {}; let tier = null; let matched = 0;
     const reasoning = _isEmpty(clf.reasoning) ? '' : String(clf.reasoning).trim();
+    const businessJustification = _isEmpty(clf.business_justification) ? '' : String(clf.business_justification).trim();
     if (!_isEmpty(clf.tier)) {
       const t = _matchEnumCanon(clf.tier, _clfKeys.tier);
       if (t) { tier = t; matched++; } else warnings.push(`tier "${_esc(String(clf.tier))}" not recognised — skipped.`);
@@ -542,7 +564,7 @@
       if (!m) { warnings.push(`<code>${_esc(k)}</code>: "${_esc(String(v)).slice(0, 40)}" not one of ${enums.join(' / ')} — skipped.`); return; }
       gate[k] = m; matched++;
     });
-    return { tier, gate, reasoning, warnings, matched };
+    return { tier, gate, reasoning, businessJustification, warnings, matched };
   }
 
   function _renderClfPreview(res) {
@@ -557,8 +579,13 @@
     return html;
   }
 
-  function _applyClf(tier, gate, reasoning) {
+  function _applyClf(tier, gate, reasoning, businessJustification) {
     _record = WizUtils.loadRecord() || {};
+    // Business justification belongs to Step 2 (the approval form reads it there).
+    if (businessJustification) {
+      const prev2 = _record['step-2'] || { step_id: 'step-2' };
+      _record['step-2'] = Object.assign({}, prev2, { business_justification: businessJustification });
+    }
     const prev = _record['step-3'] || {};
     const axisA = Object.assign({}, prev.axis_a || {});
     if (tier) axisA.tier = tier;
@@ -777,12 +804,13 @@
   function _saveState() {
     if (!_record) _record = {};
     _record['step-2'] = {
-      step_id:           'step-2',
-      business_case:     _state.business_case,
-      business_case_url: _state.business_case_url,
-      input_mode:        _state.input_mode,
-      use_case_wizard:   _state.wizard,
-      saved_at:          new Date().toISOString()
+      step_id:               'step-2',
+      business_case:         _state.business_case,
+      business_case_url:     _state.business_case_url,
+      business_justification: _state.business_justification,
+      input_mode:            _state.input_mode,
+      use_case_wizard:       _state.wizard,
+      saved_at:              new Date().toISOString()
     };
     if (!_record._meta) _record._meta = {
       schema_version: '1.0',

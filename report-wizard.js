@@ -160,6 +160,7 @@
   // ============================================================
   function _buildReportHTML() {
     const s3  = _record?.['step-3']  || null;
+    const s4  = _record?.['step-4']  || null;
     const s8  = _record?.['step-5']  || null;
     const s9  = _record?.['step-6']  || null;
     const s10 = _record?.['step-7']  || null;
@@ -188,14 +189,15 @@ ${_coverPage(s3, s8, s9, s10, meta, today, useCase, assessedBy)}
 ${_partBanner('A', 'EU AI Act Conformity Dossier', 'The formal EU AI Act conformity assessment for this system — the complete evidence dossier. It is produced first and submitted to the AI Change Board for review, and can be printed and provided to a regulator on its own.')}
 ${_section(1, 'System Classification', 'What the system is and how it is classified under the EU AI Act — which determines exactly which legal obligations apply. Confirms the assessment addressed the right requirements.', _classificationSection(s3))}
 ${_section(2, 'Risk Identification', 'The risks this system poses, identified against the pre-mapped catalogue (the Article&nbsp;9 risk-management step). Shows the hazards were named systematically, not ad hoc.', _riskAssessmentSection(s8, s10))}
-${_section(3, 'Compliance &amp; Requirement Traceability', 'Maps each applicable AI Act obligation to the harmonised-standard requirement that makes it testable, and the evidence that the requirement is implemented. This is the core evidence that every obligation is covered — nothing unaddressed.', _section3Content(s3, s9, s10))}
-${_section(4, 'Conformity Assessment Conclusion', 'The assessor&rsquo;s conclusion that, on the evidence above, the system meets its applicable requirements — the basis of conformity submitted to the Board for decision.', _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy))}
+${_section(3, 'Data Privacy Impact Assessment (DPIA)', 'A summary of the GDPR Article&nbsp;35 Data Protection Impact Assessment: the data processed, the lawful basis, the privacy risks, and the inherent and residual risk ratings recorded in Step&nbsp;4.', _dpiaSummarySection(s4))}
+${_section(4, 'Compliance &amp; Requirement Traceability', 'Maps each applicable AI Act obligation to the harmonised-standard requirement that makes it testable, and the evidence that the requirement is implemented. This is the core evidence that every obligation is covered — nothing unaddressed.', _section3Content(s3, s9, s10))}
+${_section(5, 'Conformity Assessment Conclusion', 'The assessor&rsquo;s conclusion that, on the evidence above, the system meets its applicable requirements — the basis of conformity submitted to the Board for decision.', _conformityConclusionSection(s3, s9, s10, today, useCase, assessedBy))}
 
 ${_partDivider('End of Part&nbsp;A — EU AI Act Conformity Dossier. The assessment above is submitted to the AI Change Board; Part&nbsp;B records the Board&rsquo;s review and decision on it.')}
 
 ${_partBanner('B', 'Internal Governance &amp; Sign-off', 'The internal governance layer: the Board&rsquo;s at-a-glance status, then the AI Tool &amp; Use Case Approval Form — the organisation&rsquo;s own approval record, populated from this assessment and signed off by the requester, InfoSec Governance and the Change Board.')}
 ${_ragSummaryPage(s9, s10)}
-${_section(5, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s internal approval form, pre-filled from this assessment. It carries the requester, InfoSec Governance and AI Change Board sign-off, and its approval status records the Board&rsquo;s decision — which on approval authorises deployment and triggers the formal EU Declaration of Conformity (Article&nbsp;47).', _approvalFormSection(s3, s8, s9, s10, meta, today))}
+${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s internal approval form, pre-filled from this assessment. It carries the requester, InfoSec Governance and AI Change Board sign-off, and its approval status records the Board&rsquo;s decision — which on approval authorises deployment and triggers the formal EU Declaration of Conformity (Article&nbsp;47).', _approvalFormSection(s3, s8, s9, s10, meta, today))}
 </body>
 </html>`;
   }
@@ -539,6 +541,45 @@ ${_section(5, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
       html += '<p class="empty-note">No articles applicable based on current classification.</p>';
     }
 
+    return html;
+  }
+
+  // ---- DPIA summary section (Part A) -------------------------
+  // A label/value summary of the Step 4 DPIA, formatted like the System
+  // Classification section. Part B's DPIA Evidence cell points here as an
+  // appendix the assessor prints alongside the approval form.
+  function _dpiaSummarySection(s4) {
+    if (!s4) return _notComplete('Step 4 — Data Protection Impact Assessment has not yet been completed.');
+    const di = s4.data_types_identified || {};
+    const list = a => (Array.isArray(a) && a.length) ? a.map(_esc).join(', ') : '—';
+    const special = (di.special_category_data || []).filter(x => !/^none/i.test(x));
+
+    let html = `
+<h3 class="sub-heading">Assessment Summary</h3>
+<table class="data-table">
+  <tr><td class="dt-label">DPIA Completed</td><td>${_esc(s4.completion_date || '—')}</td></tr>
+  <tr><td class="dt-label">Lawful Basis (GDPR Art.6)</td><td>${_esc(s4.lawful_basis || '—')}</td></tr>
+  <tr><td class="dt-label">Inherent Risk</td><td>${_esc(s4.inherent_risk_rating || '—')}</td></tr>
+  <tr><td class="dt-label">Residual Risk</td><td>${_esc(s4.residual_risk_rating || '—')}</td></tr>
+  <tr><td class="dt-label">DPO Consulted</td><td>${_esc(s4.dpo_consulted || '—')}</td></tr>
+  <tr><td class="dt-label">Art.36 Prior Consultation</td><td>${_esc(s4.art36_consultation_required || '—')}</td></tr>
+</table>
+
+<h3 class="sub-heading">Data Processed</h3>
+<table class="data-table">
+  <tr><td class="dt-label">Data Subjects</td><td>${list(di.data_subjects)}</td></tr>
+  <tr><td class="dt-label">Personal Data</td><td>${list(di.standard_personal_data)}</td></tr>
+  <tr><td class="dt-label">Special-Category Data</td><td>${special.length ? special.map(_esc).join(', ') : 'None'}</td></tr>
+  <tr><td class="dt-label">Automated Decision-Making</td><td>${_esc(di.automated_decision_making || '—')}</td></tr>
+  <tr><td class="dt-label">Security Measures</td><td>${list(di.security_measures)}</td></tr>
+</table>`;
+
+    const pr = di.privacy_risks || [];
+    html += `
+<h3 class="sub-heading">Privacy Risks Identified (${pr.length})</h3>`;
+    html += pr.length
+      ? `<table class="data-table"><tbody>${pr.map(r => `<tr><td>${_esc(r)}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="empty-note">No privacy risks were recorded in the DPIA.</p>';
     return html;
   }
 
@@ -1256,8 +1297,10 @@ ${rows.join('')}`;
     const useCaseName = meta.use_case_name || '—';
     const useCaseId   = meta.use_case_id || s3?.use_case_id || '';
 
-    const blank  = (h) => `<div class="af-blank" style="min-height:${h || 22}px"></div>`;
-    const line   = () => `<span class="af-line"></span>`;
+    // Blank fields are editable in the on-screen preview so the assessor can type
+    // the identity / routing / sign-off answers directly before printing.
+    const blank  = (h) => `<div class="af-blank" contenteditable="true" style="min-height:${h || 22}px"></div>`;
+    const line   = () => `<span class="af-line" contenteditable="true"></span>`;
     const box    = (html) => html && String(html).trim() ? `<div class="af-val">${html}</div>` : blank(40);
     const row    = (label, valueHtml) => `<tr><td class="af-label">${label}</td><td>${valueHtml}</td></tr>`;
     const secBanner = (t) => `<div class="af-sec">${t}</div>`;
@@ -1283,9 +1326,10 @@ ${rows.join('')}`;
     const ETH = new Set(['RISK-001', 'RISK-002', 'RISK-007']);
     const bucketOf = id => ETH.has(String(id || '').toUpperCase()) ? 'ethical' : 'operational';
     const names = bucket => selRisks.filter(r => bucketOf(r.risk_id) === bucket).map(r => r.risk_name);
+    const RISK_ATTACH = 'See attachment &ldquo;2 Risk Identification&rdquo;.';
     const riskCell = items => items.length
-      ? `${ul(items)}<p class="af-note">Mitigations &amp; residual status: see Part&nbsp;A §2–§3 (risk register and requirement traceability).</p>`
-      : blank(40);
+      ? `${ul(items)}<p class="af-note">${RISK_ATTACH}</p>`
+      : box(RISK_ATTACH);
 
     // Data used
     const dataUsed = [];
@@ -1339,8 +1383,10 @@ ${rows.join('')}`;
 .af-table td{border:1px solid rgba(150,140,110,0.45);padding:6px 9px;vertical-align:top;font-size:9pt;color:inherit}
 .af-label{font-weight:700;width:30%;background:rgba(150,140,110,0.14)}
 .af-val{font-size:9pt;color:inherit}
-.af-blank{border:1px dashed rgba(150,140,110,0.65);border-radius:3px;background:rgba(150,140,110,0.06);min-height:22px}
-.af-line{display:inline-block;min-width:160px;border-bottom:1px solid rgba(150,140,110,0.7);height:14px}
+.af-blank{border:1px dashed rgba(150,140,110,0.65);border-radius:3px;background:rgba(150,140,110,0.06);min-height:22px;padding:2px 5px}
+.af-line{display:inline-block;min-width:160px;border-bottom:1px solid rgba(150,140,110,0.7);min-height:14px}
+.af-blank:focus,.af-line:focus{outline:2px solid rgba(212,184,96,0.7);outline-offset:1px;background:rgba(212,184,96,0.08)}
+@media print{.af-blank,.af-line{outline:none}}
 .af-ul{margin:0 0 0 16px;padding:0}.af-ul li{margin:1px 0}
 .af-note{margin:5px 0 0;font-size:8pt;opacity:.72;font-style:italic}
 .af-fill{font-weight:700}
@@ -1362,7 +1408,7 @@ ${rows.join('')}`;
   <table class="af-table">
     ${row('Title', box(_esc(useCaseName)))}
     ${row('Full Description / intended purpose', box(_esc(s2.business_case || '')))}
-    ${row('Business Justification', box(_esc(s2.business_case || '')))}
+    ${row('Business Justification', s2.business_justification ? box(_esc(s2.business_justification)) : blank(40))}
     ${row('Entity Scope (Group-wide / LUX / UPE / IOM / UW …)', blank(22))}
     ${row('AI Interaction &amp; Content', interact.length ? box(ul(interact)) : blank(40))}
   </table>
@@ -1370,8 +1416,8 @@ ${rows.join('')}`;
   <div class="af-sub">Section 1.3 — Data Privacy &amp; Security</div>
   <table class="af-table">
     ${row('Data Used', dataUsed.length ? box(ul(dataUsed)) : blank(40))}
-    ${row('DPIA Evidence', box(dpiaEvidence))}
-    ${row('Technology Risk Assessment (TRA) Evidence', box('Residual-risk verification completed in the workflow (Part&nbsp;A §3). Attach / reference a formal TRA if required: ' + line()))}
+    ${row('DPIA Evidence', box((dpiaEvidence || 'DPIA status to be confirmed.') + ' See appendix &ldquo;Data Privacy Impact Assessment (DPIA)&rdquo;.'))}
+    ${row('Technology Risk Assessment (TRA) Evidence', box('Residual-risk verification completed in the workflow. See attachment &ldquo;2 Risk Identification&rdquo;.'))}
     ${row('Data Protection Measures', measures.length ? box(ul(measures)) : blank(40))}
   </table>
 
@@ -1405,11 +1451,11 @@ ${rows.join('')}`;
 
   <div class="af-sub">Section 2.2 — Risk Assessment</div>
   <table class="af-table">
-    ${row('EU AI Act Risk Category', box(`${_esc(outcome)}${s3?.rationale ? ' — ' + _esc(s3.rationale) : ''}`))}
+    ${row('EU AI Act Risk Category', box(`${_esc(outcome)}${s3?.rationale ? ' — ' + _esc(s3.rationale) : ''} ${RISK_ATTACH}`))}
     ${row('Operational Risks (Cyber / IT / DevOps)', riskCell(names('operational')))}
-    ${row('Data Protection Risks', privacyRisks.length ? box(`${ul(privacyRisks)}<p class="af-note">Mitigations: the security measures above and the controls evidenced in Part&nbsp;A §3.</p>`) : blank(40))}
+    ${row('Data Protection Risks', privacyRisks.length ? box(`${ul(privacyRisks)}<p class="af-note">${RISK_ATTACH}</p>`) : box(RISK_ATTACH))}
     ${row('Ethical Risks (bias, fairness, explainability, reliance)', riskCell(names('ethical')))}
-    ${row('Legal Risks', box(`EU AI Act classification: ${_esc(outcome)}; transparency obligations: ${b.transparency_obligations_apply ? 'Yes (Art&nbsp;50)' : 'No'}. IP / copyright / contractual risks — review and complete: ${line()}`))}
+    ${row('Legal Risks', box(`EU AI Act classification: ${_esc(outcome)}; transparency obligations: ${b.transparency_obligations_apply ? 'Yes (Art. 50)' : 'No'}. IP / copyright / contractual risks — review and complete: ${line()} ${RISK_ATTACH}`))}
   </table>
 
   <div class="af-sec" style="margin-top:0">Section 3 — To be completed by the Change Board (AICB)<span class="af-sub2">Form Completed By (name / role / date):&nbsp; ${line()} &nbsp; ${line()} &nbsp; ${line()}</span></div>
@@ -1798,10 +1844,16 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
   .trace-summary--ok{background:rgba(52,199,120,0.14);color:#8cebb0}
   .trace-summary--warn{background:rgba(212,184,96,0.15);color:#ecd489}
   .applies-if-filter{background:rgba(212,184,96,0.18);color:#ecd489}
-  /* Pale "document" islands keep their light background on screen but were inheriting the dark
-     theme's light body text, leaving light-on-light. Force dark text so they stay legible. */
-  .rag-page{color:#1f2937}
-  .rag-page-title{color:#111}
+  /* The RAG summary now matches the dark report on screen (print stays light). */
+  .rag-page{background:transparent;color:#e9e3d4}
+  .rag-page-title{color:#f0e8d0}
+  .rag-stat{background:rgba(240,232,208,0.05);border-color:rgba(240,232,208,0.14)}
+  .rag-stat--ok{background:rgba(52,199,120,0.12);border-color:rgba(52,199,120,0.3)}
+  .rag-stat--warn{background:rgba(212,184,96,0.12);border-color:rgba(212,184,96,0.3)}
+  .rag-stat--bad{background:rgba(226,90,88,0.12);border-color:rgba(226,90,88,0.35)}
+  .rag-stat-num{color:#6ee0b8}
+  .rag-stat-lbl{color:#b1a992}
+  /* Other pale "document" islands keep their light background; force dark text so they stay legible. */
   .declaration-block{color:#1f2937}
   .declaration-block .sub-heading{color:#1e3a5f}
   .test-plan-hdr{color:#1f2937}
