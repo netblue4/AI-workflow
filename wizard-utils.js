@@ -718,7 +718,7 @@ window.WizUtils = (function () {
 .wiz-panel-content{margin-top:14px}
 .wiz-panel-content>.wiz-collapsible-section:last-child,.wiz-panel-content>*:last-child{margin-bottom:0}
 /* Section intro line used at the top of a panel's content (replaces scattered coloured summary boxes) */
-.wiz-panel-lead{font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);margin:0 0 14px;max-width:78ch}
+.wiz-panel-lead{font-size:12.5px;line-height:1.6;color:var(--color-text-secondary);margin:0 0 14px;max-width:none}
 /* "⚙ Step N" chip naming the workflow step that meets a requirement */
 .wiz-wf-step{font-size:10.5px;font-weight:600;background:rgba(212,184,96,0.16);color:#ecd489;border-radius:5px;padding:2px 8px;white-space:nowrap;margin-left:auto}
 /* Leading select checkbox on a risk panel (Steps 5–7) */
