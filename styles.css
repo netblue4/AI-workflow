@@ -316,7 +316,7 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 28px 32px;
-  max-width: 760px;
+  max-width: none/*760px*/;
 }
 
 /* Step header inside detail */
