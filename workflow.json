@@ -25,7 +25,7 @@
     {
       "id": "phase-2",
       "number": 2,
-      "title": "Due diligence",
+      "title": "ISO 31000 risk management process",
       "owners": [
         "AI Governance Team",
         "DPO",
@@ -34,7 +34,7 @@
       "colorKey": "purple",
       "steps": [
         "step-5",
-        "step-6"
+        "step-7"
       ]
     },
     {
@@ -59,7 +59,6 @@
       ],
       "colorKey": "blue",
       "steps": [
-        "step-7",
         "step-10"
       ]
     },
@@ -195,21 +194,6 @@
       "applicabilityKey": "tier2",
       "gates": [],
       "detailFile": "step-5.json"
-    },
-    {
-      "id": "step-6",
-      "number": 6,
-      "phaseId": "phase-2",
-      "title": "Control identification",
-      "isNew": false,
-      "owners": [
-        "AI Governance Team"
-      ],
-      "ownerIcon": "shield",
-      "applicability": "Tier 2 / elevated risk",
-      "applicabilityKey": "tier2",
-      "gates": [],
-      "detailFile": "step-6.json"
     },
     {
       "id": "step-7",

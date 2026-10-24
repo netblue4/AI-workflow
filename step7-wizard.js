@@ -333,22 +333,28 @@
 
   // ---- Legal HS-requirement activation helpers ---------------
   const _hsActKey = (riskId, ref) => `${riskId}::${ref}`;
-  // Legal risks in Step 7 are those treated via HS requirements in Step 6
+  // The per-risk selected HS requirements. Step 6 is retired, so this now comes
+  // from Step 5's legal_assessment; a legacy step-6 record is honoured if present.
+  const _selectedHs = () => {
+    const s6 = _record?.['step-6'];
+    if (s6 && s6.selected_hs && Object.keys(s6.selected_hs).length) return s6.selected_hs;
+    return _record?.['step-5']?.legal_assessment?.selected_hs || {};
+  };
+  // Legal risks in Step 7 are those treated via HS requirements in Step 5
   // (selected_hs keys) — a durable signal independent of the risk controls.
-  // Legacy records that predate selected_hs fall back to the legal control map.
   function _legalRiskIds() {
-    const ids = new Set(Object.keys(_record?.['step-6']?.selected_hs || {}));
+    const ids = new Set(Object.keys(_selectedHs()));
     _controls.filter(c => c.domain === 'legal' && c.risk_id).forEach(c => ids.add(c.risk_id));
     return ids;
   }
   function _isLegalRisk(riskId) {
     return _legalRiskIds().has(riskId);
   }
-  // HS requirements a legal risk addresses = those ticked in Step 6, else the
+  // HS requirements a legal risk addresses = those selected in Step 5, else the
   // risk's direct risk↔HS link (tbl_Risks.fk_Harmonised_Standard_IDs), else the
   // union of its legal controls' HS refs.
   function _legalRiskHsRefs(riskId) {
-    const sel = _record?.['step-6']?.selected_hs?.[riskId];
+    const sel = _selectedHs()[riskId];
     if (sel && sel.length) return sel.slice();
     const tblRisk = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId);
     if (tblRisk?.fk_Harmonised_Standard_IDs) {

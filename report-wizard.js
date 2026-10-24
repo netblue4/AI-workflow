@@ -40,7 +40,7 @@
       const s3 = _record?.['step-3'] || null;
       const s4 = _record?.['step-4'] || null;
       const s8 = _record?.['step-5'] || null;
-      const s9 = _record?.['step-6'] || null;
+      const s9 = _selectionRecord();
       const s10 = _record?.['step-7'] || null;
       let inner = '';
       if (kind === 'classification')    inner = _classificationSection(s3);
@@ -163,7 +163,7 @@
     const s3  = _record?.['step-3']  || null;
     const s4  = _record?.['step-4']  || null;
     const s8  = _record?.['step-5']  || null;
-    const s9  = _record?.['step-6']  || null;
+    const s9  = _selectionRecord();
     const s10 = _record?.['step-7']  || null;
     const meta = _record?._meta      || {};
 
@@ -227,7 +227,17 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     return s10?.hs_activation?.[riskId]?.[ref]?.status || 'not_started';
   }
 
-  // Per-risk selected HS refs, preferring step-6 `selected_hs`; falls back to the
+  // The control-selection record (what Step 6 used to hold). Step 6 is retired, so
+  // the selection now comes straight from Step 5's legal_assessment; a legacy
+  // step-6 record is still honoured if present.
+  function _selectionRecord() {
+    const s6 = _record?.['step-6'];
+    if (s6 && s6.selected_hs && Object.keys(s6.selected_hs).length) return s6;
+    const la = _record?.['step-5']?.legal_assessment;
+    return { selected_hs: (la && la.selected_hs) || {} };
+  }
+
+  // Per-risk selected HS refs, preferring `selected_hs`; falls back to the
   // selected Harmonised_Standard controls for legacy records saved before that
   // field existed (yields nothing once those controls are removed — by which
   // point every record carries `selected_hs`).

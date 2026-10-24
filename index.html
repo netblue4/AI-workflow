@@ -135,7 +135,6 @@ function isStepComplete(stepId) {
     case 'step-3':  return !!s.axis_b?.ai_act_outcome;                 // classified, not a draft
     case 'step-4':  return !!s.completion_date;                        // DPIA saved, not a draft
     case 'step-5':  return !!(s.legal_assessment?.completed || s.group_standard_assessment?.completed);
-    case 'step-6':  return !!s.assessment_date;                        // controls saved, not the selected_hs draft
     case 'step-7':  return !!s.assessment_date;
     case 'step-1':
     case 'step-8':
@@ -362,7 +361,6 @@ function loadWorkedExample() {
     'step-3': { step_id: 'step-3', step_title: 'System classification', axis_a: { tier: 'tier_2', tier_label: 'Tier 2 — Business-impacting' }, axis_b: { ai_act_outcome: 'high_risk', organisation_role: 'deployer', transparency_obligations_apply: true, applicable_articles: [{ article_number: 'Article 10' }, { article_number: 'Article 14' }, { article_number: 'Article 15' }] }, combined_outcome: { article_14_human_oversight: true, requires_conformity_assessment: true }, all_requirement_control_numbers: [], rationale: 'High-risk: assists decisions affecting access to an essential service; deployer role; transparency and human-oversight obligations apply.', classified_by: 'A. Rivera', use_case_id: 'UC-2025-014' },
     'step-4': { step_id: 'step-4', step_title: 'Data identification and DPIA', completion_date: today, lawful_basis: 'Art.6(1)(f) — Legitimate interests', inherent_risk_rating: 'High', residual_risk_rating: 'Medium', dpo_consulted: 'Yes', data_types_identified: { data_subjects: ['Customers', 'Employees'], standard_personal_data: ['Name', 'Contact details', 'Contract terms'], special_category_data: [], automated_decision_making: 'No', security_measures: ['Encryption at rest', 'Role-based access control', 'Audit logging'], privacy_risks: ['Re-identification of pseudonymised contract data', 'Excessive retention of uploaded documents', 'Personal data egress to a third-party model'] }, answers: {} },
     'step-5': { legal_assessment: { completed: true, assessment_date: today, total_risks: 24, selected_count: 18, risks: [] }, group_standard_assessment: { completed: true, assessment_date: today, total_risks: 1, selected_count: 1, risks: [] } },
-    'step-6': { assessment_date: today },
     'step-7': { assessment_date: today },
     'step-8': { attested: true },
     'step-10': { attested: true },
@@ -412,8 +410,6 @@ async function selectStep(stepId) {
     mountStep4Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-5') {
     mountStep5Wizard(panel, step, detailData, color, phaseTitle);
-  } else if (stepId === 'step-6') {
-    mountStep6Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-7') {
     mountStep7Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
@@ -733,7 +729,6 @@ if (document.readyState === 'loading') {
 <script src="step3-wizard.js"></script>
 <script src="step4-wizard.js"></script>
 <script src="step5-wizard.js"></script>
-<script src="step6-wizard.js"></script>
 <script src="step7-wizard.js"></script>
 <script src="report-wizard.js"></script>
 </body>
