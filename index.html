@@ -32,6 +32,7 @@
         <button class="uc-btn uc-btn-load" onclick="handleUCLoad()">Load Record</button>
         <button class="uc-btn uc-btn-save" onclick="handleUCSave()">Save Record</button>
       </div>
+      <button class="uc-btn uc-btn-sample" onclick="loadSampleData()" style="width:100%;margin-top:6px" title="Fill the whole assessment with a ready-made example so you don't have to work through every step">⚡ Load sample data</button>
       <div id="uc-status" class="uc-status"></div>
     </div>
 
@@ -320,8 +321,8 @@ function buildDashboard() {
   actions.className = 'dash-actions';
   const exBtn = document.createElement('button');
   exBtn.className = 'dash-btn';
-  exBtn.textContent = 'Load a completed example';
-  exBtn.onclick = () => { if (confirm('Load a completed example assessment? This replaces the current record.')) { loadWorkedExample(); } };
+  exBtn.textContent = '⚡ Load sample data';
+  exBtn.onclick = () => loadSampleData();
   const clrBtn = document.createElement('button');
   clrBtn.className = 'dash-btn';
   clrBtn.textContent = '↺ Clear and start over';
@@ -333,6 +334,22 @@ function buildDashboard() {
 }
 
 function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// Loads a complete, ready-made sample assessment — every step filled in, including
+// the risk, control and residual-risk data and the DPIA — so you can see the whole
+// workflow and the conformity report without working through each step by hand.
+// Reads sample-record.json; falls back to the lighter inline example if that file
+// can't be fetched (e.g. the page was opened directly from the file system).
+async function loadSampleData() {
+  if (!confirm('Load sample data? This replaces the current assessment with a complete worked example.')) return;
+  let rec = null;
+  try { const r = await fetch('sample-record.json', { cache: 'no-store' }); if (r.ok) rec = await r.json(); } catch (_) {}
+  if (!rec || typeof rec !== 'object') { loadWorkedExample(); return; }
+  try { sessionStorage.setItem(UC_RECORD_KEY, JSON.stringify(rec)); } catch (_) {}
+  try { _ucSetIdentity(rec._meta || {}); } catch (_) {}
+  try { window.dispatchEvent(new Event('record-saved')); } catch (_) {}
+  selectDashboard();
+}
 
 // A fully-worked example assessment, so a first-time user can see one done.
 function loadWorkedExample() {
