@@ -34,7 +34,8 @@
       "colorKey": "purple",
       "steps": [
         "step-5",
-        "step-7"
+        "step-7",
+        "step-13"
       ]
     },
     {
@@ -198,8 +199,8 @@
     {
       "id": "step-7",
       "number": 7,
-      "phaseId": "phase-4",
-      "title": "Residual risk",
+      "phaseId": "phase-2",
+      "title": "Risk Analysis & Evaluation",
       "isNew": false,
       "owners": [
         "AI Working Group",
@@ -208,12 +209,20 @@
       "ownerIcon": "shield",
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
-      "gates": [
-        {
-          "type": "danger",
-          "text": "Gate: Residual risk assessment panels are locked until both test and activation evidence is complete for each risk group."
-        }
+      "detailFile": "step-7.json"
+    },
+    {
+      "id": "step-13",
+      "phaseId": "phase-2",
+      "title": "Recording and Reporting",
+      "isNew": true,
+      "owners": [
+        "AI Working Group",
+        "AI Governance Team"
       ],
+      "ownerIcon": "shield",
+      "applicability": "All AI systems",
+      "applicabilityKey": "all",
       "detailFile": "step-7.json"
     },
     {

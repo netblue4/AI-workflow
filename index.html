@@ -136,6 +136,7 @@ function isStepComplete(stepId) {
     case 'step-4':  return !!s.completion_date;                        // DPIA saved, not a draft
     case 'step-5':  return !!(s.legal_assessment?.completed || s.group_standard_assessment?.completed);
     case 'step-7':  return !!s.assessment_date;
+    case 'step-13': return !!s.assessment_date;
     case 'step-1':
     case 'step-8':
     case 'step-10':
@@ -168,7 +169,7 @@ function renderNav(workflow, stepIndex, phaseIndex, activeStepId) {
       const doneClass = isStepComplete(step.id) ? 'nav-step-num--done' : 'nav-step-num--todo';
       html += `
         <button class="nav-step ${activeClass}" data-step-id="${step.id}" onclick="selectStep('${step.id}')">
-          <span class="nav-step-num ${doneClass}">${step.number}</span>
+          <span class="nav-step-num ${doneClass}">${step.number != null ? step.number : '•'}</span>
           <span class="nav-step-title">${step.title}</span>
           ${step.isNew ? '<span class="nav-step-new">new</span>' : ''}
         </button>`;
@@ -279,7 +280,7 @@ function buildDashboard() {
   if (firstTodo) {
     const nb = document.createElement('button');
     nb.className = 'dash-next';
-    nb.innerHTML = `Continue → ${_stepIndex[firstTodo].number} — ${_escHtml(_stepIndex[firstTodo].title)}`;
+    nb.innerHTML = `Continue → ${_stepIndex[firstTodo].number != null ? _stepIndex[firstTodo].number + ' — ' : ''}${_escHtml(_stepIndex[firstTodo].title)}`;
     nb.onclick = () => selectStep(firstTodo);
     meter.appendChild(nb);
   }
@@ -305,7 +306,7 @@ function buildDashboard() {
       row.className = 'dash-step';
       row.onclick = () => selectStep(id);
       row.innerHTML = `
-        <span class="dash-step-num ${cpl ? 'dash-step-num--done' : 'dash-step-num--todo'}">${cpl ? '✓' : st.number}</span>
+        <span class="dash-step-num ${cpl ? 'dash-step-num--done' : 'dash-step-num--todo'}">${cpl ? '✓' : (st.number != null ? st.number : '•')}</span>
         <span class="dash-step-title">${_escHtml(st.title)}</span>
         <span class="dash-step-status ${cpl ? 'dash-step-status--done' : 'dash-step-status--todo'}">${cpl ? 'Done' : 'To do'}</span>
         <span class="dash-step-arrow">→</span>`;
@@ -412,6 +413,8 @@ async function selectStep(stepId) {
     mountStep5Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-7') {
     mountStep7Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-13') {
+    mountRecordingWizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
     mountReportWizard(panel);
   } else if (stepId === 'step-9') {
@@ -520,7 +523,7 @@ function buildMomentumBar(stepId) {
   back.className = 'momentum-btn momentum-btn--back';
   if (prevId) {
     const ps = _stepIndex[prevId];
-    back.innerHTML = `<span class="momentum-arrow">←</span><span class="momentum-btn-text"><span class="momentum-btn-kicker">Back</span><span class="momentum-btn-title">${ps.number} — ${ps.title}</span></span>`;
+    back.innerHTML = `<span class="momentum-arrow">←</span><span class="momentum-btn-text"><span class="momentum-btn-kicker">Back</span><span class="momentum-btn-title">${ps.number != null ? ps.number + ' — ' : ''}${ps.title}</span></span>`;
     back.onclick = () => selectStep(prevId);
   } else { back.style.visibility = 'hidden'; }
 
@@ -533,7 +536,7 @@ function buildMomentumBar(stepId) {
   next.className = 'momentum-btn momentum-btn--next' + (complete ? ' is-ready' : '');
   if (nextId) {
     const ns = _stepIndex[nextId];
-    next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">${complete ? 'Next ✓' : 'Next'}</span><span class="momentum-btn-title">${ns.number} — ${ns.title}</span></span><span class="momentum-arrow">→</span>`;
+    next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">${complete ? 'Next ✓' : 'Next'}</span><span class="momentum-btn-title">${ns.number != null ? ns.number + ' — ' : ''}${ns.title}</span></span><span class="momentum-arrow">→</span>`;
     next.onclick = () => selectStep(nextId);
   } else {
     next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">Done</span><span class="momentum-btn-title">End of workflow</span></span>`;
@@ -730,6 +733,7 @@ if (document.readyState === 'loading') {
 <script src="step4-wizard.js"></script>
 <script src="step5-wizard.js"></script>
 <script src="step7-wizard.js"></script>
+<script src="recording-wizard.js"></script>
 <script src="report-wizard.js"></script>
 </body>
 </html>

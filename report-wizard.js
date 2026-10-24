@@ -41,7 +41,7 @@
       const s4 = _record?.['step-4'] || null;
       const s8 = _record?.['step-5'] || null;
       const s9 = _selectionRecord();
-      const s10 = _record?.['step-7'] || null;
+      const s10 = _recordingRecord();
       let inner = '';
       if (kind === 'classification')    inner = _classificationSection(s3);
       else if (kind === 'dpia')         inner = _dpiaSummarySection(s4);
@@ -164,7 +164,7 @@
     const s4  = _record?.['step-4']  || null;
     const s8  = _record?.['step-5']  || null;
     const s9  = _selectionRecord();
-    const s10 = _record?.['step-7']  || null;
+    const s10 = _recordingRecord();
     const meta = _record?._meta      || {};
 
     const today = new Date().toISOString().slice(0, 10);
@@ -235,6 +235,13 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     if (s6 && s6.selected_hs && Object.keys(s6.selected_hs).length) return s6;
     const la = _record?.['step-5']?.legal_assessment;
     return { selected_hs: (la && la.selected_hs) || {} };
+  }
+
+  // Control implementation status + residual risk now live in the "Recording and
+  // Reporting" step (step-13). Fall back to the legacy step-7 record for records
+  // saved before the ISO 31000 split.
+  function _recordingRecord() {
+    return _record?.['step-13'] || _record?.['step-7'] || null;
   }
 
   // Per-risk selected HS refs, preferring `selected_hs`; falls back to the
