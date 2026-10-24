@@ -309,7 +309,7 @@ window.WizUtils = (function () {
     const sec = el('div', 'step-title-section');
 
     if (phaseTitle) sec.appendChild(el('p', 'step-detail-phase-label', { textContent: phaseTitle }));
-    sec.appendChild(el('h1', 'step-detail-title step-title-lg', { textContent: `${step.number} — ${step.title}` }));
+    sec.appendChild(el('h1', 'step-detail-title step-title-lg', { textContent: step.number != null ? `${step.number} — ${step.title}` : step.title }));
 
     // "Why this step?" — plain-language purpose, so a non-practitioner sees the
     // point of the step without needing it explained in person.

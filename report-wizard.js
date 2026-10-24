@@ -40,8 +40,8 @@
       const s3 = _record?.['step-3'] || null;
       const s4 = _record?.['step-4'] || null;
       const s8 = _record?.['step-5'] || null;
-      const s9 = _record?.['step-6'] || null;
-      const s10 = _record?.['step-7'] || null;
+      const s9 = _selectionRecord();
+      const s10 = _recordingRecord();
       let inner = '';
       if (kind === 'classification')    inner = _classificationSection(s3);
       else if (kind === 'dpia')         inner = _dpiaSummarySection(s4);
@@ -163,8 +163,8 @@
     const s3  = _record?.['step-3']  || null;
     const s4  = _record?.['step-4']  || null;
     const s8  = _record?.['step-5']  || null;
-    const s9  = _record?.['step-6']  || null;
-    const s10 = _record?.['step-7']  || null;
+    const s9  = _selectionRecord();
+    const s10 = _recordingRecord();
     const meta = _record?._meta      || {};
 
     const today = new Date().toISOString().slice(0, 10);
@@ -227,7 +227,38 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     return s10?.hs_activation?.[riskId]?.[ref]?.status || 'not_started';
   }
 
-  // Per-risk selected HS refs, preferring step-6 `selected_hs`; falls back to the
+  // The control-selection record (what Step 6 used to hold). Step 6 is retired, so
+  // the selection now comes straight from Step 5's legal_assessment; a legacy
+  // step-6 record is still honoured if present.
+  function _selectionRecord() {
+    const s6 = _record?.['step-6'];
+    if (s6 && s6.selected_hs && Object.keys(s6.selected_hs).length) return s6;
+    const la = _record?.['step-5']?.legal_assessment;
+    return { selected_hs: (la && la.selected_hs) || {} };
+  }
+
+  // Control implementation status + residual risk now live in the "Recording and
+  // Reporting" step (step-13). Fall back to the legacy step-7 record for records
+  // saved before the ISO 31000 split.
+  function _recordingRecord() {
+    return _record?.['step-13'] || _record?.['step-7'] || null;
+  }
+
+  // Inherent risk rating per risk, recorded in Step 7 (Risk Analysis & Evaluation).
+  function _inherentOf(riskId) { return _record?.['step-7']?.inherent_risks?.[riskId] || null; }
+  const _LVL_COL = {
+    low: { bg: '#dcfce7', text: '#166534' }, medium: { bg: '#fef3c7', text: '#92400e' },
+    high: { bg: '#fed7aa', text: '#9a3412' }, critical: { bg: '#fee2e2', text: '#991b1b' },
+  };
+  function _inherentBadgeHtml(riskId) {
+    const inh = _inherentOf(riskId);
+    if (!inh || !inh.level) return '';
+    const c = _LVL_COL[inh.level] || { bg: '#eee', text: '#555' };
+    const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
+    return `<span class="inh-badge" style="background:${c.bg};color:${c.text}">Inherent ${_esc(cap(inh.level))} · L ${_esc(inh.likelihood || '—')} × I ${_esc(inh.impact || '—')}</span>`;
+  }
+
+  // Per-risk selected HS refs, preferring `selected_hs`; falls back to the
   // selected Harmonised_Standard controls for legacy records saved before that
   // field existed (yields nothing once those controls are removed — by which
   // point every record carries `selected_hs`).
@@ -738,7 +769,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
         const riskName   = riskNameById.get(riskId);
         const riskLabel  = riskName ? `${_esc(riskId)} — ${_esc(riskName)}` : _esc(riskId);
         html += `<div class="ctrl-group">
-          <div class="ctrl-group-hdr">${riskLabel}</div>
+          <div class="ctrl-group-hdr ctrl-group-hdr--flex"><span>${riskLabel}</span>${_inherentBadgeHtml(riskId)}</div>
           <table class="data-table data-table--sched">
             <thead><tr><th>Requirement</th><th>Name</th><th>Standard</th><th>Evidence Status</th></tr></thead>
             <tbody>
@@ -1663,6 +1694,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
 .ctrl-group{border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:10px}
 .ctrl-group--fs{border-color:#e9d5ff}
 .ctrl-group-hdr{background:#f8fafc;padding:7px 12px;font-size:9pt;font-weight:700;color:#374151;border-bottom:1px solid #e5e7eb}
+.ctrl-group-hdr--flex{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.inh-badge{font-size:8pt;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap}
 .ctrl-row{display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:9pt;border-bottom:1px solid #f0f0f0;flex-wrap:wrap}
 .ctrl-row:last-child{border-bottom:none}
 .ctrl-row--dim{color:#9ca3af}

@@ -135,8 +135,9 @@ function isStepComplete(stepId) {
     case 'step-3':  return !!s.axis_b?.ai_act_outcome;                 // classified, not a draft
     case 'step-4':  return !!s.completion_date;                        // DPIA saved, not a draft
     case 'step-5':  return !!(s.legal_assessment?.completed || s.group_standard_assessment?.completed);
-    case 'step-6':  return !!s.assessment_date;                        // controls saved, not the selected_hs draft
     case 'step-7':  return !!s.assessment_date;
+    case 'step-14': return !!s.decision;
+    case 'step-13': return !!s.assessment_date;
     case 'step-1':
     case 'step-8':
     case 'step-10':
@@ -169,7 +170,7 @@ function renderNav(workflow, stepIndex, phaseIndex, activeStepId) {
       const doneClass = isStepComplete(step.id) ? 'nav-step-num--done' : 'nav-step-num--todo';
       html += `
         <button class="nav-step ${activeClass}" data-step-id="${step.id}" onclick="selectStep('${step.id}')">
-          <span class="nav-step-num ${doneClass}">${step.number}</span>
+          <span class="nav-step-num ${doneClass}">${step.number != null ? step.number : '•'}</span>
           <span class="nav-step-title">${step.title}</span>
           ${step.isNew ? '<span class="nav-step-new">new</span>' : ''}
         </button>`;
@@ -267,6 +268,14 @@ function buildDashboard() {
     <p class="dash-sub">${meta.use_case_id ? _escHtml(meta.use_case_id) + ' · ' : ''}${meta.assessed_by ? 'Assessed by ' + _escHtml(meta.assessed_by) : 'Work through the steps below to assess and authorise this AI system.'}</p>`;
   dash.appendChild(head);
 
+  // Stopped banner — a "No-go" at Risk Treatment halts the whole assessment.
+  if (rec['step-14'] && rec['step-14'].decision === 'no_go') {
+    const blocked = document.createElement('div');
+    blocked.style.cssText = 'margin:18px 0 4px;padding:16px 20px;border:1px solid rgba(226,90,88,0.5);background:rgba(226,90,88,0.14);border-radius:10px;color:#fba4a3;font-size:14px;line-height:1.55';
+    blocked.innerHTML = `<strong style="font-size:15px">⛔ Assessment stopped — No-go at Risk Treatment.</strong><br>The business decided not to fund the build${rec['step-14'].decided_by ? ' (' + _escHtml(rec['step-14'].decided_by) + ')' : ''}. This AI use case is not proceeding. Reopen <strong>Risk Treatment</strong> to change the decision.`;
+    dash.appendChild(blocked);
+  }
+
   // Readiness meter
   const meter = document.createElement('div');
   meter.className = 'dash-meter';
@@ -280,7 +289,7 @@ function buildDashboard() {
   if (firstTodo) {
     const nb = document.createElement('button');
     nb.className = 'dash-next';
-    nb.innerHTML = `Continue → ${_stepIndex[firstTodo].number} — ${_escHtml(_stepIndex[firstTodo].title)}`;
+    nb.innerHTML = `Continue → ${_stepIndex[firstTodo].number != null ? _stepIndex[firstTodo].number + ' — ' : ''}${_escHtml(_stepIndex[firstTodo].title)}`;
     nb.onclick = () => selectStep(firstTodo);
     meter.appendChild(nb);
   }
@@ -306,7 +315,7 @@ function buildDashboard() {
       row.className = 'dash-step';
       row.onclick = () => selectStep(id);
       row.innerHTML = `
-        <span class="dash-step-num ${cpl ? 'dash-step-num--done' : 'dash-step-num--todo'}">${cpl ? '✓' : st.number}</span>
+        <span class="dash-step-num ${cpl ? 'dash-step-num--done' : 'dash-step-num--todo'}">${cpl ? '✓' : (st.number != null ? st.number : '•')}</span>
         <span class="dash-step-title">${_escHtml(st.title)}</span>
         <span class="dash-step-status ${cpl ? 'dash-step-status--done' : 'dash-step-status--todo'}">${cpl ? 'Done' : 'To do'}</span>
         <span class="dash-step-arrow">→</span>`;
@@ -362,7 +371,6 @@ function loadWorkedExample() {
     'step-3': { step_id: 'step-3', step_title: 'System classification', axis_a: { tier: 'tier_2', tier_label: 'Tier 2 — Business-impacting' }, axis_b: { ai_act_outcome: 'high_risk', organisation_role: 'deployer', transparency_obligations_apply: true, applicable_articles: [{ article_number: 'Article 10' }, { article_number: 'Article 14' }, { article_number: 'Article 15' }] }, combined_outcome: { article_14_human_oversight: true, requires_conformity_assessment: true }, all_requirement_control_numbers: [], rationale: 'High-risk: assists decisions affecting access to an essential service; deployer role; transparency and human-oversight obligations apply.', classified_by: 'A. Rivera', use_case_id: 'UC-2025-014' },
     'step-4': { step_id: 'step-4', step_title: 'Data identification and DPIA', completion_date: today, lawful_basis: 'Art.6(1)(f) — Legitimate interests', inherent_risk_rating: 'High', residual_risk_rating: 'Medium', dpo_consulted: 'Yes', data_types_identified: { data_subjects: ['Customers', 'Employees'], standard_personal_data: ['Name', 'Contact details', 'Contract terms'], special_category_data: [], automated_decision_making: 'No', security_measures: ['Encryption at rest', 'Role-based access control', 'Audit logging'], privacy_risks: ['Re-identification of pseudonymised contract data', 'Excessive retention of uploaded documents', 'Personal data egress to a third-party model'] }, answers: {} },
     'step-5': { legal_assessment: { completed: true, assessment_date: today, total_risks: 24, selected_count: 18, risks: [] }, group_standard_assessment: { completed: true, assessment_date: today, total_risks: 1, selected_count: 1, risks: [] } },
-    'step-6': { assessment_date: today },
     'step-7': { assessment_date: today },
     'step-8': { attested: true },
     'step-10': { attested: true },
@@ -412,10 +420,12 @@ async function selectStep(stepId) {
     mountStep4Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-5') {
     mountStep5Wizard(panel, step, detailData, color, phaseTitle);
-  } else if (stepId === 'step-6') {
-    mountStep6Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-7') {
     mountStep7Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-14') {
+    mountTreatmentWizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-13') {
+    mountRecordingWizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
     mountReportWizard(panel);
   } else if (stepId === 'step-9') {
@@ -524,7 +534,7 @@ function buildMomentumBar(stepId) {
   back.className = 'momentum-btn momentum-btn--back';
   if (prevId) {
     const ps = _stepIndex[prevId];
-    back.innerHTML = `<span class="momentum-arrow">←</span><span class="momentum-btn-text"><span class="momentum-btn-kicker">Back</span><span class="momentum-btn-title">${ps.number} — ${ps.title}</span></span>`;
+    back.innerHTML = `<span class="momentum-arrow">←</span><span class="momentum-btn-text"><span class="momentum-btn-kicker">Back</span><span class="momentum-btn-title">${ps.number != null ? ps.number + ' — ' : ''}${ps.title}</span></span>`;
     back.onclick = () => selectStep(prevId);
   } else { back.style.visibility = 'hidden'; }
 
@@ -537,7 +547,7 @@ function buildMomentumBar(stepId) {
   next.className = 'momentum-btn momentum-btn--next' + (complete ? ' is-ready' : '');
   if (nextId) {
     const ns = _stepIndex[nextId];
-    next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">${complete ? 'Next ✓' : 'Next'}</span><span class="momentum-btn-title">${ns.number} — ${ns.title}</span></span><span class="momentum-arrow">→</span>`;
+    next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">${complete ? 'Next ✓' : 'Next'}</span><span class="momentum-btn-title">${ns.number != null ? ns.number + ' — ' : ''}${ns.title}</span></span><span class="momentum-arrow">→</span>`;
     next.onclick = () => selectStep(nextId);
   } else {
     next.innerHTML = `<span class="momentum-btn-text"><span class="momentum-btn-kicker">Done</span><span class="momentum-btn-title">End of workflow</span></span>`;
@@ -733,8 +743,9 @@ if (document.readyState === 'loading') {
 <script src="step3-wizard.js"></script>
 <script src="step4-wizard.js"></script>
 <script src="step5-wizard.js"></script>
-<script src="step6-wizard.js"></script>
 <script src="step7-wizard.js"></script>
+<script src="treatment-wizard.js"></script>
+<script src="recording-wizard.js"></script>
 <script src="report-wizard.js"></script>
 </body>
 </html>
