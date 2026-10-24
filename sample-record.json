@@ -1,0 +1,2870 @@
+{
+  "_meta": {
+    "schema_version": "1.0",
+    "title": "AI Acceptable Use — System Authorisation Record",
+    "standard": "ISO/IEC 42001-aligned",
+    "created": "2026-10-24T01:50:29.832Z",
+    "last_modified": "2026-10-24T01:50:38.093Z",
+    "use_case_name": "JAKE — Contract Q&A Assistant",
+    "use_case_id": "UC-2025-014",
+    "assessed_by": "A. Rivera (Risk & Compliance)"
+  },
+  "step-1": {
+    "attested": true,
+    "attested_by": "A. Rivera",
+    "attested_at": "2026-10-24T01:50:29.832Z"
+  },
+  "step-2": {
+    "step_id": "step-2",
+    "business_case": "JAKE is an AI assistant used by the Legal and Procurement teams to answer questions from uploaded customer contracts and draft summary clauses. It runs on a third-party foundation-model API; our organisation is the deployer. Its outputs are shared with clients. It processes customer contracts and financial records, which include personal data (PII). People use its outputs as the basis for decisions; human verification is currently informal. If it produces an incorrect or hallucinated output, the assessed business impact is severe, and could cause a regulatory or compliance breach.",
+    "input_mode": "text",
+    "saved_at": "2026-10-24T01:50:29.832Z"
+  },
+  "step-3": {
+    "step_id": "step-3",
+    "step_title": "System classification",
+    "axis_a": {
+      "tier": "tier_2",
+      "tier_label": "Tier 2 — Business-impacting"
+    },
+    "axis_b": {
+      "ai_act_outcome": "HIGH_RISK",
+      "organisation_role": "deployer",
+      "transparency_obligations_apply": true,
+      "applicable_articles": [
+        {
+          "article_number": "Article 13"
+        },
+        {
+          "article_number": "Article 14"
+        },
+        {
+          "article_number": "Article 15"
+        },
+        {
+          "article_number": "Article 10"
+        },
+        {
+          "article_number": "Article 12"
+        },
+        {
+          "article_number": "Article 17"
+        },
+        {
+          "article_number": "Article 9"
+        },
+        {
+          "article_number": "Article 11"
+        },
+        {
+          "article_number": "Article 25"
+        },
+        {
+          "article_number": "Article 26"
+        },
+        {
+          "article_number": "Article 43"
+        },
+        {
+          "article_number": "Article 50"
+        },
+        {
+          "article_number": "Article 72"
+        }
+      ]
+    },
+    "combined_outcome": {
+      "article_14_human_oversight": true,
+      "requires_conformity_assessment": true
+    },
+    "all_requirement_control_numbers": [],
+    "rationale": "High-risk: assists decisions affecting access to an essential service; deployer role; transparency and human-oversight obligations apply.",
+    "classified_by": "A. Rivera",
+    "use_case_id": "UC-2025-014"
+  },
+  "step-4": {
+    "step_id": "step-4",
+    "step_title": "Data identification and DPIA",
+    "completion_date": "2026-10-24",
+    "lawful_basis": "Art.6(1)(f) — Legitimate interests",
+    "inherent_risk_rating": "High",
+    "residual_risk_rating": "Medium",
+    "dpo_consulted": "Yes",
+    "data_types_identified": {
+      "data_subjects": [
+        "Customers",
+        "Employees"
+      ],
+      "standard_personal_data": [
+        "Name",
+        "Contact details",
+        "Contract terms"
+      ],
+      "special_category_data": [],
+      "automated_decision_making": "No",
+      "security_measures": [
+        "Encryption at rest",
+        "Role-based access control",
+        "Audit logging"
+      ],
+      "privacy_risks": [
+        "Re-identification of pseudonymised contract data",
+        "Excessive retention of uploaded documents",
+        "Personal data egress to a third-party model"
+      ]
+    },
+    "answers": {}
+  },
+  "step-5": {
+    "legal_assessment": {
+      "completed": true,
+      "assessment_date": "2026-10-24",
+      "wizard_answers": {
+        "Unmanaged risk lifecycle": "yes",
+        "Unmanaged substantial modification": "yes",
+        "Unmet deployer duties": "yes",
+        "Unverified conformity": "yes",
+        "Opaque system to deployers": "yes",
+        "Ineffective human oversight": "yes",
+        "Security compromise": "yes",
+        "Inaccurate or unproven performance": "yes",
+        "Fragile or unsafe behaviour under stress": "yes",
+        "Poor data quality & governance": "yes",
+        "Discriminatory or biased outcomes": "yes",
+        "Incomplete event recording": "yes",
+        "Inadequate system logging": "yes",
+        "No quality management system": "yes",
+        "Incomplete technical file": "yes",
+        "Undisclosed AI interaction or content": "yes",
+        "Blind post-market operation": "yes"
+      },
+      "wizard_rationales": {},
+      "wizard_challenges": {},
+      "wizard_req_selections": {
+        "Unmanaged risk lifecycle": {
+          "[18228.1]": true,
+          "[18228.2]": true,
+          "[18228.3]": true,
+          "[18228.4]": true,
+          "[18228.5]": true,
+          "[18228.6]": true
+        },
+        "Unmanaged substantial modification": {
+          "[42001.1]": true,
+          "[42001.2]": true,
+          "[42001.3]": true,
+          "[42001.4]": true
+        },
+        "Unmet deployer duties": {
+          "[42001.8]": true
+        },
+        "Unverified conformity": {
+          "[18286.16]": true,
+          "[18286.17]": true,
+          "[18286.18]": true,
+          "[18286.19]": true,
+          "[18286.20]": true
+        },
+        "Opaque system to deployers": {
+          "[18229-1.1]": true,
+          "[18229-1.2]": true,
+          "[18229-1.3]": true
+        },
+        "Ineffective human oversight": {
+          "[18229-1.6]": true,
+          "[18229-1.7]": true,
+          "[18229-1.8]": true
+        },
+        "Security compromise": {
+          "[18282.1]": true,
+          "[18282.2]": true,
+          "[18282.3]": true,
+          "[18282.4]": true,
+          "[18282.5]": true,
+          "[18282.6]": true,
+          "[18282.7]": true,
+          "[18282.8]": true
+        },
+        "Inaccurate or unproven performance": {
+          "[18229-2.9]": true,
+          "[18229-2.10]": true,
+          "[18229-2.11]": true,
+          "[18229-2.12]": true,
+          "[18229-2.13]": true,
+          "[18229-2.14]": true
+        },
+        "Fragile or unsafe behaviour under stress": {
+          "[18229-2.15]": true,
+          "[18229-2.16]": true,
+          "[18229-2.17]": true,
+          "[18229-2.18]": true,
+          "[18229-2.19]": true,
+          "[18229-2.20]": true,
+          "[18229-2.21]": true
+        },
+        "Poor data quality & governance": {
+          "[18284.1]": true,
+          "[18284.2]": true,
+          "[18284.3]": true,
+          "[18284.4]": true,
+          "[18284.5]": true,
+          "[18284.6]": true,
+          "[18284.7]": true,
+          "[18284.8]": true,
+          "[18284.9]": true,
+          "[18284.10]": true
+        },
+        "Discriminatory or biased outcomes": {
+          "[18283.1]": true,
+          "[18283.2]": true,
+          "[18283.3]": true,
+          "[18283.4]": true,
+          "[18283.5]": true
+        },
+        "Incomplete event recording": {
+          "[18229-1.4]": true,
+          "[18229-1.5]": true
+        },
+        "Inadequate system logging": {
+          "[24970.1]": true,
+          "[24970.2]": true,
+          "[24970.3]": true,
+          "[24970.4]": true,
+          "[24970.5]": true,
+          "[24970.6]": true,
+          "[24970.7]": true,
+          "[24970.8]": true
+        },
+        "No quality management system": {
+          "[18286.1]": true,
+          "[18286.2]": true,
+          "[18286.3]": true,
+          "[18286.4]": true,
+          "[18286.5]": true,
+          "[18286.6]": true,
+          "[18286.7]": true,
+          "[18286.8]": true
+        },
+        "Incomplete technical file": {
+          "[18286.9]": true,
+          "[18286.10]": true,
+          "[18286.11]": true,
+          "[18286.12]": true,
+          "[18286.13]": true,
+          "[18286.14]": true,
+          "[18286.15]": true
+        },
+        "Undisclosed AI interaction or content": {
+          "[12792.1]": true,
+          "[12792.2]": true,
+          "[12792.3]": true,
+          "[12792.4]": true,
+          "[12792.5]": true
+        },
+        "Blind post-market operation": {
+          "[18286.21]": true,
+          "[18286.22]": true,
+          "[18286.23]": true,
+          "[18286.24]": true,
+          "[18286.25]": true
+        }
+      },
+      "wizard_req_reasons": {
+        "Unmanaged risk lifecycle": {},
+        "Unmanaged substantial modification": {},
+        "Unmet deployer duties": {},
+        "Unverified conformity": {},
+        "Opaque system to deployers": {},
+        "Ineffective human oversight": {},
+        "Security compromise": {},
+        "Inaccurate or unproven performance": {},
+        "Fragile or unsafe behaviour under stress": {},
+        "Poor data quality & governance": {},
+        "Discriminatory or biased outcomes": {},
+        "Incomplete event recording": {},
+        "Inadequate system logging": {},
+        "No quality management system": {},
+        "Incomplete technical file": {},
+        "Undisclosed AI interaction or content": {},
+        "Blind post-market operation": {}
+      },
+      "selected_hs": {
+        "RISK-001": [
+          "[18229-1.1]",
+          "[18229-1.2]",
+          "[18229-1.3]"
+        ],
+        "RISK-002": [
+          "[18229-1.6]",
+          "[18229-1.7]",
+          "[18229-1.8]"
+        ],
+        "RISK-003": [
+          "[18282.1]",
+          "[18282.2]",
+          "[18282.3]",
+          "[18282.4]",
+          "[18282.5]",
+          "[18282.6]",
+          "[18282.7]",
+          "[18282.8]"
+        ],
+        "RISK-004": [
+          "[18229-2.9]",
+          "[18229-2.10]",
+          "[18229-2.11]",
+          "[18229-2.12]",
+          "[18229-2.13]",
+          "[18229-2.14]"
+        ],
+        "RISK-005": [
+          "[18229-2.15]",
+          "[18229-2.16]",
+          "[18229-2.17]",
+          "[18229-2.18]",
+          "[18229-2.19]",
+          "[18229-2.20]",
+          "[18229-2.21]"
+        ],
+        "RISK-006": [
+          "[18284.1]",
+          "[18284.2]",
+          "[18284.3]",
+          "[18284.4]",
+          "[18284.5]",
+          "[18284.6]",
+          "[18284.7]",
+          "[18284.8]",
+          "[18284.9]",
+          "[18284.10]"
+        ],
+        "RISK-007": [
+          "[18283.1]",
+          "[18283.2]",
+          "[18283.3]",
+          "[18283.4]",
+          "[18283.5]"
+        ],
+        "RISK-008": [
+          "[18229-1.4]",
+          "[18229-1.5]"
+        ],
+        "RISK-009": [
+          "[24970.1]",
+          "[24970.2]",
+          "[24970.3]",
+          "[24970.4]",
+          "[24970.5]",
+          "[24970.6]",
+          "[24970.7]",
+          "[24970.8]"
+        ],
+        "RISK-010": [
+          "[18286.1]",
+          "[18286.2]",
+          "[18286.3]",
+          "[18286.4]",
+          "[18286.5]",
+          "[18286.6]",
+          "[18286.7]",
+          "[18286.8]"
+        ],
+        "RISK-011": [
+          "[18228.1]",
+          "[18228.2]",
+          "[18228.3]",
+          "[18228.4]",
+          "[18228.5]",
+          "[18228.6]"
+        ],
+        "RISK-012": [
+          "[18286.9]",
+          "[18286.10]",
+          "[18286.11]",
+          "[18286.12]",
+          "[18286.13]",
+          "[18286.14]",
+          "[18286.15]"
+        ],
+        "RISK-013": [
+          "[42001.1]",
+          "[42001.2]",
+          "[42001.3]",
+          "[42001.4]"
+        ],
+        "RISK-014": [
+          "[42001.8]"
+        ],
+        "RISK-015": [
+          "[18286.16]",
+          "[18286.17]",
+          "[18286.18]",
+          "[18286.19]",
+          "[18286.20]"
+        ],
+        "RISK-016": [
+          "[12792.1]",
+          "[12792.2]",
+          "[12792.3]",
+          "[12792.4]",
+          "[12792.5]"
+        ],
+        "RISK-017": [
+          "[18286.21]",
+          "[18286.22]",
+          "[18286.23]",
+          "[18286.24]",
+          "[18286.25]"
+        ]
+      },
+      "requirement_exclusions": {
+        "[42001.5]": "",
+        "[42001.6]": "",
+        "[42001.7]": "",
+        "[42001.9]": ""
+      },
+      "unjustified_exclusions": 4,
+      "total_risks": 17,
+      "selected_count": 17,
+      "excluded_count": 0,
+      "exclusions_approved": false,
+      "risks": [
+        {
+          "risk_id": "RISK-001",
+          "risk_name": "Opaque system to deployers",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18229-1.1]",
+            "[18229-1.2]",
+            "[18229-1.3]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-002",
+          "risk_name": "Ineffective human oversight",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18229-1.6]",
+            "[18229-1.7]",
+            "[18229-1.8]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-003",
+          "risk_name": "Security compromise",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18282.1]",
+            "[18282.2]",
+            "[18282.3]",
+            "[18282.4]",
+            "[18282.5]",
+            "[18282.6]",
+            "[18282.7]",
+            "[18282.8]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-004",
+          "risk_name": "Inaccurate or unproven performance",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18229-2.9]",
+            "[18229-2.10]",
+            "[18229-2.11]",
+            "[18229-2.12]",
+            "[18229-2.13]",
+            "[18229-2.14]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-005",
+          "risk_name": "Fragile or unsafe behaviour under stress",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18229-2.15]",
+            "[18229-2.16]",
+            "[18229-2.17]",
+            "[18229-2.18]",
+            "[18229-2.19]",
+            "[18229-2.20]",
+            "[18229-2.21]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-006",
+          "risk_name": "Poor data quality & governance",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18284.1]",
+            "[18284.2]",
+            "[18284.3]",
+            "[18284.4]",
+            "[18284.5]",
+            "[18284.6]",
+            "[18284.7]",
+            "[18284.8]",
+            "[18284.9]",
+            "[18284.10]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-007",
+          "risk_name": "Discriminatory or biased outcomes",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18283.1]",
+            "[18283.2]",
+            "[18283.3]",
+            "[18283.4]",
+            "[18283.5]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-008",
+          "risk_name": "Incomplete event recording",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18229-1.4]",
+            "[18229-1.5]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-009",
+          "risk_name": "Inadequate system logging",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[24970.1]",
+            "[24970.2]",
+            "[24970.3]",
+            "[24970.4]",
+            "[24970.5]",
+            "[24970.6]",
+            "[24970.7]",
+            "[24970.8]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-010",
+          "risk_name": "No quality management system",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18286.1]",
+            "[18286.2]",
+            "[18286.3]",
+            "[18286.4]",
+            "[18286.5]",
+            "[18286.6]",
+            "[18286.7]",
+            "[18286.8]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-011",
+          "risk_name": "Unmanaged risk lifecycle",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18228.1]",
+            "[18228.2]",
+            "[18228.3]",
+            "[18228.4]",
+            "[18228.5]",
+            "[18228.6]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-012",
+          "risk_name": "Incomplete technical file",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18286.9]",
+            "[18286.10]",
+            "[18286.11]",
+            "[18286.12]",
+            "[18286.13]",
+            "[18286.14]",
+            "[18286.15]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-013",
+          "risk_name": "Unmanaged substantial modification",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[42001.1]",
+            "[42001.2]",
+            "[42001.3]",
+            "[42001.4]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-014",
+          "risk_name": "Unmet deployer duties",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[42001.8]"
+          ],
+          "excluded_refs": [
+            {
+              "standard_ref": "[42001.5]",
+              "standard_name": "Instructions for Use Compliance",
+              "reason": ""
+            },
+            {
+              "standard_ref": "[42001.6]",
+              "standard_name": "Human Oversight Implementation",
+              "reason": ""
+            },
+            {
+              "standard_ref": "[42001.7]",
+              "standard_name": "Monitoring & Logging",
+              "reason": ""
+            },
+            {
+              "standard_ref": "[42001.9]",
+              "standard_name": "Affected Persons Identification",
+              "reason": ""
+            }
+          ],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-015",
+          "risk_name": "Unverified conformity",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18286.16]",
+            "[18286.17]",
+            "[18286.18]",
+            "[18286.19]",
+            "[18286.20]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-016",
+          "risk_name": "Undisclosed AI interaction or content",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[12792.1]",
+            "[12792.2]",
+            "[12792.3]",
+            "[12792.4]",
+            "[12792.5]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        },
+        {
+          "risk_id": "RISK-017",
+          "risk_name": "Blind post-market operation",
+          "risk_source": "EU_AI_Act",
+          "selected": true,
+          "wizard_answer": "yes",
+          "rationale": "",
+          "selected_refs": [
+            "[18286.21]",
+            "[18286.22]",
+            "[18286.23]",
+            "[18286.24]",
+            "[18286.25]"
+          ],
+          "excluded_refs": [],
+          "relevance": "medium"
+        }
+      ]
+    },
+    "group_standard_assessment": {
+      "completed": true,
+      "assessment_date": "2026-10-24",
+      "total_risks": 1,
+      "selected_count": 1,
+      "risks": []
+    }
+  },
+  "step-6": {
+    "step_id": "step-6",
+    "step_title": "Control identification",
+    "assessment_date": "2026-10-24",
+    "assessed_by": "A. Rivera (Risk & Compliance)",
+    "use_case_id": "UC-2025-014",
+    "total_risks": 17,
+    "risks_covered": 17,
+    "total_requirements": 93,
+    "selected_hs": {
+      "RISK-001": [
+        "[18229-1.1]",
+        "[18229-1.2]",
+        "[18229-1.3]"
+      ],
+      "RISK-002": [
+        "[18229-1.6]",
+        "[18229-1.7]",
+        "[18229-1.8]"
+      ],
+      "RISK-003": [
+        "[18282.1]",
+        "[18282.2]",
+        "[18282.3]",
+        "[18282.4]",
+        "[18282.5]",
+        "[18282.6]",
+        "[18282.7]",
+        "[18282.8]"
+      ],
+      "RISK-004": [
+        "[18229-2.9]",
+        "[18229-2.10]",
+        "[18229-2.11]",
+        "[18229-2.12]",
+        "[18229-2.13]",
+        "[18229-2.14]"
+      ],
+      "RISK-005": [
+        "[18229-2.15]",
+        "[18229-2.16]",
+        "[18229-2.17]",
+        "[18229-2.18]",
+        "[18229-2.19]",
+        "[18229-2.20]",
+        "[18229-2.21]"
+      ],
+      "RISK-006": [
+        "[18284.1]",
+        "[18284.2]",
+        "[18284.3]",
+        "[18284.4]",
+        "[18284.5]",
+        "[18284.6]",
+        "[18284.7]",
+        "[18284.8]",
+        "[18284.9]",
+        "[18284.10]"
+      ],
+      "RISK-007": [
+        "[18283.1]",
+        "[18283.2]",
+        "[18283.3]",
+        "[18283.4]",
+        "[18283.5]"
+      ],
+      "RISK-008": [
+        "[18229-1.4]",
+        "[18229-1.5]"
+      ],
+      "RISK-009": [
+        "[24970.1]",
+        "[24970.2]",
+        "[24970.3]",
+        "[24970.4]",
+        "[24970.5]",
+        "[24970.6]",
+        "[24970.7]",
+        "[24970.8]"
+      ],
+      "RISK-010": [
+        "[18286.1]",
+        "[18286.2]",
+        "[18286.3]",
+        "[18286.4]",
+        "[18286.5]",
+        "[18286.6]",
+        "[18286.7]",
+        "[18286.8]"
+      ],
+      "RISK-011": [
+        "[18228.1]",
+        "[18228.2]",
+        "[18228.3]",
+        "[18228.4]",
+        "[18228.5]",
+        "[18228.6]"
+      ],
+      "RISK-012": [
+        "[18286.9]",
+        "[18286.10]",
+        "[18286.11]",
+        "[18286.12]",
+        "[18286.13]",
+        "[18286.14]",
+        "[18286.15]"
+      ],
+      "RISK-013": [
+        "[42001.1]",
+        "[42001.2]",
+        "[42001.3]",
+        "[42001.4]"
+      ],
+      "RISK-014": [
+        "[42001.8]"
+      ],
+      "RISK-015": [
+        "[18286.16]",
+        "[18286.17]",
+        "[18286.18]",
+        "[18286.19]",
+        "[18286.20]"
+      ],
+      "RISK-016": [
+        "[12792.1]",
+        "[12792.2]",
+        "[12792.3]",
+        "[12792.4]",
+        "[12792.5]"
+      ],
+      "RISK-017": [
+        "[18286.21]",
+        "[18286.22]",
+        "[18286.23]",
+        "[18286.24]",
+        "[18286.25]"
+      ]
+    },
+    "selected_requirements": [
+      {
+        "risk_id": "RISK-001",
+        "risk_name": "Opaque system to deployers",
+        "standard_ref": "[18229-1.1]",
+        "standard_name": "Intended Purpose",
+        "subcategory": "Transparency",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-001",
+        "risk_name": "Opaque system to deployers",
+        "standard_ref": "[18229-1.2]",
+        "standard_name": "Limitations",
+        "subcategory": "Transparency",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-001",
+        "risk_name": "Opaque system to deployers",
+        "standard_ref": "[18229-1.3]",
+        "standard_name": "Instructions for Use",
+        "subcategory": "Transparency",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-002",
+        "risk_name": "Ineffective human oversight",
+        "standard_ref": "[18229-1.6]",
+        "standard_name": "Automation Confidence Warning",
+        "subcategory": "Human Oversight",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-002",
+        "risk_name": "Ineffective human oversight",
+        "standard_ref": "[18229-1.7]",
+        "standard_name": "Intervention Tools",
+        "subcategory": "Human Oversight",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-002",
+        "risk_name": "Ineffective human oversight",
+        "standard_ref": "[18229-1.8]",
+        "standard_name": "Interpretability",
+        "subcategory": "Human Oversight",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.1]",
+        "standard_name": "Adversarial Attacks",
+        "subcategory": "Threat Mitigation",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.2]",
+        "standard_name": "Data Poisoning",
+        "subcategory": "Threat Mitigation",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.3]",
+        "standard_name": "Model Inversion",
+        "subcategory": "Threat Mitigation",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.4]",
+        "standard_name": "Secure Development",
+        "subcategory": "System Integrity",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.5]",
+        "standard_name": "Supply Chain Security",
+        "subcategory": "System Integrity",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.6]",
+        "standard_name": "Access Control",
+        "subcategory": "Infrastructure",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.7]",
+        "standard_name": "Model Robustness",
+        "subcategory": "Infrastructure",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-003",
+        "risk_name": "Security compromise",
+        "standard_ref": "[18282.8]",
+        "standard_name": "Anomaly Detection",
+        "subcategory": "Defense-in-Depth",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-004",
+        "risk_name": "Inaccurate or unproven performance",
+        "standard_ref": "[18229-2.9]",
+        "standard_name": "Metric Selection",
+        "subcategory": "Metric Requirements",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-004",
+        "risk_name": "Inaccurate or unproven performance",
+        "standard_ref": "[18229-2.10]",
+        "standard_name": "Validation",
+        "subcategory": "Metric Requirements",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-004",
+        "risk_name": "Inaccurate or unproven performance",
+        "standard_ref": "[18229-2.11]",
+        "standard_name": "Declaration",
+        "subcategory": "Metric Requirements",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-004",
+        "risk_name": "Inaccurate or unproven performance",
+        "standard_ref": "[18229-2.12]",
+        "standard_name": "Consistency",
+        "subcategory": "Lifecycle Performance",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-004",
+        "risk_name": "Inaccurate or unproven performance",
+        "standard_ref": "[18229-2.13]",
+        "standard_name": "Benchmarking",
+        "subcategory": "Lifecycle Performance",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-004",
+        "risk_name": "Inaccurate or unproven performance",
+        "standard_ref": "[18229-2.14]",
+        "standard_name": "Verification Methods",
+        "subcategory": "Technical Documentation",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-005",
+        "risk_name": "Fragile or unsafe behaviour under stress",
+        "standard_ref": "[18229-2.15]",
+        "standard_name": "Input Noise",
+        "subcategory": "Resilience Factors",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-005",
+        "risk_name": "Fragile or unsafe behaviour under stress",
+        "standard_ref": "[18229-2.16]",
+        "standard_name": "Environment Changes",
+        "subcategory": "Resilience Factors",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-005",
+        "risk_name": "Fragile or unsafe behaviour under stress",
+        "standard_ref": "[18229-2.17]",
+        "standard_name": "Feedback Loops",
+        "subcategory": "Resilience Factors",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-005",
+        "risk_name": "Fragile or unsafe behaviour under stress",
+        "standard_ref": "[18229-2.18]",
+        "standard_name": "Graceful Degradation",
+        "subcategory": "Fail-Safe Mechanisms",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-005",
+        "risk_name": "Fragile or unsafe behaviour under stress",
+        "standard_ref": "[18229-2.19]",
+        "standard_name": "Technical Redundancy",
+        "subcategory": "Fail-Safe Mechanisms",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-005",
+        "risk_name": "Fragile or unsafe behaviour under stress",
+        "standard_ref": "[18229-2.20]",
+        "standard_name": "Output Reliability",
+        "subcategory": "Reproducibility",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-005",
+        "risk_name": "Fragile or unsafe behaviour under stress",
+        "standard_ref": "[18229-2.21]",
+        "standard_name": "Content Moderation Guardrail",
+        "subcategory": "Content Safety",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.1]",
+        "standard_name": "Design Choices",
+        "subcategory": "Governance Practices",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.2]",
+        "standard_name": "Data Origin",
+        "subcategory": "Governance Practices",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.3]",
+        "standard_name": "Data Preparation Operations",
+        "subcategory": "Governance Practices",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.4]",
+        "standard_name": "Representativeness",
+        "subcategory": "Quality Metrics",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.5]",
+        "standard_name": "Completeness",
+        "subcategory": "Quality Metrics",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.6]",
+        "standard_name": "Accuracy / Correctness",
+        "subcategory": "Quality Metrics",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.7]",
+        "standard_name": "Dataset Splitting",
+        "subcategory": "Lifecycle Requirements",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.8]",
+        "standard_name": "Data Retention",
+        "subcategory": "Lifecycle Requirements",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.9]",
+        "standard_name": "Formulation",
+        "subcategory": "Assumptions",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-006",
+        "risk_name": "Poor data quality & governance",
+        "standard_ref": "[18284.10]",
+        "standard_name": "Personal Data Egress & Output Filtering",
+        "subcategory": "Privacy Protection",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-007",
+        "risk_name": "Discriminatory or biased outcomes",
+        "standard_ref": "[18283.1]",
+        "standard_name": "Representativeness",
+        "subcategory": "Bias Detection",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-007",
+        "risk_name": "Discriminatory or biased outcomes",
+        "standard_ref": "[18283.2]",
+        "standard_name": "Bias Metrics",
+        "subcategory": "Bias Detection",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-007",
+        "risk_name": "Discriminatory or biased outcomes",
+        "standard_ref": "[18283.3]",
+        "standard_name": "Proxy Identification",
+        "subcategory": "Bias Detection",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-007",
+        "risk_name": "Discriminatory or biased outcomes",
+        "standard_ref": "[18283.4]",
+        "standard_name": "Multi-stakeholder Input",
+        "subcategory": "Human & Social Context",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-007",
+        "risk_name": "Discriminatory or biased outcomes",
+        "standard_ref": "[18283.5]",
+        "standard_name": "Fundamental Rights",
+        "subcategory": "Human & Social Context",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-008",
+        "risk_name": "Incomplete event recording",
+        "standard_ref": "[18229-1.4]",
+        "standard_name": "Event Recording",
+        "subcategory": "Logging",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-008",
+        "risk_name": "Incomplete event recording",
+        "standard_ref": "[18229-1.5]",
+        "standard_name": "Traceability",
+        "subcategory": "Logging",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.1]",
+        "standard_name": "Monitoring Events",
+        "subcategory": "Logging Triggers",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.2]",
+        "standard_name": "Human Intervention",
+        "subcategory": "Logging Triggers",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.3]",
+        "standard_name": "System State",
+        "subcategory": "Captured Information",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.4]",
+        "standard_name": "Input/Output Data",
+        "subcategory": "Captured Information",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.5]",
+        "standard_name": "Errors & Failures",
+        "subcategory": "Captured Information",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.6]",
+        "standard_name": "Tamper Resistance",
+        "subcategory": "Storage & Governance",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.7]",
+        "standard_name": "Retention Periods",
+        "subcategory": "Storage & Governance",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-009",
+        "risk_name": "Inadequate system logging",
+        "standard_ref": "[24970.8]",
+        "standard_name": "Privacy",
+        "subcategory": "Storage & Governance",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.1]",
+        "standard_name": "Compliance Strategy",
+        "subcategory": "Organizational Strategy",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.2]",
+        "standard_name": "Accountability Framework",
+        "subcategory": "Organizational Strategy",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.3]",
+        "standard_name": "Design & Development",
+        "subcategory": "Operational Controls",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.4]",
+        "standard_name": "Resource Management",
+        "subcategory": "Operational Controls",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.5]",
+        "standard_name": "Post-Market Monitoring (PMM)",
+        "subcategory": "Post-Launch Duties",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.6]",
+        "standard_name": "Incident Reporting",
+        "subcategory": "Post-Launch Duties",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.7]",
+        "standard_name": "Technical Documentation",
+        "subcategory": "Documentation & Records",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-010",
+        "risk_name": "No quality management system",
+        "standard_ref": "[18286.8]",
+        "standard_name": "Record-Keeping",
+        "subcategory": "Documentation & Records",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-011",
+        "risk_name": "Unmanaged risk lifecycle",
+        "standard_ref": "[18228.1]",
+        "standard_name": "Identification",
+        "subcategory": "Key Risk Iterations",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-011",
+        "risk_name": "Unmanaged risk lifecycle",
+        "standard_ref": "[18228.2]",
+        "standard_name": "Estimation",
+        "subcategory": "Key Risk Iterations",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-011",
+        "risk_name": "Unmanaged risk lifecycle",
+        "standard_ref": "[18228.3]",
+        "standard_name": "Evaluation",
+        "subcategory": "Key Risk Iterations",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-011",
+        "risk_name": "Unmanaged risk lifecycle",
+        "standard_ref": "[18228.4]",
+        "standard_name": "Elimination",
+        "subcategory": "Mitigation Hierarchy",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-011",
+        "risk_name": "Unmanaged risk lifecycle",
+        "standard_ref": "[18228.5]",
+        "standard_name": "Mitigation",
+        "subcategory": "Mitigation Hierarchy",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-011",
+        "risk_name": "Unmanaged risk lifecycle",
+        "standard_ref": "[18228.6]",
+        "standard_name": "Information",
+        "subcategory": "Mitigation Hierarchy",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-012",
+        "risk_name": "Incomplete technical file",
+        "standard_ref": "[18286.9]",
+        "standard_name": "System Identity & Purpose",
+        "subcategory": "System Description",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-012",
+        "risk_name": "Incomplete technical file",
+        "standard_ref": "[18286.10]",
+        "standard_name": "Architecture & Components",
+        "subcategory": "System Description",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-012",
+        "risk_name": "Incomplete technical file",
+        "standard_ref": "[18286.11]",
+        "standard_name": "Training Methodology",
+        "subcategory": "System Description",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-012",
+        "risk_name": "Incomplete technical file",
+        "standard_ref": "[18286.12]",
+        "standard_name": "Accuracy & Metrics Achieved",
+        "subcategory": "Performance Evidence",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-012",
+        "risk_name": "Incomplete technical file",
+        "standard_ref": "[18286.13]",
+        "standard_name": "Testing & Validation Results",
+        "subcategory": "Performance Evidence",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-012",
+        "risk_name": "Incomplete technical file",
+        "standard_ref": "[18286.14]",
+        "standard_name": "Version Control",
+        "subcategory": "Change Management",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-012",
+        "risk_name": "Incomplete technical file",
+        "standard_ref": "[18286.15]",
+        "standard_name": "Modification Log",
+        "subcategory": "Change Management",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-013",
+        "risk_name": "Unmanaged substantial modification",
+        "standard_ref": "[42001.1]",
+        "standard_name": "Scope of Change Evaluation",
+        "subcategory": "Modification Assessment",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-013",
+        "risk_name": "Unmanaged substantial modification",
+        "standard_ref": "[42001.2]",
+        "standard_name": "Provider Responsibility Trigger",
+        "subcategory": "Modification Assessment",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-013",
+        "risk_name": "Unmanaged substantial modification",
+        "standard_ref": "[42001.3]",
+        "standard_name": "Re-assessment Requirement",
+        "subcategory": "Re-conformity",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-013",
+        "risk_name": "Unmanaged substantial modification",
+        "standard_ref": "[42001.4]",
+        "standard_name": "Updated Technical Documentation",
+        "subcategory": "Re-conformity",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-014",
+        "risk_name": "Unmet deployer duties",
+        "standard_ref": "[42001.8]",
+        "standard_name": "Fundamental Rights Impact Assessment",
+        "subcategory": "Impact Assessment",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-015",
+        "risk_name": "Unverified conformity",
+        "standard_ref": "[18286.16]",
+        "standard_name": "Articles 9-17 Completion Verification",
+        "subcategory": "Pre-Market Review",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-015",
+        "risk_name": "Unverified conformity",
+        "standard_ref": "[18286.17]",
+        "standard_name": "Competent Reviewer Sign-off",
+        "subcategory": "Pre-Market Review",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-015",
+        "risk_name": "Unverified conformity",
+        "standard_ref": "[18286.18]",
+        "standard_name": "No Critical Gaps Declaration",
+        "subcategory": "Conformity Conclusion",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-015",
+        "risk_name": "Unverified conformity",
+        "standard_ref": "[18286.19]",
+        "standard_name": "Self-Assessment Conclusion Statement",
+        "subcategory": "Conformity Conclusion",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-015",
+        "risk_name": "Unverified conformity",
+        "standard_ref": "[18286.20]",
+        "standard_name": "Conformity Review Date & Version",
+        "subcategory": "Assessment Record",
+        "coverage_type": "Workflow"
+      },
+      {
+        "risk_id": "RISK-016",
+        "risk_name": "Undisclosed AI interaction or content",
+        "standard_ref": "[12792.1]",
+        "standard_name": "AI Identity Disclosure",
+        "subcategory": "Disclosure Requirements",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-016",
+        "risk_name": "Undisclosed AI interaction or content",
+        "standard_ref": "[12792.2]",
+        "standard_name": "Disclosure Timing & Clarity",
+        "subcategory": "Disclosure Requirements",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-016",
+        "risk_name": "Undisclosed AI interaction or content",
+        "standard_ref": "[12792.3]",
+        "standard_name": "AI-Generated Content Labelling",
+        "subcategory": "Synthetic Content",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-016",
+        "risk_name": "Undisclosed AI interaction or content",
+        "standard_ref": "[12792.4]",
+        "standard_name": "Deep Fake Detection Support",
+        "subcategory": "Synthetic Content",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-016",
+        "risk_name": "Undisclosed AI interaction or content",
+        "standard_ref": "[12792.5]",
+        "standard_name": "Deployer Disclosure Implementation",
+        "subcategory": "Deployer Duties",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-017",
+        "risk_name": "Blind post-market operation",
+        "standard_ref": "[18286.21]",
+        "standard_name": "PMM Plan & Scope",
+        "subcategory": "Monitoring System",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-017",
+        "risk_name": "Blind post-market operation",
+        "standard_ref": "[18286.22]",
+        "standard_name": "Performance Data Collection",
+        "subcategory": "Monitoring System",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-017",
+        "risk_name": "Blind post-market operation",
+        "standard_ref": "[18286.23]",
+        "standard_name": "Drift & Degradation Detection",
+        "subcategory": "Monitoring System",
+        "coverage_type": "Test"
+      },
+      {
+        "risk_id": "RISK-017",
+        "risk_name": "Blind post-market operation",
+        "standard_ref": "[18286.24]",
+        "standard_name": "User Incident Reporting Channel",
+        "subcategory": "Feedback Loop",
+        "coverage_type": "Document"
+      },
+      {
+        "risk_id": "RISK-017",
+        "risk_name": "Blind post-market operation",
+        "standard_ref": "[18286.25]",
+        "standard_name": "Corrective Action Process",
+        "subcategory": "Feedback Loop",
+        "coverage_type": "Document"
+      }
+    ]
+  },
+  "step-7": {
+    "step_id": "step-7",
+    "step_title": "Residual risk",
+    "assessment_date": "2026-10-24",
+    "assessed_by": "A. Rivera (Risk & Compliance)",
+    "use_case_id": "UC-2025-014",
+    "total_requirements": 93,
+    "requirements_evidenced": 93,
+    "requirements_waived": 0,
+    "requirements_pending": 0,
+    "requirements": [
+      {
+        "risk_id": "RISK-001",
+        "standard_ref": "[18229-1.1]",
+        "standard_name": "Intended Purpose",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-001",
+        "standard_ref": "[18229-1.2]",
+        "standard_name": "Limitations",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-001",
+        "standard_ref": "[18229-1.3]",
+        "standard_name": "Instructions for Use",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-002",
+        "standard_ref": "[18229-1.6]",
+        "standard_name": "Automation Confidence Warning",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-002",
+        "standard_ref": "[18229-1.7]",
+        "standard_name": "Intervention Tools",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-002",
+        "standard_ref": "[18229-1.8]",
+        "standard_name": "Interpretability",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.1]",
+        "standard_name": "Adversarial Attacks",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.2]",
+        "standard_name": "Data Poisoning",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.3]",
+        "standard_name": "Model Inversion",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.4]",
+        "standard_name": "Secure Development",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.5]",
+        "standard_name": "Supply Chain Security",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.6]",
+        "standard_name": "Access Control",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.7]",
+        "standard_name": "Model Robustness",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-003",
+        "standard_ref": "[18282.8]",
+        "standard_name": "Anomaly Detection",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-004",
+        "standard_ref": "[18229-2.9]",
+        "standard_name": "Metric Selection",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-004",
+        "standard_ref": "[18229-2.10]",
+        "standard_name": "Validation",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-004",
+        "standard_ref": "[18229-2.11]",
+        "standard_name": "Declaration",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-004",
+        "standard_ref": "[18229-2.12]",
+        "standard_name": "Consistency",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-004",
+        "standard_ref": "[18229-2.13]",
+        "standard_name": "Benchmarking",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-004",
+        "standard_ref": "[18229-2.14]",
+        "standard_name": "Verification Methods",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-005",
+        "standard_ref": "[18229-2.15]",
+        "standard_name": "Input Noise",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-005",
+        "standard_ref": "[18229-2.16]",
+        "standard_name": "Environment Changes",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-005",
+        "standard_ref": "[18229-2.17]",
+        "standard_name": "Feedback Loops",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-005",
+        "standard_ref": "[18229-2.18]",
+        "standard_name": "Graceful Degradation",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-005",
+        "standard_ref": "[18229-2.19]",
+        "standard_name": "Technical Redundancy",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-005",
+        "standard_ref": "[18229-2.20]",
+        "standard_name": "Output Reliability",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-005",
+        "standard_ref": "[18229-2.21]",
+        "standard_name": "Content Moderation Guardrail",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.1]",
+        "standard_name": "Design Choices",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.2]",
+        "standard_name": "Data Origin",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.3]",
+        "standard_name": "Data Preparation Operations",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.4]",
+        "standard_name": "Representativeness",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.5]",
+        "standard_name": "Completeness",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.6]",
+        "standard_name": "Accuracy / Correctness",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.7]",
+        "standard_name": "Dataset Splitting",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.8]",
+        "standard_name": "Data Retention",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.9]",
+        "standard_name": "Formulation",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-006",
+        "standard_ref": "[18284.10]",
+        "standard_name": "Personal Data Egress & Output Filtering",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-007",
+        "standard_ref": "[18283.1]",
+        "standard_name": "Representativeness",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-007",
+        "standard_ref": "[18283.2]",
+        "standard_name": "Bias Metrics",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-007",
+        "standard_ref": "[18283.3]",
+        "standard_name": "Proxy Identification",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-007",
+        "standard_ref": "[18283.4]",
+        "standard_name": "Multi-stakeholder Input",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-007",
+        "standard_ref": "[18283.5]",
+        "standard_name": "Fundamental Rights",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-008",
+        "standard_ref": "[18229-1.4]",
+        "standard_name": "Event Recording",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-008",
+        "standard_ref": "[18229-1.5]",
+        "standard_name": "Traceability",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.1]",
+        "standard_name": "Monitoring Events",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.2]",
+        "standard_name": "Human Intervention",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.3]",
+        "standard_name": "System State",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.4]",
+        "standard_name": "Input/Output Data",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.5]",
+        "standard_name": "Errors & Failures",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.6]",
+        "standard_name": "Tamper Resistance",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.7]",
+        "standard_name": "Retention Periods",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-009",
+        "standard_ref": "[24970.8]",
+        "standard_name": "Privacy",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.1]",
+        "standard_name": "Compliance Strategy",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Compliance Strategy\nThis AI governance workflow (Steps 3–7 and the AI Act Compliance Controls view) constitutes the organisation's formal compliance strategy under ISO 18286.1, providing a repeatable, auditable process for identifying applicable obligations, treating risks, selecting controls, and maintaining ongoing HS traceability."
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.2]",
+        "standard_name": "Accountability Framework",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Accountability Framework\nThis AI governance workflow constitutes the organisation's accountability framework under ISO 18286.2, with defined roles and escalation paths from requestor through Department Head, AI Governance Team, DPO, AI Change Board, and CISO/Steering Committee."
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.3]",
+        "standard_name": "Design & Development",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Design and Development Controls\nSteps 5 and 6 of the AI governance workflow, combined with the Step 8 Board gate and Step 7 controls verification, constitute the organisation's design and development control process under ISO 18286.3."
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.4]",
+        "standard_name": "Resource Management",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Resource Management\nThe AI governance workflow embeds resource management under ISO 18286.4 through mandatory competence prerequisites, specialist function assignments, and targeted user briefings at each stage."
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.5]",
+        "standard_name": "Post-Market Monitoring (PMM)",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Post-Market Monitoring\nStep 12 of the AI governance workflow constitutes the organisation's post-market monitoring system under ISO 18286.5, providing risk-proportionate periodic reviews and event-triggered re-assessments across the full lifecycle of each approved AI use case."
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.6]",
+        "standard_name": "Incident Reporting",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Incident Reporting\nSteps 7, 10, and 12 of the AI governance workflow, combined with the AI Governance Team escalation framework, constitute the organisation's incident detection, response, and reporting procedures under ISO 18286.6."
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.7]",
+        "standard_name": "Technical Documentation",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Technical Documentation\nThe AI governance workflow produces and retains the complete set of technical documentation required by ISO 18286.7 and Article 11, with the Step 8 conformity report serving as the primary Technical File document."
+      },
+      {
+        "risk_id": "RISK-010",
+        "standard_ref": "[18286.8]",
+        "standard_name": "Record-Keeping",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — Record-Keeping\nThe AI governance workflow (Steps 2–12) generates a complete set of records at each stage, retained in the central inventory under Step 11, constituting the organisation's record-keeping system under ISO 18286.8."
+      },
+      {
+        "risk_id": "RISK-011",
+        "standard_ref": "[18228.1]",
+        "standard_name": "Identification",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 5 — Risk identification."
+      },
+      {
+        "risk_id": "RISK-011",
+        "standard_ref": "[18228.2]",
+        "standard_name": "Estimation",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 7 — Residual risk."
+      },
+      {
+        "risk_id": "RISK-011",
+        "standard_ref": "[18228.3]",
+        "standard_name": "Evaluation",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 7 — Residual risk."
+      },
+      {
+        "risk_id": "RISK-011",
+        "standard_ref": "[18228.4]",
+        "standard_name": "Elimination",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 6 — Control identification."
+      },
+      {
+        "risk_id": "RISK-011",
+        "standard_ref": "[18228.5]",
+        "standard_name": "Mitigation",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 6 — Control identification."
+      },
+      {
+        "risk_id": "RISK-011",
+        "standard_ref": "[18228.6]",
+        "standard_name": "Information",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 10 — User obligations briefing."
+      },
+      {
+        "risk_id": "RISK-012",
+        "standard_ref": "[18286.9]",
+        "standard_name": "System Identity & Purpose",
+        "status": "evidence_provided",
+        "notes": "AI Governance Workflow — System Identity and Purpose\nStep 2 of the AI governance workflow produces a documented declaration of the AI system's identity, intended purpose, and operational scope, satisfying the system description requirements of ISO 18286.9."
+      },
+      {
+        "risk_id": "RISK-012",
+        "standard_ref": "[18286.10]",
+        "standard_name": "Architecture & Components",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-012",
+        "standard_ref": "[18286.11]",
+        "standard_name": "Training Methodology",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-012",
+        "standard_ref": "[18286.12]",
+        "standard_name": "Accuracy & Metrics Achieved",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-012",
+        "standard_ref": "[18286.13]",
+        "standard_name": "Testing & Validation Results",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-012",
+        "standard_ref": "[18286.14]",
+        "standard_name": "Version Control",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-012",
+        "standard_ref": "[18286.15]",
+        "standard_name": "Modification Log",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-013",
+        "standard_ref": "[42001.1]",
+        "standard_name": "Scope of Change Evaluation",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 12 — Periodic and triggered review."
+      },
+      {
+        "risk_id": "RISK-013",
+        "standard_ref": "[42001.2]",
+        "standard_name": "Provider Responsibility Trigger",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 3 — System classification."
+      },
+      {
+        "risk_id": "RISK-013",
+        "standard_ref": "[42001.3]",
+        "standard_name": "Re-assessment Requirement",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 12 — Periodic and triggered review."
+      },
+      {
+        "risk_id": "RISK-013",
+        "standard_ref": "[42001.4]",
+        "standard_name": "Updated Technical Documentation",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 11 — Central inventory registration and record keeping."
+      },
+      {
+        "risk_id": "RISK-014",
+        "standard_ref": "[42001.8]",
+        "standard_name": "Fundamental Rights Impact Assessment",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 4 — Data identification and DPIA."
+      },
+      {
+        "risk_id": "RISK-015",
+        "standard_ref": "[18286.16]",
+        "standard_name": "Articles 9-17 Completion Verification",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+      },
+      {
+        "risk_id": "RISK-015",
+        "standard_ref": "[18286.17]",
+        "standard_name": "Competent Reviewer Sign-off",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+      },
+      {
+        "risk_id": "RISK-015",
+        "standard_ref": "[18286.18]",
+        "standard_name": "No Critical Gaps Declaration",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+      },
+      {
+        "risk_id": "RISK-015",
+        "standard_ref": "[18286.19]",
+        "standard_name": "Self-Assessment Conclusion Statement",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+      },
+      {
+        "risk_id": "RISK-015",
+        "standard_ref": "[18286.20]",
+        "standard_name": "Conformity Review Date & Version",
+        "status": "evidence_provided",
+        "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+      },
+      {
+        "risk_id": "RISK-016",
+        "standard_ref": "[12792.1]",
+        "standard_name": "AI Identity Disclosure",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-016",
+        "standard_ref": "[12792.2]",
+        "standard_name": "Disclosure Timing & Clarity",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-016",
+        "standard_ref": "[12792.3]",
+        "standard_name": "AI-Generated Content Labelling",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-016",
+        "standard_ref": "[12792.4]",
+        "standard_name": "Deep Fake Detection Support",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-016",
+        "standard_ref": "[12792.5]",
+        "standard_name": "Deployer Disclosure Implementation",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-017",
+        "standard_ref": "[18286.21]",
+        "standard_name": "PMM Plan & Scope",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-017",
+        "standard_ref": "[18286.22]",
+        "standard_name": "Performance Data Collection",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-017",
+        "standard_ref": "[18286.23]",
+        "standard_name": "Drift & Degradation Detection",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-017",
+        "standard_ref": "[18286.24]",
+        "standard_name": "User Incident Reporting Channel",
+        "status": "evidence_provided",
+        "notes": ""
+      },
+      {
+        "risk_id": "RISK-017",
+        "standard_ref": "[18286.25]",
+        "standard_name": "Corrective Action Process",
+        "status": "evidence_provided",
+        "notes": ""
+      }
+    ],
+    "hs_activation": {
+      "RISK-001": {
+        "[18229-1.1]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-1.2]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-1.3]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-002": {
+        "[18229-1.6]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-1.7]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-1.8]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-003": {
+        "[18282.1]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18282.2]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18282.3]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18282.4]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18282.5]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18282.6]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18282.7]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18282.8]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-004": {
+        "[18229-2.9]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.10]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.11]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.12]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.13]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.14]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-005": {
+        "[18229-2.15]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.16]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.17]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.18]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.19]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.20]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-2.21]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-006": {
+        "[18284.1]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.2]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.3]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.4]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.5]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.6]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.7]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.8]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.9]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18284.10]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-007": {
+        "[18283.1]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18283.2]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18283.3]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18283.4]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18283.5]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-008": {
+        "[18229-1.4]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18229-1.5]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-009": {
+        "[24970.1]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[24970.2]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[24970.3]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[24970.4]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[24970.5]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[24970.6]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[24970.7]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[24970.8]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-010": {
+        "[18286.1]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Compliance Strategy\nThis AI governance workflow (Steps 3–7 and the AI Act Compliance Controls view) constitutes the organisation's formal compliance strategy under ISO 18286.1, providing a repeatable, auditable process for identifying applicable obligations, treating risks, selecting controls, and maintaining ongoing HS traceability."
+        },
+        "[18286.2]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Accountability Framework\nThis AI governance workflow constitutes the organisation's accountability framework under ISO 18286.2, with defined roles and escalation paths from requestor through Department Head, AI Governance Team, DPO, AI Change Board, and CISO/Steering Committee."
+        },
+        "[18286.3]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Design and Development Controls\nSteps 5 and 6 of the AI governance workflow, combined with the Step 8 Board gate and Step 7 controls verification, constitute the organisation's design and development control process under ISO 18286.3."
+        },
+        "[18286.4]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Resource Management\nThe AI governance workflow embeds resource management under ISO 18286.4 through mandatory competence prerequisites, specialist function assignments, and targeted user briefings at each stage."
+        },
+        "[18286.5]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Post-Market Monitoring\nStep 12 of the AI governance workflow constitutes the organisation's post-market monitoring system under ISO 18286.5, providing risk-proportionate periodic reviews and event-triggered re-assessments across the full lifecycle of each approved AI use case."
+        },
+        "[18286.6]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Incident Reporting\nSteps 7, 10, and 12 of the AI governance workflow, combined with the AI Governance Team escalation framework, constitute the organisation's incident detection, response, and reporting procedures under ISO 18286.6."
+        },
+        "[18286.7]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Technical Documentation\nThe AI governance workflow produces and retains the complete set of technical documentation required by ISO 18286.7 and Article 11, with the Step 8 conformity report serving as the primary Technical File document."
+        },
+        "[18286.8]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — Record-Keeping\nThe AI governance workflow (Steps 2–12) generates a complete set of records at each stage, retained in the central inventory under Step 11, constituting the organisation's record-keeping system under ISO 18286.8."
+        }
+      },
+      "RISK-011": {
+        "[18228.1]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 5 — Risk identification."
+        },
+        "[18228.2]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 7 — Residual risk."
+        },
+        "[18228.3]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 7 — Residual risk."
+        },
+        "[18228.4]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 6 — Control identification."
+        },
+        "[18228.5]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 6 — Control identification."
+        },
+        "[18228.6]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 10 — User obligations briefing."
+        }
+      },
+      "RISK-012": {
+        "[18286.9]": {
+          "status": "evidence_provided",
+          "notes": "AI Governance Workflow — System Identity and Purpose\nStep 2 of the AI governance workflow produces a documented declaration of the AI system's identity, intended purpose, and operational scope, satisfying the system description requirements of ISO 18286.9."
+        },
+        "[18286.10]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.11]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.12]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.13]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.14]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.15]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-013": {
+        "[42001.1]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 12 — Periodic and triggered review."
+        },
+        "[42001.2]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 3 — System classification."
+        },
+        "[42001.3]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 12 — Periodic and triggered review."
+        },
+        "[42001.4]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 11 — Central inventory registration and record keeping."
+        }
+      },
+      "RISK-014": {
+        "[42001.8]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 4 — Data identification and DPIA."
+        }
+      },
+      "RISK-015": {
+        "[18286.16]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+        },
+        "[18286.17]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+        },
+        "[18286.18]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+        },
+        "[18286.19]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+        },
+        "[18286.20]": {
+          "status": "evidence_provided",
+          "notes": "Met by the governance workflow — Step 8 — AI Change Board approval."
+        }
+      },
+      "RISK-016": {
+        "[12792.1]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[12792.2]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[12792.3]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[12792.4]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[12792.5]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      },
+      "RISK-017": {
+        "[18286.21]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.22]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.23]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.24]": {
+          "status": "evidence_provided",
+          "notes": ""
+        },
+        "[18286.25]": {
+          "status": "evidence_provided",
+          "notes": ""
+        }
+      }
+    },
+    "total_controls": 3,
+    "evidenced_count": 3,
+    "controls": [
+      {
+        "key": "DPIA__Encryption at rest",
+        "name": "Encryption at rest",
+        "objective": "",
+        "source": "DPIA",
+        "domain": "dpia",
+        "risk_id": "",
+        "risk_name": "",
+        "notes": "",
+        "status": "evidence_provided"
+      },
+      {
+        "key": "DPIA__Role-based access control",
+        "name": "Role-based access control",
+        "objective": "",
+        "source": "DPIA",
+        "domain": "dpia",
+        "risk_id": "",
+        "risk_name": "",
+        "notes": "",
+        "status": "evidence_provided"
+      },
+      {
+        "key": "DPIA__Audit logging",
+        "name": "Audit logging",
+        "objective": "",
+        "source": "DPIA",
+        "domain": "dpia",
+        "risk_id": "",
+        "risk_name": "",
+        "notes": "",
+        "status": "evidence_provided"
+      }
+    ],
+    "residual_risks": {
+      "RISK-001": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-002": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-003": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-004": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-005": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-006": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-007": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-008": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-009": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-010": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-011": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-012": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-013": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-014": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-015": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-016": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      },
+      "RISK-017": {
+        "likelihood": "low",
+        "impact": "medium",
+        "level": "low",
+        "justification": ""
+      }
+    }
+  },
+  "step-8": {
+    "attested": true
+  },
+  "step-10": {
+    "attested": true
+  },
+  "step-11": {
+    "attested": true
+  },
+  "step-12": {
+    "attested": true
+  }
+}
