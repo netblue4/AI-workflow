@@ -35,6 +35,7 @@
       "steps": [
         "step-5",
         "step-7",
+        "step-14",
         "step-13"
       ]
     },
@@ -210,6 +211,19 @@
       "applicability": "Tier 2 / elevated risk",
       "applicabilityKey": "tier2",
       "detailFile": "step-7.json"
+    },
+    {
+      "id": "step-14",
+      "phaseId": "phase-2",
+      "title": "Risk Treatment",
+      "isNew": true,
+      "owners": [
+        "AI Working Group",
+        "Business Owner"
+      ],
+      "ownerIcon": "shield",
+      "applicability": "All AI systems",
+      "applicabilityKey": "all"
     },
     {
       "id": "step-13",

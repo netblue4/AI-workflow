@@ -136,6 +136,7 @@ function isStepComplete(stepId) {
     case 'step-4':  return !!s.completion_date;                        // DPIA saved, not a draft
     case 'step-5':  return !!(s.legal_assessment?.completed || s.group_standard_assessment?.completed);
     case 'step-7':  return !!s.assessment_date;
+    case 'step-14': return !!s.decision;
     case 'step-13': return !!s.assessment_date;
     case 'step-1':
     case 'step-8':
@@ -266,6 +267,14 @@ function buildDashboard() {
     <h1 class="dash-title">${meta.use_case_name ? _escHtml(meta.use_case_name) : 'Your AI use case'}</h1>
     <p class="dash-sub">${meta.use_case_id ? _escHtml(meta.use_case_id) + ' · ' : ''}${meta.assessed_by ? 'Assessed by ' + _escHtml(meta.assessed_by) : 'Work through the steps below to assess and authorise this AI system.'}</p>`;
   dash.appendChild(head);
+
+  // Stopped banner — a "No-go" at Risk Treatment halts the whole assessment.
+  if (rec['step-14'] && rec['step-14'].decision === 'no_go') {
+    const blocked = document.createElement('div');
+    blocked.style.cssText = 'margin:18px 0 4px;padding:16px 20px;border:1px solid rgba(226,90,88,0.5);background:rgba(226,90,88,0.14);border-radius:10px;color:#fba4a3;font-size:14px;line-height:1.55';
+    blocked.innerHTML = `<strong style="font-size:15px">⛔ Assessment stopped — No-go at Risk Treatment.</strong><br>The business decided not to fund the build${rec['step-14'].decided_by ? ' (' + _escHtml(rec['step-14'].decided_by) + ')' : ''}. This AI use case is not proceeding. Reopen <strong>Risk Treatment</strong> to change the decision.`;
+    dash.appendChild(blocked);
+  }
 
   // Readiness meter
   const meter = document.createElement('div');
@@ -413,6 +422,8 @@ async function selectStep(stepId) {
     mountStep5Wizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-7') {
     mountStep7Wizard(panel, step, detailData, color, phaseTitle);
+  } else if (stepId === 'step-14') {
+    mountTreatmentWizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-13') {
     mountRecordingWizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
@@ -733,6 +744,7 @@ if (document.readyState === 'loading') {
 <script src="step4-wizard.js"></script>
 <script src="step5-wizard.js"></script>
 <script src="step7-wizard.js"></script>
+<script src="treatment-wizard.js"></script>
 <script src="recording-wizard.js"></script>
 <script src="report-wizard.js"></script>
 </body>
