@@ -339,6 +339,11 @@
   }
 
   // ---- Tabs ---------------------------------------------------
+  // Vestigial: the five source tabs were consolidated into one risk list in
+  // Wave 1 (see mountStep5Wizard), so this strip and _switchTab below are no
+  // longer wired up. Left in place because the pane builders they reference
+  // share state/save helpers with the live list; a standalone removal pass can
+  // retire the whole cluster.
   function _buildTabStrip() {
     return WizUtils.buildTabStrip([
       ['legal', 'Legal/Regulatory Risks'],
@@ -1312,7 +1317,7 @@
 
     const body = _el('div', 's5-ai-body'); body.style.display = 'none';
     const info = _el('p', ''); info.style.cssText = 'font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 10px';
-    info.textContent = 'This gathers every challenge you have written (across the Legal and NIST tabs) into one prompt. Paste it into your AI tool; it re-assesses the challenged risks, rewrites their justifications, and returns an updated assessment. Load that reply back in above, then repeat as needed.';
+    info.textContent = 'This gathers every challenge you have written into one prompt. Paste it into your AI tool; it re-assesses the challenged risks, rewrites their justifications, and returns an updated assessment. Load that reply back in above, then repeat as needed.';
     const buildBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Build re-assessment prompt' });
     const copyBtn  = _el('button', 'wiz-btn-primary', { textContent: 'Copy prompt' }); copyBtn.style.display = 'none';
     const promptArea = _el('textarea', 's5-prompt-area'); promptArea.rows = 14; promptArea.readOnly = true; promptArea.style.marginTop = '10px';
