@@ -255,7 +255,7 @@
       "gates": [
         {
           "type": "success",
-          "text": "On approval: Proceed to Phase 4. AI Governance Team registers the use case in the central inventory."
+          "text": "On approval: the use case is authorised to deploy and proceeds to Phase 6 (Ongoing governance). The AI Governance Team registers it in the central inventory and retains all authorisation records."
         },
         {
           "type": "warning",
