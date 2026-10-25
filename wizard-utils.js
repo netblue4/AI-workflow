@@ -406,7 +406,9 @@ window.WizUtils = (function () {
       if (r && r.attested) {
         wrap.classList.add('wiz-attest--done');
         status.className = 'wiz-attest-status wiz-attest-status--ok';
-        status.textContent = `✓ Recorded — ${r.attested_by || '—'}, ${(r.attested_at || '').slice(0, 10)}`;
+        const who = r.attested_by ? ` by ${r.attested_by}` : '';
+        const when = r.attested_at ? ` on ${String(r.attested_at).slice(0, 10)}` : '';
+        status.textContent = `✓ Recorded${who}${when}`;
       } else {
         wrap.classList.remove('wiz-attest--done');
         status.className = 'wiz-attest-status';
@@ -770,8 +772,10 @@ window.WizUtils = (function () {
   }
 
   injectStyles('calm-styles', `
-.calm .calm-head,.calm .wiz-pane-wrap>*{width:100%;max-width:760px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+.calm .calm-head,.calm .wiz-pane-wrap>*,.calm>.calm-col{width:100%;max-width:760px;margin-left:auto;margin-right:auto;box-sizing:border-box}
 #detail-panel .calm .wiz-pane-wrap>*{max-width:760px}
+.calm .calm-col>.step-detail-card,.calm .calm-col>.step-content-section{max-width:none;width:auto}
+.calm .calm-col>.wiz-panel{margin-left:8px;margin-right:8px}
 .calm-head{display:flex;flex-direction:column;gap:10px;padding:24px 8px 0;margin-bottom:28px}
 .calm-kicker{margin:0;font-size:13px;color:var(--color-text-secondary)}
 .calm-title{margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.01em;color:var(--color-text-primary)}
@@ -792,6 +796,7 @@ window.WizUtils = (function () {
 .calm-bar-fill{height:4px;border-radius:2px;background:var(--gold,#d4b860);transition:width .25s}
 /* Containers: no card chrome, one quiet column */
 .calm .step-detail-card{background:none;border:0;box-shadow:none;padding:0 8px}
+.calm .step-content-section{background:none;border:0;border-radius:0;padding:0 8px}
 .calm .wiz-panel-lead{font-size:14px;line-height:1.6;margin:0 0 20px}
 .calm .wiz-save-block{border-top:0;margin-top:16px;padding-top:0}
 /* Groups read as section headings, not boxes */
@@ -820,6 +825,20 @@ window.WizUtils = (function () {
 .calm .wiz-panel-status--todo,.calm .wiz-panel-status--muted{border:0;background:none;padding:0;font-weight:400;color:var(--color-text-secondary)}
 .calm .wiz-panel-body{border-top:0;padding:0 20px 22px}
 .calm .wiz-panel-desc{font-size:13.5px;margin:0 0 4px}
+.calm .wiz-btn-primary{min-height:40px;padding:0 18px;border:0;border-radius:8px;background:var(--gold,#d4b860);color:#241d08;font-size:14px;font-weight:600;font-family:inherit;opacity:1}
+.calm .wiz-btn-primary:hover{background:var(--gold-bright,#ecd489);opacity:1}
+.calm .wiz-btn-secondary{min-height:40px;border-radius:8px;font-size:14px}
+.calm .wiz-item-badge{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;min-width:0}
+.calm .wiz-item-badge--none{background:none;padding:0;font-weight:400;color:var(--color-text-secondary)}
+.calm .wiz-item-badge--na{background:none;padding:0;font-weight:400}
+/* Sign-off: a quiet section, not a coloured box */
+.calm .wiz-attest{margin:0 0 28px;padding:20px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface)}
+.calm .wiz-attest--done{border-color:rgba(52,199,120,0.45);background:var(--color-surface)}
+.calm .wiz-attest-title{font-size:15px;font-weight:600;margin-bottom:12px}
+.calm .wiz-attest-check{font-size:14px}
+.calm .wiz-attest-label{font-size:13px;font-weight:400}
+.calm .wiz-attest-input{min-height:40px;box-sizing:border-box;border-radius:8px;background:var(--color-bg)}
+.calm .wiz-attest-status{font-size:13px;font-weight:500}
 .calm .section-label{font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--color-text-secondary)}
 @media (max-width:640px){.calm .wiz-panel-body{padding:0 14px 18px}.calm-title{font-size:25px}}
 `);

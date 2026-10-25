@@ -8,10 +8,13 @@
   'use strict';
 
   let _container = null, _record = null, _tbl = null;
+  let _step = null, _phaseTitle = '';
 
   // ---- Public API ---------------------------------------------
-  window.mountReportWizard = function (container) {
+  window.mountReportWizard = function (container, step, colorKey, phaseTitle) {
     _container = container;
+    _step = step || null;
+    _phaseTitle = phaseTitle || '';
     _record    = null;
     _tbl       = null;
     container.innerHTML = '<p style="padding:32px;color:#64748b;font-size:13px">Loading report data…</p>';
@@ -102,27 +105,40 @@
     _container.innerHTML = '';
     _injectStyles();
 
+    // Calm header + one quiet column (shared with the other workflow steps)
     const shell = document.createElement('div');
-    shell.className = 'rpt-shell';
+    shell.className = 'wiz-shell rpt-shell';
+    if (window.WizUtils && WizUtils.calmShell) WizUtils.calmShell(shell);
+    if (_step && window.WizUtils && WizUtils.buildCalmHeader) {
+      shell.appendChild(WizUtils.buildCalmHeader(_step, _phaseTitle, {
+        lead: 'Review the AI System Conformity Assessment Report, record the Board’s decision, then print or export it.'
+      }));
+    }
+    const col = document.createElement('div');
+    col.className = 'calm-col';
+    shell.appendChild(col);
 
-    // Action bar
+    // Report preview: a heading row with the print action, then the report
+    // itself, sized to its content so the page scrolls as one.
     const bar = document.createElement('div');
     bar.className = 'rpt-action-bar';
-    const barTitle = document.createElement('div');
+    const barTitle = document.createElement('h2');
     barTitle.className = 'rpt-bar-title';
     barTitle.textContent = 'AI System Conformity Assessment Report';
     const printBtn = document.createElement('button');
+    printBtn.type = 'button';
     printBtn.className = 'rpt-print-btn';
-    printBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print / Export PDF`;
+    printBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print / export PDF`;
     printBtn.addEventListener('click', _handlePrint);
     bar.appendChild(barTitle);
     bar.appendChild(printBtn);
-    shell.appendChild(bar);
 
     // Iframe preview (built first so the approval panel can refresh it)
     const iframe = document.createElement('iframe');
     iframe.className = 'rpt-iframe';
     iframe.setAttribute('title', 'Conformity Assessment Report Preview');
+    const size = () => { try { iframe.style.height = (iframe.contentDocument.documentElement.scrollHeight + 2) + 'px'; } catch (_) {} };
+    iframe.addEventListener('load', () => { size(); setTimeout(size, 100); setTimeout(size, 400); });
 
     // Digital AI Change Board approval — replaces the paper signature.
     // Ticking the box + naming the approver records step-8 evidence digitally.
@@ -137,10 +153,11 @@
           iframe.srcdoc = _buildReportHTML();
         }
       });
-      shell.appendChild(approval);
+      col.appendChild(approval);
     }
 
-    shell.appendChild(iframe);
+    col.appendChild(bar);
+    col.appendChild(iframe);
     _container.appendChild(shell);
 
     iframe.srcdoc = _buildReportHTML();
@@ -1903,12 +1920,12 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;color:#111;backgrou
     const s = document.createElement('style');
     s.id = 'rpt-shell-styles';
     s.textContent = `
-.rpt-shell{display:flex;flex-direction:column;height:100%;min-height:0;background:var(--color-bg)}
-.rpt-action-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--color-border);background:var(--color-surface);flex-shrink:0}
-.rpt-bar-title{font-size:14px;font-weight:600;color:var(--color-text-primary)}
-.rpt-print-btn{display:flex;align-items:center;gap:7px;padding:8px 18px;background:linear-gradient(180deg,var(--gold-bright),var(--gold));color:#241d08;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.rpt-print-btn:hover{background:linear-gradient(180deg,var(--gold),var(--gold-deep))}
-.rpt-iframe{flex:1;border:none;background:var(--color-bg);width:100%}
+.rpt-action-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 4px 10px;margin-bottom:16px;border-bottom:1px solid var(--color-border)}
+.rpt-bar-title{margin:0;font-size:15px;font-weight:600;color:var(--color-text-primary)}
+.rpt-print-btn{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 18px;background:var(--gold,#d4b860);color:#241d08;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
+.rpt-print-btn:hover{background:var(--gold-bright,#ecd489)}
+.rpt-print-btn:focus-visible{outline:2px solid var(--gold,#d4b860);outline-offset:2px}
+.rpt-iframe{display:block;width:100%;min-height:600px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-bg)}
 `;
     document.head.appendChild(s);
   }

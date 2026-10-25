@@ -42,29 +42,35 @@
 
     container.innerHTML = '';
 
-    // Standard full-width title section (from workflow.json)
-    container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle, { hideDetails: true }));
+    // Calm header + one quiet column (shared with the other workflow steps)
+    const shell = WizUtils.calmShell(_el('div', 'wiz-shell'));
+    shell.appendChild(WizUtils.buildCalmHeader(step, phaseTitle, {
+      lead: 'Set your governance tier, answer the EU AI Act gates, then classify the system.',
+      about: ['Your governance tier sets the oversight path: fast-track, or the AI Change Board. Answer the gates G1–G5 in order — G1 and G2 can end the assessment early, so read each gate before answering.']
+    }));
+    const col = _el('div', 'calm-col');
+    shell.appendChild(col);
+    container.appendChild(shell);
 
-    // AI prompt + load-output sections (moved here from Step 2) — draft the
-    // classification with your AI tool, then load its reply to fill this screen.
-    // Grouped into a single collapsed "AI support" panel.
+    // Classification wizard — the tier and gate groups, the rationale, the
+    // actions and the result.
+    const wizardPane = _buildWizardPane(detail);
+    wizardPane.id = 'wiz-pane-wizard';
+    col.appendChild(wizardPane);
+
+    // AI prompt + load-output sections — draft the classification with your AI
+    // tool, then load its reply to fill this screen. Optional, so it sits last.
     if (window.AiPromptSections) {
       const aiBody = WizUtils.el('div', '');
       aiBody.appendChild(window.AiPromptSections.askClassification(detail));
       aiBody.appendChild(window.AiPromptSections.loadClassification({ onApplied: () => window.selectStep && window.selectStep('step-3') }));
-      container.appendChild(WizUtils.buildStepPanel({
+      col.appendChild(WizUtils.buildStepPanel({
         title: 'AI support',
         description: 'Optional. Draft the classification with your AI tool, then load its reply to fill this screen automatically.',
         status: 'Optional', statusKind: 'muted',
         body: aiBody
       }).el);
     }
-
-    // Classification wizard — the parent "screen content" card holding the Axis A
-    // and Axis B task groups, the rationale, the actions and the result.
-    const wizardPane = _buildWizardPane(detail);
-    wizardPane.id = 'wiz-pane-wizard';
-    container.appendChild(wizardPane);
 
     _updateGateVisibility();
 
@@ -106,17 +112,10 @@
 
     // Parent "screen content" card — full width, no title, a single lead line.
     const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('p', 'wiz-panel-lead', {
-      textContent: 'Set your governance tier, answer the EU AI Act gates G1–G5, then run the classification.'
-    }));
 
     // ── Axis A group (holds the governance-tier task) ──
     _axisAPanel = _buildAxisAPanel(detail.axis_a_classification);
-    card.appendChild(WizUtils.buildStepGroup({
-      title: 'Axis A — Select your governance tier',
-      description: 'Your internal governance tier sets the oversight path (fast-track vs Change Board).',
-      body: _axisAPanel.el
-    }).el);
+    card.appendChild(_axisAPanel.el);
 
     // ── Axis B group (holds the five EU AI Act gate tasks) ──
     const gatesBody = _el('div', '');
@@ -126,8 +125,9 @@
       gatesBody.appendChild(p.el);
     });
     card.appendChild(WizUtils.buildStepGroup({
-      title: 'Axis B — Complete EU AI Act gates G1–G5',
-      description: 'Answer each gate in sequence. G1 and G2 may short-circuit the assessment — read each gate before answering.',
+      title: 'EU AI Act gates',
+      status: 'G1–G5',
+      open: true,
       body: gatesBody
     }).el);
 
@@ -140,9 +140,9 @@
 
     // Action row — right-aligned, Clear then Classify (matches the template).
     const actionRow = _el('div', 'wiz-action-row', { style: 'justify-content:flex-end' });
-    const clearBtn = _el('button', 'wiz-btn-secondary', { textContent: '↺ Clear all answers' });
+    const clearBtn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: 'Clear all answers' });
     clearBtn.addEventListener('click', _clearAll);
-    const classifyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Classify System' });
+    const classifyBtn = _el('button', 'wiz-btn-primary', { type: 'button', textContent: 'Classify system' });
     classifyBtn.addEventListener('click', () => _handleClassify(pane, detail));
     actionRow.append(clearBtn, classifyBtn);
     card.appendChild(actionRow);
@@ -987,10 +987,10 @@
       .wiz-gate-body { padding:14px 16px;display:flex;flex-direction:column;gap:10px; }
 
       /* Questions */
-      .wiz-q-row { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;transition:border-color var(--transition); }
-      .wiz-q-row.answered-yes { border-color:var(--danger-border); }
-      .wiz-q-row.answered-no  { border-color:var(--success-border); }
-      .wiz-pill { padding:5px 18px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--color-border-mid);background:var(--color-surface);color:var(--color-text-secondary);transition:all var(--transition);user-select:none;font-family:inherit; }
+      .wiz-q-row { background:none;border:0;border-top:1px solid var(--color-border);border-radius:0;padding:16px 0 4px; }
+      .wiz-q-row p { font-size:14px !important; }
+      .wiz-pill { display:inline-flex;align-items:center;justify-content:center;min-height:40px;min-width:96px;box-sizing:border-box;padding:0 18px;border-radius:8px;font-size:14px;font-weight:400;cursor:pointer;border:1px solid rgba(240,232,208,0.14);background:transparent;color:var(--color-text-secondary);transition:all var(--transition);user-select:none;font-family:inherit; }
+      .wiz-pill:hover { border-color:rgba(212,184,96,0.5);color:var(--color-text-primary); }
       .wiz-pill.active-yes { border-color:var(--danger-border);background:var(--danger-fill);color:var(--danger-text); }
       .wiz-pill.active-no  { border-color:var(--success-border);background:var(--success-fill);color:var(--success-text); }
 

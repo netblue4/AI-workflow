@@ -45,22 +45,25 @@
 
     container.innerHTML = '';
 
-    // Standard full-width title section (from workflow.json)
-    container.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle));
+    // Calm header + one quiet column (shared with the other workflow steps)
+    const shell = WizUtils.calmShell(_el('div', 'wiz-shell'));
+    shell.appendChild(WizUtils.buildCalmHeader(step, phaseTitle, {
+      lead: 'Describe the AI system and why the business needs it. Every later step is built from this.',
+      about: ['The use case name, ID and assessor are set in the Use Case Record panel in the sidebar — complete that before you start.']
+    }));
+    const col = _el('div', 'calm-col');
+    shell.appendChild(col);
+    container.appendChild(shell);
 
-    // White content section — the fields to capture
+    // The fields to capture
     const card = _el('div', 'step-content-section');
-
-    const identNote = _el('div', 's2-identity-note');
-    identNote.innerHTML = '<strong>Use case identity</strong> (name, ID, and assessor) is captured in the <strong>Use Case Record</strong> panel in the left sidebar. Complete that panel before proceeding.';
-    card.appendChild(identNote);
 
     // Step 2 now captures only the business case. The "Ask your AI tool" and
     // "Load output" sections moved to Step 3 (classification) and Step 4 (DPIA),
     // exposed via window.AiPromptSections and rendered by those wizards.
     card.appendChild(_buildBusinessCaseForm());
 
-    container.appendChild(card);
+    col.appendChild(card);
   };
 
   // Load the Step 3 gate-answer keys + allowed values so the classification
@@ -184,8 +187,8 @@
 
     // Segmented toggle
     const seg = _el('div', 's2-seg');
-    _segText = _el('button', 's2-seg-btn' + (_state.input_mode === 'text' ? ' is-on' : ''), { textContent: '✍️  Write it myself' });
-    _segWiz  = _el('button', 's2-seg-btn' + (_state.input_mode === 'wiz'  ? ' is-on' : ''), { textContent: '🧭  Guide me' });
+    _segText = _el('button', 's2-seg-btn' + (_state.input_mode === 'text' ? ' is-on' : ''), { type: 'button', textContent: 'Write it myself' });
+    _segWiz  = _el('button', 's2-seg-btn' + (_state.input_mode === 'wiz'  ? ' is-on' : ''), { type: 'button', textContent: 'Guide me' });
     _segText.type = 'button'; _segWiz.type = 'button';
     _segText.addEventListener('click', () => _setMode('text'));
     _segWiz.addEventListener('click',  () => { if (!_answeredAny()) _state.wizard.idx = 0; _setMode('wiz'); });
@@ -828,12 +831,12 @@
     WizUtils.injectStyles('wiz2-styles', `
       /* Step 2 form */
       .s2-identity-note { font-size:12px;color:var(--color-text-secondary);background:var(--info-fill,rgba(80,150,225,0.12));border:1px solid var(--info-border,rgba(80,150,225,0.40));border-radius:var(--radius-md,6px);padding:10px 14px;margin-bottom:20px;line-height:1.5; }
-      .s2-form-section { margin-bottom:24px; }
-      .s2-field-label { display:block;font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:4px; }
-      .s2-field-hint { font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;line-height:1.5; }
-      .s2-textarea { width:100%;padding:10px 12px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface);resize:vertical;box-sizing:border-box;line-height:1.6; }
+      .s2-form-section { margin-bottom:28px; }
+      .s2-field-label { display:block;font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px; }
+      .s2-field-hint { font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.5; }
+      .s2-textarea { width:100%;padding:12px 14px;border:1px solid var(--color-border-mid);border-radius:8px;font-size:14px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6; }
       .s2-textarea:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16)); }
-      .s2-input { display:block;width:100%;padding:8px 10px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface);box-sizing:border-box;margin-top:4px; }
+      .s2-input { display:block;width:100%;min-height:40px;padding:8px 12px;border:1px solid var(--color-border-mid);border-radius:8px;font-size:14px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);box-sizing:border-box;margin-top:4px; }
       .s2-input:focus { outline:none;border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16)); }
 
       /* Ask your AI tool collapsible */
@@ -846,10 +849,11 @@
       .s2-prompt-area { width:100%;padding:12px;border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.6; }
 
       /* Business-case mode toggle */
-      .s2-seg { display:inline-flex;gap:2px;padding:3px;background:var(--color-bg);border:1px solid var(--color-border-mid);border-radius:var(--radius-md,6px);margin-bottom:14px; }
-      .s2-seg-btn { appearance:none;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--color-text-secondary);padding:6px 14px;border-radius:var(--radius-sm,4px);transition:background .12s,color .12s; }
-      .s2-seg-btn:hover { color:var(--color-text-primary); }
-      .s2-seg-btn.is-on { background:var(--color-surface);color:var(--color-text-primary);box-shadow:0 1px 2px rgba(0,0,0,0.12); }
+      .s2-seg { display:inline-grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:24px; }
+      .s2-seg-btn { appearance:none;min-height:40px;border:1px solid rgba(240,232,208,0.14);background:transparent;cursor:pointer;font-family:inherit;font-size:14px;font-weight:400;color:var(--color-text-secondary);padding:0 18px;border-radius:8px;transition:border-color .12s,background .12s,color .12s; }
+      .s2-seg-btn:hover { color:var(--color-text-primary);border-color:rgba(212,184,96,0.5); }
+      .s2-seg-btn.is-on { border-color:var(--gold,#d4b860);background:rgba(212,184,96,0.14);color:var(--color-text-primary);font-weight:500; }
+      .s2-seg-btn:focus-visible { outline:2px solid var(--gold,#d4b860);outline-offset:2px; }
       .s2-desc-host { min-height:40px; }
       .s2-wiz-builtnote { display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--color-text-secondary);background:var(--teal-50,rgba(93,202,165,0.10));border:1px solid var(--teal-100,rgba(93,202,165,0.30));border-radius:var(--radius-md,6px);padding:8px 12px;margin-bottom:10px; }
       .s2-wiz-reopen { appearance:none;border:1px solid var(--color-border-mid);background:var(--color-surface);cursor:pointer;font-family:inherit;font-size:11.5px;color:var(--color-text-secondary);padding:3px 10px;border-radius:var(--radius-sm,4px); }
