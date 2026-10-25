@@ -694,6 +694,136 @@ window.WizUtils = (function () {
     return { el: grp, body: content, header, setStatus, open: () => setOpen(true), close: () => setOpen(false) };
   }
 
+  // ---- Calm layout (risk screens) -------------------------------------
+  // A lighter step header — title, one sentence, owners · tier, and a single
+  // "About this step" toggle — plus a single-column shell where only one risk
+  // panel is open at a time. Shared by the four ISO 31000 risk steps.
+  const CALM_CHEVRON = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 5L7 9.5L11.5 5"/></svg>';
+
+  function buildCalmHeader(step, phaseTitle, opts) {
+    opts = opts || {};
+    const head = el('div', 'calm-head');
+    const kicker = [phaseTitle, step.number != null ? `Step ${step.number}` : ''].filter(Boolean).join(' · ');
+    if (kicker) head.appendChild(el('p', 'calm-kicker', { textContent: kicker }));
+    head.appendChild(el('h1', 'calm-title', { textContent: step.title }));
+    if (opts.lead) head.appendChild(el('p', 'calm-lead', { textContent: opts.lead }));
+
+    const meta = el('div', 'calm-meta');
+    if ((step.owners || []).length) meta.appendChild(el('span', '', { textContent: step.owners.join(' · ') }));
+    if (step.applicability) meta.appendChild(el('span', 'calm-chip', { textContent: step.applicability }));
+
+    const about = el('div', 'calm-about');
+    about.hidden = true;
+    const why = STEP_WHY[step.id];
+    if (why) about.appendChild(el('p', '', { textContent: why }));
+    (opts.about || []).forEach(t => about.appendChild(el('p', '', { textContent: t })));
+    (step.gates || []).forEach(g => { const n = el('div', `gate-note ${g.type || 'info'}`); n.innerHTML = g.text; about.appendChild(n); });
+
+    if (about.childElementCount) {
+      const toggle = el('button', 'calm-link', { type: 'button' });
+      toggle.innerHTML = `About this step ${CALM_CHEVRON}`;
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.addEventListener('click', () => {
+        about.hidden = !about.hidden;
+        toggle.setAttribute('aria-expanded', String(!about.hidden));
+        toggle.classList.toggle('is-open', !about.hidden);
+      });
+      meta.appendChild(toggle);
+    }
+    head.appendChild(meta);
+    head.appendChild(about);
+    return head;
+  }
+
+  // Marks a wizard shell as calm, and keeps one panel open per list: opening
+  // a panel closes its open siblings (via their own headers, so any per-step
+  // open-state bookkeeping stays in sync).
+  function calmShell(shell) {
+    shell.classList.add('calm');
+    shell.addEventListener('click', e => {
+      const head = e.target.closest('.wiz-panel-head');
+      if (!head || !shell.contains(head)) return;
+      const panel = head.closest('.wiz-panel');
+      if (!panel || panel.classList.contains('is-open') || !panel.parentElement) return;
+      Array.from(panel.parentElement.children).forEach(p => {
+        if (p === panel || !p.classList.contains('wiz-panel') || !p.classList.contains('is-open')) return;
+        const h = p.querySelector(':scope > .wiz-panel-head, :scope > .wiz-panel-headrow > .wiz-panel-head');
+        if (h) h.click();
+      });
+    }, true);
+    return shell;
+  }
+
+  // Progress line: "3 of 17 risks planned" over a thin bar.
+  function buildCalmProgress() {
+    const p = el('div', 'calm-progress');
+    const text = el('span', 'calm-progress-text');
+    const bar = el('div', 'calm-bar');
+    const fill = el('div', 'calm-bar-fill');
+    bar.appendChild(fill);
+    p.append(text, bar);
+    function set(done, total, label) {
+      text.textContent = `${done} of ${total} ${label}`;
+      fill.style.width = total ? `${Math.round(done / total * 100)}%` : '0';
+    }
+    return { el: p, set };
+  }
+
+  injectStyles('calm-styles', `
+.calm .calm-head,.calm .wiz-pane-wrap>*{width:100%;max-width:760px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+#detail-panel .calm .wiz-pane-wrap>*{max-width:760px}
+.calm-head{display:flex;flex-direction:column;gap:10px;padding:24px 8px 0;margin-bottom:28px}
+.calm-kicker{margin:0;font-size:13px;color:var(--color-text-secondary)}
+.calm-title{margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.01em;color:var(--color-text-primary)}
+.calm-lead{margin:0;font-size:15.5px;line-height:1.5;color:var(--color-text-secondary)}
+.calm-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-size:13px;color:var(--color-text-secondary)}
+.calm-chip{padding:2px 9px;border-radius:999px;background:rgba(212,184,96,0.14);color:#ecd489}
+.calm-link{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0;border:0;background:none;color:var(--gold,#d4b860);font-size:13px;font-family:inherit;cursor:pointer}
+.calm-link:hover{color:var(--gold-bright,#ecd489)}
+.calm-link svg{transition:transform .15s}
+.calm-link.is-open svg{transform:rotate(180deg)}
+.calm-link:focus-visible{outline:2px solid var(--gold,#d4b860);outline-offset:2px}
+.calm-about{padding:14px 16px;border-radius:10px;background:var(--color-bg-subtle,#1c1a12);font-size:13.5px;line-height:1.6;color:var(--color-text-secondary)}
+.calm-about p{margin:0 0 8px}.calm-about p:last-child{margin:0}
+.calm-about[hidden]{display:none}
+.calm-progress{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.calm-progress-text{font-size:13px;color:var(--color-text-secondary)}
+.calm-bar{height:4px;border-radius:2px;background:rgba(240,232,208,0.10)}
+.calm-bar-fill{height:4px;border-radius:2px;background:var(--gold,#d4b860);transition:width .25s}
+/* Containers: no card chrome, one quiet column */
+.calm .step-detail-card{background:none;border:0;box-shadow:none;padding:0 8px}
+.calm .wiz-panel-lead{font-size:14px;line-height:1.6;margin:0 0 20px}
+.calm .wiz-save-block{border-top:0;margin-top:16px;padding-top:0}
+/* Groups read as section headings, not boxes */
+.calm .wiz-group{border:0;border-radius:0;background:none;overflow:visible;margin-bottom:20px}
+.calm .wiz-group-head{min-height:48px;padding:0 4px;background:none;border-bottom:1px solid var(--color-border);border-radius:0}
+.calm .wiz-group-head:hover{background:none}
+.calm .wiz-group-head:hover .wiz-group-title{color:var(--color-text-primary)}
+.calm .wiz-group-title{font-size:15px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--color-text-primary)}
+.calm .wiz-group-status{font-size:12px;font-weight:500;border:0;background:none;padding:0;color:var(--color-text-secondary)}
+.calm .wiz-group-body{border-top:0;padding:14px 0 0}
+.calm .wiz-group-desc{font-size:13.5px;margin:0 0 14px}
+/* Risk panels: one-line rows; the open one lifts */
+.calm .wiz-panel{border:1px solid var(--color-border);background:transparent;margin-bottom:8px}
+.calm .wiz-panel:hover{border-color:rgba(212,184,96,0.3)}
+.calm .wiz-panel.is-open{border-color:rgba(212,184,96,0.45);background:var(--color-surface)}
+.calm .wiz-panel-head{min-height:56px;padding:0 16px}
+.calm .wiz-panel-head:hover{background:none}
+.calm .wiz-panel-head:focus-visible,.calm .wiz-group-head:focus-visible{outline:2px solid var(--gold,#d4b860);outline-offset:-2px}
+.calm .wiz-panel-num{display:none}
+.calm .wiz-panel-head-left{flex-wrap:wrap;column-gap:10px;row-gap:2px}
+.calm .wiz-panel-title{font-size:15px;font-weight:500;overflow:visible}
+.calm .wiz-panel.is-open .wiz-panel-title{font-weight:600}
+.calm .wiz-panel-ref{font-size:12.5px;font-style:normal;color:var(--color-text-secondary)}
+.calm .wiz-panel:not(.is-open) .wiz-panel-ref{display:none}
+.calm .wiz-panel-status{font-size:12px;font-weight:600;text-transform:none;letter-spacing:0;padding:2px 9px;border-radius:999px}
+.calm .wiz-panel-status--todo,.calm .wiz-panel-status--muted{border:0;background:none;padding:0;font-weight:400;color:var(--color-text-secondary)}
+.calm .wiz-panel-body{border-top:0;padding:0 20px 22px}
+.calm .wiz-panel-desc{font-size:13.5px;margin:0 0 4px}
+.calm .section-label{font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--color-text-secondary)}
+@media (max-width:640px){.calm .wiz-panel-body{padding:0 14px 18px}.calm-title{font-size:25px}}
+`);
+
   injectStyles('wiz-panel-styles', `
 .wiz-panel{border:1px solid rgba(212,184,96,0.34);border-radius:10px;margin-bottom:12px;background:var(--color-surface,#1c1810);overflow:hidden;transition:border-color .15s}
 .wiz-panel:hover{border-color:rgba(212,184,96,0.5)}
@@ -746,5 +876,5 @@ window.WizUtils = (function () {
 .wiz-group-content>.wiz-panel:last-child{margin-bottom:8px}
 `);
 
-  return { el, sectionLabel, STEP_WHY, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildStepGroup, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
+  return { el, sectionLabel, STEP_WHY, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildStepGroup, buildDeliverablesList, buildStepHeader, buildCalmHeader, calmShell, buildCalmProgress, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
 })();

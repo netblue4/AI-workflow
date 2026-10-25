@@ -64,6 +64,7 @@
   let _hsByRef = new Map();   // standard_ref → HS row
   let _tcByHsRef = new Map(); // standard_ref → TestControl[]
   let _fsByRef = new Map();   // canonical HS ref → framework self-certification statement
+  let _progress = null;       // calm progress line (requirements evidenced)
   const _hsActState = {};     // `${riskId}::${standard_ref}` → { status, notes }
 
   // HS refs appear with/without brackets and stray spaces across tables — compare
@@ -90,11 +91,15 @@
     Object.keys(_hsActState).forEach(k => delete _hsActState[k]);
     _hsByRef = new Map();
     _tcByHsRef = new Map();
+    _progress = null;
 
     _injectStyles();
 
-    const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(_step, _colorKey, _phaseTitle, { hideDetails: true }));
+    const shell = WizUtils.calmShell(_el('div', 'wiz-shell'));
+    shell.appendChild(WizUtils.buildCalmHeader(_step, _phaseTitle, {
+      lead: 'Show that each requirement is in place, then rate the risk that remains.',
+      about: ['Residual risk unlocks once every requirement for a risk is evidenced or waived. Requirements the governance workflow already meets are listed separately and default to evidenced.']
+    }));
     // Consolidated: the three domain tabs are stacked into one scroll (below).
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
@@ -440,7 +445,7 @@
       g.refs.forEach(ref => { total++; body.appendChild(_buildHsActCard(g.riskId, ref)); });
     });
     return WizUtils.buildStepPanel({
-      title: 'Already Met By Workflow',
+      title: 'Already met by the workflow',
       description: 'Requirements the governance workflow satisfies — evidenced by default, each pointing to the step that meets it.',
       status: String(total), statusKind: 'done',
       body
@@ -451,24 +456,25 @@
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const pane = _el('div', 'wiz-pane'); pane.dataset.pane = 'all';
-    pane.appendChild(_el('p', 'wiz-panel-lead', {
-      textContent: 'Provide evidence that each selected requirement is implemented, then assess the residual risk. Residual unlocks once every requirement for a risk is evidenced or waived.'
-    }));
 
-    const wfPanel = _buildWorkflowPanel7();
-    if (wfPanel) pane.appendChild(wfPanel);
+    _progress = WizUtils.buildCalmProgress();
+    pane.appendChild(_progress.el);
+    _updateActProgress();
 
     const legal = _buildDomainRiskBody('legal', 'Legal / EU AI Act');
     pane.appendChild(WizUtils.buildStepGroup({
-      title: 'Requirements & residual risk',
-      description: 'For each risk, evidence its selected harmonised-standard requirements, then assess the residual risk.',
-      status: legal.count ? String(legal.count) : '', statusKind: 'progress',
+      title: 'Requirements and residual risk',
+      status: legal.count ? `${legal.count} risks` : '', open: true,
       body: legal.el
     }).el);
 
+    // No action needed here by default, so it sits below the work.
+    const wfPanel = _buildWorkflowPanel7();
+    if (wfPanel) pane.appendChild(wfPanel);
+
     const dpia = _buildDpiaResidualBody();
     if (dpia) pane.appendChild(WizUtils.buildStepGroup({
-      title: 'DPIA — residual risk',
+      title: 'DPIA residual risk',
       description: 'The DPIA is assessed as a whole in Step 3. Confirm the security-measure controls are live; the residual rating is carried from the DPIA.',
       body: dpia
     }).el);
@@ -486,27 +492,6 @@
     _legalRiskIds().forEach(id => { risks.add(id); _legalRiskHsRefs(id).forEach(ref => { total++; if (doneS((_hsActState[_hsActKey(id, ref)] || {}).status)) done++; }); });
     return { total, done, risks: risks.size };
   }
-  function _setAllExpanded(open) {
-    const pane = _container.querySelector('[data-pane="all"]');
-    if (!pane) return;
-    // Risk task panels live inside the group headers — open/close each one.
-    pane.querySelectorAll('.wiz-group .wiz-panel').forEach(p => {
-      const body = p.querySelector('.wiz-panel-body');
-      if (body) { body.style.display = open ? '' : 'none'; p.classList.toggle('is-open', open); }
-    });
-  }
-  function _buildStep7Toolbar() {
-    const bar = _el('div', 's7-toolbar');
-    const acts = _el('div', 's7-toolbar-actions');
-    const ex = _el('button', 's7-toolbar-btn', { type: 'button', textContent: '⤢ Expand all' });
-    ex.addEventListener('click', () => _setAllExpanded(true));
-    const co = _el('button', 's7-toolbar-btn', { type: 'button', textContent: '⤡ Collapse all' });
-    co.addEventListener('click', () => _setAllExpanded(false));
-    acts.append(ex, co);
-    bar.append(acts);
-    return bar;
-  }
-
   // ===========================================================
   // DOMAIN PANE — per-risk Activation → Testing → Residual
   // ===========================================================
@@ -545,12 +530,26 @@
     return wrap;
   }
 
-  function _buildRiskBlock(riskId, riskName, domain) {
-    const artId = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId)?.fk_AI_Article_ID;
+  function _residualLevel(riskId) {
     const rr = _residualState[riskId] || {};
-    const level = (rr.likelihood && rr.impact) ? (_config.risk_matrix[rr.likelihood]?.[rr.impact] || '') : '';
-    const statusTxt  = level ? level.charAt(0).toUpperCase() + level.slice(1) : 'Not assessed';
-    const statusKind = level === 'low' ? 'done' : level ? 'progress' : 'todo';
+    return (rr.likelihood && rr.impact) ? (_config.risk_matrix[rr.likelihood]?.[rr.impact] || '') : '';
+  }
+  function _riskStatus(riskId) {
+    const level = _residualLevel(riskId);
+    return [level ? level.charAt(0).toUpperCase() + level.slice(1) : 'Not assessed', level === 'low' ? 'done' : level ? 'progress' : 'todo'];
+  }
+  // Keep a risk row's status in step with its residual rating as it changes.
+  function _syncRiskStatus(riskId) {
+    const st = _container.querySelector(`.wiz-panel[data-risk-id="${riskId}"] .wiz-panel-status`);
+    if (!st) return;
+    const [txt, kind] = _riskStatus(riskId);
+    st.textContent = txt;
+    st.className = 'wiz-panel-status wiz-panel-status--' + kind;
+  }
+
+  function _buildRiskBlock(riskId, riskName, domain, open) {
+    const artId = (_tblData.risks || []).find(r => r.pk_Risk_ID === riskId)?.fk_AI_Article_ID;
+    const [statusTxt, statusKind] = _riskStatus(riskId);
 
     const body = _el('div', '');
 
@@ -558,7 +557,7 @@
       // Legal/Regulatory: verify each HS requirement — for Test-type requirements
       // the evidence is the test result; for Document/Workflow it is the artefact
       // or workflow record. No separate risk-control test section.
-      body.appendChild(_sectionLabel('1 · Harmonised Standard Verification'));
+      body.appendChild(_sectionLabel('Requirements'));
       const allRefs = _legalRiskHsRefs(riskId);
       const refs    = allRefs.filter(r => !_isWfRef7(r)); // workflow-met refs live in their own panel
       const wfN     = allRefs.length - refs.length;
@@ -571,7 +570,7 @@
         body.appendChild(_domainMuted('No harmonised standard requirements selected for this risk in Step 4.'));
       }
 
-      body.appendChild(_sectionLabel('2 · Residual Risk'));
+      body.appendChild(_sectionLabel('Residual risk'));
       body.appendChild(_buildResidualPanel(riskId));
     } else {
       // 1 · Control Activation
@@ -598,10 +597,9 @@
     const panel = WizUtils.buildStepPanel({
       num: riskId,
       title: riskName,
-      ref: artId ? WizUtils.artLabel(artId) : '',
+      ref: [riskId, artId ? WizUtils.artLabel(artId) : ''].filter(Boolean).join(' · '),
       status: statusTxt, statusKind,
-      check: { checked: true, disabled: true, title: 'Selected in Step 4 — change what applies there' },
-      body
+      open, body
     });
     panel.el.dataset.riskId = riskId;
     return panel.el;
@@ -620,9 +618,9 @@
       return { el: wrap, count: 0 };
     }
     const riskNameById = new Map((_tblData.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
-    wrap.appendChild(_buildStep7Toolbar());
     const list = _el('div', '');
-    riskIds.forEach(id => list.appendChild(_buildRiskBlock(id, riskNameById.get(id) || id, domain)));
+    const firstOpen = riskIds.find(id => !_residualLevel(id));
+    riskIds.forEach(id => list.appendChild(_buildRiskBlock(id, riskNameById.get(id) || id, domain, id === firstOpen)));
     wrap.appendChild(list);
     return { el: wrap, count: riskIds.length };
   }
@@ -660,12 +658,12 @@
     // per-risk selectable item; the residual rating is owned by Step 4).
     const body = _el('div', '');
 
-    body.appendChild(_sectionLabel('1 · Security measures'));
+    body.appendChild(_sectionLabel('Security measures'));
     const dpiaCtrls = _controls.filter(c => c.domain === 'dpia');
     if (dpiaCtrls.length) dpiaCtrls.forEach(c => body.appendChild(_buildActControlCard(c, 'dpia')));
     else body.appendChild(_domainMuted('No security-measure controls were recorded in the DPIA.'));
 
-    body.appendChild(_sectionLabel('2 · Residual Risk'));
+    body.appendChild(_sectionLabel('Residual risk'));
     const ratings = _el('div', '');
     ratings.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
     const mkPill = (label, rating) => {
@@ -739,6 +737,7 @@
   }
 
   function _updateActProgress() {
+    if (_progress) { const v = _verificationCounts(); _progress.set(v.done, v.total, 'requirements evidenced or waived'); }
     const { evidenced, total } = _actProgressCounts();
     const pct = total ? Math.round((evidenced / total) * 100) : 0;
     const countEl = _container.querySelector('#s7a-progress-count');
@@ -849,7 +848,6 @@
 
     if (h?.standard_text) {
       const objWrap = _el('div', 's9-obj-wrap');
-      objWrap.appendChild(_el('span', 's9-field-label', { textContent: 'Requirement' }));
       objWrap.appendChild(_el('p', 's9-ctrl-obj', { textContent: h.standard_text }));
       card.appendChild(objWrap);
     }
@@ -875,7 +873,7 @@
       }));
     }
     const ta = document.createElement('textarea');
-    ta.className = 's9-ctrl-notes'; ta.rows = prefilledFromFs ? 4 : 3; ta.value = st.notes;
+    ta.className = 's9-ctrl-notes'; ta.rows = prefilledFromFs ? 3 : 2; ta.value = st.notes;
     ta.placeholder = evPlaceholder;
     ta.addEventListener('input', () => { _hsActState[key].notes = ta.value; });
     notesWrap.appendChild(ta);
@@ -946,7 +944,7 @@
     if (!panel) return;
     const complete = _isRiskGroupComplete(riskId);
     panel.classList.toggle('s9-residual--locked', !complete);
-    panel.querySelectorAll('select, textarea').forEach(el => { el.disabled = !complete; });
+    panel.querySelectorAll('select, textarea, button').forEach(el => { el.disabled = !complete; });
     const note = panel.querySelector('.s9-residual-lock-note');
     if (note) note.style.display = complete ? 'none' : '';
   }
@@ -959,7 +957,7 @@
     panel.dataset.residualRisk = riskId;
 
     const hdr  = _el('div', 's9-residual-hdr');
-    const ttl  = _el('span', 's9-residual-title'); ttl.textContent = 'Residual Risk Assessment';
+    const ttl  = _el('span', 's9-residual-title'); ttl.textContent = 'Rate the risk that remains with controls in place';
     const note = _el('span', 's9-residual-lock-note');
     note.textContent   = 'Unlocks once this risk’s requirements are evidenced or waived';
     note.style.display = complete ? 'none' : '';
@@ -971,37 +969,41 @@
     const levelPill = _el('span', 's9-residual-level-pill');
     _applyResidualLevel(levelPill, saved.likelihood, saved.impact);
 
+    // One-tap level buttons, matching Risk Analysis & Evaluation.
     const mkSel = (lbl, currentVal, onChange) => {
       const wrap = _el('div', 's9-residual-field');
-      const l    = _el('label', 's9-field-label'); l.textContent = lbl;
-      const sel  = document.createElement('select');
-      sel.className = 's9-residual-select';
-      sel.disabled  = !complete;
-      LEVELS.forEach(v => {
-        const o = document.createElement('option');
-        o.value = v; o.textContent = v ? v.charAt(0).toUpperCase() + v.slice(1) : '— Select —';
-        if (v === currentVal) o.selected = true;
-        sel.appendChild(o);
+      wrap.appendChild(_el('span', 's9-field-label', { textContent: lbl }));
+      const grp = _el('div', 's9-seg');
+      grp.setAttribute('role', 'group'); grp.setAttribute('aria-label', lbl);
+      let cur = currentVal;
+      const btns = LEVELS.filter(Boolean).map(v => {
+        const b = _el('button', 's9-seg-btn', { type: 'button', textContent: v.charAt(0).toUpperCase() + v.slice(1), disabled: !complete });
+        b.addEventListener('click', () => { cur = v; sync(); onChange(v); });
+        grp.appendChild(b);
+        return [v, b];
       });
-      sel.addEventListener('change', () => onChange(sel.value));
-      wrap.appendChild(l); wrap.appendChild(sel);
+      const sync = () => btns.forEach(([v, b]) => b.setAttribute('aria-pressed', String(cur === v)));
+      sync();
+      wrap.appendChild(grp);
       return wrap;
     };
 
     row.appendChild(mkSel('Likelihood', saved.likelihood, v => {
       _residualState[riskId].likelihood = v;
       _applyResidualLevel(levelPill, _residualState[riskId].likelihood, _residualState[riskId].impact);
+      _syncRiskStatus(riskId);
     }));
     row.appendChild(mkSel('Impact', saved.impact, v => {
       _residualState[riskId].impact = v;
       _applyResidualLevel(levelPill, _residualState[riskId].likelihood, _residualState[riskId].impact);
+      _syncRiskStatus(riskId);
     }));
 
-    const lvlWrap = _el('div', 's9-residual-field');
-    const lvlLbl  = _el('label', 's9-field-label'); lvlLbl.textContent = 'Risk Level';
-    lvlWrap.appendChild(lvlLbl); lvlWrap.appendChild(levelPill);
-    row.appendChild(lvlWrap);
     panel.appendChild(row);
+    const lvlWrap = _el('div', 's9-residual-level');
+    lvlWrap.appendChild(_el('span', '', { textContent: 'Residual risk' }));
+    lvlWrap.appendChild(levelPill);
+    panel.appendChild(lvlWrap);
 
     const jWrap = _el('div', 's9-residual-just');
     const jLbl  = _el('label', 's9-field-label'); jLbl.textContent = 'Justification';
@@ -1166,13 +1168,6 @@
   function _injectStyles() {
     WizUtils.injectStyles('wiz7-base-styles', `
 .wiz-shell{display:flex;flex-direction:column;height:100%}
-.s7-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border:1px solid var(--color-border-mid,var(--color-border));border-radius:8px;background:var(--color-surface)}
-.s7-toolbar-summary{font-size:13px;color:var(--color-text-secondary)}
-.s7-toolbar-summary strong{color:var(--color-text-primary)}
-.s7-toolbar-done{color:#8cebb0;font-weight:600}
-.s7-toolbar-actions{display:flex;gap:8px}
-.s7-toolbar-btn{font-size:12px;font-weight:600;font-family:inherit;color:var(--color-text-secondary);background:var(--color-bg);border:1px solid var(--color-border-mid,var(--color-border));border-radius:6px;padding:6px 12px;cursor:pointer}
-.s7-toolbar-btn:hover{color:var(--color-text-primary);border-color:var(--teal-400,#2dd4bf)}
 .wiz-tab-strip{display:flex;gap:2px;padding:14px 24px 0;border-bottom:1px solid var(--color-border);background:var(--color-surface)}
 .wiz-tab{padding:8px 16px;font-size:12px;font-weight:500;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--color-text-secondary);font-family:inherit;transition:color .15s,border-color .15s;white-space:nowrap}
 .wiz-tab:hover{color:var(--color-text-primary)}
@@ -1264,39 +1259,47 @@
 .s9-risk-acc-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
 .s9-risk-acc-body{padding:14px;display:flex;flex-direction:column;gap:0}
 .s9-collapsed{display:none!important}
-.s9-ctrl-card{border:1px solid var(--color-border);border-radius:8px;padding:14px 16px;margin-bottom:10px;background:var(--color-bg)}
+.s9-ctrl-card{border:0;border-top:1px solid var(--color-border);border-radius:0;padding:14px 0 16px;margin:0;background:none}
 .s9-ctrl-hdr{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.s9-ctrl-name{font-size:13px;font-weight:600;color:var(--color-text-primary);flex:1}
+.s9-ctrl-name{font-size:14px;font-weight:600;color:var(--color-text-primary);flex:1}
 .s9-src-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0;margin-top:2px}
 .s9-src-badge--eu{background:rgba(80,150,225,0.16);color:#a4ccf6}
 .s9-src-badge--compliance{background:rgba(138,130,235,0.16);color:#bfb8ff}
 .s9-src-badge--dpia{background:rgba(93,202,165,0.16);color:#8ce3c6}
 .s9-src-badge--framework{background:rgba(212,184,96,0.16);color:#ecd489}
 .s9-obj-wrap{margin-bottom:10px}
-.s9-field-label{display:block;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
-.s9-ctrl-obj{font-size:12px;color:var(--color-text-secondary);margin:0;line-height:1.5}
+.s9-field-label{display:block;font-size:13px;font-weight:400;color:var(--color-text-secondary);margin-bottom:6px}
+.s9-ctrl-obj{font-size:13.5px;color:var(--color-text-secondary);margin:0;line-height:1.55}
 .s9-notes-wrap{margin-bottom:10px}
 .s9-fs-prefill-hint{font-size:11px;color:#ecd489;margin:0 0 6px;line-height:1.4}
-.s9-ctrl-notes{width:100%;padding:8px 10px;border:1px solid var(--color-border-mid,rgba(240,232,208,0.30));border-radius:6px;font-size:12px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.5}
+.s9-ctrl-notes{width:100%;padding:8px 10px;border:1px solid var(--color-border-mid,rgba(240,232,208,0.30));border-radius:8px;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);resize:vertical;box-sizing:border-box;line-height:1.5}
 .s9-ctrl-notes:focus{outline:none;border-color:#8ce3c6;box-shadow:0 0 0 2px rgba(13,148,136,.15)}
 .s9-status-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.s9-status-select{padding:5px 8px;border:1px solid var(--color-border-mid,rgba(240,232,208,0.30));border-radius:6px;font-size:12px;color:var(--color-text-primary);background:var(--color-bg);cursor:pointer}
-.s9-status-pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap}
+.s9-status-select{min-height:36px;padding:5px 8px;border:1px solid var(--color-border-mid,rgba(240,232,208,0.30));border-radius:8px;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);cursor:pointer}
+.s9-status-pill{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
 .s9-result-card{margin-top:20px;padding:16px 20px;background:var(--color-bg-secondary,#211d15);border:1px solid var(--color-border);border-radius:8px}
 .s9-result-title{font-size:14px;font-weight:700;color:var(--color-text-primary);margin:0 0 12px}
 
 /* ---- Tab 3: residual styles ---- */
-.s9-residual{margin:12px 0 0;padding:12px 14px;border:1px solid rgba(93,202,165,0.45);border-radius:8px;background:rgba(93,202,165,0.10)}
-.s9-residual--locked{background:#211d15;border-color:#2e2a1f;opacity:.75;pointer-events:none}
+.s9-residual{margin:4px 0 0;padding:0;border:0;border-radius:0;background:none;display:flex;flex-direction:column;gap:16px}
+.s9-residual--locked{opacity:.6;pointer-events:none}
 .s9-residual--locked .s9-residual-title{color:var(--color-text-tertiary)}
-.s9-residual-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.s9-residual-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8ce3c6}
-.s9-residual-lock-note{font-size:10px;color:var(--color-text-tertiary);font-style:italic}
-.s9-residual-row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
-.s9-residual-field{display:flex;flex-direction:column;gap:4px}
+.s9-residual-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.s9-residual-title{font-size:13.5px;color:var(--color-text-secondary)}
+.s9-residual-lock-note{font-size:12.5px;color:#ecd489}
+.s9-residual-row{display:flex;flex-direction:column;gap:16px}
+.s9-residual-field{display:flex;flex-direction:column;gap:2px}
 .s9-residual-select{padding:5px 8px;border:1px solid var(--color-border-mid,rgba(240,232,208,0.30));border-radius:5px;font-size:12px;font-family:inherit;background:var(--color-bg,#fff);color:var(--color-text-primary);cursor:pointer;min-width:120px}
 .s9-residual-select:disabled{background:var(--color-bg-subtle,#211d15);cursor:default}
-.s9-residual-level-pill{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;text-align:center;min-width:70px}
+.s9-residual-level-pill{display:inline-block;padding:3px 11px;border-radius:999px;font-size:13px;font-weight:600}
+.s9-residual-level{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:8px;background:var(--color-bg);font-size:14px;color:var(--color-text-secondary)}
+.s9-seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.s9-seg-btn{min-height:42px;border-radius:8px;border:1px solid rgba(240,232,208,0.14);background:transparent;color:var(--color-text-secondary);font-size:14px;font-family:inherit;cursor:pointer;transition:border-color .12s,background .12s,color .12s}
+.s9-seg-btn:hover:not(:disabled){border-color:rgba(212,184,96,0.5);color:var(--color-text-primary)}
+.s9-seg-btn[aria-pressed="true"]{border-color:var(--gold,#d4b860);background:rgba(212,184,96,0.14);color:var(--color-text-primary);font-weight:500}
+.s9-seg-btn:disabled{cursor:default}
+.s9-seg-btn:focus-visible{outline:2px solid var(--gold,#d4b860);outline-offset:2px}
+@media (max-width:640px){.s9-seg{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .s9-residual-just{margin-top:0}
     `);
   }

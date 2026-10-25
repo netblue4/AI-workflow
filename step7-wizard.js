@@ -40,8 +40,11 @@
   window.mountStep7Wizard = function (container, step, detail, colorKey, phaseTitle) {
     _container = container;
     _injectStyles();
-    const shell = _el('div', 'wiz-shell s7-shell');
-    shell.appendChild(_buildHeader(step, phaseTitle));
+    const shell = WizUtils.calmShell(_el('div', 'wiz-shell'));
+    shell.appendChild(WizUtils.buildCalmHeader(step, phaseTitle, {
+      lead: 'Rate each risk before any controls are applied, then choose how you will treat it.',
+      about: ['Control implementation and residual risk are recorded later, in “Recording and Reporting”.']
+    }));
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
     container.innerHTML = '';
@@ -55,39 +58,6 @@
     d.textContent = 'Risk Analysis & Evaluation — rate the inherent risk (before controls) and choose a treatment strategy for each applicable risk.';
     return d;
   };
-
-  // ---- Header: title, one sentence, owners · tier, and a single "About" toggle
-  function _buildHeader(step, phaseTitle) {
-    const head = _el('div', 's7-head');
-    const kicker = [phaseTitle, step.number != null ? `Step ${step.number}` : ''].filter(Boolean).join(' · ');
-    if (kicker) head.appendChild(_el('p', 's7-kicker', { textContent: kicker }));
-    head.appendChild(_el('h1', 's7-title', { textContent: step.title }));
-    head.appendChild(_el('p', 's7-lead', { textContent: 'Rate each risk before any controls are applied, then choose how you will treat it.' }));
-
-    const meta = _el('div', 's7-meta');
-    if ((step.owners || []).length) meta.appendChild(_el('span', '', { textContent: step.owners.join(' · ') }));
-    if (step.applicability) meta.appendChild(_el('span', 's7-chip', { textContent: step.applicability }));
-
-    const about = _el('div', 's7-about');
-    about.hidden = true;
-    const why = (WizUtils.STEP_WHY || {})[step.id];
-    if (why) about.appendChild(_el('p', '', { textContent: why }));
-    about.appendChild(_el('p', '', { textContent: 'Control implementation and residual risk are recorded later, in “Recording and Reporting”.' }));
-    (step.gates || []).forEach(g => { const n = _el('div', `gate-note ${g.type || 'info'}`); n.innerHTML = g.text; about.appendChild(n); });
-
-    const toggle = _el('button', 's7-link', { type: 'button' });
-    toggle.innerHTML = `About this step ${CHEVRON}`;
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.addEventListener('click', () => {
-      about.hidden = !about.hidden;
-      toggle.setAttribute('aria-expanded', String(!about.hidden));
-      toggle.classList.toggle('is-open', !about.hidden);
-    });
-    meta.appendChild(toggle);
-    head.appendChild(meta);
-    head.appendChild(about);
-    return head;
-  }
 
   // ---- Data ---------------------------------------------------
   async function _loadData(pw) {
@@ -335,19 +305,10 @@
 
   function _injectStyles() {
     WizUtils.injectStyles('s7-styles', `
-.s7-shell .s7-head,.s7-shell .s7-body{width:100%;max-width:760px;margin:0 auto;box-sizing:border-box;padding:0 8px}
-.s7-head{padding-top:24px !important;margin-bottom:28px !important;display:flex;flex-direction:column;gap:10px}
-.s7-kicker{margin:0;font-size:13px;color:var(--color-text-secondary)}
-.s7-title{margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.01em;color:var(--color-text-primary)}
-.s7-lead{margin:0;font-size:15.5px;line-height:1.5;color:var(--color-text-secondary)}
-.s7-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-size:13px;color:var(--color-text-secondary)}
-.s7-chip{padding:2px 9px;border-radius:999px;background:rgba(212,184,96,0.14);color:#ecd489}
 .s7-link{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0;border:0;background:none;color:var(--gold,#d4b860);font-size:13px;font-family:inherit;cursor:pointer}
 .s7-link:hover{color:var(--gold-bright,#ecd489)}
 .s7-link svg{transition:transform .15s}
 .s7-link.is-open svg{transform:rotate(180deg)}
-.s7-about{padding:14px 16px;border-radius:10px;background:var(--color-bg-subtle,#1c1a12);font-size:13.5px;line-height:1.6;color:var(--color-text-secondary)}
-.s7-about p{margin:0 0 8px}.s7-about p:last-child{margin:0}
 .s7-progress{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
 .s7-progress-text{font-size:13px;color:var(--color-text-secondary)}
 .s7-bar{height:4px;border-radius:2px;background:rgba(240,232,208,0.10)}
@@ -385,7 +346,7 @@
 .s7-reqs{padding:10px 14px;border-radius:8px;background:var(--color-bg)}
 .s7-reqs[hidden]{display:none}
 .s7-seg-btn:focus-visible,.s7-risk-head:focus-visible,.s7-link:focus-visible{outline:2px solid var(--gold,#d4b860);outline-offset:2px}
-@media (max-width:640px){.s7-risk-body{padding:0 14px 18px}.s7-seg{grid-template-columns:repeat(2,minmax(0,1fr))}.s7-title{font-size:25px}}
+@media (max-width:640px){.s7-risk-body{padding:0 14px 18px}.s7-seg{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .s9r-req{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px}
 .s9r-ref{font-family:var(--font-mono);font-size:11px;font-weight:600;color:#ecd489;background:rgba(212,184,96,0.16);border-radius:4px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
 .s9r-name{color:var(--color-text-primary)}
