@@ -427,7 +427,7 @@ async function selectStep(stepId) {
   } else if (stepId === 'step-13') {
     mountRecordingWizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
-    mountReportWizard(panel);
+    mountReportWizard(panel, step, color, phaseTitle);
   } else {
     panel.innerHTML = '';
     panel.appendChild(WizUtils.buildStepHeader(step, color, phaseTitle));

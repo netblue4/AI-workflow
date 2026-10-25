@@ -14,6 +14,7 @@
   const _answers = {}; // fieldId → string | string[]
   let _rationale = ''; // free-text DPIA rationale (holds your AI tool's reasoning)
   let _saveBlock = null; // shared Approve & Save block (WizUtils.buildSaveBlock)
+  let _progress = null;  // calm progress line (required answers completed)
 
   // ---- Public API ---------------------------------------------
   window.mountStep4Wizard = function (container, step, detail, colorKey, phaseTitle) {
@@ -29,21 +30,12 @@
 
     _injectStyles();
 
-    const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle, { hideDetails: true }));
-    // AI prompt + load-output sections (moved here from Step 2) — draft the DPIA
-    // with your AI tool, then load its reply to fill this screen.
-    if (window.AiPromptSections) {
-      const aiBody = _el('div', '');
-      aiBody.appendChild(window.AiPromptSections.askDpia(detail));
-      aiBody.appendChild(window.AiPromptSections.loadDpia({ onApplied: () => window.selectStep && window.selectStep('step-4') }));
-      shell.appendChild(WizUtils.buildStepPanel({
-        title: 'AI support',
-        description: 'Optional. Draft the DPIA with your AI tool, then load its reply to fill the sections below automatically.',
-        status: 'Optional', statusKind: 'muted',
-        body: aiBody
-      }).el);
-    }
+    _progress = null;
+    const shell = WizUtils.calmShell(_el('div', 'wiz-shell'));
+    shell.appendChild(WizUtils.buildCalmHeader(step, phaseTitle, {
+      lead: 'Record what personal data the system uses, the risks to people, and the safeguards in place.',
+      about: detail?.scope_note ? ['GDPR Art.35 scope: ' + detail.scope_note] : []
+    }));
     // Reference/methodology moved to the About the framework training area; the
     // step is a single wizard pane now (no tab strip).
     const pw = _el('div', 'wiz-pane-wrap');
@@ -129,6 +121,7 @@
     // Refresh progress label
     const prog = _container.querySelector('#dpia-progress');
     if (prog) prog.textContent = _computeProgress();
+    if (_progress) { const c = _progressCounts(); _progress.set(c.filled, c.totalRequired, 'required answers completed'); }
   }
 
   function _toggleField(fieldId, hide) {
@@ -156,12 +149,8 @@
   function _buildWizardPane() {
     const card = _el('div', 'step-detail-card');
 
-    // A single quiet lead line replaces the old stacked summary + info boxes.
-    if (_detail?.scope_note) {
-      const lead = _el('p', 'wiz-panel-lead');
-      lead.textContent = 'GDPR Art.35 scope: ' + _detail.scope_note;
-      card.appendChild(lead);
-    }
+    _progress = WizUtils.buildCalmProgress();
+    card.appendChild(_progress.el);
 
     // DPIA sections — each a collapsed gold StepDIV.
     if (_detail?.sections) {
@@ -180,6 +169,20 @@
       description: 'Reasoning behind the DPIA answers. Loaded from your AI tool’s reasoning, or add your own notes. Saved with the DPIA.',
       body: _buildRationaleSection()
     }).el);
+
+    // AI prompt + load-output sections — draft the DPIA with your AI tool, then
+    // load its reply to fill the sections above. Optional, so it sits last.
+    if (window.AiPromptSections) {
+      const aiBody = _el('div', '');
+      aiBody.appendChild(window.AiPromptSections.askDpia(_detail));
+      aiBody.appendChild(window.AiPromptSections.loadDpia({ onApplied: () => window.selectStep && window.selectStep('step-4') }));
+      card.appendChild(WizUtils.buildStepPanel({
+        title: 'AI support',
+        description: 'Optional. Draft the DPIA with your AI tool, then load its reply to fill the sections above automatically.',
+        status: 'Optional', statusKind: 'muted',
+        body: aiBody
+      }).el);
+    }
     _saveBlock = WizUtils.buildSaveBlock({
       label: 'Approve & Save',
       secondary: { label: '↺ Clear all answers', onClick: _clearAll },
@@ -209,7 +212,8 @@
     wrap.dataset.sectionId = section.id;
 
     // Header
-    const header = _el('div', 'dpia-section-header');
+    const header = _el('button', 'dpia-section-header', { type: 'button' });
+    header.setAttribute('aria-expanded', 'false');
 
     const left = _el('div', 'dpia-section-header-left');
     const num  = _el('span', 'dpia-section-num');
@@ -230,8 +234,8 @@
     badge.id = `dpia-badge-${section.id}`;
     right.appendChild(badge);
     const chevron = _el('span', 'dpia-chevron');
-    chevron.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-    chevron.style.transform = 'rotate(-90deg)'; // all sections start collapsed
+    chevron.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    chevron.setAttribute('aria-hidden', 'true'); // all sections start collapsed
     right.appendChild(chevron);
     header.appendChild(right);
     wrap.appendChild(header);
@@ -254,10 +258,7 @@
 
     _updateSectionBadge(section);
 
-    header.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('dpia-collapsed');
-      chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
-    });
+    header.addEventListener('click', () => _setSectionOpen(wrap, body.classList.contains('dpia-collapsed')));
     return wrap;
   }
 
@@ -383,9 +384,25 @@
         : 'wiz-item-badge wiz-item-badge--partial';
   }
 
+  // Open one section and close the rest, so only one is ever open.
+  function _setSectionOpen(wrap, open) {
+    _container.querySelectorAll('.dpia-section').forEach(sec => {
+      const on = open && sec === wrap;
+      sec.querySelector('.dpia-section-body').classList.toggle('dpia-collapsed', !on);
+      sec.querySelector('.dpia-chevron').style.transform = on ? 'rotate(180deg)' : '';
+      sec.querySelector('.dpia-section-header').setAttribute('aria-expanded', String(on));
+      sec.classList.toggle('is-open', on);
+    });
+  }
+
   // ---- Progress counter ---------------------------------------
   function _computeProgress() {
-    if (!_detail?.sections) return '';
+    const { filled, totalRequired } = _progressCounts();
+    return `${filled} / ${totalRequired} required fields completed`;
+  }
+
+  function _progressCounts() {
+    if (!_detail?.sections) return { filled: 0, totalRequired: 0 };
     let totalRequired = 0, filled = 0;
 
     _detail.sections.forEach(s => {
@@ -403,7 +420,7 @@
       });
     });
 
-    return `${filled} / ${totalRequired} required fields completed`;
+    return { filled, totalRequired };
   }
 
   // ---- Action row ---------------------------------------------
@@ -571,44 +588,50 @@
 .dpia-rationale-ta:focus{outline:none;border-color:var(--info-400,#38bdf8);background:var(--color-surface)}
 
 /* ---- Section accordion (styled as the shared gold StepDIV) ---- */
-.dpia-section{border:1px solid rgba(212,184,96,0.34);border-radius:10px;margin-bottom:12px;overflow:hidden;background:var(--color-surface,#1c1810);transition:border-color .15s}
-.dpia-section:hover{border-color:rgba(212,184,96,0.5)}
-.dpia-section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:none;cursor:pointer;user-select:none;gap:12px}
-.dpia-section-header:hover{background:rgba(212,184,96,0.05)}
-.dpia-section-header-left{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
-.dpia-section-num{width:24px;height:24px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--font-mono,monospace);background:rgba(212,184,96,0.16);color:#ecd489}
-.dpia-section-title{font-size:14.5px;font-weight:700;color:var(--color-text-primary)}
-.dpia-gdpr-ref{font-size:11px;color:var(--color-text-tertiary);font-style:italic;white-space:nowrap;flex-shrink:0}
+.dpia-section{border:1px solid var(--color-border);border-radius:10px;margin-bottom:8px;overflow:hidden;background:transparent;transition:border-color .15s,background .15s}
+.dpia-section.is-open{border-color:rgba(212,184,96,0.45);background:var(--color-surface,#1c1810)}
+.dpia-section:hover{border-color:rgba(212,184,96,0.3)}
+.dpia-section.is-open:hover{border-color:rgba(212,184,96,0.45)}
+.dpia-section-header{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:56px;padding:0 16px;border:0;background:none;color:inherit;font-family:inherit;text-align:left;cursor:pointer;user-select:none;gap:12px}
+.dpia-section-header:focus-visible{outline:2px solid var(--gold,#d4b860);outline-offset:-2px;border-radius:10px}
+.dpia-section-header:hover .dpia-section-title{color:var(--color-text-primary)}
+.dpia-section-header-left{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:10px;row-gap:2px;flex:1;min-width:0}
+.dpia-section-num{flex-shrink:0;font-size:13px;font-family:var(--font-mono,monospace);color:var(--color-text-secondary)}
+.dpia-section-title{font-size:15px;font-weight:500;color:var(--color-text-primary)}
+.dpia-section.is-open .dpia-section-title{font-weight:600}
+.dpia-gdpr-ref{font-size:12.5px;color:var(--color-text-secondary)}
+.dpia-section:not(.is-open) .dpia-gdpr-ref{display:none}
 .dpia-section-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .dpia-chevron{display:flex;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .2s}
-.dpia-section-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:16px;border-top:1px solid rgba(212,184,96,0.16)}
+.dpia-section-body{padding:0 20px 22px;display:flex;flex-direction:column;gap:20px}
 .dpia-collapsed{display:none}
-.dpia-section-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin:0;padding:10px 12px;background:var(--color-bg);border-radius:6px;border:1px solid var(--color-border)}
+.dpia-section-desc{font-size:13.5px;color:var(--color-text-secondary);line-height:1.6;margin:0}
 
 /* ---- Conditional sections ---- */
 .dpia-section--disabled .dpia-section-header{opacity:.5}
-.dpia-na-notice{display:none;font-size:12px;color:var(--color-text-tertiary);background:var(--color-bg-subtle,#211d15);border:1px dashed var(--color-border);border-radius:5px;padding:10px 12px;line-height:1.55}
+.dpia-na-notice{display:none;font-size:13.5px;color:var(--color-text-secondary);line-height:1.55}
 .dpia-section--disabled .dpia-na-notice{display:block}
 .dpia-section--disabled .dpia-section-body > :not(.dpia-na-notice){display:none!important}
 .dpia-field--hidden{display:none!important}
 
 /* ---- Divider ---- */
 .dpia-divider{display:flex;align-items:center;gap:12px;padding:10px 0 4px;border-top:1px solid var(--color-border);margin-top:6px}
-.dpia-divider-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-tertiary);white-space:nowrap}
+.dpia-divider-label{font-size:13px;font-weight:500;color:var(--color-text-secondary);white-space:nowrap}
 
 /* ---- Fields ---- */
 .dpia-field-wrap{display:flex;flex-direction:column;gap:6px}
-.dpia-label{font-size:13px;font-weight:600;color:var(--color-text-primary);cursor:default}
+.dpia-label{font-size:14px;font-weight:500;color:var(--color-text-primary);cursor:default}
 .dpia-required{color:var(--danger-500,#ec6a68)}
-.dpia-hint{font-size:11px;color:var(--color-text-tertiary);margin:0;line-height:1.55;padding:6px 10px;background:var(--color-bg);border-radius:4px;border:1px solid var(--color-border)}
-.dpia-text-input,.dpia-textarea,.dpia-select{width:100%;padding:8px 11px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--color-text-primary);background:var(--color-surface);outline:none;box-sizing:border-box}
+.dpia-hint{font-size:13px;color:var(--color-text-secondary);margin:0;line-height:1.55}
+.dpia-text-input,.dpia-textarea,.dpia-select{width:100%;min-height:40px;padding:8px 12px;border:1px solid var(--color-border-mid,var(--color-border));border-radius:8px;font-size:14px;font-family:inherit;color:var(--color-text-primary);background:var(--color-bg);outline:none;box-sizing:border-box}
 .dpia-textarea{resize:vertical;line-height:1.6}
 .dpia-text-input:focus,.dpia-textarea:focus,.dpia-select:focus{border-color:var(--teal-400,#2dd4bf);box-shadow:0 0 0 2px var(--teal-100,rgba(93,202,165,0.16))}
 .dpia-select{cursor:pointer}
 .dpia-cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
-.dpia-cb-wrap{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border:1px solid var(--color-border);border-radius:5px;font-size:13px;color:var(--color-text-primary);background:var(--color-surface);cursor:pointer;line-height:1.45}
-.dpia-cb-wrap:hover{background:var(--color-bg-subtle,#211d15)}
-.dpia-cb{margin-top:2px;flex-shrink:0;accent-color:var(--teal-600,#8ce3c6);width:14px;height:14px;cursor:pointer}
+.dpia-cb-wrap{display:flex;align-items:flex-start;gap:10px;min-height:40px;box-sizing:border-box;padding:9px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;color:var(--color-text-primary);background:transparent;cursor:pointer;line-height:1.45}
+.dpia-cb-wrap:hover{border-color:rgba(212,184,96,0.5)}
+.dpia-cb-wrap:has(.dpia-cb:checked){border-color:var(--gold,#d4b860);background:rgba(212,184,96,0.10)}
+.dpia-cb{margin-top:2px;flex-shrink:0;accent-color:var(--gold,#d4b860);width:16px;height:16px;cursor:pointer}
 .dpia-warn{font-size:13px;color:var(--danger-600,#ec6a68);padding:16px 0}
 
 /* ---- Action row ---- */
