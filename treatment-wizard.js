@@ -73,7 +73,7 @@
     const ids = _riskIds();
     if (!ids.length) {
       const w = _el('div', 's9-warn');
-      w.innerHTML = '<strong>No risks selected in Step 5.</strong> Complete Risk Identification first, then return here.';
+      w.innerHTML = '<strong>No risks selected in Step 4.</strong> Complete Risk Identification first, then return here.';
       card.appendChild(w); pw.appendChild(card); return;
     }
     ids.forEach(id => { _plans[id] = Object.assign({ responsible: '', timeline: '', resources: '' }, _plans[id] || {}); });

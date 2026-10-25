@@ -930,7 +930,7 @@
         const parsed = JSON.parse(e.target.result);
         _record = parsed;
         const step3Data = parsed['step-3'];
-        if (!step3Data) { alert('This file does not contain Step 3 data. Other step records have been loaded.'); return; }
+        if (!step3Data) { alert('This file does not contain Step 2 data. Other step records have been loaded.'); return; }
         _restoreState(step3Data);
         WizUtils.saveRecord(_record);
         if (typeof selectStep === 'function') selectStep('step-3');

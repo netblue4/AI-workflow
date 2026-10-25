@@ -469,7 +469,7 @@
     const dpia = _buildDpiaResidualBody();
     if (dpia) pane.appendChild(WizUtils.buildStepGroup({
       title: 'DPIA — residual risk',
-      description: 'The DPIA is assessed as a whole in Step 4. Confirm the security-measure controls are live; the residual rating is carried from the DPIA.',
+      description: 'The DPIA is assessed as a whole in Step 3. Confirm the security-measure controls are live; the residual rating is carried from the DPIA.',
       body: dpia
     }).el);
 
@@ -568,7 +568,7 @@
       } else if (allRefs.length) {
         body.appendChild(_domainMuted('All requirements for this risk are met by the governance workflow — see “Already Met By Workflow”.'));
       } else {
-        body.appendChild(_domainMuted('No harmonised standard requirements selected for this risk in Step 6.'));
+        body.appendChild(_domainMuted('No harmonised standard requirements selected for this risk in Step 4.'));
       }
 
       body.appendChild(_sectionLabel('2 · Residual Risk'));
@@ -600,7 +600,7 @@
       title: riskName,
       ref: artId ? WizUtils.artLabel(artId) : '',
       status: statusTxt, statusKind,
-      check: { checked: true, disabled: true, title: 'Selected in Steps 5 & 6 — change what applies there' },
+      check: { checked: true, disabled: true, title: 'Selected in Step 4 — change what applies there' },
       body
     });
     panel.el.dataset.riskId = riskId;
@@ -615,7 +615,7 @@
       : Array.from(new Set(_controls.filter(c => c.domain === domain && c.risk_id).map(c => c.risk_id)));
     if (!riskIds.length) {
       const warn = _el('div', 's9-warn');
-      warn.innerHTML = `<strong>No ${title} risk controls found.</strong> Select controls for ${title} risks in Steps 5 and 6 first.`;
+      warn.innerHTML = `<strong>No ${title} risk controls found.</strong> Select controls for ${title} risks in Step 4 first.`;
       wrap.appendChild(warn);
       return { el: wrap, count: 0 };
     }
@@ -637,7 +637,7 @@
     const step4 = _record?.['step-4'];
     if (!step4) {
       const warn = _el('div', 's9-warn');
-      warn.innerHTML = '<strong>Step 4 (DPIA) not yet completed.</strong> Complete and save the DPIA first.';
+      warn.innerHTML = '<strong>Step 3 (DPIA) not yet completed.</strong> Complete and save the DPIA first.';
       card.appendChild(warn);
       return card;
     }
@@ -680,7 +680,7 @@
     ratings.appendChild(mkPill('Inherent', step4.inherent_risk_rating));
     ratings.appendChild(mkPill('Residual', step4.residual_risk_rating));
     body.appendChild(ratings);
-    body.appendChild(_domainMuted('Residual rating is owned by the Step 4 DPIA. Update it there if it changes.'));
+    body.appendChild(_domainMuted('Residual rating is owned by the Step 3 DPIA. Update it there if it changes.'));
 
     card.appendChild(WizUtils.buildStepPanel({
       title: 'Data Protection Impact Assessment',
@@ -871,7 +871,7 @@
     notesWrap.appendChild(_el('label', 's9-field-label', { textContent: evLabel }));
     if (prefilledFromFs) {
       notesWrap.appendChild(_el('p', 's9-fs-prefill-hint', {
-        textContent: 'Pre-filled from the framework self-certification shown in Step 6 — edit or confirm.'
+        textContent: 'Pre-filled from the framework self-certification shown in Step 4 — edit or confirm.'
       }));
     }
     const ta = document.createElement('textarea');

@@ -398,7 +398,7 @@
     title.style.marginBottom = '2px';
     const sub = _el('p', '');
     sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
-    sub.textContent = 'Stage 2 prompt — covers Steps 5 (Risk Assessment) and 6 (Control Identification). Your Step 2 business case, Step 3 classification and Step 4 DPIA are filled in automatically.';
+    sub.textContent = 'Stage 2 prompt — covers Step 4 (Risk Identification). Your Step 1 business case, Step 2 classification and Step 3 DPIA are filled in automatically.';
     hLeft.append(title, sub);
     const hRight  = _el('div', 's5-ai-header-right');
     const chevron = _el('span', 's5-ai-chevron');
@@ -414,10 +414,10 @@
     instruct.innerHTML = `
       <strong>How to use this prompt</strong>
       <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
-        <li>Complete the Step 2, Step 3 and Step 4 wizards first — the business case, classification and DPIA are inserted into the prompt automatically.</li>
+        <li>Complete the Step 1, Step 2 and Step 3 wizards first — the business case, classification and DPIA are inserted into the prompt automatically.</li>
         <li>Copy the prompt below and paste it into your AI tool — no need to paste the business case or Stage 1 report separately.</li>
         <li>Run it, then save the risk assessment report as a PDF alongside this system record.</li>
-        <li>Use the report to answer the questions in the Step 5 and Step 6 wizards.</li>
+        <li>Use the report to answer the questions in the Step 4 wizard.</li>
       </ol>`;
     body.appendChild(instruct);
 
@@ -451,7 +451,7 @@
     if (ctx) {
       prompt = prompt
         .replace('CONTEXT — paste the full Stage 1 report (classification and DPIA) below this line, then run the prompt:',
-                 'CONTEXT — the Step 2 business case, Step 3 classification and Step 4 DPIA below are filled in automatically from this system record. Use the business case as background scenario context; treat the classification and DPIA as authoritative:')
+                 'CONTEXT — the Step 1 business case, Step 2 classification and Step 3 DPIA below are filled in automatically from this system record. Use the business case as background scenario context; treat the classification and DPIA as authoritative:')
         .replace('[PASTE STAGE 1 REPORT HERE]', ctx);
     }
     return prompt;
@@ -475,7 +475,7 @@
     // below remain the authoritative inputs.
     const bc = (s2?.business_case || '').trim();
     if (bc) {
-      lines.push('=== BUSINESS CASE (Step 2) — background scenario context ===',
+      lines.push('=== BUSINESS CASE (Step 1) — background scenario context ===',
         'Use this to understand what the AI system does and how it is deployed. It is supporting context only; the classification and DPIA below are the authoritative, reviewed inputs.',
         bc);
       const url = (s2?.business_case_url || '').trim();
@@ -487,7 +487,7 @@
       const b  = s3.axis_b || {};
       const co = s3.combined_outcome || {};
       const arts = (b.applicable_articles || []).map(a => a.article_number || a).filter(Boolean);
-      lines.push('=== SYSTEM CLASSIFICATION (Step 3) ===',
+      lines.push('=== SYSTEM CLASSIFICATION (Step 2) ===',
         'Tier: ' + (s3.axis_a?.tier_label || '—'),
         'EU AI Act outcome: ' + (b.ai_act_outcome || '—'),
         'Organisation role: ' + (b.organisation_role || '—'),
@@ -497,12 +497,12 @@
         'Requires conformity assessment: ' + yn(co.requires_conformity_assessment),
         '');
     } else {
-      lines.push('=== SYSTEM CLASSIFICATION (Step 3) — not yet completed ===', '');
+      lines.push('=== SYSTEM CLASSIFICATION (Step 2) — not yet completed ===', '');
     }
 
     if (s4) {
       const d = s4.data_types_identified || {};
-      lines.push('=== DPIA (Step 4) ===',
+      lines.push('=== DPIA (Step 3) ===',
         'Data subjects: ' + list(d.data_subjects),
         'Standard personal data: ' + list(d.standard_personal_data),
         'Special category data: ' + ((d.special_category_data && d.special_category_data.length) ? d.special_category_data.join(', ') : 'none'),
@@ -514,7 +514,7 @@
         'Residual risk rating: ' + (s4.residual_risk_rating || '—'),
         'DPO consulted: ' + (s4.dpo_consulted || '—'));
     } else {
-      lines.push('=== DPIA (Step 4) — not yet completed ===');
+      lines.push('=== DPIA (Step 3) — not yet completed ===');
     }
 
     return lines.join('\n');
@@ -552,7 +552,7 @@
     // ── Parent "screen content" card ──
     const card = _el('div', 'step-detail-card');
     card.appendChild(_el('p', 'wiz-panel-lead', {
-      textContent: 'Risks are split by priority. The Required set is derived from your Step 3 classification and Step 4 DPIA — these must be treated for compliance. Everything else is recommended: treat what matters for your system. Use the checkbox on each risk to include or exclude it.'
+      textContent: 'Risks are split by priority. The Required set is derived from your Step 2 classification and Step 3 DPIA — these must be treated for compliance. Everything else is recommended: treat what matters for your system. Use the checkbox on each risk to include or exclude it.'
     }));
 
     // ── Already Met By Workflow (stays a gold panel — no user action needed) ──
@@ -564,14 +564,14 @@
     // ── Required (mandatory) — group header ──
     if (mandN) {
       card.appendChild(_makeGroup('req', 'Required for compliance',
-        'Mapped to the EU AI Act articles your Step 3 classification found apply, plus your DPIA privacy risks. These must be treated.',
+        'Mapped to the EU AI Act articles your Step 2 classification found apply, plus your DPIA privacy risks. These must be treated.',
         String(mandN), 'progress', mandatory));
     } else if (step3Done) {
       card.appendChild(_el('div', 's5-empty-note', { textContent: 'Your classification did not trigger any risk-bearing articles, and the DPIA recorded no privacy risks — so there is no mandatory set. Review the recommended risks below.' }));
     } else {
       const note = _el('div', 'wiz8-info');
       note.style.cssText = 'margin:6px 0 12px;padding:10px 14px;border-radius:6px';
-      note.innerHTML = '<strong>Complete Step 3 (System classification) to see which risks are mandatory.</strong> Until then every risk is shown as recommended.';
+      note.innerHTML = '<strong>Complete Step 2 (System classification) to see which risks are mandatory.</strong> Until then every risk is shown as recommended.';
       card.appendChild(note);
     }
 
@@ -1341,10 +1341,10 @@
     const section = _el('div', 's5-ai-section');
     const header  = _el('div', 's5-ai-header');
     const hLeft   = _el('div', 's5-ai-header-left');
-    const title   = _sectionLabel('Load your AI tool output into Steps 5 & 6');
+    const title   = _sectionLabel('Load your AI tool output into Step 4');
     title.style.marginBottom = '2px';
     const sub = _el('p', ''); sub.style.cssText = 'font-size:11px;color:var(--color-text-tertiary);margin-bottom:0';
-    sub.textContent = 'Loads risk applicability and control selection as a draft — review and save in Steps 5 and 6.';
+    sub.textContent = 'Loads risk applicability and control selection as a draft — review and save in Step 4.';
     hLeft.append(title, sub);
     const hRight = _el('div', 's5-ai-header-right');
     const chevron = _el('span', 's5-ai-chevron');
@@ -1357,7 +1357,7 @@
     const ta = _el('textarea', 's5-prompt-area'); ta.rows = 8; ta.placeholder = 'Paste your AI tool’s full reply (or just its ```json block) here…';
     const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;margin:10px 0';
     const checkBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Validate & preview' });
-    const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Steps 5 & 6' });
+    const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Step 4' });
     applyBtn.style.display = 'none';
     btnRow.append(checkBtn, applyBtn);
     const preview = _el('div', 's5-load-preview'); preview.style.cssText = 'font-size:12.5px;line-height:1.6';
@@ -1374,7 +1374,7 @@
     applyBtn.addEventListener('click', () => {
       if (!_res) return;
       _applyRa(_res);
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and requirement selections for ${_res.reqRiskCount} risk${_res.reqRiskCount !== 1 ? 's' : ''} as a draft. Review below, then <strong>Save all risks</strong>; confirm in <strong>Step 6</strong>.</span>`;
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${_res.riskCount} risk answer${_res.riskCount !== 1 ? 's' : ''} and requirement selections for ${_res.reqRiskCount} risk${_res.reqRiskCount !== 1 ? 's' : ''} as a draft. Review below, then <strong>Save all risks</strong>; confirm in <strong>Step 4</strong>.</span>`;
       applyBtn.style.display = 'none';
       _renderConsolidated();
     });
@@ -1446,7 +1446,7 @@
         res.warnings.slice(0, 12).map(w => `<li>${w}</li>`).join('') +
         (res.warnings.length > 12 ? `<li>…and ${res.warnings.length - 12} more</li>` : '') + '</ul>';
     }
-    html += '<div style="color:var(--color-text-tertiary);margin-top:8px">This loads a <strong>draft</strong> — review and <strong>Save</strong> in Steps 5 and 6. Nothing is written until you click Apply.</div>';
+    html += '<div style="color:var(--color-text-tertiary);margin-top:8px">This loads a <strong>draft</strong> — review and <strong>Save</strong> in Step 4. Nothing is written until you click Apply.</div>';
     return html;
   }
 
@@ -1790,7 +1790,7 @@
     const card = _el('div', 'step-detail-card');
     card.appendChild(_el('h2', 'step-detail-title', { textContent: 'NIST AI RMF Risk Assessment' }));
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Risks surfaced by the NIST AI Risk Management Framework that sit alongside — and beyond — the EU AI Act article set. Each is mapped to an AI Act article and flows through control selection in Step 6. Mark each risk as applicable to this use case.';
+    sub.textContent = 'Risks surfaced by the NIST AI Risk Management Framework that sit alongside — and beyond — the EU AI Act article set. Each is mapped to an AI Act article and flows through control selection in Step 4. Mark each risk as applicable to this use case.';
     card.appendChild(sub);
 
     const nistRisks = (_tblRisks || []).filter(r => r.risk_source === 'NIST_RMF');
@@ -1904,7 +1904,7 @@
     card.appendChild(title);
 
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Risks derived from the Acceptable Use of AI Tools Standard. Mark each risk as applicable to this use case; applicable risks are treated with controls in Step 6.';
+    sub.textContent = 'Risks derived from the Acceptable Use of AI Tools Standard. Mark each risk as applicable to this use case; applicable risks are treated with controls in Step 4.';
     card.appendChild(sub);
 
     const gsRisks = (_tblRisks || []).filter(r => r.risk_category === 'Group_Standard');
@@ -1985,11 +1985,11 @@
   function _buildDpiaRisksPane() {
     const card = _el('div', 'step-detail-card');
     card.appendChild(_el('h2', 'step-detail-title', { textContent: 'DPIA Risks' }));
-    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'Privacy risks identified during the Data Protection Impact Assessment (Step 4).' }));
+    card.appendChild(_el('p', 'step-detail-summary', { textContent: 'Privacy risks identified during the Data Protection Impact Assessment (Step 3).' }));
 
     const step4 = _record?.['step-4'];
     if (!step4) {
-      card.appendChild(_el('p', 'wiz8-notice', { innerHTML: '<strong>Step 4 (DPIA) not yet completed.</strong> Complete and save the DPIA first.' }));
+      card.appendChild(_el('p', 'wiz8-notice', { innerHTML: '<strong>Step 3 (DPIA) not yet completed.</strong> Complete and save the DPIA first.' }));
       return card;
     }
     const risks = step4.data_types_identified?.privacy_risks || [];
@@ -2061,7 +2061,7 @@
     card.appendChild(title);
 
     const sub = _el('p', 'step-detail-summary');
-    sub.textContent = 'Read-only view of the legal/regulatory assessment. Complete the Legal/Regulatory Risk Identification tab and save before proceeding to Step 9.';
+    sub.textContent = 'Read-only view of the legal/regulatory assessment. Complete the Legal/Regulatory Risk Identification tab and save before proceeding to Step 7.';
     card.appendChild(sub);
 
     card.appendChild(_sectionLabel('Input Sources'));
@@ -2081,12 +2081,12 @@
 
     if (!legalDone) {
       const warn = _el('div', 'wiz8-review-warn');
-      warn.innerHTML = `<strong>⚠ Incomplete:</strong> Legal/Regulatory assessment not yet saved. Complete the Legal/Regulatory Risk Identification tab before proceeding to Step 9.`;
+      warn.innerHTML = `<strong>⚠ Incomplete:</strong> Legal/Regulatory assessment not yet saved. Complete the Legal/Regulatory Risk Identification tab before proceeding to Step 7.`;
       gateRow.appendChild(warn);
     } else {
       const ok = _el('div', 'wiz8-review-complete');
       const total = saved8.legal_assessment.selected_count || 0;
-      ok.innerHTML = `<strong>✓ Assessment complete.</strong> ${total} risk${total !== 1 ? 's' : ''} confirmed. Proceed to Step 6 (Control Identification).`;
+      ok.innerHTML = `<strong>✓ Assessment complete.</strong> ${total} risk${total !== 1 ? 's' : ''} confirmed. Proceed to Step 5 (Risk Analysis & Evaluation).`;
       gateRow.appendChild(ok);
     }
     card.appendChild(gateRow);
@@ -2150,10 +2150,10 @@
     const card = _el('div', 'wiz8-source-card');
     if (!_step3Data) {
       const w = _el('div', 'wiz8-warn');
-      w.innerHTML = '<strong>Step 3 not yet completed.</strong> Complete Step 3 (System classification) to filter risks to only those applicable to your system. All risks are currently shown.';
+      w.innerHTML = '<strong>Step 2 not yet completed.</strong> Complete Step 2 (System classification) to filter risks to only those applicable to your system. All risks are currently shown.';
       card.appendChild(w); return card;
     }
-    const lbl = _el('p', 'wiz8-source-label'); lbl.textContent = 'Step 3 — EU AI Act Classification'; card.appendChild(lbl);
+    const lbl = _el('p', 'wiz8-source-label'); lbl.textContent = 'Step 2 — EU AI Act Classification'; card.appendChild(lbl);
     const grid = _el('div', 'wiz8-source-grid');
     const cell = (label, value, mod) => {
       const c = _el('div', 'wiz8-source-cell');
@@ -2172,10 +2172,10 @@
     const card = _el('div', 'wiz8-source-card wiz5-source-card--dpia');
     if (!_step7Data) {
       const w = _el('div', 'wiz8-info');
-      w.innerHTML = '<strong>Step 4 (Data identification and DPIA) not yet completed.</strong> Complete the DPIA to sharpen relevance scoring with data inventory context.';
+      w.innerHTML = '<strong>Step 3 (Data identification and DPIA) not yet completed.</strong> Complete the DPIA to sharpen relevance scoring with data inventory context.';
       card.appendChild(w); return card;
     }
-    const lbl = _el('p', 'wiz8-source-label'); lbl.textContent = 'Step 4 — Data identification and DPIA'; card.appendChild(lbl);
+    const lbl = _el('p', 'wiz8-source-label'); lbl.textContent = 'Step 3 — Data identification and DPIA'; card.appendChild(lbl);
     const di   = _step7Data.data_types_identified || {};
     const grid = _el('div', 'wiz8-source-grid');
     const cell = (label, value, mod) => {

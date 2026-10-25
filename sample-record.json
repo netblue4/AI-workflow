@@ -2,7 +2,7 @@
   "_meta": {
     "schema_version": "1.0",
     "title": "AI Acceptable Use — System Authorisation Record",
-    "standard": "ISO/IEC 42001-aligned",
+    "standard": "ISO/IEC 42001-aligned; AI risk assessment per ISO 31000 (Cl. 6.1.2 & 8.2)",
     "created": "2026-10-24T01:50:29.832Z",
     "last_modified": "2026-10-24T05:00:20.849Z",
     "use_case_name": "JAKE — Contract Q&A Assistant",
@@ -1420,7 +1420,7 @@
         "standard_ref": "[18286.3]",
         "standard_name": "Design & Development",
         "status": "evidence_provided",
-        "notes": "AI Governance Workflow — Design and Development Controls\nSteps 5 and 6 of the AI governance workflow, combined with the Step 8 Board gate and Step 7 controls verification, constitute the organisation's design and development control process under ISO 18286.3."
+        "notes": "AI Governance Workflow — Design and Development Controls\nStep 4 of the AI governance workflow, combined with the Step 11 Board gate and Step 7 controls verification, constitute the organisation's design and development control process under ISO 18286.3."
       },
       {
         "risk_id": "RISK-010",
@@ -1483,14 +1483,14 @@
         "standard_ref": "[18228.4]",
         "standard_name": "Elimination",
         "status": "evidence_provided",
-        "notes": "Met by the governance workflow — Step 6 — Control identification."
+        "notes": "Met by the governance workflow — Step 4 — Risk identification."
       },
       {
         "risk_id": "RISK-011",
         "standard_ref": "[18228.5]",
         "standard_name": "Mitigation",
         "status": "evidence_provided",
-        "notes": "Met by the governance workflow — Step 6 — Control identification."
+        "notes": "Met by the governance workflow — Step 4 — Risk identification."
       },
       {
         "risk_id": "RISK-011",
@@ -1927,7 +1927,7 @@
         },
         "[18286.3]": {
           "status": "evidence_provided",
-          "notes": "AI Governance Workflow — Design and Development Controls\nSteps 5 and 6 of the AI governance workflow, combined with the Step 8 Board gate and Step 7 controls verification, constitute the organisation's design and development control process under ISO 18286.3."
+          "notes": "AI Governance Workflow — Design and Development Controls\nStep 4 of the AI governance workflow, combined with the Step 11 Board gate and Step 7 controls verification, constitute the organisation's design and development control process under ISO 18286.3."
         },
         "[18286.4]": {
           "status": "evidence_provided",
@@ -1965,11 +1965,11 @@
         },
         "[18228.4]": {
           "status": "evidence_provided",
-          "notes": "Met by the governance workflow — Step 6 — Control identification."
+          "notes": "Met by the governance workflow — Step 4 — Risk identification."
         },
         "[18228.5]": {
           "status": "evidence_provided",
-          "notes": "Met by the governance workflow — Step 6 — Control identification."
+          "notes": "Met by the governance workflow — Step 4 — Risk identification."
         },
         "[18228.6]": {
           "status": "evidence_provided",

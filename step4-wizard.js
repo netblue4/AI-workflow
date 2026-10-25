@@ -516,7 +516,7 @@
     card.appendChild(stats);
 
     const note = _el('p', 'dpia-result-note');
-    note.innerHTML = `DPIA saved to record. <strong>${di.standard_personal_data.length + di.special_category_data.length} data type${(di.standard_personal_data.length + di.special_category_data.length) !== 1 ? 's' : ''}</strong> identified will be used to scope the Risk Assessment in Step 5. Use the <strong>Save Record</strong> button in the sidebar to download the full system record.`;
+    note.innerHTML = `DPIA saved to record. <strong>${di.standard_personal_data.length + di.special_category_data.length} data type${(di.standard_personal_data.length + di.special_category_data.length) !== 1 ? 's' : ''}</strong> identified will be used to scope the Risk Assessment in Step 4. Use the <strong>Save Record</strong> button in the sidebar to download the full system record.`;
     card.appendChild(note);
     area.appendChild(card);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

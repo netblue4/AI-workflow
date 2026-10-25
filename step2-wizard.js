@@ -388,7 +388,7 @@
   function _buildAskAiSection(cfg) {
     cfg = cfg || {};
     const cfgTitle    = cfg.title    || 'Ask your AI tool to draft a classification and DPIA';
-    const cfgSubtitle = cfg.subtitle || 'Stage 1 prompt — covers Steps 3 (EU AI Act classification) and 4 (DPIA). Paste into your AI tool, save the report, then record the answers in the step wizards.';
+    const cfgSubtitle = cfg.subtitle || 'Stage 1 prompt — covers Steps 2 (EU AI Act classification) and 3 (DPIA). Paste into your AI tool, save the report, then record the answers in the step wizards.';
     const cfgTemplate = cfg.promptTemplate || _detail?.ai_prompt_template || '';
     const bcGetter    = cfg.bcGetter || (() => _state.business_case);
     const section = _el('div', 'wiz-collapsible-section s2-ai-section');
@@ -419,7 +419,7 @@
         <li>Copy the prompt using the button below.</li>
         <li>Paste it into your AI tool and run it.</li>
         <li>Save the report as a PDF alongside this system record.</li>
-        <li>Use the report to answer the questions in the Step 3 and Step 4 wizards.</li>
+        <li>Use the report to answer the questions in the Step 2 and Step 3 wizards.</li>
       </ol>`;
     body.appendChild(instruct);
 
@@ -467,8 +467,8 @@
     const section = _el('div', 'wiz-collapsible-section s2-ai-section');
     const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: cfg.title || 'Load your AI tool output into Step 3 (Classification)' }));
-    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: cfg.subtitle || 'Loads the tier and gate answers as a draft — review and finalise in Step 3.' }));
+    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: cfg.title || 'Load your AI tool output into Step 2 (Classification)' }));
+    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: cfg.subtitle || 'Loads the tier and gate answers as a draft — review and finalise in Step 2.' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
     const chevron = _el('span', 's2-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -482,7 +482,7 @@
     ta.rows = 8; ta.placeholder = 'Paste your AI tool’s full reply (or just its ```json block) here…';
     const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;margin:10px 0';
     const checkBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Validate & preview' });
-    const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Step 3' });
+    const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Step 2' });
     applyBtn.style.display = 'none';
     btnRow.append(checkBtn, applyBtn);
     const preview = _el('div', 's2-load-preview'); preview.style.cssText = 'font-size:12.5px;line-height:1.6';
@@ -492,7 +492,7 @@
       applyBtn.style.display = 'none'; _res = null;
       const clf = _extractClassification(ta.value);
       if (!clf) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>classification</code> JSON block in the pasted text.</span>'; return; }
-      if (!_clfKeys) { preview.innerHTML = '<span style="color:#ecd489">Step 3 definitions still loading — try again in a moment.</span>'; return; }
+      if (!_clfKeys) { preview.innerHTML = '<span style="color:#ecd489">Step 2 definitions still loading — try again in a moment.</span>'; return; }
       _res = _validateClf(clf);
       preview.innerHTML = _renderClfPreview(_res);
       if (_res.matched > 0) applyBtn.style.display = '';
@@ -501,7 +501,7 @@
       if (!_res) return;
       const n = _applyClf(_res.tier, _res.gate, _res.reasoning, _res.businessJustification);
       const rNote = _res.reasoning ? ' Its rationale was loaded into the Assessment rationale box.' : '';
-      const bjNote = _res.businessJustification ? ' The business justification was saved to Step 2.' : '';
+      const bjNote = _res.businessJustification ? ' The business justification was saved to Step 1.' : '';
       preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} classification answer${n !== 1 ? 's' : ''} as a draft.${rNote}${bjNote} Review the gates below, then run the classification to finalise the outcome and articles.</span>`;
       applyBtn.style.display = 'none';
       if (typeof cfg.onApplied === 'function') setTimeout(cfg.onApplied, 400);
@@ -575,7 +575,7 @@
       html += '<ul style="margin:0 0 0 16px;padding:0;color:var(--color-text-secondary)">' +
         res.warnings.slice(0, 12).map(w => `<li>${w}</li>`).join('') + '</ul>';
     }
-    html += '<div style="color:var(--color-text-tertiary);margin-top:8px">This loads a <strong>draft</strong> — Step 3 still computes the final outcome and articles when you run the classification there. Nothing is written until you click <strong>Apply to Step 3</strong>.</div>';
+    html += '<div style="color:var(--color-text-tertiary);margin-top:8px">This loads a <strong>draft</strong> — Step 2 still computes the final outcome and articles when you run the classification there. Nothing is written until you click <strong>Apply to Step 2</strong>.</div>';
     return html;
   }
 
@@ -612,8 +612,8 @@
     const section = _el('div', 'wiz-collapsible-section s2-ai-section');
     const header  = _el('div', 'wiz-collapsible-header s2-ai-header');
     const hLeft   = _el('div', 'wiz-collapsible-header-left');
-    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: cfg.title || 'Load your AI tool output into Step 4 (DPIA)' }));
-    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: cfg.subtitle || 'Paste your AI tool’s output; the DPIA answers are validated and loaded into Step 4 so you don’t re-key them.' }));
+    hLeft.appendChild(_el('p', 'section-label', { style: 'margin-bottom:2px', textContent: cfg.title || 'Load your AI tool output into Step 3 (DPIA)' }));
+    hLeft.appendChild(_el('p', '', { style: 'font-size:11px;color:var(--color-text-tertiary);margin:0', textContent: cfg.subtitle || 'Paste your AI tool’s output; the DPIA answers are validated and loaded into Step 3 so you don’t re-key them.' }));
     const hRight  = _el('div', 'wiz-collapsible-header-right');
     const chevron = _el('span', 's2-ai-chevron');
     chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -630,7 +630,7 @@
 
     const btnRow = _el('div', ''); btnRow.style.cssText = 'display:flex;gap:8px;margin:10px 0';
     const checkBtn = _el('button', 'wiz-btn-secondary', { textContent: 'Validate & preview' });
-    const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Step 4' });
+    const applyBtn = _el('button', 'wiz-btn-primary', { textContent: 'Apply to Step 3' });
     applyBtn.style.display = 'none';
     btnRow.append(checkBtn, applyBtn);
 
@@ -641,7 +641,7 @@
       applyBtn.style.display = 'none'; _clean = null; _reasoning = '';
       const extracted = _extractDpiaAnswers(ta.value);
       if (!extracted) { preview.innerHTML = '<span style="color:#fba4a3">Could not find a <code>dpia_answers</code> JSON block in the pasted text.</span>'; return; }
-      if (!_dpiaFields) { preview.innerHTML = '<span style="color:#ecd489">Step 4 field definitions still loading — try again in a moment.</span>'; return; }
+      if (!_dpiaFields) { preview.innerHTML = '<span style="color:#ecd489">Step 3 field definitions still loading — try again in a moment.</span>'; return; }
       const { clean, warnings, matched, skipped } = _validateDpia(extracted.answers);
       _clean = clean; _reasoning = extracted.reasoning || '';
       preview.innerHTML = _renderPreview(matched, warnings, skipped);
@@ -651,7 +651,7 @@
       if (!_clean) return;
       const n = _applyDpia(_clean, _reasoning);
       const rNote = _reasoning ? ' Its rationale was loaded into the DPIA rationale box.' : '';
-      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} DPIA field${n !== 1 ? 's' : ''} into Step 4.${rNote} Review the answers below and save.</span>`;
+      preview.innerHTML = `<span style="color:#8cebb0">✓ Loaded ${n} DPIA field${n !== 1 ? 's' : ''} into Step 3.${rNote} Review the answers below and save.</span>`;
       applyBtn.style.display = 'none';
       if (typeof cfg.onApplied === 'function') setTimeout(cfg.onApplied, 400);
     });
@@ -773,7 +773,7 @@
         warnings.slice(0, 12).map(w => `<li>${w}</li>`).join('') +
         (warnings.length > 12 ? `<li>…and ${warnings.length - 12} more</li>` : '') + '</ul>';
     }
-    html += '<div style="color:var(--color-text-tertiary);margin-top:8px">Review above, then apply. Nothing is written until you click <strong>Apply to Step 4</strong>.</div>';
+    html += '<div style="color:var(--color-text-tertiary);margin-top:8px">Review above, then apply. Nothing is written until you click <strong>Apply to Step 3</strong>.</div>';
     return html;
   }
 
@@ -888,7 +888,7 @@
   const _askInstructions = (loadLabel) => `
     <strong>How to use this prompt</strong>
     <ol style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--color-text-secondary);line-height:1.9">
-      <li>Copy the prompt below (your Step 2 business case is already inserted).</li>
+      <li>Copy the prompt below (your Step 1 business case is already inserted).</li>
       <li>Paste it into your AI tool and run it.</li>
       <li>Paste its reply into “${loadLabel}” below to fill this screen automatically.</li>
     </ol>`;

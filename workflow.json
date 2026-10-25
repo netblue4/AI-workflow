@@ -1,8 +1,8 @@
 {
   "meta": {
     "title": "AI Acceptable Use — Authorisation and Governance Workflow",
-    "version": "2.1",
-    "standard": "ISO/IEC 42001-aligned",
+    "version": "2.2",
+    "standard": "ISO/IEC 42001-aligned; AI risk assessment per ISO 31000 (Cl. 6.1.2 & 8.2)",
     "lastUpdated": "2025"
   },
   "phases": [
@@ -16,7 +16,6 @@
       ],
       "colorKey": "teal",
       "steps": [
-        "step-1",
         "step-2",
         "step-3",
         "step-4"
@@ -35,8 +34,7 @@
       "steps": [
         "step-5",
         "step-7",
-        "step-14",
-        "step-13"
+        "step-14"
       ]
     },
     {
@@ -48,19 +46,21 @@
         "AI Governance Team"
       ],
       "colorKey": "green",
-      "steps": []
+      "steps": [
+        "step-13"
+      ]
     },
     {
       "id": "phase-4",
       "number": 4,
-      "title": "Verification",
+      "title": "User enablement",
       "owners": [
-        "AI Working Group",
         "AI Governance Team",
         "Authorised Users"
       ],
       "colorKey": "blue",
       "steps": [
+        "step-1",
         "step-10"
       ]
     },
@@ -97,8 +97,8 @@
   "steps": [
     {
       "id": "step-1",
-      "number": 1,
-      "phaseId": "phase-1",
+      "number": 8,
+      "phaseId": "phase-4",
       "title": "Training prerequisite check",
       "isNew": false,
       "owners": [
@@ -117,7 +117,7 @@
     },
     {
       "id": "step-2",
-      "number": 2,
+      "number": 1,
       "phaseId": "phase-1",
       "title": "Business case documentation",
       "isNew": false,
@@ -133,7 +133,7 @@
     },
     {
       "id": "step-3",
-      "number": 3,
+      "number": 2,
       "phaseId": "phase-1",
       "title": "System classification",
       "isNew": false,
@@ -153,7 +153,7 @@
     },
     {
       "id": "step-4",
-      "number": 4,
+      "number": 3,
       "phaseId": "phase-1",
       "title": "Data identification and DPIA",
       "isNew": false,
@@ -184,7 +184,7 @@
     },
     {
       "id": "step-5",
-      "number": 5,
+      "number": 4,
       "phaseId": "phase-2",
       "title": "Risk identification",
       "isNew": false,
@@ -199,7 +199,7 @@
     },
     {
       "id": "step-7",
-      "number": 7,
+      "number": 5,
       "phaseId": "phase-2",
       "title": "Risk Analysis & Evaluation",
       "isNew": false,
@@ -214,6 +214,7 @@
     },
     {
       "id": "step-14",
+      "number": 6,
       "phaseId": "phase-2",
       "title": "Risk Treatment",
       "isNew": true,
@@ -227,7 +228,8 @@
     },
     {
       "id": "step-13",
-      "phaseId": "phase-2",
+      "number": 7,
+      "phaseId": "phase-3",
       "title": "Recording and Reporting",
       "isNew": true,
       "owners": [
@@ -236,12 +238,11 @@
       ],
       "ownerIcon": "shield",
       "applicability": "All AI systems",
-      "applicabilityKey": "all",
-      "detailFile": "step-7.json"
+      "applicabilityKey": "all"
     },
     {
       "id": "step-8",
-      "number": 8,
+      "number": 11,
       "phaseId": "phase-5",
       "title": "AI Change Board approval",
       "isNew": false,
@@ -265,7 +266,7 @@
     },
     {
       "id": "step-10",
-      "number": 10,
+      "number": 9,
       "phaseId": "phase-4",
       "title": "User obligations briefing",
       "isNew": true,
@@ -278,11 +279,11 @@
       "applicabilityKey": "ops",
       "accountability": {
         "system": [
-          "Accuracy and hallucination risk evaluation (Steps 5 and 7)",
-          "Bias detection and domain suitability (Steps 5 and 7)",
-          "IP and copyright exposure (vendor terms, Step 5)",
-          "Output logging and anomaly flagging (Step 6)",
-          "Disclosure labelling on published content (Step 6)"
+          "Accuracy and hallucination risk evaluation (Steps 4 and 5)",
+          "Bias detection and domain suitability (Steps 4 and 5)",
+          "IP and copyright exposure (vendor terms, Step 4)",
+          "Output logging and anomaly flagging (Step 7)",
+          "Disclosure labelling on published content (Step 7)"
         ],
         "user": [
           "Not inputting data known to be personal, confidential, or classified",
@@ -302,7 +303,7 @@
     },
     {
       "id": "step-11",
-      "number": 11,
+      "number": 10,
       "phaseId": "phase-5",
       "title": "Central inventory registration and record keeping",
       "isNew": false,
@@ -332,7 +333,7 @@
       "gates": [
         {
           "type": "info",
-          "text": "Model change trigger: If the vendor updates the underlying model, the risk assessment (Step 5) must be reviewed before continued use is permitted."
+          "text": "Model change trigger: If the vendor updates the underlying model, the risk assessment (Step 4) must be reviewed before continued use is permitted."
         },
         {
           "type": "info",

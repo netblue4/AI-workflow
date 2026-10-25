@@ -731,7 +731,7 @@
     "treatment_question": "Risk Iteration: Does this high-risk system require a risk management process that includes any of the following?\na) Identifying known and reasonably foreseeable risks\nb) Estimating and evaluating the severity of those risks\nc) Continuously revisiting the evaluation as new data emerges",
     "coverage_type": "Workflow",
     "workflow_step": "step-5",
-    "workflow_step_label": "Step 5 — Risk identification"
+    "workflow_step_label": "Step 4 — Risk identification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-060",
@@ -745,7 +745,7 @@
     "treatment_question": "Risk Iteration: Does this high-risk system require a risk management process that includes any of the following?\na) Identifying known and reasonably foreseeable risks\nb) Estimating and evaluating the severity of those risks\nc) Continuously revisiting the evaluation as new data emerges",
     "coverage_type": "Workflow",
     "workflow_step": "step-7",
-    "workflow_step_label": "Step 7 — Residual risk"
+    "workflow_step_label": "Step 7 — Recording and Reporting"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-061",
@@ -759,7 +759,7 @@
     "treatment_question": "Risk Iteration: Does this high-risk system require a risk management process that includes any of the following?\na) Identifying known and reasonably foreseeable risks\nb) Estimating and evaluating the severity of those risks\nc) Continuously revisiting the evaluation as new data emerges",
     "coverage_type": "Workflow",
     "workflow_step": "step-7",
-    "workflow_step_label": "Step 7 — Residual risk"
+    "workflow_step_label": "Step 7 — Recording and Reporting"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-062",
@@ -773,7 +773,7 @@
     "treatment_question": "Mitigation Hierarchy: Must identified risks be mitigated using any of the following steps?\na) Eliminating the risk entirely through system design\nb) Implementing technical controls to reduce unavoidable risks\nc) Flagging any residual risk through adequate user information",
     "coverage_type": "Workflow",
     "workflow_step": "step-6",
-    "workflow_step_label": "Step 6 — Control identification"
+    "workflow_step_label": "Step 4 — Risk identification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-063",
@@ -787,7 +787,7 @@
     "treatment_question": "Mitigation Hierarchy: Must identified risks be mitigated using any of the following steps?\na) Eliminating the risk entirely through system design\nb) Implementing technical controls to reduce unavoidable risks\nc) Flagging any residual risk through adequate user information",
     "coverage_type": "Workflow",
     "workflow_step": "step-6",
-    "workflow_step_label": "Step 6 — Control identification"
+    "workflow_step_label": "Step 4 — Risk identification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-064",
@@ -801,7 +801,7 @@
     "treatment_question": "Mitigation Hierarchy: Must identified risks be mitigated using any of the following steps?\na) Eliminating the risk entirely through system design\nb) Implementing technical controls to reduce unavoidable risks\nc) Flagging any residual risk through adequate user information",
     "coverage_type": "Workflow",
     "workflow_step": "step-10",
-    "workflow_step_label": "Step 10 — User obligations briefing"
+    "workflow_step_label": "Step 9 — User obligations briefing"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-065",
@@ -913,7 +913,7 @@
     "treatment_question": "Modification Assessment: When modifying the system, must you evaluate any of the following?\na) Whether the modification qualifies as \"substantial\" under the AI Act\nb) Whether the change affects the system's core compliance\nc) Whether the modification shifts legal Provider responsibilities to you",
     "coverage_type": "Workflow",
     "workflow_step": "step-3",
-    "workflow_step_label": "Step 3 — System classification"
+    "workflow_step_label": "Step 2 — System classification"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-074",
@@ -941,7 +941,7 @@
     "treatment_question": "Re-conformity: If a substantial change occurs, does it require any of the following actions?\na) Triggering a full or partial re-run of the conformity assessment\nb) Updating the Technical File and architecture documentation\nc) Re-evaluating performance evidence and modification logs",
     "coverage_type": "Workflow",
     "workflow_step": "step-11",
-    "workflow_step_label": "Step 11 — Central inventory registration and record keeping"
+    "workflow_step_label": "Step 10 — Central inventory registration and record keeping"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-076",
@@ -991,7 +991,7 @@
     "treatment_question": "Impact Assessment: Prior to deployment, does your use case require any of the following?\na) Conducting a fundamental rights impact assessment\nb) Documenting the findings and notifying the provider of risks\nc) Identifying the specific categories of people affected by the outputs",
     "coverage_type": "Workflow",
     "workflow_step": "step-4",
-    "workflow_step_label": "Step 4 — Data identification and DPIA"
+    "workflow_step_label": "Step 3 — Data identification and DPIA"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-080",
@@ -1017,7 +1017,7 @@
     "treatment_question": "Pre-Market Review: Before the system goes live, do you require any of the following internal reviews?\na) Verification that all applicable Article 9-17 controls are assessed\nb) Confirmation that evidence exists for every applicable requirement\nc) Formal sign-off by a reviewer with sufficient technical and legal competence",
     "coverage_type": "Workflow",
     "workflow_step": "step-8",
-    "workflow_step_label": "Step 8 — AI Change Board approval"
+    "workflow_step_label": "Step 11 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-082",
@@ -1031,7 +1031,7 @@
     "treatment_question": "Pre-Market Review: Before the system goes live, do you require any of the following internal reviews?\na) Verification that all applicable Article 9-17 controls are assessed\nb) Confirmation that evidence exists for every applicable requirement\nc) Formal sign-off by a reviewer with sufficient technical and legal competence",
     "coverage_type": "Workflow",
     "workflow_step": "step-8",
-    "workflow_step_label": "Step 8 — AI Change Board approval"
+    "workflow_step_label": "Step 11 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-083",
@@ -1045,7 +1045,7 @@
     "treatment_question": "Conformity Conclusion: Must the conformity assessment conclude with any of the following?\na) A formal declaration that no critical compliance gaps remain\nb) Confirmation that all identified gaps were resolved prior to market placement\nc) A documented conclusion statement confirming regulatory compliance",
     "coverage_type": "Workflow",
     "workflow_step": "step-8",
-    "workflow_step_label": "Step 8 — AI Change Board approval"
+    "workflow_step_label": "Step 11 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-084",
@@ -1059,7 +1059,7 @@
     "treatment_question": "Conformity Conclusion: Must the conformity assessment conclude with any of the following?\na) A formal declaration that no critical compliance gaps remain\nb) Confirmation that all identified gaps were resolved prior to market placement\nc) A documented conclusion statement confirming regulatory compliance",
     "coverage_type": "Workflow",
     "workflow_step": "step-8",
-    "workflow_step_label": "Step 8 — AI Change Board approval"
+    "workflow_step_label": "Step 11 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-085",
@@ -1073,7 +1073,7 @@
     "treatment_question": "Assessment Record: Must the final conformity record capture any of the following details?\na) The exact date the conformity assessment was completed\nb) The specific version of the system that was assessed\nc) The version of the compliance framework used for the evaluation",
     "coverage_type": "Workflow",
     "workflow_step": "step-8",
-    "workflow_step_label": "Step 8 — AI Change Board approval"
+    "workflow_step_label": "Step 11 — AI Change Board approval"
   },
   {
     "pk_Harmonised_Standard_ID": "HS-086",

@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "description": "Step 5 display model derived from tbl_Risks.json + tbl_Harmonised_Standards.json. Each risk carries its category applicability question (Step A) and its requirement areas / subcategory treatment questions (Step B). Edit wording here to adapt the Step 5 screen.",
+  "description": "Step 4 display model derived from tbl_Risks.json + tbl_Harmonised_Standards.json. Each risk carries its category applicability question (Step A) and its requirement areas / subcategory treatment questions (Step B). Edit wording here to adapt the Step 4 screen.",
   "color_palette": {
     "amber": {
       "bg": "#fef3c7",
