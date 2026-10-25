@@ -15,6 +15,7 @@
   let _decision = '';         // '' | 'go' | 'no_go'
   let _decidedBy = '';
   let _saveBlock = null;
+  let _progress = null;       // calm progress line ("n of N risks planned")
 
   const _RES_COLORS = {
     low: { bg: 'rgba(52,199,120,0.16)', text: '#8cebb0' },
@@ -26,8 +27,11 @@
   window.mountTreatmentWizard = function (container, step, detail, colorKey, phaseTitle) {
     _container = container;
     _injectStyles();
-    const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle, { hideDetails: true }));
+    const shell = WizUtils.calmShell(_el('div', 'wiz-shell'));
+    shell.appendChild(WizUtils.buildCalmHeader(step, phaseTitle, {
+      lead: 'Record who treats each risk, by when and with what resources, then record the decision to fund the build.',
+      about: ['Print the treatment plan to run your cost–benefit analysis: the resources column is the cost side. The funding decision is the business gate — separate from the AI Change Board’s decision to deploy.']
+    }));
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
     container.innerHTML = '';
@@ -67,9 +71,6 @@
   function _renderPanes(pw) {
     pw.innerHTML = '';
     const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('p', 'wiz-panel-lead', {
-      textContent: 'For each risk, record who is responsible for treating it, by when, and the resources required. Print the treatment plan to run your cost–benefit analysis, then record the business decision to fund the build below.'
-    }));
     const ids = _riskIds();
     if (!ids.length) {
       const w = _el('div', 's9-warn');
@@ -78,18 +79,21 @@
     }
     ids.forEach(id => { _plans[id] = Object.assign({ responsible: '', timeline: '', resources: '' }, _plans[id] || {}); });
 
-    // Treatment plan group + print button
+    // Progress, then the plan: one risk open at a time (the first still to plan)
+    _progress = WizUtils.buildCalmProgress();
+    card.appendChild(_progress.el);
+    _syncProgress();
     const body = _el('div', '');
-    const printRow = _el('div', '', { style: 'display:flex;justify-content:flex-end;margin-bottom:10px' });
-    const printBtn = _el('button', 'wiz-btn-secondary', { type: 'button', textContent: '🖨 Print risk treatment plan' });
+    const firstOpen = ids.find(id => !_isPlanned(id));
+    ids.forEach(id => body.appendChild(_buildRiskPanel(id, id === firstOpen)));
+    const printRow = _el('div', 's14-print');
+    const printBtn = _el('button', 'calm-link', { type: 'button', textContent: 'Print treatment plan' });
     printBtn.addEventListener('click', _printPlan);
     printRow.appendChild(printBtn);
     body.appendChild(printRow);
-    ids.forEach(id => body.appendChild(_buildRiskPanel(id)));
     card.appendChild(WizUtils.buildStepGroup({
-      title: 'Risk treatment plan',
-      description: 'Responsibilities, timelines and resources to treat each risk — the cost side of the business cost–benefit analysis.',
-      status: String(ids.length), statusKind: 'progress', body
+      title: 'Treatment plan',
+      status: `${ids.length} risks`, open: true, body
     }).el);
 
     // Decision
@@ -108,7 +112,12 @@
     return pill;
   }
 
-  function _buildRiskPanel(id) {
+  const _isPlanned = id => { const p = _plans[id] || {}; return !!(p.responsible || p.timeline || p.resources); };
+  function _syncProgress() {
+    if (_progress) _progress.set(_riskIds().filter(_isPlanned).length, _riskIds().length, 'risks planned');
+  }
+
+  function _buildRiskPanel(id, open) {
     const r = _risk(id);
     const plan = _plans[id];
     const inh = _inherentOf(id);
@@ -123,10 +132,16 @@
 
     const mk = (lbl, key, ph) => {
       const w = _el('div', 's14-field');
-      w.appendChild(_el('label', 's14-flabel', { textContent: lbl }));
+      w.appendChild(_el('label', 's14-flabel', { textContent: lbl, htmlFor: `s14-${key}-${id}` }));
       const inp = document.createElement('input');
       inp.type = 'text'; inp.className = 's14-input'; inp.placeholder = ph; inp.value = plan[key] || '';
-      inp.addEventListener('input', () => { plan[key] = inp.value; });
+      inp.id = `s14-${key}-${id}`;
+      inp.addEventListener('input', () => {
+        plan[key] = inp.value;
+        const planned = _isPlanned(id);
+        panel.setStatus(planned ? 'Planned' : 'To plan', planned ? 'done' : 'todo');
+        _syncProgress();
+      });
       w.appendChild(inp); return w;
     };
     const grid = _el('div', 's14-grid');
@@ -136,13 +151,14 @@
     body.appendChild(grid);
 
     const artId = r.fk_AI_Article_ID || '';
-    const filled = plan.responsible || plan.timeline || plan.resources;
-    return WizUtils.buildStepPanel({
+    const filled = _isPlanned(id);
+    const panel = WizUtils.buildStepPanel({
       num: id, title: r.risk_name || id,
-      ref: artId ? WizUtils.artLabel(artId) : '',
+      ref: [id, artId ? WizUtils.artLabel(artId) : ''].filter(Boolean).join(' · '),
       status: filled ? 'Planned' : 'To plan', statusKind: filled ? 'done' : 'todo',
-      body
-    }).el;
+      open, body
+    });
+    return panel.el;
   }
 
   function _buildDecisionPanel() {
@@ -245,14 +261,15 @@
 
   function _injectStyles() {
     WizUtils.injectStyles('s14-styles', `
-.s14-ctx{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 12px}
-.s14-ctx-lbl{font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em}
-.s14-lvl{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700}
-.s14-strat{font-size:12px;font-weight:600;color:var(--color-text-primary);background:rgba(212,184,96,0.16);border-radius:5px;padding:2px 9px}
-.s14-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.s14-ctx{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.s14-ctx-lbl{font-size:13px;color:var(--color-text-secondary)}
+.s14-lvl{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;margin-right:8px}
+.s14-strat{font-size:13px;color:var(--color-text-primary)}
+.s14-print{display:flex;justify-content:flex-end;margin-top:4px}
+.s14-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .s14-field{display:flex;flex-direction:column;gap:4px}
-.s14-flabel{font-size:11px;font-weight:600;color:var(--color-text-secondary)}
-.s14-input{padding:8px 10px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text-primary);font-size:13px;font-family:inherit;box-sizing:border-box}
+.s14-flabel{font-size:13px;color:var(--color-text-secondary)}
+.s14-input{min-height:40px;padding:8px 10px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text-primary);font-size:13px;font-family:inherit;box-sizing:border-box}
 .s14-switch{display:inline-flex;border:1px solid var(--color-border);border-radius:10px;overflow:hidden}
 .s14-sw-opt{padding:10px 20px;background:var(--color-surface);color:var(--color-text-secondary);border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:all .12s}
 .s14-sw-opt + .s14-sw-opt{border-left:1px solid var(--color-border)}

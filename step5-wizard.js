@@ -29,6 +29,7 @@
   let _savedNoteEl    = null;      // Wave 2: live "Saved ✓" indicator in the risk header
   let _riskheadSummaryEl = null;   // Wave 2: risk-count summary, updated in place on autosave
   let _uiOpen = {};                // per-panel open state, preserved across in-step re-renders
+  let _progress = null;            // calm progress line ("n of N risks answered")
 
   // Shared gold StepDIV whose open/closed state survives a _renderConsolidated().
   function _makePanel(key, title, description, status, statusKind, body) {
@@ -38,8 +39,8 @@
   }
 
   // Shared "question/task group header" whose open state survives a re-render.
-  function _makeGroup(key, title, description, status, statusKind, body) {
-    const g = WizUtils.buildStepGroup({ title, description, status, statusKind, body, open: _uiOpen[key] === true });
+  function _makeGroup(key, title, description, status, statusKind, body, defaultOpen) {
+    const g = WizUtils.buildStepGroup({ title, description, status, statusKind, body, open: _uiOpen[key] === undefined ? !!defaultOpen : _uiOpen[key] === true });
     g.header.addEventListener('click', () => { _uiOpen[key] = g.el.classList.contains('is-open'); });
     return g.el;
   }
@@ -97,11 +98,15 @@
     _exclusionsApproved = false;
     _recChecked.clear();
     _uiOpen = {};
+    _progress = null;
 
     _injectStyles();
 
-    const shell = _el('div', 'wiz-shell');
-    shell.appendChild(WizUtils.buildStepHeader(step, colorKey, phaseTitle, { hideDetails: true }));
+    const shell = WizUtils.calmShell(_el('div', 'wiz-shell'));
+    shell.appendChild(WizUtils.buildCalmHeader(step, phaseTitle, {
+      lead: 'Decide which risks apply to this system, and which requirements you will implement for each.',
+      about: ['Required risks come from your Step 2 classification and Step 3 DPIA — they must be treated for compliance. Everything else is recommended: treat what matters for your system. Use the checkbox on each risk to include or exclude it.']
+    }));
     // Wave 1: the five source tabs are consolidated into one risk list (below).
     const pw = _el('div', 'wiz-pane-wrap');
     shell.appendChild(pw);
@@ -545,24 +550,12 @@
   function _buildConsolidatedCard() {
     const wrap = _el('div', '');
 
-    // ── AI support — lifted out of the parent card and placed on top ──
-    const aiBody = _el('div', '');
-    aiBody.appendChild(_buildAskAiCollapsible());
-    aiBody.appendChild(_buildLoadRaSection());
-    aiBody.appendChild(_buildChallengeCompileSection());
-    wrap.appendChild(_makePanel('ai', 'AI support',
-      'Optional. Draft the risk assessment with your AI tool, load its reply, or compile a challenge prompt to justify what you exclude.',
-      'Optional', 'muted', aiBody));
-
     // ── Parent "screen content" card ──
     const card = _el('div', 'step-detail-card');
-    card.appendChild(_el('p', 'wiz-panel-lead', {
-      textContent: 'Risks are split by priority. The Required set is derived from your Step 2 classification and Step 3 DPIA — these must be treated for compliance. Everything else is recommended: treat what matters for your system. Use the checkbox on each risk to include or exclude it.'
-    }));
 
-    // ── Already Met By Workflow (stays a gold panel — no user action needed) ──
-    const wfPanel = _buildWorkflowPanel();
-    if (wfPanel) card.appendChild(wfPanel);
+    _progress = WizUtils.buildCalmProgress();
+    card.appendChild(_progress.el);
+    _refreshRiskCounts();
 
     const { mandatory, recommended, excluded, mandN, recN, exclN, step3Done } = _buildConsolidatedList();
 
@@ -570,7 +563,7 @@
     if (mandN) {
       card.appendChild(_makeGroup('req', 'Required for compliance',
         'Mapped to the EU AI Act articles your Step 2 classification found apply, plus your DPIA privacy risks. These must be treated.',
-        String(mandN), 'progress', mandatory));
+        `${mandN} risks`, 'progress', mandatory, true));
     } else if (step3Done) {
       card.appendChild(_el('div', 's5-empty-note', { textContent: 'Your classification did not trigger any risk-bearing articles, and the DPIA recorded no privacy risks — so there is no mandatory set. Review the recommended risks below.' }));
     } else {
@@ -581,9 +574,9 @@
     }
 
     // ── Recommended (optional) — group header ──
-    card.appendChild(_makeGroup('rec', 'Recommended / technical (optional)',
+    card.appendChild(_makeGroup('rec', 'Recommended (optional)',
       'Good-practice and NIST-surfaced risks beyond the mandatory set. Treat the ones that matter — untick any that do not apply.',
-      String(recN), recN ? 'info' : 'muted', recommended));
+      `${recN} risks`, recN ? 'info' : 'muted', recommended));
 
     // ── Excluded — risks marked Not applicable; needs explicit oversight ──
     if (exclN) {
@@ -592,8 +585,20 @@
       exBody.appendChild(excluded);
       card.appendChild(_makeGroup('excl', 'Excluded — needs review',
         'Risks marked Not applicable. Review each exclusion and its justification, then approve — this is the human-oversight record for what was left out.',
-        String(exclN), _exclusionsApproved ? 'done' : 'progress', exBody));
+        `${exclN} risks`, _exclusionsApproved ? 'done' : 'progress', exBody));
     }
+
+    // ── No action needed by default: workflow-met requirements, then AI help ──
+    const wfPanel = _buildWorkflowPanel();
+    if (wfPanel) card.appendChild(wfPanel);
+
+    const aiBody = _el('div', '');
+    aiBody.appendChild(_buildAskAiCollapsible());
+    aiBody.appendChild(_buildLoadRaSection());
+    aiBody.appendChild(_buildChallengeCompileSection());
+    card.appendChild(_makePanel('ai', 'AI support',
+      'Optional. Draft the risk assessment with your AI tool, load its reply, or compile a challenge prompt to justify what you exclude.',
+      'Optional', 'muted', aiBody));
 
     // ── Actions (after the Excluded group) + Risk Result ──
     // Save → shows the exact "Risk Identification" section from the conformity
@@ -777,7 +782,7 @@
         body.appendChild(wrap);
       });
     });
-    return _makePanel('workflow', 'Already Met By Workflow',
+    return _makePanel('workflow', 'Already met by the workflow',
       'Requirements the governance workflow itself satisfies — claimed by default and mapped to the step that meets them.',
       `${met}/${total}`, met === total ? 'done' : 'progress', body);
   }
@@ -840,7 +845,7 @@
     if (!_wizState.reqReasons[name]) _wizState.reqReasons[name] = {};
     const reqReasons = _wizState.reqReasons[name];
 
-    const BADGE = { yes: '✓ Applies', partially: '~ Partial', no: '✗ Not applicable' };
+    const BADGE = { yes: 'Applies', partially: 'Partly applies', no: 'Not applicable' };
     const KIND  = { yes: 'done', partially: 'progress', no: 'muted' };
     const applies = a => a === 'yes' || a === 'partially';
     const defaultSelectAll = () => { if (Object.keys(reqState).length === 0) allRefs.forEach(ref => { reqState[ref] = true; }); };
@@ -858,7 +863,7 @@
     }
 
     // ── STEP A — does this risk apply? ──
-    body.appendChild(_el('p', 's5-applies-label', { textContent: 'Step A — Does this risk apply?' }));
+    body.appendChild(_el('p', 's5-applies-label', { textContent: 'Does this risk apply?' }));
     if (riskG.category_question) {
       const q = _el('div', 's5-qblock'); q.textContent = riskG.category_question;
       body.appendChild(q);
@@ -971,8 +976,8 @@
     };
 
     const btnRow = _el('div', 's5-answer-row');
-    [['yes', '✓ Applies'], ['partially', '~ Partial'], ['no', '✗ Not applicable']].forEach(([val, lbl]) => {
-      const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer0 === val ? ' s5-answer-btn--active' : ''}`);
+    [['yes', 'Applies'], ['partially', 'Partly'], ['no', 'Not applicable']].forEach(([val, lbl]) => {
+      const btn = _el('button', `s5-answer-btn s5-answer-btn--${val}${answer0 === val ? ' s5-answer-btn--active' : ''}`, { type: 'button' });
       btn.textContent = lbl;
       btn.addEventListener('click', () => applyAnswer(val));
       btnRow.appendChild(btn);
@@ -988,7 +993,8 @@
 
     const ta = document.createElement('textarea');
     ta.className   = 's5-rationale-ta';
-    ta.placeholder = 'Rationale…';
+    ta.placeholder = 'Rationale (optional)…';
+    ta.setAttribute('aria-label', 'Rationale');
     ta.rows        = 2;
     ta.value       = _wizState.rationales[name] || '';
     ta.addEventListener('input', () => { _wizState.rationales[name] = ta.value; _autosaveSoon(); });
@@ -998,7 +1004,7 @@
     _panel = WizUtils.buildStepPanel({
       num: riskId,
       title: name,
-      ref: artId ? WizUtils.artLabel(artId) : '',
+      ref: [riskId, artId ? WizUtils.artLabel(artId) : ''].filter(Boolean).join(' · '),
       status: answer0 ? BADGE[answer0] : 'Unanswered',
       statusKind: answer0 ? KIND[answer0] : 'todo',
       check: {
@@ -1061,6 +1067,10 @@
     return { mand, rec };
   }
   function _refreshRiskCounts() {
+    if (_progress) {
+      const qs = (_legalGuidance?.wizard_questions || []).filter(wq => !_isFullyWorkflowRisk(_riskIdByName.get(wq.risk_name)));
+      _progress.set(qs.filter(wq => _wizState.answers[wq.risk_name] !== undefined).length, qs.length, 'risks answered');
+    }
     if (!_riskheadSummaryEl) return;
     const { mand, rec } = _riskTierCounts();
     _riskheadSummaryEl.innerHTML = `<strong>${mand}</strong> required · <strong>${rec}</strong> recommended`;
@@ -2339,22 +2349,24 @@
 .s5-risk-list{display:flex;flex-direction:column}
 .s5-risk-body{display:flex;flex-direction:column;gap:10px}
 .s5-prefilter-note{background:rgba(224,120,80,0.12);border:1px solid rgba(224,120,80,0.40);border-radius:6px;padding:9px 13px;font-size:12px;color:#ecd489;line-height:1.55}
-.s5-applies-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-tertiary);margin:0 0 5px}
+.s5-applies-label{font-size:13px;font-weight:400;color:var(--color-text-secondary);margin:4px 0 8px}
 .s5-applies-list{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:3px}
 .s5-applies-list li{font-size:12px;color:var(--color-text-secondary);line-height:1.5;padding:4px 10px 4px 26px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:5px;position:relative}
 .s5-applies-list li::before{content:"✓";position:absolute;left:8px;color:#8ce3c6;font-weight:700;font-size:11px;top:5px}
 .s5-analog-row{font-size:12px;color:#cfc7b2;line-height:1.5;padding:8px 12px;background:#211d15;border-radius:6px;border:1px solid var(--color-border)}
-.s5-answer-row{display:flex;gap:6px;flex-wrap:wrap}
-.s5-answer-btn{padding:7px 14px;font-size:12px;font-weight:600;border:1px solid var(--color-border);border-radius:6px;cursor:pointer;background:var(--color-surface);color:var(--color-text-secondary);font-family:inherit;transition:background .12s,border-color .12s}
-.s5-answer-btn--yes.s5-answer-btn--active{background:rgba(52,199,120,0.10);border-color:#46c17f;color:#8cebb0}
-.s5-answer-btn--partially.s5-answer-btn--active{background:rgba(212,184,96,0.12);border-color:#e0b94a;color:#ecd489}
-.s5-answer-btn--no.s5-answer-btn--active{background:#211d15;border-color:#8b8574;color:#b1a992}
-.s5-rationale-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-bg-subtle,#211d15)}
+.s5-answer-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.s5-answer-btn{min-height:42px;padding:0 10px;font-size:14px;font-weight:400;border:1px solid rgba(240,232,208,0.14);border-radius:8px;cursor:pointer;background:transparent;color:var(--color-text-secondary);font-family:inherit;transition:background .12s,border-color .12s,color .12s}
+.s5-answer-btn:hover{border-color:rgba(212,184,96,0.5);color:var(--color-text-primary)}
+.s5-answer-btn:focus-visible{outline:2px solid var(--gold,#d4b860);outline-offset:2px}
+.s5-answer-btn--yes.s5-answer-btn--active{background:rgba(212,184,96,0.14);border-color:var(--gold,#d4b860);color:var(--color-text-primary);font-weight:500}
+.s5-answer-btn--partially.s5-answer-btn--active{background:rgba(212,184,96,0.14);border-color:var(--gold,#d4b860);color:var(--color-text-primary);font-weight:500}
+.s5-answer-btn--no.s5-answer-btn--active{background:rgba(212,184,96,0.14);border-color:var(--gold,#d4b860);color:var(--color-text-primary);font-weight:500}
+.s5-rationale-ta{width:100%;box-sizing:border-box;font-size:13px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-bg)}
 .s5-rationale-ta:focus{outline:none;border-color:#8ce3c6;background:var(--color-surface)}
 
 /* Step A question block + Step B requirement areas */
-.s5-qblock{white-space:pre-wrap;font-size:12px;line-height:1.6;color:var(--color-text-secondary);background:var(--color-bg-subtle,#211d15);border:1px solid var(--color-border);border-radius:6px;padding:9px 12px}
-.s5-stepb{display:flex;flex-direction:column;gap:8px;padding-left:2px;border-left:2px solid rgba(93,202,165,0.35);margin-left:1px}
+.s5-qblock{white-space:pre-wrap;font-size:13.5px;line-height:1.6;color:var(--color-text-secondary);background:var(--color-bg);border:0;border-radius:8px;padding:12px 14px}
+.s5-stepb{display:flex;flex-direction:column;gap:0;margin-top:8px}
 .s5-area-hint{font-size:12px;color:var(--color-text-tertiary);margin:0}
 .s5-area-row{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--color-border);border-radius:7px;padding:10px 12px;background:var(--color-surface);cursor:pointer}
 .s5-area-row:hover{border-color:rgba(93,202,165,0.45)}
@@ -2366,17 +2378,17 @@
 .s5-ref-chip{font-size:10.5px;font-weight:600;background:rgba(80,150,225,0.14);color:#a4ccf6;border-radius:5px;padding:2px 7px;white-space:nowrap}
 /* Step B — requirement selection */
 .s5-stepb-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.s5-stepb-tools{display:flex;align-items:center;gap:6px;font-size:11.5px}
-.s5-sub-label{font-size:11.5px;font-weight:700;color:var(--color-text-secondary);margin:8px 0 2px;padding-left:2px;border-left:2px solid rgba(93,202,165,0.4)}
-.s5-req-row{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--color-border);border-radius:7px;padding:9px 12px;background:var(--color-surface);cursor:pointer}
-.s5-req-row:hover{border-color:rgba(93,202,165,0.45)}
+.s5-stepb-tools{display:flex;align-items:center;gap:6px;font-size:13px}
+.s5-sub-label{font-size:13px;font-weight:500;color:var(--color-text-secondary);margin:14px 0 2px}
+.s5-req-row{display:flex;align-items:flex-start;gap:12px;border:0;border-top:1px solid var(--color-border);border-radius:0;padding:12px 2px;background:none;cursor:pointer}
+.s5-req-row:hover .s5-req-name{color:var(--gold-bright,#ecd489)}
 .s5-req-cb{flex-shrink:0;width:16px;height:16px;margin-top:2px;cursor:pointer;accent-color:var(--teal-400,#5dcaa5)}
 .s5-req-main{display:flex;flex-direction:column;gap:4px;min-width:0}
 .s5-req-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.s5-req-name{font-size:12.5px;font-weight:700;color:var(--color-text-primary)}
-.s5-req-desc{font-size:11.5px;line-height:1.55;color:var(--color-text-secondary)}
-.s5-req-wrap{display:flex;flex-direction:column;gap:6px;border:1px solid transparent;border-radius:8px}
-.s5-req-wrap.needs-reason{border-color:rgba(224,150,80,0.55);background:rgba(224,120,80,0.05);padding:2px}
+.s5-req-name{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.s5-req-desc{font-size:13px;line-height:1.55;color:var(--color-text-secondary)}
+.s5-req-wrap{display:flex;flex-direction:column;gap:6px;border:0;border-radius:0}
+.s5-req-wrap.needs-reason .s5-req-reason-lbl::after{content:' — missing';color:#f3ab8a}
 .s5-req-reason{display:flex;flex-direction:column;gap:4px;margin:0 0 4px 28px}
 .s5-req-reason-lbl{font-size:11px;font-weight:600;color:#f0b878}
 .s5-req-reason-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid rgba(224,150,80,0.45);border-radius:6px;padding:7px 10px;line-height:1.5;resize:vertical;background:var(--color-surface)}
@@ -2384,9 +2396,9 @@
 
 /* Challenge cycle */
 .s5-challenge-wrap{margin-top:8px}
-.s5-challenge-btn{font-size:11.5px;font-weight:600;color:#e0b94a;background:none;border:1px solid rgba(224,150,80,0.45);border-radius:6px;padding:5px 12px;cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s}
-.s5-challenge-btn:hover{background:rgba(224,150,80,0.10)}
-.s5-challenge-btn.is-active{background:rgba(224,120,80,0.14);border-color:#e0964f;color:#f0b878}
+.s5-challenge-btn{min-height:32px;font-size:13px;font-weight:400;color:var(--gold,#d4b860);background:none;border:0;border-radius:6px;padding:0;cursor:pointer;font-family:inherit}
+.s5-challenge-btn:hover{color:var(--gold-bright,#ecd489)}
+.s5-challenge-btn.is-active{color:#f0b878}
 .s5-challenge-panel{margin-top:8px;padding:10px 12px;border:1px solid rgba(224,150,80,0.35);border-radius:6px;background:rgba(224,120,80,0.06)}
 .s5-challenge-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#e0b94a;margin:0 0 6px}
 .s5-challenge-ta{width:100%;box-sizing:border-box;font-size:12px;font-family:inherit;color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:6px;padding:8px 10px;line-height:1.5;resize:vertical;background:var(--color-surface)}
@@ -2396,7 +2408,7 @@
 
 /* Wave 1 — consolidated risk list */
 .s5-consol-list{display:flex;flex-direction:column;gap:12px}
-.s5-src-chip{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.s5-src-chip{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0}
 .s5-src-chip--legal{background:rgba(80,150,225,0.16);color:#a4ccf6}
 .s5-src-chip--nist{background:rgba(93,130,214,0.16);color:#a4ccf6}
 .s5-src-chip--internal{background:rgba(212,184,96,0.16);color:#ecd489}
@@ -2412,8 +2424,8 @@
 .s5-riskhead-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .s5-riskhead-toggle{font-size:11.5px;font-weight:500;color:var(--teal-600,#8ce3c6);background:none;border:1px solid rgba(93,202,165,0.45);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:inherit}
 .s5-riskhead-toggle:hover{background:rgba(93,202,165,0.10)}
-.s5-dpia-risk{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--color-border);border-radius:6px;padding:10px 12px;background:var(--color-surface)}
-.s5-dpia-risk-txt{font-size:12.5px;line-height:1.5;color:var(--color-text-primary)}
+.s5-dpia-risk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--color-border);border-radius:10px;min-height:56px;box-sizing:border-box;padding:8px 16px;margin-bottom:8px;background:none}
+.s5-dpia-risk-txt{font-size:15px;line-height:1.5;color:var(--color-text-primary)}
 /* Priority tiers */
 .s5-group-hdr{display:flex;align-items:center;gap:12px;margin:20px 0 10px;padding:10px 14px;border-radius:8px;border-left:4px solid}
 .s5-group-hdr--req{background:rgba(226,90,88,0.08);border-left-color:#e25a58}
@@ -2434,7 +2446,7 @@
 .s5-group-count{font-size:11px;font-weight:700;padding:1px 9px;border-radius:10px;background:rgba(255,255,255,0.08);color:var(--color-text-secondary)}
 .s5-group-sub{font-size:11.5px;color:var(--color-text-tertiary);line-height:1.5;margin:3px 0 0}
 .s5-group-chev{display:flex;align-items:center;color:var(--color-text-tertiary);transition:transform .2s}
-.s5-req-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:9px;background:rgba(226,90,88,0.18);color:#fba4a3;white-space:nowrap;flex-shrink:0}
+.s5-req-badge{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(226,90,88,0.18);color:#fba4a3;white-space:nowrap;flex-shrink:0}
 .s5-empty-note{font-size:12.5px;color:var(--color-text-secondary);background:var(--color-bg-subtle,#211d15);border:1px solid var(--color-border);border-radius:6px;padding:12px 14px;margin:6px 0}
 .s5-rec-check{width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:var(--teal-400,#5dcaa5)}
 .s5-recbulk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px dashed var(--color-border-mid,var(--color-border));border-radius:8px;background:var(--color-bg-subtle,#211d15)}
