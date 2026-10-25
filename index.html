@@ -365,7 +365,7 @@ function loadWorkedExample() {
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
   const rec = {
-    _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned', created: now, last_modified: now, use_case_name: 'JAKE — Contract Q&A Assistant', use_case_id: 'UC-2025-014', assessed_by: 'A. Rivera (Risk & Compliance)' },
+    _meta: { schema_version: '1.0', title: 'AI Acceptable Use — System Authorisation Record', standard: 'ISO/IEC 42001-aligned; AI risk assessment per ISO 31000 (Cl. 6.1.2 & 8.2)', created: now, last_modified: now, use_case_name: 'JAKE — Contract Q&A Assistant', use_case_id: 'UC-2025-014', assessed_by: 'A. Rivera (Risk & Compliance)' },
     'step-1': { attested: true, attested_by: 'A. Rivera', attested_at: now },
     'step-2': { step_id: 'step-2', business_case: 'JAKE is an AI assistant used by the Legal and Procurement teams to answer questions from uploaded customer contracts and draft summary clauses. It runs on a third-party foundation-model API; our organisation is the deployer. Its outputs are shared with clients. It processes customer contracts and financial records, which include personal data (PII). People use its outputs as the basis for decisions; human verification is currently informal. If it produces an incorrect or hallucinated output, the assessed business impact is severe, and could cause a regulatory or compliance breach.', input_mode: 'text', saved_at: now },
     'step-3': { step_id: 'step-3', step_title: 'System classification', axis_a: { tier: 'tier_2', tier_label: 'Tier 2 — Business-impacting' }, axis_b: { ai_act_outcome: 'high_risk', organisation_role: 'deployer', transparency_obligations_apply: true, applicable_articles: [{ article_number: 'Article 10' }, { article_number: 'Article 14' }, { article_number: 'Article 15' }] }, combined_outcome: { article_14_human_oversight: true, requires_conformity_assessment: true }, all_requirement_control_numbers: [], rationale: 'High-risk: assists decisions affecting access to an essential service; deployer role; transparency and human-oversight obligations apply.', classified_by: 'A. Rivera', use_case_id: 'UC-2025-014' },
@@ -428,8 +428,6 @@ async function selectStep(stepId) {
     mountRecordingWizard(panel, step, detailData, color, phaseTitle);
   } else if (stepId === 'step-8') {
     mountReportWizard(panel);
-  } else if (stepId === 'step-9') {
-    mountStep9Wizard(panel, step, detailData, color, phaseTitle);
   } else {
     panel.innerHTML = '';
     panel.appendChild(WizUtils.buildStepHeader(step, color, phaseTitle));
@@ -571,8 +569,13 @@ function linkifyDeadEnds(root) {
     const txt = elm.textContent || '';
     if (txt.length > 400) return;
     if (!/not yet complete|Complete (and save|Step|the)|before proceeding/i.test(txt)) return;
+    // Resolve a displayed "Step N" to its step id. Step ids are stable internal
+    // keys (step-2, step-7, …) that no longer equal the displayed number, so map
+    // via the number each step actually shows in the nav.
+    const idByNum = {};
+    Object.values(_stepIndex).forEach(s => { if (s.number != null) idByNum[String(s.number)] = s.id; });
     const nums = [...new Set((txt.match(/Step (\d+)/g) || []).map(s => s.match(/\d+/)[0]))];
-    const targets = nums.filter(nu => _stepIndex['step-' + nu] && 'step-' + nu !== _activeStepId);
+    const targets = nums.filter(nu => idByNum[nu] && idByNum[nu] !== _activeStepId);
     if (!targets.length) return;
     elm.dataset.deadendLinked = '1';
     const row = document.createElement('div');
@@ -582,7 +585,7 @@ function linkifyDeadEnds(root) {
       b.type = 'button';
       b.className = 'deadend-goto';
       b.textContent = `Go to Step ${nu} →`;
-      b.onclick = () => selectStep('step-' + nu);
+      b.onclick = () => selectStep(idByNum[nu]);
       row.appendChild(b);
     });
     elm.appendChild(row);

@@ -1,5 +1,5 @@
 /* Report Wizard — AI System Conformity Assessment Report
-   Aggregates outputs from Steps 3, 8, 9, 10 and tbl_ reference data.
+   Aggregates outputs from Steps 2, 4, 7, 9 and tbl_ reference data.
    Generates a printable HTML conformity assessment document for AI Change Board submission.
    Satisfies Article 43 HS requirements [18286.16]–[18286.20].
    Mounts on step-11.
@@ -227,8 +227,9 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     return s10?.hs_activation?.[riskId]?.[ref]?.status || 'not_started';
   }
 
-  // The control-selection record (what Step 6 used to hold). Step 6 is retired, so
-  // the selection now comes straight from Step 5's legal_assessment; a legacy
+  // The control-selection record (what the retired control-identification step
+  // used to hold). It is retired, so the selection now comes straight from
+  // Step 4's legal_assessment; a legacy
   // step-6 record is still honoured if present.
   function _selectionRecord() {
     const s6 = _record?.['step-6'];
@@ -244,7 +245,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     return _record?.['step-13'] || _record?.['step-7'] || null;
   }
 
-  // Inherent risk rating per risk, recorded in Step 7 (Risk Analysis & Evaluation).
+  // Inherent risk rating per risk, recorded in Step 5 (Risk Analysis & Evaluation).
   function _inherentOf(riskId) { return _record?.['step-7']?.inherent_risks?.[riskId] || null; }
   const _LVL_COL = {
     low: { bg: '#dcfce7', text: '#166534' }, medium: { bg: '#fef3c7', text: '#92400e' },
@@ -404,7 +405,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
   function _outstandingItemsSection(s9, s10) {
     let html = '';
     if (!s9) {
-      return `<div class="outstanding-warn">Step 6 (Control Identification) not yet completed.</div>`;
+      return `<div class="outstanding-warn">Step 4 (Risk Identification) not yet completed.</div>`;
     }
     if (!s10 || !s10.hs_activation) {
       return `<div class="outstanding-warn">Step 7 (Residual Risk) not yet completed.</div>`;
@@ -412,7 +413,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
 
     const riskNameById = new Map((_tbl.risks || []).map(r => [r.pk_Risk_ID, r.risk_name]));
 
-    // Outstanding requirements — selected in Step 6 but not yet evidenced/waived.
+    // Outstanding requirements — selected in Step 4 but not yet evidenced/waived.
     const outstanding = [];
     _reqStatsByRisk(s9, s10).forEach((s, riskId) => {
       s.refs.forEach(r => {
@@ -520,7 +521,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
 
   // ---- Section 1: System Classification ----------------------
   function _classificationSection(s3) {
-    if (!s3) return _notComplete('Step 3 — System Classification has not yet been completed.');
+    if (!s3) return _notComplete('Step 2 — System Classification has not yet been completed.');
 
     const axA = s3.axis_a || {};
     const axB = s3.axis_b || {};
@@ -577,11 +578,11 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
   }
 
   // ---- DPIA summary section (Part A) -------------------------
-  // A label/value summary of the Step 4 DPIA, formatted like the System
+  // A label/value summary of the Step 3 DPIA, formatted like the System
   // Classification section. Part B's DPIA Evidence cell points here as an
   // appendix the assessor prints alongside the approval form.
   function _dpiaSummarySection(s4) {
-    if (!s4) return _notComplete('Step 4 — Data Protection Impact Assessment has not yet been completed.');
+    if (!s4) return _notComplete('Step 3 — Data Protection Impact Assessment has not yet been completed.');
     const di = s4.data_types_identified || {};
     const list = a => (Array.isArray(a) && a.length) ? a.map(_esc).join(', ') : '—';
     const special = (di.special_category_data || []).filter(x => !/^none/i.test(x));
@@ -617,14 +618,14 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
 
   // ---- Section 2: Risk Assessment ----------------------------
   // Section 2 = risk identification + the DPIA risk assessment. Split into two
-  // reusable subsections so Step 5 (risk) and Step 4 (DPIA) can render the exact
+  // reusable subsections so Step 4 (risk) and Step 3 (DPIA) can render the exact
   // same tables in their save summaries.
   function _riskAssessmentSection(s8, s10) {
     return _riskIdentificationSubsection(s8, s10) + _dpiaRiskSubsection();
   }
 
   function _riskIdentificationSubsection(s8, s10) {
-    if (!s8) return _notComplete('Step 5 — Risk Identification has not yet been completed.');
+    if (!s8) return _notComplete('Step 4 — Risk Identification has not yet been completed.');
 
     let html = '';
 
@@ -677,18 +678,18 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     return html;
   }
 
-  // ---- DPIA Risk Assessment (also the Step 4 save summary) ----
+  // ---- DPIA Risk Assessment (also the Step 3 save summary) ----
   function _dpiaRiskSubsection() {
     const s4 = _record?.['step-4'];
     let html = `<h3 class="sub-heading">DPIA Risk Assessment</h3>`;
     if (!s4) {
-      html += _notComplete('Step 4 — DPIA not yet completed.');
+      html += _notComplete('Step 3 — DPIA not yet completed.');
     } else {
       const pr   = (s4.data_types_identified || {}).privacy_risks || [];
       const pill = rating => rating
         ? `<span class="rag-residual rag-residual--${_esc((rating || '').toLowerCase())}">${_esc(rating)}</span>`
         : '—';
-      html += `<p class="section-meta">Inherent risk: ${pill(s4.inherent_risk_rating)} &nbsp;|&nbsp; Residual risk: ${pill(s4.residual_risk_rating)} &nbsp;<span class="trace-none">(carried from the Step 4 DPIA)</span></p>`;
+      html += `<p class="section-meta">Inherent risk: ${pill(s4.inherent_risk_rating)} &nbsp;|&nbsp; Residual risk: ${pill(s4.residual_risk_rating)} &nbsp;<span class="trace-none">(carried from the Step 3 DPIA)</span></p>`;
       if (pr.length) {
         html += `<ul style="margin:4px 0 0 18px;line-height:1.7">${pr.map(x => `<li>${_esc(x)}</li>`).join('')}</ul>`;
       } else {
@@ -701,7 +702,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
   // ---- Section 3: Control Schedule ---------------------------
   // Full content of report Section 3: the traceability table, then the
   // Requirement Evidence Register (Requirements by risk + DPIA Controls).
-  // Shared by the report and the Step 6/7 save summaries so they stay identical.
+  // Shared by the report and the Step 4/7 save summaries so they stay identical.
   function _section3Content(s3, s9, s10) {
     return _complianceTraceabilitySection(s3, s9, s10)
       + '<h3 class="sub-heading">Requirement Evidence Register</h3>'
@@ -710,11 +711,11 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
   }
 
   function _controlScheduleSection(s9, s10) {
-    if (!s9) return _notComplete('Step 6 — Control Identification has not yet been completed.');
+    if (!s9) return _notComplete('Step 4 — Risk Identification has not yet been completed.');
 
     const riskCtrls = s9.risk_controls || [];
     const compAdds  = s9.compliance_additions || [];
-    // DPIA security measures come from Step 4; their evidence status is in Step 7.
+    // DPIA security measures come from Step 3; their evidence status is in Step 7.
     const dpiaAdds  = ((_record?.['step-4']?.data_types_identified?.security_measures) || [])
       .map(m => ({ control_name: m }));
 
@@ -754,8 +755,8 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
 
     const regularAdds = compAdds.filter(c => !_isFS(c));
 
-    const s7date = s10?.assessment_date ? ` &nbsp;|&nbsp; Step 7 recorded: ${s10.assessment_date}` : ' &nbsp;|&nbsp; <em>Step 7 — Residual Risk not yet completed</em>';
-    let html = `<p class="section-meta">Step 6 date: ${s9.assessment_date || '—'}${s7date}</p>`;
+    const s7date = s10?.assessment_date ? ` &nbsp;|&nbsp; Step 7 recorded: ${s10.assessment_date}` : ' &nbsp;|&nbsp; <em>Step 7 — Recording and Reporting not yet completed</em>';
+    let html = `<p class="section-meta">Risk identification date: ${s9.assessment_date || '—'}${s7date}</p>`;
 
     // ---- Requirements by risk ---------------------------------------
     const _reqId = c => c.fk_Harmonised_Standard_IDs ? WizUtils.fmtStdRef(c.fk_Harmonised_Standard_IDs) : c.control_id;
@@ -810,7 +811,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     // ---- DPIA Controls ----------------------------------------------
     if (dpiaAdds.length > 0) {
       html += `<h3 class="sub-heading">DPIA Controls</h3>
-      <p class="section-meta">Technical security measures committed in the DPIA (Step 4) and carried forward into the control register.</p>
+      <p class="section-meta">Technical security measures committed in the DPIA (Step 3) and carried forward into the control register.</p>
       <table class="data-table">
         <thead><tr><th>Name</th><th>Source</th><th>Operational Status</th></tr></thead>
         <tbody>
@@ -831,7 +832,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
   // selected/activated as a treatment for a legal risk (step-6/7), self-certified
   // by a Framework_Statement control, or picked up by a compliance addition.
   function _complianceTraceabilitySection(s3, s9, s10) {
-    if (!s3 || !s9) return _notComplete('Steps 3 and 6 must be completed before compliance traceability can be generated.');
+    if (!s3 || !s9) return _notComplete('Steps 2 and 4 must be completed before compliance traceability can be generated.');
 
     const applicableNums = new Set(
       (s3.axis_b?.applicable_articles || []).map(a => a.article_number)
@@ -869,7 +870,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
     let naCount2 = 0;        // resolved as not applicable (structural or justified exclusion)
     let openCount = 0;       // applies but not addressed and no exclusion recorded
     let unjustifiedCount = 0;// excluded without a recorded reason
-    // Per-requirement exclusion reasons captured in Step 5 (ref → reason).
+    // Per-requirement exclusion reasons captured in Step 4 (ref → reason).
     const reqExcl = _record?.['step-5']?.legal_assessment?.requirement_exclusions || {};
 
     applicableNums.forEach(artNum => {
@@ -900,7 +901,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
           const activated  = hsRisks.length > 0 || selfCert;
           // Not Applicable: a per-assessment N/A decision recorded against the ref.
           const isNA       = !activated && (!!hsNA[ref] || ctype === 'Not_Applicable');
-          // Excluded in Step 5: a recorded exclusion entry, justified when it has a
+          // Excluded in Step 4: a recorded exclusion entry, justified when it has a
           // reason. An explicit exclusion is a deliberate human decision, so it is
           // honoured ahead of the Workflow/Document "covered by its own mechanism"
           // default below — otherwise the assessor's N/A call would be silently lost.
@@ -911,7 +912,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
           const open        = !activated && !isNA && !hasExcl; // applies, not addressed
           const covered     = activated;
           // Workflow/Document requirements are met by claiming them like any other
-          // requirement (selected in Step 5, evidenced in Step 7). coverage_type no
+          // requirement (selected in Step 4, evidenced in Step 7). coverage_type no
           // longer grants coverage on its own — it only changes how a *claimed*
           // requirement reads: a distinct badge naming its evidence route.
           const evByType    = activated && (ctype === 'Workflow' || ctype === 'Document');
@@ -935,7 +936,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
           else                  { badgeKey = 'open'; badgeTxt = '● Open'; }
           const naReason = isNA ? (hsNA[ref] ? hsNA[ref].reason : 'Not applicable to this system type')
                          : justifiedNA ? exclReason
-                         : unjustified ? 'Excluded in Step 5 without a recorded reason — add one before sign-off.'
+                         : unjustified ? 'Excluded in Step 4 without a recorded reason — add one before sign-off.'
                          : '';
           const rowCls   = (covered || justifiedNA) ? '' : (isNA ? 'trace-row--na' : 'trace-row--gap');
 
@@ -1016,7 +1017,7 @@ ${_section(6, 'AI Tool &amp; Use Case Approval Form', 'The organisation&rsquo;s 
       .filter(p => p.test_controls.length > 0);
 
     if (filteredPlans.length === 0) {
-      html += _notComplete('No test plans generated. Ensure Step 6 control selection is complete.');
+      html += _notComplete('No test plans generated. Ensure Step 4 risk identification is complete.');
     } else {
       filteredPlans.forEach(p => {
         html += `<div class="test-plan">

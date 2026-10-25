@@ -98,16 +98,17 @@
     wrap.appendChild(_sectionTitle('Standards basis'));
     wrap.appendChild(el('p', 'abt-body', { textContent: 'The workflow implements an ISO/IEC 42001-aligned AI management-system lifecycle. Each step maps to a clause of ISO/IEC 42001; the classification and DPIA criteria come from EU law, not any internal standard.' }));
     const rows = [
-      ['1 — Training prerequisite', '7.2 Competence · 7.3 Awareness', '—'],
-      ['2 — Business case', '8.1 Operational planning · A.6 lifecycle', '—'],
-      ['3 — System classification', '6.1 Planning · A.5 impact assessment', 'EU AI Act'],
-      ['4 — Data identification & DPIA', '6.1.4 / 8.4 impact assessment · A.7 data', 'GDPR Art. 35'],
-      ['5 — Risk identification', '6.1.2 / 8.2 AI risk assessment', 'ISO 31000 · ISO/IEC 23894'],
-      ['6 — Control identification', '6.1.3 / 8.3 AI risk treatment · Annex A', 'ISO/IEC harmonised standards'],
-      ['7 — Residual risk', '6.1.3 residual-risk acceptance', '—'],
-      ['8 — AI Change Board approval', 'Clause 5 Leadership · 8.1 control', '—'],
-      ['10 — User obligations briefing', '7.3 Awareness · A.9 responsible use', '—'],
-      ['11 — Central inventory & records', '7.5 Documented information · A.6', '—'],
+      ['1 — Business case', '8.1 Operational planning · A.6 lifecycle', '—'],
+      ['2 — System classification', '6.1 Planning · A.5 impact assessment', 'EU AI Act'],
+      ['3 — Data identification & DPIA', '6.1.4 / 8.4 impact assessment · A.7 data', 'GDPR Art. 35'],
+      ['4 — Risk identification', '6.1.2(c) / 8.2 AI risk assessment', 'ISO 31000 Cl. 6.4.2 · ISO/IEC 23894'],
+      ['5 — Risk analysis & evaluation', '6.1.2(d–e) / 8.2 AI risk assessment', 'ISO 31000 Cl. 6.4.3–6.4.4'],
+      ['6 — Risk treatment', '6.1.3 / 8.3 AI risk treatment · Annex A', 'ISO 31000 Cl. 6.5'],
+      ['7 — Recording & reporting', '6.1.3 residual acceptance · 9.1 monitoring', 'ISO 31000 Cl. 6.6–6.7'],
+      ['8 — Training prerequisite', '7.2 Competence · 7.3 Awareness', '—'],
+      ['9 — User obligations briefing', '7.3 Awareness · A.9 responsible use', '—'],
+      ['10 — Central inventory & records', '7.5 Documented information · A.6', '—'],
+      ['11 — AI Change Board approval', 'Clause 5 Leadership · 8.1 control', '—'],
       ['12 — Periodic & triggered review', '9.1 Monitoring · 9.3 Review · 10 Improvement', '—'],
     ];
     const scroll = el('div', 'abt-std-scroll');
@@ -122,17 +123,28 @@
     const note = el('div', 'abt-note');
     note.innerHTML = '<strong>In one line.</strong> An ISO/IEC 42001-aligned lifecycle — impact assessment (GDPR Art. 35 DPIA), risk assessment and treatment (ISO 31000 / ISO/IEC 23894), and monitoring — with classification driven by the EU AI Act.';
     wrap.appendChild(note);
+
+    const align = el('div', 'abt-note');
+    align.innerHTML = '<strong>How ISO 31000 plugs into ISO/IEC 42001.</strong> 42001 requires a documented AI risk assessment (Cl. 6.1.2) and its operational execution (Cl. 8.2) but deliberately leaves the method open. ISO 31000 supplies the method, stage for stage:' +
+      '<ul style="margin:8px 0 0 18px;padding:0;line-height:1.8">' +
+      '<li><strong>Risk identification</strong> (ISO 31000 Cl. 6.4.2) → satisfies 42001 Cl. 6.1.2(c): discover, recognise and describe the AI risks (e.g. data poisoning, bias, hallucination).</li>' +
+      '<li><strong>Risk analysis</strong> (Cl. 6.4.3) → 42001 Cl. 6.1.2(d): determine the consequence and likelihood of each.</li>' +
+      '<li><strong>Risk evaluation</strong> (Cl. 6.4.4) → 42001 Cl. 6.1.2(e): compare against the risk criteria to decide what needs treatment.</li>' +
+      '<li><strong>Risk treatment</strong> (Cl. 6.5) → 42001 Cl. 6.1.3: apply the AI controls from 42001 Annex A (data quality, transparency, oversight) to the evaluated risks.</li>' +
+      '</ul>' +
+      '<p style="margin:10px 0 0">The assessment gate is defined as <em>“AI Risk Assessment (ISO 42001 Cl. 8.2)”</em>, and the step forms are structured on the ISO 31000 identify → analyse → evaluate flow. ISO/IEC 23894 maps ISO 31000 onto AI specifically, supplying the AI risk vocabulary and categories while keeping full 42001 alignment.</p>';
+    wrap.appendChild(align);
     return wrap;
   }
 
   // ---- Tabs 2–4: step methodology (reference panes moved out of the steps) ----
   const _TRAINING = {
     classify: { builder: 'buildStep3Reference', title: 'How do we classify the system',
-      body: 'Step 3 places every system on two axes: an internal governance tier and the EU AI Act risk tier. The methodology below is exactly what the step applies — the tiers, the gate questions (G1–G5), and the combined-outcome matrix that turns the two axes into a single classification.' },
+      body: 'Step 2 places every system on two axes: an internal governance tier and the EU AI Act risk tier. The methodology below is exactly what the step applies — the tiers, the gate questions (G1–G5), and the combined-outcome matrix that turns the two axes into a single classification.' },
     dpia: { builder: 'buildStep4Reference', title: 'How do we perform a DPIA',
-      body: 'Step 4 runs a GDPR Article 35 Data Protection Impact Assessment whenever personal data is involved. The reference below sets out the legal obligations and the sections the assessment must cover.' },
+      body: 'Step 3 runs a GDPR Article 35 Data Protection Impact Assessment whenever personal data is involved. The reference below sets out the legal obligations and the sections the assessment must cover.' },
     risks: { builder: 'buildStep5Reference', title: 'How do we identify risks',
-      body: 'Step 5 assesses the system against the risk catalogue, keeping only the risks relevant to its classification and data. The reference below is the full catalogue, grouped by article and standard, with the guidance used to judge relevance.' },
+      body: 'Step 4 assesses the system against the risk catalogue, keeping only the risks relevant to its classification and data. The reference below is the full catalogue, grouped by article and standard, with the guidance used to judge relevance.' },
   };
 
   function _fillTrainingPane(id, pane) {
@@ -158,7 +170,7 @@
 
     wrap.appendChild(_sectionTitle('The two stages'));
     wrap.appendChild(_orderedFlow([
-      ['Evidence the requirements', 'For each risk, provide evidence that every selected harmonised-standard requirement is implemented — a document reference, a workflow record, or an implementation link. Framework self-certifications are pre-filled from Step 6 as a starting point.'],
+      ['Evidence the requirements', 'For each risk, provide evidence that every selected harmonised-standard requirement is implemented — a document reference, a workflow record, or an implementation link. Framework self-certifications are pre-filled as a starting point.'],
       ['Record the residual', 'Once a risk’s requirements are all evidenced or waived, its residual assessment unlocks. Rate the likelihood and impact that remain, and record a justification.'],
     ]));
 
@@ -252,7 +264,7 @@
 
 
   // ---- Report guide: what's in the AI System Conformity Assessment Report ----
-  // Plain-language mirror of the Step 8 report's structure. KEEP IN SYNC with the
+  // Plain-language mirror of the Step 11 report's structure. KEEP IN SYNC with the
   // section list/order in report-wizard.js → _buildReportHTML(): if a section is
   // renamed, reordered, added or removed there, update _REPORT_PART_A /
   // _REPORT_PART_B below so this reference tab doesn't drift from the real report.
@@ -260,7 +272,7 @@
     ['Cover / Identification', "The front page. It names the AI system being assessed, gives it a reference number and date, says who carried out the assessment, and sums up the headline result, so anyone picking it up immediately knows what they're looking at."],
     ['1. System Classification', "The law treats different AI uses very differently. A few are banned outright, some are tightly regulated, most are low-risk. This section shows which category the system falls into and why, including how risky it is and whether the organisation is building the AI or just using someone else's. That classification drives which rules apply for the rest of the report."],
     ['2. Risk Identification', "You can't manage a danger you haven't named. This lists the specific things that could go wrong with this system, for example biased decisions, confidently wrong answers, or misuse of people's personal data, and who is responsible for each. They're drawn from a ready-made library of known AI risks rather than guessed at on the day."],
-    ['3. Data Privacy Impact Assessment (DPIA)', "A summary of the GDPR Article 35 privacy assessment from Step 4: the data the system processes, the lawful basis for it, the privacy risks identified, and the inherent and residual risk ratings. The approval form in Part B points back to this section as its DPIA evidence."],
+    ['3. Data Privacy Impact Assessment (DPIA)', "A summary of the GDPR Article 35 privacy assessment from Step 3: the data the system processes, the lawful basis for it, the privacy risks identified, and the inherent and residual risk ratings. The approval form in Part B points back to this section as its DPIA evidence."],
     ['4. Compliance & Requirement Traceability', "The heart of the report, and the part that proves nothing was missed. For each rule the system must follow, it shows the specific harmonised-standard requirement selected to meet it, and marks whether that requirement is evidenced, still outstanding, or genuinely not needed. Below it, a register lists the requirements in place, grouped by the risk they address, with the evidence status recorded in Step 7. Anything left uncovered shows up here as a gap."],
     ['5. Conformity Assessment Conclusion', "This shows the assessor's conclusion: based on everything above, the system meets the rules it has to meet. It includes a short checklist confirming the assessment is complete, and is signed by the assessor. This is the recommendation passed to the decision-makers, it is not yet the final approval."],
     ['— handover —', "A short note marking that the evidence (Part A) is finished and is now going to the internal decision-makers for a verdict."],
