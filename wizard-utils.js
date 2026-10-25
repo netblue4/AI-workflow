@@ -746,5 +746,5 @@ window.WizUtils = (function () {
 .wiz-group-content>.wiz-panel:last-child{margin-bottom:8px}
 `);
 
-  return { el, sectionLabel, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildStepGroup, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
+  return { el, sectionLabel, STEP_WHY, loadRecord, saveRecord, copyToClipboard, injectStyles, buildTabStrip, buildCollapsible, buildStepPanel, buildStepGroup, buildDeliverablesList, buildStepHeader, buildAttestation, buildSaveBlock, glossify, fetchAll, ARTICLES, ARTICLES_BY_ID, loadArticles, artLabel, fmtStdRef, STD_REF_PREFIX, SR_CONTROLS, SR_BY_STEP, loadSrControls, srControlsForStep };
 })();
